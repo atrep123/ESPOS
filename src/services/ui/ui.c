@@ -21,6 +21,7 @@ static void ui_task(void *arg)
     bus_subscribe(TOP_TICK_10MS, q);
     bus_subscribe(TOP_INPUT_BTN, q);
     bus_subscribe(TOP_RPC_CALL, q);
+    bus_subscribe(TOP_METRICS_RET, q);
 
     while (1) {
         if (xQueueReceive(q, &m, portMAX_DELAY)) {
@@ -38,6 +39,10 @@ static void ui_task(void *arg)
                     if (strcmp(m.u.rpc.method, "set_bg") == 0) {
                         ui_core_on_rpc_bg(&st, m.u.rpc.arg);
                     }
+                    break;
+                case TOP_METRICS_RET:
+                    st.metrics_free_heap = m.u.metrics.free_heap;
+                    st.metrics_min_free_heap = m.u.metrics.min_free_heap;
                     break;
                 default:
                     break;

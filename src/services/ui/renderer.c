@@ -5,6 +5,7 @@
 #include "esp_lcd_panel_ops.h"
 
 #include "display_config.h"
+#include "ui_core.h"
 
 static const char *TAG = "ui_renderer";
 
@@ -43,13 +44,21 @@ void render_frame_striped(esp_lcd_panel_handle_t panel, const ui_state_t *st)
         }
         line[32] = '\0';
 
-        ESP_LOGI(TAG,
-                 "[SIM] t=%ld scene=%u btnA=%u bg=0x%04X",
-                 (long)st->t,
-                 (unsigned)st->scene,
-                 (unsigned)st->btnA,
-                 (unsigned)st->bg);
-        ESP_LOGI(TAG, "[SIM] %s", line);
+        if (st->scene == UI_SCENE_METRICS) {
+            ESP_LOGI(TAG,
+                     "[SIM] METRICS t=%ld free_heap=%" PRIu32 " min_heap=%" PRIu32,
+                     (long)st->t,
+                     st->metrics_free_heap,
+                     st->metrics_min_free_heap);
+        } else {
+            ESP_LOGI(TAG,
+                     "[SIM] t=%ld scene=%u btnA=%u bg=0x%04X",
+                     (long)st->t,
+                     (unsigned)st->scene,
+                     (unsigned)st->btnA,
+                     (unsigned)st->bg);
+            ESP_LOGI(TAG, "[SIM] %s", line);
+        }
         return;
     }
 

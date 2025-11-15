@@ -28,6 +28,10 @@ typedef struct {
             char method[16];
             uint32_t arg;
         } rpc;
+        struct {
+            uint32_t free_heap;
+            uint32_t min_free_heap;
+        } metrics;
     } u;
 } msg_t;
 
@@ -35,4 +39,3 @@ void bus_init(void);
 QueueHandle_t bus_make_queue(size_t depth);
 void bus_subscribe(topic_t t, QueueHandle_t q);
 void bus_publish(const msg_t *m);
-

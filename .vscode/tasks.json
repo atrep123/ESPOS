@@ -1,0 +1,76 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Simulator: Start (AutoPorts, New Window)",
+      "type": "shell",
+      "command": ".\\run_sim.ps1 -AutoPorts -Fps 144",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: UART set_bg ff0000 (auto)",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"$p=Get-Content .\\sim_ports.json | ConvertFrom-Json; if (-not $p.uart_port) { Write-Host 'uart_port not found in sim_ports.json'; exit 1 }; $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1',$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg ff0000'); Start-Sleep -Milliseconds 100; $client.Close()\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: simctl set_bg red (auto)",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"$p=Get-Content .\\sim_ports.json | ConvertFrom-Json; if (-not $p.rpc_port) { Write-Host 'rpc_port not found in sim_ports.json'; exit 1 }; python .\\simctl.py $($p.rpc_port) set_bg 255 0 0\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start (AutoPorts, SameWindow)",
+      "type": "shell",
+      "command": ".\\run_sim.ps1 -SameWindow -AutoPorts -Fps 144",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Smoke Test (auto)",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"
+        $ErrorActionPreference = 'Stop';
+        $limit = (Get-Date).AddSeconds(12);
+        while (-not (Test-Path .\\sim_ports.json)) { Start-Sleep -Milliseconds 200; if ((Get-Date) -gt $limit) { Write-Host 'Timeout waiting for sim_ports.json'; exit 1 } }
+        $p = Get-Content .\\sim_ports.json | ConvertFrom-Json;
+        if (-not $p.rpc_port) { Write-Host 'rpc_port missing in sim_ports.json'; exit 1 }
+        if (-not $p.uart_port) { Write-Host 'uart_port missing in sim_ports.json'; exit 1 }
+        python .\\simctl.py $($p.rpc_port) set_bg 255 32 32;
+        python .\\simctl.py $($p.rpc_port) scene 1;
+        python .\\simctl.py $($p.rpc_port) btn B press; Start-Sleep -Milliseconds 120; python .\\simctl.py $($p.rpc_port) btn B release;
+        $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1', [int]$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg 00ff00'); Start-Sleep -Milliseconds 100; $client.Close()
+      \"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start + Smoke Test",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"Write-Host 'Use the Run button on compound tasks list.'\"",
+      "dependsOn": [
+        "Simulator: Start (AutoPorts, New Window)",
+        "Simulator: Smoke Test (auto)"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+    {
+      "label": "Simulator: Start (RPC 8765 / UART 7777)",
+      "type": "shell",
+      "command": ".\\run_sim.ps1 -Port 8765 -UartPort 7777 -Fps 120",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: simctl set_bg red (port 8765)",
+      "type": "shell",
+      "command": "python .\\simctl.py 8765 set_bg 255 0 0",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

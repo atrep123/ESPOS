@@ -60,10 +60,10 @@ esp_err_t ssd1363_bus_init(void)
 
 esp_err_t ssd1363_reset(void)
 {
-    if (DISPLAY_RST_GPIO < 0) {
-        return ESP_OK;
-    }
-
+    /* If reset pin is not configured, nothing to do. */
+#if DISPLAY_RST_GPIO < 0
+    return ESP_OK;
+#else
     gpio_config_t io_conf = {
         .pin_bit_mask = 1ULL << DISPLAY_RST_GPIO,
         .mode = GPIO_MODE_OUTPUT,
@@ -84,6 +84,7 @@ esp_err_t ssd1363_reset(void)
 
     ESP_LOGI(TAG, "Panel reset pulse sent on GPIO %d", DISPLAY_RST_GPIO);
     return ESP_OK;
+#endif
 }
 
 static esp_err_t ssd1363_send_bytes(bool is_cmd, const uint8_t *data, size_t len)
@@ -163,4 +164,3 @@ esp_err_t ssd1363_init_panel(void)
     ESP_LOGW(TAG, "SSD1363 init sequence is placeholder; update for your panel");
     return ESP_OK;
 }
-

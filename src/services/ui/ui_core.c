@@ -19,6 +19,8 @@ void ui_core_init(ui_state_t *st)
     st->btnB = 0;
     st->btnC = 0;
     st->scene = UI_SCENE_HOME;
+    st->metrics_free_heap = 0;
+    st->metrics_min_free_heap = 0;
 }
 
 void ui_core_on_tick(ui_state_t *st)
@@ -66,4 +68,3 @@ void ui_core_on_rpc_bg(ui_state_t *st, uint32_t rgb)
 
     st->bg = ui_core_rgb565(r, g, b);
 }
-

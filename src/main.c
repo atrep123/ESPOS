@@ -15,6 +15,7 @@
 #include "services/input/input.h"
 #include "services/rpc/rpc.h"
 #include "services/store/store.h"
+#include "services/metrics/metrics.h"
 #include "services/ui/ui.h"
 
 static const char *TAG = "ESP32OS";
@@ -121,6 +122,7 @@ void app_main(void)
     kernel_start_ticker();
     input_start();
     rpc_start();
+    metrics_start();
 
     /* TODO: initialize your ST7789 panel here and pass handle instead of NULL. */
     esp_lcd_panel_handle_t panel = NULL;

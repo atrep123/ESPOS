@@ -56,4 +56,3 @@ void input_start(void)
 {
     (void)xTaskCreatePinnedToCore(input_task, "in", 2048, NULL, 5, NULL, 0);
 }
-

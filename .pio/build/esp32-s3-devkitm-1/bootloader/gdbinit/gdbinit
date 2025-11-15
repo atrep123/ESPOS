@@ -1,0 +1,2 @@
+source D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader/gdbinit/symbols
+source D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader/gdbinit/connect

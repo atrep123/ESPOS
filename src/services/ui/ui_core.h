@@ -25,6 +25,9 @@ typedef struct {
     uint8_t btnB;     /* button B state             */
     uint8_t btnC;     /* button C state             */
     ui_scene_t scene; /* current scene              */
+    /* Basic metrics snapshot (filled by UI task). */
+    uint32_t metrics_free_heap;
+    uint32_t metrics_min_free_heap;
 } ui_state_t;
 
 /* Initialise UI state with defaults (dark background,
@@ -39,4 +42,3 @@ void ui_core_on_button(ui_state_t *st, uint8_t id, bool pressed);
 
 /* Handle RPC that sets background color from 0xRRGGBB. */
 void ui_core_on_rpc_bg(ui_state_t *st, uint32_t rgb);
-

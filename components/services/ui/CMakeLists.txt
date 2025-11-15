@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "../../../src/services/ui/ui.c"
+        "../../../src/services/ui/renderer.c"
+        "../../../src/services/ui/ui_core.c"
+    INCLUDE_DIRS
+        "../../../src/services/ui"
+    REQUIRES
+        kernel
+        display
+)

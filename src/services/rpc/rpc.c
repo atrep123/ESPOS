@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "driver/uart.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -38,7 +39,9 @@ static void rpc_task(void *arg)
                 n = 0;
 
                 msg_t m = { .topic = TOP_RPC_CALL };
-                if (sscanf(buf, "set_bg %x", &m.u.rpc.arg) == 1) {
+                unsigned int tmp = 0;
+                if (sscanf(buf, "set_bg %x", &tmp) == 1) {
+                    m.u.rpc.arg = tmp;
                     strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method));
                 } else {
                     strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method));
@@ -55,4 +58,3 @@ void rpc_start(void)
 {
     (void)xTaskCreatePinnedToCore(rpc_task, "rpc", 4096, NULL, 5, NULL, 0);
 }
-
