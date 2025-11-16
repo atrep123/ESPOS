@@ -7,6 +7,7 @@
 #include "esp_log.h"
 
 #include "display_config.h"
+#include <stdbool.h>
 
 static const char *TAG = "ssd1363";
 
@@ -152,15 +153,155 @@ esp_err_t ssd1363_init_panel(void)
         return err;
     }
 
-    /* Placeholder init sequence – replace with the real one
-     * from the SSD1363 datasheet for your module.
-     */
+    /* Placeholder init; optional conservative default below guarded by macro. */
+#if SSD1363_USE_DEFAULT_INIT
+    /* Oscillator/clock: divide=1, freq=8 (tunable) */
+    (void)ssd1363_set_display_clock(1, 8);
+    /* Multiplex ratio: height-1 (e.g., 127 for 128 rows) */
+    (void)ssd1363_set_multiplex_ratio((uint8_t)(DISPLAY_HEIGHT - 1));
+    /* Display offset and start line */
+    (void)ssd1363_set_display_offset(0);
+    (void)ssd1363_set_start_line(0);
+    /* Remap: device-specific bitfields; 0x00 baseline. Adjust for segment/COM scan direction. */
+    (void)ssd1363_set_remap(0x00);
+    /* Contrast, precharge, VCOMH: conservative mids */
+    (void)ssd1363_set_contrast(0x7F);
+    (void)ssd1363_set_precharge(0x22);
+    (void)ssd1363_set_vcomh(0x34);
+    /* Normal display */
+    (void)ssd1363_invert_display(false);
+#else
     const uint8_t init_seq[] = {
         0xAE, /* Display OFF */
-        /* TODO: add contrast, mux ratio, addressing mode, etc. */
+        /*
+         * NOTE: Add your panel's required sequence here. Typical SSD13xx bring-up includes:
+         *   - Set Display Clock Divide/Oscillator Frequency (0xB3, div|freq)
+         *   - Set Multiplex Ratio (0xA8, ratio)
+         *   - Set Display Offset (0xA2, offset)
+         *   - Set Start Line (0xA1, line)
+         *   - Set Remap/Color Depth (device specific; for SSD1363 verify command)
+         *   - Set Contrast (0xC1 or device-specific)
+         *   - Set Precharge Period (0xB1)
+         *   - Set VCOMH (0xBE)
+         *   - Normal Display Mode (0xA6) or Invert (0xA7)
+         */
     };
     (void)ssd1363_write_cmd_list(init_seq, sizeof(init_seq));
+#endif
+
+    /* Set a default full-frame address window so subsequent writes cover the panel. */
+    (void)ssd1363_set_addr_window(0, DISPLAY_WIDTH - 1, 0, DISPLAY_HEIGHT - 1);
+
+    /* Finally, turn the display ON. */
+    (void)ssd1363_display_on();
 
     ESP_LOGW(TAG, "SSD1363 init sequence is placeholder; update for your panel");
     return ESP_OK;
+}
+
+esp_err_t ssd1363_display_on(void)
+{
+    return ssd1363_write_cmd(0xAF); /* Display ON */
+}
+
+esp_err_t ssd1363_display_off(void)
+{
+    return ssd1363_write_cmd(0xAE); /* Display OFF */
+}
+
+esp_err_t ssd1363_set_addr_window(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1)
+{
+    /* Common SSD13xx style addressing; verify with SSD1363 datasheet for final use. */
+    uint8_t cmds[6];
+    cmds[0] = 0x15; /* Set Column Address */
+    cmds[1] = (uint8_t)x0;
+    cmds[2] = (uint8_t)x1;
+    cmds[3] = 0x75; /* Set Row Address */
+    cmds[4] = (uint8_t)y0;
+    cmds[5] = (uint8_t)y1;
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_write_ram_start(void)
+{
+    return ssd1363_write_cmd(0x5C); /* Write RAM */
+}
+
+/* Optional configuration helpers (verify codes for SSD1363 specifically). */
+esp_err_t ssd1363_set_contrast(uint8_t contrast)
+{
+    uint8_t cmds[2] = { 0xC1, contrast };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_multiplex_ratio(uint8_t ratio)
+{
+    uint8_t cmds[2] = { 0xA8, ratio };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_display_offset(uint8_t offset)
+{
+    uint8_t cmds[2] = { 0xA2, offset };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_start_line(uint8_t line)
+{
+    uint8_t cmds[2] = { 0xA1, line };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_remap(uint8_t config)
+{
+    /* Device-specific; many SSD13xx use 0xA0 with bitfields */
+    uint8_t cmds[2] = { 0xA0, config };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_display_clock(uint8_t divide, uint8_t freq)
+{
+    /* 0xB3: upper nibble freq, lower nibble divide */
+    uint8_t val = (uint8_t)(((freq & 0x0F) << 4) | (divide & 0x0F));
+    uint8_t cmds[2] = { 0xB3, val };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_precharge(uint8_t period)
+{
+    uint8_t cmds[2] = { 0xB1, period };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_set_vcomh(uint8_t level)
+{
+    uint8_t cmds[2] = { 0xBE, level };
+    return ssd1363_write_cmd_list(cmds, sizeof(cmds));
+}
+
+esp_err_t ssd1363_entire_display_on(bool on)
+{
+    return ssd1363_write_cmd(on ? 0xA5 : 0xA4);
+}
+
+esp_err_t ssd1363_invert_display(bool invert)
+{
+    return ssd1363_write_cmd(invert ? 0xA7 : 0xA6);
+}
+
+esp_err_t ssd1363_begin_frame(uint16_t x0, uint16_t y0, uint16_t x1_incl, uint16_t y1_incl)
+{
+    if (x0 > x1_incl || y0 > y1_incl) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    /* Clip to panel bounds */
+    if (x0 >= DISPLAY_WIDTH || y0 >= DISPLAY_HEIGHT) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (x1_incl >= DISPLAY_WIDTH)  x1_incl = (uint16_t)(DISPLAY_WIDTH - 1);
+    if (y1_incl >= DISPLAY_HEIGHT) y1_incl = (uint16_t)(DISPLAY_HEIGHT - 1);
+
+    esp_err_t err = ssd1363_set_addr_window(x0, x1_incl, y0, y1_incl);
+    if (err != ESP_OK) return err;
+    return ssd1363_write_ram_start();
 }

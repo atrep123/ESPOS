@@ -9,7 +9,15 @@ param(
     [switch]$NoUnicode,
     [string]$Script = "",
     [switch]$AutoPorts,
-    [switch]$SameWindow
+    [switch]$SameWindow,
+    [int]$FullRedrawInterval = 300,
+    [switch]$NoDiff,
+    [string]$Config = "",
+    [string]$ExportMetrics = "",
+    [int]$WebSocketPort = 0,
+    [string]$Record = "",
+    [string]$Playback = "",
+    [switch]$AutoSize
 )
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -39,6 +47,14 @@ if ($UartPort -gt 0) { $argsList += @("--uart-port", "$UartPort") }
 if ($NoColor) { $argsList += "--no-color" }
 if ($NoUnicode) { $argsList += "--no-unicode" }
 if ($Script -ne "") { $argsList += @("--script", "$Script") }
+if ($FullRedrawInterval -gt 0) { $argsList += @("--full-redraw-interval", "$FullRedrawInterval") }
+if ($NoDiff) { $argsList += "--no-diff" }
+if ($Config -ne "") { $argsList += @("--config", "$Config") }
+if ($ExportMetrics -ne "") { $argsList += @("--export-metrics", "$ExportMetrics") }
+if ($WebSocketPort -gt 0) { $argsList += @("--websocket-port", "$WebSocketPort") }
+if ($Record -ne "") { $argsList += @("--record", "$Record") }
+if ($Playback -ne "") { $argsList += @("--playback", "$Playback") }
+if ($AutoSize) { $argsList += "--auto-size" }
 
 if ($SameWindow) {
     if ($UartPort -gt 0) {

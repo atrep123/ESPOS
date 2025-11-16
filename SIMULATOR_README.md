@@ -5,12 +5,20 @@ Vylepšený UI simulátor pro vývoj a testování uživatelského rozhraní ESP
 ## 🎯 Funkce
 
 ### ✨ Vizuální vylepšení
-- **ANSI barvy** - barevný výstup v terminálu
+- **ANSI barvy** - barevný výstup v terminálu s optimalizací escape sekvencí
 - **Unicode rámečky** - profesionální vzhled
-- **Velký displej** - 64×16 znaků pro lepší čitelnost
+- **Velký displej** - až 100×24 znaků (konfigurovatelné)
 - **Real-time FPS** - zobrazení výkonu simulátoru
 - **RGB informace** - živé zobrazení barevných hodnot
 - **Progress bar** - animovaný indikátor
+- **Efektivní rendering** - substring diff s ANSI-aware algoritmy
+
+### ⚡ Výkonnostní optimalizace
+- **Substring diff rendering** - překresluje jen změněné části řádků
+- **ANSI optimalizace** - automatické odstraňování redundantních reset sekvencí
+- **Adaptivní pacing** - přesné dodržení cílového FPS
+- **Periodic redraw** - konfigurovatelný interval pro prevenci driftu
+- **TypedDict events** - type-safe event handling s lepší diagnostikou
 
 ### 🎮 Interaktivní ovládání
 - **A/B/C** - Simulace tlačítek (A přepíná scénu)
@@ -61,10 +69,12 @@ Přepínače `run_sim.ps1`:
 - `-UartPort <int>`: UART‑like textový TCP port; 0 = vypnuto
 - `-AutoPorts`: zvolí volné porty pro ty, které nejsou explicitně zadány
 - `-SameWindow`: spustí simulátor v aktuálním terminálu
-- `-Width <int>` / `-Height <int>`: velikost UI v znacích (výchozí 64×16)
+- `-Width <int>` / `-Height <int>`: velikost UI v znacích (výchozí 100×24)
 - `-NoColor`: vypne ANSI barvy
 - `-NoUnicode`: ASCII rámečky místo Unicode
 - `-Script <cesta>`: přehrání skriptu událostí (viz níže)
+- `-FullRedrawInterval <int>`: perioda full redraw (snímky, výchozí 300, 0=vypnuto)
+- `-NoDiff`: vypne substring diff rendering (vždy full redraw, debug)
 
 ### Python verze (doporučeno)
 
@@ -81,7 +91,16 @@ python sim_run.py --fps 144 --rpc-port 8765 --width 64 --height 16
 ```
 
 Přímé přepínače `sim_run.py` jsou ekvivalentní k těm v `run_sim.ps1`:
-`--fps`, `--width`, `--height`, `--rpc-port`, `--uart-port`, `--no-color`, `--no-unicode`, `--script`.
+`--fps`, `--width`, `--height`, `--rpc-port`, `--uart-port`, `--no-color`, `--no-unicode`, `--script`, `--full-redraw-interval`, `--no-diff`.
+
+Další pokročilé parametry:
+- `--com-port <port>`: připojit COM port (vyžaduje pyserial)
+- `--baud <rate>`: rychlost COM portu (výchozí 115200)
+- `--config <path>`: načíst konfiguraci ze souboru (JSON)
+- `--export-metrics <path>`: exportovat timing metriky do CSV
+- `--websocket-port <port>`: spustit WebSocket server pro remote viewer
+- `--record <path>`: zaznamenat session do souboru
+- `--playback <path>`: přehrát zaznamenaný session
 
 ### C verze
 
@@ -113,9 +132,15 @@ pio run -e ui-sim
 - **`sim_run.py`** - Python implementace (doporučeno pro vývoj)
 - **`sim/main.c`** - C implementace (originální verze)
 - **`build_sim.ps1`** - PowerShell build skript pro Windows
+- **`run_sim.ps1`** - PowerShell launcher s rozšířenými parametry
 - **`platformio.ini`** - PlatformIO konfigurace (sekce `[env:ui-sim]`)
 - **`simctl.py`** - jednoduchý RPC klient (TCP) pro ovládání simulátoru
+- **`esp32_sim_client.py`** - kompletní Python client library
+- **`include/esp32_sim_client.h`** - C/C++ header-only client library
 - **`events_example.json`** - ukázkový skript s časovanými událostmi
+- **`.sim_config.json`** - ukázkový konfigurační soubor
+- **`ui_sim/remote_viewer.html`** - WebSocket remote viewer (web UI)
+- **`SIMULATOR_EXAMPLES.md`** - příklady použití a integrace
 
 ## 🎨 Příklad výstupu
 
@@ -285,3 +310,17 @@ widgets = [
 
 Simulátor emuluje UI systém z `src/services/ui/` bez nutnosti ESP32 hardwaru.
 Ideální pro rychlý vývoj a testování UI logiky.
+
+### 🔗 Další zdroje
+
+- **Client libraries**: `esp32_sim_client.py` (Python), `include/esp32_sim_client.h` (C/C++)
+- **Remote viewer**: Otevřete `ui_sim/remote_viewer.html` v prohlížeči (vyžaduje WebSocket server)
+- **Příklady**: Viz `SIMULATOR_EXAMPLES.md` pro pokročilé use-cases
+- **Config template**: `.sim_config.json` - zkopírujte a upravte dle potřeby
+
+### 📊 Exportované soubory
+
+- `sim_ports.json` - aktuální porty a PID simulátoru (smazáno při ukončení)
+- `simulator.log` - log chyb (vytváří se jen při chybách)
+- `metrics.csv` - performance metriky (pokud použito `--export-metrics`)
+- `session.json` - záznam session (pokud použito `--record`)

@@ -1,4 +1,4 @@
-/* * Data converted from D:\ESP32OS\.pio\build\esp32-s3-devkitm-1\x509_crt_bundle
+/* * Data converted from d:\ESP32OS\.pio\build\esp32-s3-devkitm-1\x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

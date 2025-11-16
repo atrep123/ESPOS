@@ -1,0 +1,75 @@
+{
+  "name": "StatusBar",
+  "description": "Bottom status bar with icons and info",
+  "category": "display",
+  "author": "ESP32OS",
+  "version": "1.0",
+  "width": 128,
+  "height": 10,
+  "widgets": [
+    {
+      "type": "panel",
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 10,
+      "border": true,
+      "border_style": "single"
+    },
+    {
+      "type": "icon",
+      "x": 2,
+      "y": 2,
+      "width": 6,
+      "height": 6,
+      "icon_char": "\u26a1",
+      "text": "\u26a1"
+    },
+    {
+      "type": "label",
+      "x": 10,
+      "y": 2,
+      "width": 30,
+      "height": 6,
+      "text": "Battery: 85%"
+    },
+    {
+      "type": "icon",
+      "x": 45,
+      "y": 2,
+      "width": 6,
+      "height": 6,
+      "icon_char": "\ud83d\udcf6",
+      "text": "\ud83d\udcf6"
+    },
+    {
+      "type": "label",
+      "x": 53,
+      "y": 2,
+      "width": 30,
+      "height": 6,
+      "text": "WiFi: OK"
+    },
+    {
+      "type": "label",
+      "x": 90,
+      "y": 2,
+      "width": 36,
+      "height": 6,
+      "text": "12:34:56",
+      "align": "right"
+    }
+  ],
+  "parameters": [
+    "battery_level",
+    "wifi_status",
+    "time"
+  ],
+  "tags": [
+    "status",
+    "info",
+    "bar",
+    "display"
+  ],
+  "preview_ascii": "\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551 \u26a1 Battery: 85%  \ud83d\udcf6 WiFi: OK      12:34:56  \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n"
+}

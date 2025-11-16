@@ -17,6 +17,7 @@
 #include "services/store/store.h"
 #include "services/metrics/metrics.h"
 #include "services/ui/ui.h"
+#include "ui_demo.h"
 
 static const char *TAG = "ESP32OS";
 
@@ -117,6 +118,9 @@ void app_main(void)
      * will log an error if I2C pins are still -1.
      */
     (void)ssd1363_init_panel();
+
+    /* Start simple UI demo render loop (dirty-rect updates). */
+    ui_demo_start();
 
     bus_init();
     kernel_start_ticker();

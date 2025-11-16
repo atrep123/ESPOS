@@ -479,6 +479,106 @@ def start_com_bridge(port_name: str, baud: int, evq: "queue.Queue[Dict[str, Any]
     th.start()
     return th
 
+# --- WebSocket server for remote UI viewing ---
+
+def start_websocket_server(port: int, frame_callback) -> Optional[threading.Thread]:
+    """Start WebSocket server for remote UI streaming (requires websockets library)"""
+    try:
+        import asyncio
+        import websockets  # type: ignore
+    except Exception:
+        print("websockets not installed. Install with: pip install websockets", file=sys.stderr)
+        return None
+    
+    clients = set()
+    
+    async def handler(websocket, path):
+        clients.add(websocket)
+        try:
+            await websocket.wait_closed()
+        finally:
+            clients.discard(websocket)
+    
+    async def broadcast_frames():
+        while True:
+            await asyncio.sleep(0.033)  # ~30 FPS broadcast
+            frame_data = frame_callback()
+            if frame_data and clients:
+                message = json.dumps(frame_data)
+                await asyncio.gather(*[client.send(message) for client in clients], return_exceptions=True)
+    
+    async def main_server():
+        async with websockets.serve(handler, "127.0.0.1", port):
+            await broadcast_frames()
+    
+    def run_loop():
+        asyncio.run(main_server())
+    
+    th = threading.Thread(target=run_loop, daemon=True)
+    th.start()
+    return th
+
+# --- Metrics export to CSV ---
+
+class MetricsRecorder:
+    def __init__(self, filepath: str):
+        self.filepath = filepath
+        self.data: List[Dict[str, Any]] = []
+    
+    def record(self, frame: int, fps: float, compute_ms: float, sleep_ms: float, util: float):
+        self.data.append({
+            'frame': frame,
+            'fps': fps,
+            'compute_ms': compute_ms,
+            'sleep_ms': sleep_ms,
+            'util': util,
+            'timestamp': time.time()
+        })
+    
+    def export(self):
+        try:
+            import csv
+            with open(self.filepath, 'w', newline='', encoding='utf-8') as f:
+                if self.data:
+                    writer = csv.DictWriter(f, fieldnames=self.data[0].keys())
+                    writer.writeheader()
+                    writer.writerows(self.data)
+        except Exception as e:
+            log_error(f"Failed to export metrics: {e}")
+
+# --- Session recording and playback ---
+
+class SessionRecorder:
+    def __init__(self, filepath: str):
+        self.filepath = filepath
+        self.events: List[Dict[str, Any]] = []
+        self.start_time = time.time()
+    
+    def record_event(self, event_type: str, data: Dict[str, Any]):
+        elapsed_ms = int((time.time() - self.start_time) * 1000)
+        self.events.append({
+            'at_ms': elapsed_ms,
+            'type': event_type,
+            'data': data
+        })
+    
+    def save(self):
+        try:
+            with open(self.filepath, 'w', encoding='utf-8') as f:
+                json.dump(self.events, f, indent=2)
+        except Exception as e:
+            log_error(f"Failed to save recording: {e}")
+
+def load_playback(filepath: str) -> List[Dict[str, Any]]:
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            events = json.load(f)
+            events.sort(key=lambda e: int(e.get('at_ms', 0)))
+            return events
+    except Exception as e:
+        log_error(f"Failed to load playback: {e}")
+        return []
+
 def rgb565(r: int, g: int, b: int) -> int:
     """Convert RGB888 to RGB565"""
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
@@ -630,7 +730,58 @@ def main() -> None:
     parser.add_argument('--baud', type=int, default=115200, help='Baud rate for COM bridge')
     parser.add_argument('--full-redraw-interval', type=int, default=300, help='Periodic full redraw interval (frames, 0=disable)')
     parser.add_argument('--no-diff', action='store_true', help='Disable substring diff rendering (debug full redraw)')
+    parser.add_argument('--config', type=str, default='', help='Load configuration from JSON file')
+    parser.add_argument('--export-metrics', type=str, default='', help='Export timing metrics to CSV file')
+    parser.add_argument('--websocket-port', type=int, default=0, help='Enable WebSocket server for remote viewer (0=disabled)')
+    parser.add_argument('--record', type=str, default='', help='Record session to file')
+    parser.add_argument('--playback', type=str, default='', help='Playback recorded session from file')
+    parser.add_argument('--auto-size', action='store_true', help='Auto-detect terminal size and adjust UI')
     args = parser.parse_args()
+    
+    # Load config file if provided
+    if args.config and os.path.exists(args.config):
+        try:
+            with open(args.config, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                # Override args with config values (args take precedence if explicitly set)
+                for key, value in config.items():
+                    attr_name = key.replace('-', '_')
+                    if hasattr(args, attr_name) and getattr(args, attr_name) == parser.get_default(key.replace('_', '-')):
+                        setattr(args, attr_name, value)
+        except Exception as e:
+            log_error(f"Failed to load config {args.config}: {e}")
+    
+    # Auto-detect terminal size if requested
+    if args.auto_size:
+        try:
+            if platform.system() == 'Windows':
+                import ctypes
+                kernel32 = ctypes.windll.kernel32
+                STD_OUTPUT_HANDLE = -11
+                handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+                import ctypes.wintypes
+                class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
+                    _fields_ = [
+                        ("dwSize", ctypes.wintypes._COORD),
+                        ("dwCursorPosition", ctypes.wintypes._COORD),
+                        ("wAttributes", ctypes.wintypes.WORD),
+                        ("srWindow", ctypes.wintypes.SMALL_RECT),
+                        ("dwMaximumWindowSize", ctypes.wintypes._COORD),
+                    ]
+                csbi = CONSOLE_SCREEN_BUFFER_INFO()
+                if kernel32.GetConsoleScreenBufferInfo(handle, ctypes.byref(csbi)):
+                    term_width = csbi.srWindow.Right - csbi.srWindow.Left + 1
+                    term_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1
+                    # Leave margins for borders
+                    args.width = max(40, min(term_width - 4, 120))
+                    args.height = max(16, min(term_height - 6, 40))
+            else:
+                import shutil
+                term_size = shutil.get_terminal_size((80, 24))
+                args.width = max(40, min(term_size.columns - 4, 120))
+                args.height = max(16, min(term_size.lines - 6, 40))
+        except Exception as e:
+            log_error(f"Auto-size detection failed: {e}")
 
     # Event queue and servers (bind before announcing)
     class RPCEvent(TypedDict):
@@ -664,6 +815,32 @@ def main() -> None:
     # Optional COM bridge
     if args.com_port:
         com_th = start_com_bridge(args.com_port, args.baud, evq)
+
+    # Initialize optional features
+    metrics_recorder = None
+    if args.export_metrics:
+        metrics_recorder = MetricsRecorder(args.export_metrics)
+    
+    session_recorder = None
+    if args.record:
+        session_recorder = SessionRecorder(args.record)
+    
+    playback_events: List[Dict[str, Any]] = []
+    if args.playback:
+        playback_events = load_playback(args.playback)
+    
+    ws_server = None
+    current_frame_data: Dict[str, Any] = {}
+    
+    def get_frame_data():
+        return current_frame_data.copy()
+    
+    if args.websocket_port > 0:
+        ws_server = start_websocket_server(args.websocket_port, get_frame_data)
+        if ws_server:
+            print(f"{Color.DIM}WebSocket: 127.0.0.1:{args.websocket_port}{Color.RESET}")
+        else:
+            print(f"{Color.DIM}WebSocket disabled (install: pip install websockets){Color.RESET}")
 
     state = UIState()
     frame = 0
@@ -721,8 +898,13 @@ def main() -> None:
         # Load script if provided
         script_events = []
         next_event_idx = 0
+        playback_idx = 0
         run_start = time.time()
-        if args.script:
+        
+        # Prefer playback over script
+        if playback_events:
+            script_events = playback_events
+        elif args.script:
             try:
                 with open(args.script, 'r', encoding='utf-8') as f:
                     script_events = json.load(f) or []
@@ -751,6 +933,8 @@ def main() -> None:
             # Check for keyboard input
             key = get_key_nonblocking()
             if key:
+                if session_recorder:
+                    session_recorder.record_event('key', {'key': key})
                 if key == 'q':
                     running = False
                 elif key == 'a':
@@ -778,6 +962,8 @@ def main() -> None:
             try:
                 while True:
                     ev = evq.get_nowait()
+                    if session_recorder:
+                        session_recorder.record_event('network', ev)
                     et = ev.get('type')
                     if et == 'rpc':
                         apply_rpc_message(state, ev.get('data', {}))
@@ -792,11 +978,22 @@ def main() -> None:
             except queue.Empty:
                 pass
 
-            # Scripted events
+            # Scripted/playback events
             if script_events:
                 elapsed_ms = int((time.time() - run_start) * 1000)
                 while next_event_idx < len(script_events) and int(script_events[next_event_idx].get('at_ms', 0)) <= elapsed_ms:
-                    apply_rpc_message(state, script_events[next_event_idx])
+                    evt = script_events[next_event_idx]
+                    evt_type = evt.get('type', '')
+                    if evt_type == 'key':
+                        # Simulate key press from playback
+                        pass  # Would need to inject into state directly
+                    elif evt_type == 'network':
+                        evt_data = evt.get('data', {})
+                        if evt_data.get('type') == 'rpc':
+                            apply_rpc_message(state, evt_data.get('data', {}))
+                    else:
+                        # Legacy script format
+                        apply_rpc_message(state, evt)
                     next_event_idx += 1
 
             # Auto demo
@@ -875,10 +1072,40 @@ def main() -> None:
             compute_ms_prev = frame_time * 1000.0
             sleep_ms_prev = sleep_time * 1000.0
             util_prev = frame_time / total
+            
+            # Record metrics
+            if metrics_recorder:
+                metrics_recorder.record(frame, fps, compute_ms_prev, sleep_ms_prev, util_prev)
+            
+            # Update WebSocket frame data
+            if ws_server:
+                current_frame_data = {
+                    'frame': frame,
+                    'fps': fps,
+                    'scene': state.scene,
+                    'bg': state.bg,
+                    'btnA': state.btnA,
+                    'btnB': state.btnB,
+                    'btnC': state.btnC,
+                    'tick': state.t,
+                    'compute_ms': compute_ms_prev,
+                    'sleep_ms': sleep_ms_prev,
+                    'util': util_prev
+                }
+            
             # Update only footer line with new metrics next loop; no second full render here
     
     except KeyboardInterrupt:
         pass
+    
+    # Save metrics and recording if enabled
+    if metrics_recorder:
+        metrics_recorder.export()
+        print(f"{Color.DIM}Metrics exported to {args.export_metrics}{Color.RESET}")
+    
+    if session_recorder:
+        session_recorder.save()
+        print(f"{Color.DIM}Session recorded to {args.record}{Color.RESET}")
     
     # Show cursor again and clear
     sys.stdout.write("\033[?25h\n")

@@ -2,13 +2,16 @@
 
 #include <string.h>
 
+#include "esp_log.h"
 #include "freertos/task.h"
 
 #include "renderer.h"
+#include "services/store/store.h"
 #include "ui_core.h"
 
 static QueueHandle_t q;
 static esp_lcd_panel_handle_t gpanel;
+static const char *TAG = "ui";
 
 static void ui_task(void *arg)
 {
@@ -17,6 +20,13 @@ static void ui_task(void *arg)
     ui_state_t st;
     ui_core_init(&st);
     msg_t m;
+
+    store_conf_t conf;
+    if (store_get_conf(&conf) == ESP_OK) {
+        ui_core_on_rpc_bg(&st, conf.bg_rgb);
+    } else {
+        ESP_LOGW(TAG, "store_get_conf failed; using default UI colors");
+    }
 
     bus_subscribe(TOP_TICK_10MS, q);
     bus_subscribe(TOP_INPUT_BTN, q);
@@ -38,6 +48,10 @@ static void ui_task(void *arg)
                 case TOP_RPC_CALL:
                     if (strcmp(m.u.rpc.method, "set_bg") == 0) {
                         ui_core_on_rpc_bg(&st, m.u.rpc.arg);
+                        esp_err_t serr = store_set_bg_rgb(m.u.rpc.arg);
+                        if (serr != ESP_OK) {
+                            ESP_LOGE(TAG, "store_set_bg_rgb failed: %d", serr);
+                        }
                     }
                     break;
                 case TOP_METRICS_RET:

@@ -1,0 +1,3730 @@
+{
+  "generated": "2025-11-16T13:45:04.186561",
+  "duration": 21.086143493652344,
+  "stats": {
+    "samples": 969,
+    "fps_min": 10.157429951596695,
+    "fps_max": 64.98871686594303,
+    "fps_avg": 53.230217694487415,
+    "fps_median": 58.77653921608395,
+    "fps_stddev": 14.824541189337069,
+    "fps_p50": 58.77653921608395,
+    "fps_p95": 64.41422462710418,
+    "fps_p99": 64.88651330513873,
+    "render_min_ms": 10.000216888323443,
+    "render_max_ms": 119.16411636955509,
+    "render_avg_ms": 21.247944143485036,
+    "render_median_ms": 13.090283012497615,
+    "render_stddev_ms": 20.635606434593317,
+    "frame_min_ms": 11.132430005751145,
+    "frame_max_ms": 120.63483201968744,
+    "frame_avg_ms": 24.005009802499554,
+    "frame_median_ms": 15.120395770764164,
+    "frame_stddev_ms": 21.77343416672137,
+    "memory_avg_mb": 0.0,
+    "memory_peak_mb": 0.0,
+    "cpu_avg_percent": 0.0,
+    "cpu_peak_percent": 0.0
+  },
+  "alerts": [
+    {
+      "timestamp": 1763297091.1199915,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.03 (threshold: <30.0)",
+      "value": 22.027508273740967
+    },
+    {
+      "timestamp": 1763297091.1199915,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.03 (threshold: <25.0)",
+      "value": 22.027508273740967
+    },
+    {
+      "timestamp": 1763297091.156545,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.72 (threshold: <30.0)",
+      "value": 26.718763932596634
+    },
+    {
+      "timestamp": 1763297091.1936996,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.09 (threshold: <30.0)",
+      "value": 29.086346807503745
+    },
+    {
+      "timestamp": 1763297091.2308323,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.12 (threshold: <30.0)",
+      "value": 28.122344477096167
+    },
+    {
+      "timestamp": 1763297091.2673554,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.41 (threshold: <30.0)",
+      "value": 27.410052093224678
+    },
+    {
+      "timestamp": 1763297091.3041923,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.79 (threshold: <30.0)",
+      "value": 23.792676320824736
+    },
+    {
+      "timestamp": 1763297091.3041923,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.79 (threshold: <25.0)",
+      "value": 23.792676320824736
+    },
+    {
+      "timestamp": 1763297091.3401065,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.54 (threshold: <30.0)",
+      "value": 26.535505473232845
+    },
+    {
+      "timestamp": 1763297091.3759508,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.73 (threshold: <30.0)",
+      "value": 25.72950617300919
+    },
+    {
+      "timestamp": 1763297091.4121118,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.09 (threshold: <30.0)",
+      "value": 27.091839126262975
+    },
+    {
+      "timestamp": 1763297091.448724,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.13 (threshold: <30.0)",
+      "value": 23.128737322927122
+    },
+    {
+      "timestamp": 1763297091.448724,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.13 (threshold: <25.0)",
+      "value": 23.128737322927122
+    },
+    {
+      "timestamp": 1763297091.485031,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.58 (threshold: <30.0)",
+      "value": 23.575953785709686
+    },
+    {
+      "timestamp": 1763297091.485031,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.58 (threshold: <25.0)",
+      "value": 23.575953785709686
+    },
+    {
+      "timestamp": 1763297091.5209038,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.13 (threshold: <30.0)",
+      "value": 29.13443839381147
+    },
+    {
+      "timestamp": 1763297091.5571206,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.14 (threshold: <30.0)",
+      "value": 25.141715590754885
+    },
+    {
+      "timestamp": 1763297091.593313,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.80 (threshold: <30.0)",
+      "value": 24.802799500549973
+    },
+    {
+      "timestamp": 1763297091.593313,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.80 (threshold: <25.0)",
+      "value": 24.802799500549973
+    },
+    {
+      "timestamp": 1763297091.6292286,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.88 (threshold: <30.0)",
+      "value": 29.884464007799515
+    },
+    {
+      "timestamp": 1763297091.6657627,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.33 (threshold: <30.0)",
+      "value": 20.331556658130918
+    },
+    {
+      "timestamp": 1763297091.6657627,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.33 (threshold: <25.0)",
+      "value": 20.331556658130918
+    },
+    {
+      "timestamp": 1763297091.7014792,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.50 (threshold: <30.0)",
+      "value": 28.497804359091305
+    },
+    {
+      "timestamp": 1763297091.7374501,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.90 (threshold: <30.0)",
+      "value": 21.90277019764421
+    },
+    {
+      "timestamp": 1763297091.7374501,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.90 (threshold: <25.0)",
+      "value": 21.90277019764421
+    },
+    {
+      "timestamp": 1763297091.7735229,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.93 (threshold: <30.0)",
+      "value": 23.927578697759763
+    },
+    {
+      "timestamp": 1763297091.7735229,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.93 (threshold: <25.0)",
+      "value": 23.927578697759763
+    },
+    {
+      "timestamp": 1763297091.8098526,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.81 (threshold: <30.0)",
+      "value": 23.80509171850473
+    },
+    {
+      "timestamp": 1763297091.8098526,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.81 (threshold: <25.0)",
+      "value": 23.80509171850473
+    },
+    {
+      "timestamp": 1763297091.8463588,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.55 (threshold: <30.0)",
+      "value": 29.548907506047883
+    },
+    {
+      "timestamp": 1763297091.8830462,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.55 (threshold: <30.0)",
+      "value": 20.554810887874805
+    },
+    {
+      "timestamp": 1763297091.8830462,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.55 (threshold: <25.0)",
+      "value": 20.554810887874805
+    },
+    {
+      "timestamp": 1763297091.9188604,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.50 (threshold: <30.0)",
+      "value": 23.501708972199815
+    },
+    {
+      "timestamp": 1763297091.9188604,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.50 (threshold: <25.0)",
+      "value": 23.501708972199815
+    },
+    {
+      "timestamp": 1763297091.9550507,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.22 (threshold: <30.0)",
+      "value": 21.216373580336352
+    },
+    {
+      "timestamp": 1763297091.9550507,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.22 (threshold: <25.0)",
+      "value": 21.216373580336352
+    },
+    {
+      "timestamp": 1763297091.9913044,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.88 (threshold: <30.0)",
+      "value": 24.884795906370353
+    },
+    {
+      "timestamp": 1763297091.9913044,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.88 (threshold: <25.0)",
+      "value": 24.884795906370353
+    },
+    {
+      "timestamp": 1763297092.0272334,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.65 (threshold: <30.0)",
+      "value": 29.64646532303467
+    },
+    {
+      "timestamp": 1763297092.0636535,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.08 (threshold: <30.0)",
+      "value": 23.075357748226477
+    },
+    {
+      "timestamp": 1763297092.0636535,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.08 (threshold: <25.0)",
+      "value": 23.075357748226477
+    },
+    {
+      "timestamp": 1763297092.099426,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.82 (threshold: <30.0)",
+      "value": 23.82081109451284
+    },
+    {
+      "timestamp": 1763297092.099426,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.82 (threshold: <25.0)",
+      "value": 23.82081109451284
+    },
+    {
+      "timestamp": 1763297092.1355503,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.30 (threshold: <30.0)",
+      "value": 22.30249371218262
+    },
+    {
+      "timestamp": 1763297092.1355503,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.30 (threshold: <25.0)",
+      "value": 22.30249371218262
+    },
+    {
+      "timestamp": 1763297092.1717427,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.53 (threshold: <30.0)",
+      "value": 23.52739336550361
+    },
+    {
+      "timestamp": 1763297092.1717427,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.53 (threshold: <25.0)",
+      "value": 23.52739336550361
+    },
+    {
+      "timestamp": 1763297092.2076921,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.39 (threshold: <30.0)",
+      "value": 23.38649394637664
+    },
+    {
+      "timestamp": 1763297092.2076921,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.39 (threshold: <25.0)",
+      "value": 23.38649394637664
+    },
+    {
+      "timestamp": 1763297092.2437565,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.48 (threshold: <30.0)",
+      "value": 26.481322897619684
+    },
+    {
+      "timestamp": 1763297092.28305,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.50 (threshold: <30.0)",
+      "value": 25.502092458605738
+    },
+    {
+      "timestamp": 1763297092.3190515,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.66 (threshold: <30.0)",
+      "value": 29.655730275995452
+    },
+    {
+      "timestamp": 1763297092.3564346,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.41 (threshold: <30.0)",
+      "value": 23.408889698370633
+    },
+    {
+      "timestamp": 1763297092.3564346,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.41 (threshold: <25.0)",
+      "value": 23.408889698370633
+    },
+    {
+      "timestamp": 1763297092.3924325,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.09 (threshold: <30.0)",
+      "value": 24.088924832571777
+    },
+    {
+      "timestamp": 1763297092.3924325,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.09 (threshold: <25.0)",
+      "value": 24.088924832571777
+    },
+    {
+      "timestamp": 1763297092.4364324,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.80 (threshold: <30.0)",
+      "value": 25.797621723358297
+    },
+    {
+      "timestamp": 1763297092.4724393,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.47 (threshold: <30.0)",
+      "value": 20.47329763416913
+    },
+    {
+      "timestamp": 1763297092.4724393,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.47 (threshold: <25.0)",
+      "value": 20.47329763416913
+    },
+    {
+      "timestamp": 1763297092.508223,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.25 (threshold: <30.0)",
+      "value": 24.25458034375604
+    },
+    {
+      "timestamp": 1763297092.508223,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.25 (threshold: <25.0)",
+      "value": 24.25458034375604
+    },
+    {
+      "timestamp": 1763297092.5442615,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.28 (threshold: <30.0)",
+      "value": 28.27981385103302
+    },
+    {
+      "timestamp": 1763297092.580679,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.85 (threshold: <30.0)",
+      "value": 25.846185369074355
+    },
+    {
+      "timestamp": 1763297092.6167376,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.20 (threshold: <30.0)",
+      "value": 23.195022333320743
+    },
+    {
+      "timestamp": 1763297092.6167376,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.20 (threshold: <25.0)",
+      "value": 23.195022333320743
+    },
+    {
+      "timestamp": 1763297092.6528096,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.33 (threshold: <30.0)",
+      "value": 27.32868387901483
+    },
+    {
+      "timestamp": 1763297092.6886225,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.80 (threshold: <30.0)",
+      "value": 25.799125276666732
+    },
+    {
+      "timestamp": 1763297092.724905,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.50 (threshold: <30.0)",
+      "value": 26.50466014648094
+    },
+    {
+      "timestamp": 1763297092.7619488,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.46 (threshold: <30.0)",
+      "value": 24.457018468206417
+    },
+    {
+      "timestamp": 1763297092.7619488,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.46 (threshold: <25.0)",
+      "value": 24.457018468206417
+    },
+    {
+      "timestamp": 1763297092.7980702,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.78 (threshold: <30.0)",
+      "value": 20.78290191155228
+    },
+    {
+      "timestamp": 1763297092.7980702,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.78 (threshold: <25.0)",
+      "value": 20.78290191155228
+    },
+    {
+      "timestamp": 1763297092.834082,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.49 (threshold: <30.0)",
+      "value": 22.49043380093201
+    },
+    {
+      "timestamp": 1763297092.834082,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.49 (threshold: <25.0)",
+      "value": 22.49043380093201
+    },
+    {
+      "timestamp": 1763297092.8699908,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.85 (threshold: <30.0)",
+      "value": 21.85318142018692
+    },
+    {
+      "timestamp": 1763297092.8699908,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.85 (threshold: <25.0)",
+      "value": 21.85318142018692
+    },
+    {
+      "timestamp": 1763297092.9058383,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.96 (threshold: <30.0)",
+      "value": 29.958475055685703
+    },
+    {
+      "timestamp": 1763297092.9420488,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.27 (threshold: <30.0)",
+      "value": 28.26674001189018
+    },
+    {
+      "timestamp": 1763297092.9781404,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.25 (threshold: <30.0)",
+      "value": 23.24634598019804
+    },
+    {
+      "timestamp": 1763297092.9781404,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.25 (threshold: <25.0)",
+      "value": 23.24634598019804
+    },
+    {
+      "timestamp": 1763297093.0151489,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.58 (threshold: <30.0)",
+      "value": 27.5760320829361
+    },
+    {
+      "timestamp": 1763297093.0511532,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.41 (threshold: <30.0)",
+      "value": 20.408467640308793
+    },
+    {
+      "timestamp": 1763297093.0511532,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.41 (threshold: <25.0)",
+      "value": 20.408467640308793
+    },
+    {
+      "timestamp": 1763297093.1517022,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.39 (threshold: <30.0)",
+      "value": 29.387070659887623
+    },
+    {
+      "timestamp": 1763297093.1877015,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.40 (threshold: <30.0)",
+      "value": 28.39978634757491
+    },
+    {
+      "timestamp": 1763297093.2242255,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.58 (threshold: <30.0)",
+      "value": 23.581216982698876
+    },
+    {
+      "timestamp": 1763297093.2242255,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.58 (threshold: <25.0)",
+      "value": 23.581216982698876
+    },
+    {
+      "timestamp": 1763297093.2602327,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.09 (threshold: <30.0)",
+      "value": 20.086061598264706
+    },
+    {
+      "timestamp": 1763297093.2602327,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.09 (threshold: <25.0)",
+      "value": 20.086061598264706
+    },
+    {
+      "timestamp": 1763297093.2965019,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.30 (threshold: <30.0)",
+      "value": 26.304057508474514
+    },
+    {
+      "timestamp": 1763297093.3331091,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.90 (threshold: <30.0)",
+      "value": 22.89975537685668
+    },
+    {
+      "timestamp": 1763297093.3331091,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.90 (threshold: <25.0)",
+      "value": 22.89975537685668
+    },
+    {
+      "timestamp": 1763297093.3695602,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.35 (threshold: <30.0)",
+      "value": 29.35393454231598
+    },
+    {
+      "timestamp": 1763297093.405851,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.22 (threshold: <30.0)",
+      "value": 26.216915843792226
+    },
+    {
+      "timestamp": 1763297093.442426,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.80 (threshold: <30.0)",
+      "value": 22.79539253568352
+    },
+    {
+      "timestamp": 1763297093.442426,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.80 (threshold: <25.0)",
+      "value": 22.79539253568352
+    },
+    {
+      "timestamp": 1763297093.479308,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.95 (threshold: <30.0)",
+      "value": 23.946107957863155
+    },
+    {
+      "timestamp": 1763297093.479308,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.95 (threshold: <25.0)",
+      "value": 23.946107957863155
+    },
+    {
+      "timestamp": 1763297093.5157325,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.26 (threshold: <30.0)",
+      "value": 24.255943995459383
+    },
+    {
+      "timestamp": 1763297093.5157325,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.26 (threshold: <25.0)",
+      "value": 24.255943995459383
+    },
+    {
+      "timestamp": 1763297093.5518436,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.63 (threshold: <30.0)",
+      "value": 20.631968440302103
+    },
+    {
+      "timestamp": 1763297093.5518436,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.63 (threshold: <25.0)",
+      "value": 20.631968440302103
+    },
+    {
+      "timestamp": 1763297093.5880842,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.67 (threshold: <30.0)",
+      "value": 20.670244158281818
+    },
+    {
+      "timestamp": 1763297093.5880842,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.67 (threshold: <25.0)",
+      "value": 20.670244158281818
+    },
+    {
+      "timestamp": 1763297093.6238759,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.11 (threshold: <30.0)",
+      "value": 26.109853175713106
+    },
+    {
+      "timestamp": 1763297093.6604154,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.39 (threshold: <30.0)",
+      "value": 28.38536992710773
+    },
+    {
+      "timestamp": 1763297093.6968405,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.99 (threshold: <30.0)",
+      "value": 27.98721256967677
+    },
+    {
+      "timestamp": 1763297093.7332165,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.03 (threshold: <30.0)",
+      "value": 22.027550199974996
+    },
+    {
+      "timestamp": 1763297093.7332165,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.03 (threshold: <25.0)",
+      "value": 22.027550199974996
+    },
+    {
+      "timestamp": 1763297093.7690442,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.43 (threshold: <30.0)",
+      "value": 24.43136932090278
+    },
+    {
+      "timestamp": 1763297093.7690442,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.43 (threshold: <25.0)",
+      "value": 24.43136932090278
+    },
+    {
+      "timestamp": 1763297093.8050401,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.85 (threshold: <30.0)",
+      "value": 20.848510335049543
+    },
+    {
+      "timestamp": 1763297093.8050401,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.85 (threshold: <25.0)",
+      "value": 20.848510335049543
+    },
+    {
+      "timestamp": 1763297093.841158,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.84 (threshold: <30.0)",
+      "value": 20.844980791897182
+    },
+    {
+      "timestamp": 1763297093.841158,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.84 (threshold: <25.0)",
+      "value": 20.844980791897182
+    },
+    {
+      "timestamp": 1763297093.8770056,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.88 (threshold: <30.0)",
+      "value": 20.875062911835972
+    },
+    {
+      "timestamp": 1763297093.8770056,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.88 (threshold: <25.0)",
+      "value": 20.875062911835972
+    },
+    {
+      "timestamp": 1763297093.9133782,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.77 (threshold: <30.0)",
+      "value": 21.7680343875757
+    },
+    {
+      "timestamp": 1763297093.9133782,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.77 (threshold: <25.0)",
+      "value": 21.7680343875757
+    },
+    {
+      "timestamp": 1763297093.9496062,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.03 (threshold: <30.0)",
+      "value": 28.030031279489997
+    },
+    {
+      "timestamp": 1763297093.985828,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.09 (threshold: <30.0)",
+      "value": 29.086619946167204
+    },
+    {
+      "timestamp": 1763297094.021757,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.00 (threshold: <30.0)",
+      "value": 21.995987685804735
+    },
+    {
+      "timestamp": 1763297094.021757,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.00 (threshold: <25.0)",
+      "value": 21.995987685804735
+    },
+    {
+      "timestamp": 1763297094.0581498,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.37 (threshold: <30.0)",
+      "value": 26.373151709296074
+    },
+    {
+      "timestamp": 1763297094.09419,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.45 (threshold: <30.0)",
+      "value": 21.451687006495973
+    },
+    {
+      "timestamp": 1763297094.09419,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.45 (threshold: <25.0)",
+      "value": 21.451687006495973
+    },
+    {
+      "timestamp": 1763297094.1302915,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.24 (threshold: <30.0)",
+      "value": 29.24091604393199
+    },
+    {
+      "timestamp": 1763297094.1671019,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.95 (threshold: <30.0)",
+      "value": 22.94624219807546
+    },
+    {
+      "timestamp": 1763297094.1671019,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.95 (threshold: <25.0)",
+      "value": 22.94624219807546
+    },
+    {
+      "timestamp": 1763297094.2030482,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.44 (threshold: <30.0)",
+      "value": 28.440291972594753
+    },
+    {
+      "timestamp": 1763297094.2393084,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.55 (threshold: <30.0)",
+      "value": 22.549093845666377
+    },
+    {
+      "timestamp": 1763297094.2393084,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.55 (threshold: <25.0)",
+      "value": 22.549093845666377
+    },
+    {
+      "timestamp": 1763297094.2753637,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.46 (threshold: <30.0)",
+      "value": 23.462867947854114
+    },
+    {
+      "timestamp": 1763297094.2753637,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.46 (threshold: <25.0)",
+      "value": 23.462867947854114
+    },
+    {
+      "timestamp": 1763297094.3123868,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.31 (threshold: <30.0)",
+      "value": 21.306308114692257
+    },
+    {
+      "timestamp": 1763297094.3123868,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.31 (threshold: <25.0)",
+      "value": 21.306308114692257
+    },
+    {
+      "timestamp": 1763297094.3490584,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.99 (threshold: <30.0)",
+      "value": 28.991990211649284
+    },
+    {
+      "timestamp": 1763297094.385148,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.99 (threshold: <30.0)",
+      "value": 25.994855771582692
+    },
+    {
+      "timestamp": 1763297094.4214585,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.57 (threshold: <30.0)",
+      "value": 26.57228705034318
+    },
+    {
+      "timestamp": 1763297094.4581254,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.88 (threshold: <30.0)",
+      "value": 25.879979026097416
+    },
+    {
+      "timestamp": 1763297094.494778,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.56 (threshold: <30.0)",
+      "value": 22.558108763857383
+    },
+    {
+      "timestamp": 1763297094.494778,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.56 (threshold: <25.0)",
+      "value": 22.558108763857383
+    },
+    {
+      "timestamp": 1763297094.5309503,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.82 (threshold: <30.0)",
+      "value": 27.823725955102866
+    },
+    {
+      "timestamp": 1763297094.5674727,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.27 (threshold: <30.0)",
+      "value": 20.27161295395551
+    },
+    {
+      "timestamp": 1763297094.5674727,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.27 (threshold: <25.0)",
+      "value": 20.27161295395551
+    },
+    {
+      "timestamp": 1763297094.603854,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.55 (threshold: <30.0)",
+      "value": 21.546508615477656
+    },
+    {
+      "timestamp": 1763297094.603854,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.55 (threshold: <25.0)",
+      "value": 21.546508615477656
+    },
+    {
+      "timestamp": 1763297094.6402035,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.97 (threshold: <30.0)",
+      "value": 26.9713513926243
+    },
+    {
+      "timestamp": 1763297094.6761975,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.76 (threshold: <30.0)",
+      "value": 20.762314750551884
+    },
+    {
+      "timestamp": 1763297094.6761975,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.76 (threshold: <25.0)",
+      "value": 20.762314750551884
+    },
+    {
+      "timestamp": 1763297094.7127528,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.21 (threshold: <30.0)",
+      "value": 28.206661853784382
+    },
+    {
+      "timestamp": 1763297094.7496796,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.19 (threshold: <30.0)",
+      "value": 23.18741879825511
+    },
+    {
+      "timestamp": 1763297094.7496796,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.19 (threshold: <25.0)",
+      "value": 23.18741879825511
+    },
+    {
+      "timestamp": 1763297094.7865329,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.71 (threshold: <30.0)",
+      "value": 21.712404362900845
+    },
+    {
+      "timestamp": 1763297094.7865329,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.71 (threshold: <25.0)",
+      "value": 21.712404362900845
+    },
+    {
+      "timestamp": 1763297094.822981,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.46 (threshold: <30.0)",
+      "value": 24.46116429820881
+    },
+    {
+      "timestamp": 1763297094.822981,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.46 (threshold: <25.0)",
+      "value": 24.46116429820881
+    },
+    {
+      "timestamp": 1763297094.8591306,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.23 (threshold: <30.0)",
+      "value": 24.233595836206725
+    },
+    {
+      "timestamp": 1763297094.8591306,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.23 (threshold: <25.0)",
+      "value": 24.233595836206725
+    },
+    {
+      "timestamp": 1763297094.8954816,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.31 (threshold: <30.0)",
+      "value": 22.312228968814356
+    },
+    {
+      "timestamp": 1763297094.8954816,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.31 (threshold: <25.0)",
+      "value": 22.312228968814356
+    },
+    {
+      "timestamp": 1763297094.9316616,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.92 (threshold: <30.0)",
+      "value": 21.92118576499622
+    },
+    {
+      "timestamp": 1763297094.9316616,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.92 (threshold: <25.0)",
+      "value": 21.92118576499622
+    },
+    {
+      "timestamp": 1763297094.9679892,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.98 (threshold: <30.0)",
+      "value": 23.981227714773034
+    },
+    {
+      "timestamp": 1763297094.9679892,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.98 (threshold: <25.0)",
+      "value": 23.981227714773034
+    },
+    {
+      "timestamp": 1763297095.0045407,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.76 (threshold: <30.0)",
+      "value": 28.76210075142285
+    },
+    {
+      "timestamp": 1763297095.041205,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=22.95 (threshold: <30.0)",
+      "value": 22.952599410641273
+    },
+    {
+      "timestamp": 1763297095.041205,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=22.95 (threshold: <25.0)",
+      "value": 22.952599410641273
+    },
+    {
+      "timestamp": 1763297095.0775523,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.63 (threshold: <30.0)",
+      "value": 21.62525900740691
+    },
+    {
+      "timestamp": 1763297095.0775523,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.63 (threshold: <25.0)",
+      "value": 21.62525900740691
+    },
+    {
+      "timestamp": 1763297095.114173,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.05 (threshold: <30.0)",
+      "value": 26.051409166039072
+    },
+    {
+      "timestamp": 1763297095.1505306,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.97 (threshold: <30.0)",
+      "value": 24.970471269922644
+    },
+    {
+      "timestamp": 1763297095.1505306,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.97 (threshold: <25.0)",
+      "value": 24.970471269922644
+    },
+    {
+      "timestamp": 1763297095.1875298,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.82 (threshold: <30.0)",
+      "value": 26.81724032369428
+    },
+    {
+      "timestamp": 1763297095.2242477,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.36 (threshold: <30.0)",
+      "value": 27.358498854376872
+    },
+    {
+      "timestamp": 1763297095.2615383,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.59 (threshold: <30.0)",
+      "value": 26.585822011407842
+    },
+    {
+      "timestamp": 1763297095.2977722,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.11 (threshold: <30.0)",
+      "value": 23.10829235134377
+    },
+    {
+      "timestamp": 1763297095.2977722,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.11 (threshold: <25.0)",
+      "value": 23.10829235134377
+    },
+    {
+      "timestamp": 1763297095.3349097,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.27 (threshold: <30.0)",
+      "value": 24.267031553850366
+    },
+    {
+      "timestamp": 1763297095.3349097,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.27 (threshold: <25.0)",
+      "value": 24.267031553850366
+    },
+    {
+      "timestamp": 1763297095.3719823,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.81 (threshold: <30.0)",
+      "value": 21.807157846056576
+    },
+    {
+      "timestamp": 1763297095.3719823,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.81 (threshold: <25.0)",
+      "value": 21.807157846056576
+    },
+    {
+      "timestamp": 1763297095.4089646,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.66 (threshold: <30.0)",
+      "value": 23.661693548422253
+    },
+    {
+      "timestamp": 1763297095.4089646,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.66 (threshold: <25.0)",
+      "value": 23.661693548422253
+    },
+    {
+      "timestamp": 1763297095.445887,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.99 (threshold: <30.0)",
+      "value": 29.992216801245203
+    },
+    {
+      "timestamp": 1763297095.482054,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=26.58 (threshold: <30.0)",
+      "value": 26.57665676395337
+    },
+    {
+      "timestamp": 1763297095.5185916,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.93 (threshold: <30.0)",
+      "value": 28.930881552634816
+    },
+    {
+      "timestamp": 1763297095.5551136,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.22 (threshold: <30.0)",
+      "value": 28.221442187923035
+    },
+    {
+      "timestamp": 1763297095.5919535,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.45 (threshold: <30.0)",
+      "value": 28.44886629503308
+    },
+    {
+      "timestamp": 1763297095.6284018,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.51 (threshold: <30.0)",
+      "value": 27.510154425651294
+    },
+    {
+      "timestamp": 1763297095.6646745,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.74 (threshold: <30.0)",
+      "value": 24.744462220655738
+    },
+    {
+      "timestamp": 1763297095.6646745,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.74 (threshold: <25.0)",
+      "value": 24.744462220655738
+    },
+    {
+      "timestamp": 1763297095.701567,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.98 (threshold: <30.0)",
+      "value": 29.98108176986758
+    },
+    {
+      "timestamp": 1763297095.737925,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.62 (threshold: <30.0)",
+      "value": 25.624677143823074
+    },
+    {
+      "timestamp": 1763297095.774567,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=21.53 (threshold: <30.0)",
+      "value": 21.527554140542655
+    },
+    {
+      "timestamp": 1763297095.774567,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=21.53 (threshold: <25.0)",
+      "value": 21.527554140542655
+    },
+    {
+      "timestamp": 1763297095.8106966,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.79 (threshold: <30.0)",
+      "value": 20.7906128895976
+    },
+    {
+      "timestamp": 1763297095.8106966,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.79 (threshold: <25.0)",
+      "value": 20.7906128895976
+    },
+    {
+      "timestamp": 1763297095.8479202,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.38 (threshold: <30.0)",
+      "value": 24.38086325673847
+    },
+    {
+      "timestamp": 1763297095.8479202,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.38 (threshold: <25.0)",
+      "value": 24.38086325673847
+    },
+    {
+      "timestamp": 1763297095.8846154,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=24.54 (threshold: <30.0)",
+      "value": 24.538147198157198
+    },
+    {
+      "timestamp": 1763297095.8846154,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=24.54 (threshold: <25.0)",
+      "value": 24.538147198157198
+    },
+    {
+      "timestamp": 1763297095.9208705,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=23.66 (threshold: <30.0)",
+      "value": 23.66081537003895
+    },
+    {
+      "timestamp": 1763297095.9208705,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=23.66 (threshold: <25.0)",
+      "value": 23.66081537003895
+    },
+    {
+      "timestamp": 1763297095.9571593,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=29.08 (threshold: <30.0)",
+      "value": 29.079679654308027
+    },
+    {
+      "timestamp": 1763297095.9939847,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=27.60 (threshold: <30.0)",
+      "value": 27.598642549847433
+    },
+    {
+      "timestamp": 1763297096.0306184,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=20.96 (threshold: <30.0)",
+      "value": 20.95518577789512
+    },
+    {
+      "timestamp": 1763297096.0306184,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=20.96 (threshold: <25.0)",
+      "value": 20.95518577789512
+    },
+    {
+      "timestamp": 1763297096.067579,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=28.66 (threshold: <30.0)",
+      "value": 28.66395560566158
+    },
+    {
+      "timestamp": 1763297096.103855,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=25.49 (threshold: <30.0)",
+      "value": 25.486130418577066
+    },
+    {
+      "timestamp": 1763297096.525148,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=16.53 (threshold: <30.0)",
+      "value": 16.53321903276649
+    },
+    {
+      "timestamp": 1763297096.525148,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=16.53 (threshold: <25.0)",
+      "value": 16.53321903276649
+    },
+    {
+      "timestamp": 1763297096.5847335,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=10.87 (threshold: <30.0)",
+      "value": 10.871579014840442
+    },
+    {
+      "timestamp": 1763297096.5847335,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=10.87 (threshold: <15.0)",
+      "value": 10.871579014840442
+    },
+    {
+      "timestamp": 1763297096.5847335,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=10.87 (threshold: <25.0)",
+      "value": 10.871579014840442
+    },
+    {
+      "timestamp": 1763297096.722503,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=14.99 (threshold: <30.0)",
+      "value": 14.986598207997083
+    },
+    {
+      "timestamp": 1763297096.722503,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=14.99 (threshold: <15.0)",
+      "value": 14.986598207997083
+    },
+    {
+      "timestamp": 1763297096.722503,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=14.99 (threshold: <25.0)",
+      "value": 14.986598207997083
+    },
+    {
+      "timestamp": 1763297096.9022028,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.68 (threshold: <30.0)",
+      "value": 11.681826345262573
+    },
+    {
+      "timestamp": 1763297096.9022028,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.68 (threshold: <15.0)",
+      "value": 11.681826345262573
+    },
+    {
+      "timestamp": 1763297096.9022028,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.68 (threshold: <25.0)",
+      "value": 11.681826345262573
+    },
+    {
+      "timestamp": 1763297096.9820626,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.37 (threshold: <30.0)",
+      "value": 11.372118507506341
+    },
+    {
+      "timestamp": 1763297096.9820626,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.37 (threshold: <15.0)",
+      "value": 11.372118507506341
+    },
+    {
+      "timestamp": 1763297096.9820626,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.37 (threshold: <25.0)",
+      "value": 11.372118507506341
+    },
+    {
+      "timestamp": 1763297097.2441895,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=17.93 (threshold: <30.0)",
+      "value": 17.928403879695374
+    },
+    {
+      "timestamp": 1763297097.2441895,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=17.93 (threshold: <25.0)",
+      "value": 17.928403879695374
+    },
+    {
+      "timestamp": 1763297097.264067,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.18 (threshold: <30.0)",
+      "value": 11.180855237655475
+    },
+    {
+      "timestamp": 1763297097.264067,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.18 (threshold: <15.0)",
+      "value": 11.180855237655475
+    },
+    {
+      "timestamp": 1763297097.264067,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.18 (threshold: <25.0)",
+      "value": 11.180855237655475
+    },
+    {
+      "timestamp": 1763297097.3843942,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=10.50 (threshold: <30.0)",
+      "value": 10.504277688261322
+    },
+    {
+      "timestamp": 1763297097.3843942,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=10.50 (threshold: <15.0)",
+      "value": 10.504277688261322
+    },
+    {
+      "timestamp": 1763297097.3843942,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=10.50 (threshold: <25.0)",
+      "value": 10.504277688261322
+    },
+    {
+      "timestamp": 1763297097.5050035,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=19.24 (threshold: <30.0)",
+      "value": 19.23506585951324
+    },
+    {
+      "timestamp": 1763297097.5050035,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=19.24 (threshold: <25.0)",
+      "value": 19.23506585951324
+    },
+    {
+      "timestamp": 1763297097.8062396,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.32 (threshold: <30.0)",
+      "value": 11.323218129770607
+    },
+    {
+      "timestamp": 1763297097.8062396,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.32 (threshold: <15.0)",
+      "value": 11.323218129770607
+    },
+    {
+      "timestamp": 1763297097.8062396,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.32 (threshold: <25.0)",
+      "value": 11.323218129770607
+    },
+    {
+      "timestamp": 1763297097.8670754,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=17.26 (threshold: <30.0)",
+      "value": 17.258871679987628
+    },
+    {
+      "timestamp": 1763297097.8670754,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=17.26 (threshold: <25.0)",
+      "value": 17.258871679987628
+    },
+    {
+      "timestamp": 1763297097.9071565,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=14.83 (threshold: <30.0)",
+      "value": 14.829407504916116
+    },
+    {
+      "timestamp": 1763297097.9071565,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=14.83 (threshold: <15.0)",
+      "value": 14.829407504916116
+    },
+    {
+      "timestamp": 1763297097.9071565,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=14.83 (threshold: <25.0)",
+      "value": 14.829407504916116
+    },
+    {
+      "timestamp": 1763297098.672781,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=10.91 (threshold: <30.0)",
+      "value": 10.910118953187407
+    },
+    {
+      "timestamp": 1763297098.672781,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=10.91 (threshold: <15.0)",
+      "value": 10.910118953187407
+    },
+    {
+      "timestamp": 1763297098.672781,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=10.91 (threshold: <25.0)",
+      "value": 10.910118953187407
+    },
+    {
+      "timestamp": 1763297098.79305,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=10.16 (threshold: <30.0)",
+      "value": 10.157429951596695
+    },
+    {
+      "timestamp": 1763297098.79305,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=10.16 (threshold: <15.0)",
+      "value": 10.157429951596695
+    },
+    {
+      "timestamp": 1763297098.79305,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=10.16 (threshold: <25.0)",
+      "value": 10.157429951596695
+    },
+    {
+      "timestamp": 1763297098.9347095,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=13.26 (threshold: <30.0)",
+      "value": 13.264107500759707
+    },
+    {
+      "timestamp": 1763297098.9347095,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=13.26 (threshold: <15.0)",
+      "value": 13.264107500759707
+    },
+    {
+      "timestamp": 1763297098.9347095,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=13.26 (threshold: <25.0)",
+      "value": 13.264107500759707
+    },
+    {
+      "timestamp": 1763297099.4637928,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=14.32 (threshold: <30.0)",
+      "value": 14.321435695270512
+    },
+    {
+      "timestamp": 1763297099.4637928,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=14.32 (threshold: <15.0)",
+      "value": 14.321435695270512
+    },
+    {
+      "timestamp": 1763297099.4637928,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=14.32 (threshold: <25.0)",
+      "value": 14.321435695270512
+    },
+    {
+      "timestamp": 1763297099.5865977,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=16.71 (threshold: <30.0)",
+      "value": 16.708800568318626
+    },
+    {
+      "timestamp": 1763297099.5865977,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=16.71 (threshold: <25.0)",
+      "value": 16.708800568318626
+    },
+    {
+      "timestamp": 1763297099.6884463,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=16.98 (threshold: <30.0)",
+      "value": 16.97690954086285
+    },
+    {
+      "timestamp": 1763297099.6884463,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=16.98 (threshold: <25.0)",
+      "value": 16.97690954086285
+    },
+    {
+      "timestamp": 1763297099.7916567,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=17.51 (threshold: <30.0)",
+      "value": 17.506589211841654
+    },
+    {
+      "timestamp": 1763297099.7916567,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=17.51 (threshold: <25.0)",
+      "value": 17.506589211841654
+    },
+    {
+      "timestamp": 1763297100.039306,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=13.30 (threshold: <30.0)",
+      "value": 13.301710378868963
+    },
+    {
+      "timestamp": 1763297100.039306,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=13.30 (threshold: <15.0)",
+      "value": 13.301710378868963
+    },
+    {
+      "timestamp": 1763297100.039306,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=13.30 (threshold: <25.0)",
+      "value": 13.301710378868963
+    },
+    {
+      "timestamp": 1763297100.1218047,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=12.57 (threshold: <30.0)",
+      "value": 12.573073931884622
+    },
+    {
+      "timestamp": 1763297100.1218047,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=12.57 (threshold: <15.0)",
+      "value": 12.573073931884622
+    },
+    {
+      "timestamp": 1763297100.1218047,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=12.57 (threshold: <25.0)",
+      "value": 12.573073931884622
+    },
+    {
+      "timestamp": 1763297100.5139508,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.62 (threshold: <30.0)",
+      "value": 11.617434038293622
+    },
+    {
+      "timestamp": 1763297100.5139508,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.62 (threshold: <15.0)",
+      "value": 11.617434038293622
+    },
+    {
+      "timestamp": 1763297100.5139508,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.62 (threshold: <25.0)",
+      "value": 11.617434038293622
+    },
+    {
+      "timestamp": 1763297100.7632928,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.71 (threshold: <30.0)",
+      "value": 11.70834875360392
+    },
+    {
+      "timestamp": 1763297100.7632928,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.71 (threshold: <15.0)",
+      "value": 11.70834875360392
+    },
+    {
+      "timestamp": 1763297100.7632928,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.71 (threshold: <25.0)",
+      "value": 11.70834875360392
+    },
+    {
+      "timestamp": 1763297101.218102,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=14.43 (threshold: <30.0)",
+      "value": 14.425301923277697
+    },
+    {
+      "timestamp": 1763297101.218102,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=14.43 (threshold: <15.0)",
+      "value": 14.425301923277697
+    },
+    {
+      "timestamp": 1763297101.218102,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=14.43 (threshold: <25.0)",
+      "value": 14.425301923277697
+    },
+    {
+      "timestamp": 1763297101.4061666,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=13.35 (threshold: <30.0)",
+      "value": 13.348115355576866
+    },
+    {
+      "timestamp": 1763297101.4061666,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=13.35 (threshold: <15.0)",
+      "value": 13.348115355576866
+    },
+    {
+      "timestamp": 1763297101.4061666,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=13.35 (threshold: <25.0)",
+      "value": 13.348115355576866
+    },
+    {
+      "timestamp": 1763297101.615286,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=10.94 (threshold: <30.0)",
+      "value": 10.936943686865577
+    },
+    {
+      "timestamp": 1763297101.615286,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=10.94 (threshold: <15.0)",
+      "value": 10.936943686865577
+    },
+    {
+      "timestamp": 1763297101.615286,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=10.94 (threshold: <25.0)",
+      "value": 10.936943686865577
+    },
+    {
+      "timestamp": 1763297102.2645156,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=13.02 (threshold: <30.0)",
+      "value": 13.016798774034994
+    },
+    {
+      "timestamp": 1763297102.2645156,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=13.02 (threshold: <15.0)",
+      "value": 13.016798774034994
+    },
+    {
+      "timestamp": 1763297102.2645156,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=13.02 (threshold: <25.0)",
+      "value": 13.016798774034994
+    },
+    {
+      "timestamp": 1763297102.28548,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=12.06 (threshold: <30.0)",
+      "value": 12.064074513881165
+    },
+    {
+      "timestamp": 1763297102.28548,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=12.06 (threshold: <15.0)",
+      "value": 12.064074513881165
+    },
+    {
+      "timestamp": 1763297102.28548,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=12.06 (threshold: <25.0)",
+      "value": 12.064074513881165
+    },
+    {
+      "timestamp": 1763297102.369504,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=18.49 (threshold: <30.0)",
+      "value": 18.491401438918327
+    },
+    {
+      "timestamp": 1763297102.369504,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=18.49 (threshold: <25.0)",
+      "value": 18.491401438918327
+    },
+    {
+      "timestamp": 1763297102.4324176,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=14.51 (threshold: <30.0)",
+      "value": 14.51089727438486
+    },
+    {
+      "timestamp": 1763297102.4324176,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=14.51 (threshold: <15.0)",
+      "value": 14.51089727438486
+    },
+    {
+      "timestamp": 1763297102.4324176,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=14.51 (threshold: <25.0)",
+      "value": 14.51089727438486
+    },
+    {
+      "timestamp": 1763297102.5791004,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.96 (threshold: <30.0)",
+      "value": 11.958555564605629
+    },
+    {
+      "timestamp": 1763297102.5791004,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.96 (threshold: <15.0)",
+      "value": 11.958555564605629
+    },
+    {
+      "timestamp": 1763297102.5791004,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.96 (threshold: <25.0)",
+      "value": 11.958555564605629
+    },
+    {
+      "timestamp": 1763297102.9172573,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=11.37 (threshold: <30.0)",
+      "value": 11.372207437346693
+    },
+    {
+      "timestamp": 1763297102.9172573,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=11.37 (threshold: <15.0)",
+      "value": 11.372207437346693
+    },
+    {
+      "timestamp": 1763297102.9172573,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=11.37 (threshold: <25.0)",
+      "value": 11.372207437346693
+    },
+    {
+      "timestamp": 1763297103.1080713,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=12.85 (threshold: <30.0)",
+      "value": 12.848880112847276
+    },
+    {
+      "timestamp": 1763297103.1080713,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=12.85 (threshold: <15.0)",
+      "value": 12.848880112847276
+    },
+    {
+      "timestamp": 1763297103.1080713,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=12.85 (threshold: <25.0)",
+      "value": 12.848880112847276
+    },
+    {
+      "timestamp": 1763297103.2978575,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=16.62 (threshold: <30.0)",
+      "value": 16.618809741970495
+    },
+    {
+      "timestamp": 1763297103.2978575,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=16.62 (threshold: <25.0)",
+      "value": 16.618809741970495
+    },
+    {
+      "timestamp": 1763297103.3192055,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=18.11 (threshold: <30.0)",
+      "value": 18.10545244967463
+    },
+    {
+      "timestamp": 1763297103.3192055,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=18.11 (threshold: <25.0)",
+      "value": 18.10545244967463
+    },
+    {
+      "timestamp": 1763297103.3407855,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=18.12 (threshold: <30.0)",
+      "value": 18.11517188971112
+    },
+    {
+      "timestamp": 1763297103.3407855,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=18.12 (threshold: <25.0)",
+      "value": 18.11517188971112
+    },
+    {
+      "timestamp": 1763297103.445667,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=19.36 (threshold: <30.0)",
+      "value": 19.35840290202152
+    },
+    {
+      "timestamp": 1763297103.445667,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=19.36 (threshold: <25.0)",
+      "value": 19.35840290202152
+    },
+    {
+      "timestamp": 1763297103.6370952,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=14.75 (threshold: <30.0)",
+      "value": 14.747453794160437
+    },
+    {
+      "timestamp": 1763297103.6370952,
+      "rule": "critical_fps",
+      "severity": "critical",
+      "message": "critical_fps: fps=14.75 (threshold: <15.0)",
+      "value": 14.747453794160437
+    },
+    {
+      "timestamp": 1763297103.6370952,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=14.75 (threshold: <25.0)",
+      "value": 14.747453794160437
+    },
+    {
+      "timestamp": 1763297103.9155993,
+      "rule": "low_fps",
+      "severity": "warning",
+      "message": "low_fps: fps=17.81 (threshold: <30.0)",
+      "value": 17.805553373085544
+    },
+    {
+      "timestamp": 1763297103.9155993,
+      "rule": "very_low_fps",
+      "severity": "critical",
+      "message": "very_low_fps: fps=17.81 (threshold: <25.0)",
+      "value": 17.805553373085544
+    }
+  ],
+  "anomalies": [
+    {
+      "timestamp": 1763297091.1199915,
+      "metric": "fps",
+      "value": 22.027508273740967,
+      "expected_range": [
+        51.38687073484482,
+        68.80223943128308
+      ],
+      "deviation_sigma": 13.114983945338466
+    },
+    {
+      "timestamp": 1763297091.1199915,
+      "metric": "render_ms",
+      "value": 43.423905538857085,
+      "expected_range": [
+        8.296382218174204,
+        16.758324702164735
+      ],
+      "deviation_sigma": 21.907418163483367
+    },
+    {
+      "timestamp": 1763297091.156545,
+      "metric": "fps",
+      "value": 26.718763932596634,
+      "expected_range": [
+        49.763981437056394,
+        70.25404087824309
+      ],
+      "deviation_sigma": 9.74821395338766
+    },
+    {
+      "timestamp": 1763297091.156545,
+      "metric": "render_ms",
+      "value": 54.82401281500215,
+      "expected_range": [
+        6.5002886432900215,
+        18.69327918526774
+      ],
+      "deviation_sigma": 20.77942835533798
+    },
+    {
+      "timestamp": 1763297091.1936996,
+      "metric": "fps",
+      "value": 29.086346807503745,
+      "expected_range": [
+        48.661021746718475,
+        71.20771694873771
+      ],
+      "deviation_sigma": 8.209102645995321
+    },
+    {
+      "timestamp": 1763297091.1936996,
+      "metric": "render_ms",
+      "value": 52.264065092760504,
+      "expected_range": [
+        4.143577779351203,
+        21.23934982006182
+      ],
+      "deviation_sigma": 13.888557193726745
+    },
+    {
+      "timestamp": 1763297091.2308323,
+      "metric": "fps",
+      "value": 28.122344477096167,
+      "expected_range": [
+        47.783836843895685,
+        71.94687937934474
+      ],
+      "deviation_sigma": 7.882206122334452
+    },
+    {
+      "timestamp": 1763297091.2308323,
+      "metric": "render_ms",
+      "value": 59.35809226849848,
+      "expected_range": [
+        2.560768819849965,
+        22.999217398323925
+      ],
+      "deviation_sigma": 13.673669695791352
+    },
+    {
+      "timestamp": 1763297091.2673554,
+      "metric": "fps",
+      "value": 27.410052093224678,
+      "expected_range": [
+        46.915102527979485,
+        72.67390381296396
+      ],
+      "deviation_sigma": 7.543313227729626
+    },
+    {
+      "timestamp": 1763297091.2673554,
+      "metric": "render_ms",
+      "value": 44.89385638615889,
+      "expected_range": [
+        0.7273585775003131,
+        25.04056558334952
+      ],
+      "deviation_sigma": 7.899384305336548
+    },
+    {
+      "timestamp": 1763297091.3041923,
+      "metric": "fps",
+      "value": 23.792676320824736,
+      "expected_range": [
+        46.06476184544026,
+        73.37999304304329
+      ],
+      "deviation_sigma": 7.892234379455651
+    },
+    {
+      "timestamp": 1763297091.3041923,
+      "metric": "render_ms",
+      "value": 59.8921065396277,
+      "expected_range": [
+        -0.005897705954675203,
+        25.916404914936955
+      ],
+      "deviation_sigma": 10.864047138461059
+    },
+    {
+      "timestamp": 1763297091.3401065,
+      "metric": "fps",
+      "value": 26.535505473232845,
+      "expected_range": [
+        45.08458404977096,
+        74.20048327816406
+      ],
+      "deviation_sigma": 6.822463822470477
+    },
+    {
+      "timestamp": 1763297091.3401065,
+      "metric": "render_ms",
+      "value": 40.58450343555372,
+      "expected_range": [
+        -1.4896230385891798,
+        27.60873848283873
+      ],
+      "deviation_sigma": 5.675566102199883
+    },
+    {
+      "timestamp": 1763297091.3759508,
+      "metric": "fps",
+      "value": 25.72950617300919,
+      "expected_range": [
+        44.29379149446389,
+        74.84445974393351
+      ],
+      "deviation_sigma": 6.645933732747788
+    },
+    {
+      "timestamp": 1763297091.3759508,
+      "metric": "render_ms",
+      "value": 49.52398640030519,
+      "expected_range": [
+        -1.923583618433696,
+        28.16476090620178
+      ],
+      "deviation_sigma": 7.2593022311244315
+    },
+    {
+      "timestamp": 1763297091.4121118,
+      "metric": "fps",
+      "value": 27.091839126262975,
+      "expected_range": [
+        43.50615371583478,
+        75.4823646931547
+      ],
+      "deviation_sigma": 6.079973659395882
+    },
+    {
+      "timestamp": 1763297091.4121118,
+      "metric": "render_ms",
+      "value": 53.85127308431492,
+      "expected_range": [
+        -2.680061658139781,
+        29.082315927130967
+      ],
+      "deviation_sigma": 7.678923753240084
+    },
+    {
+      "timestamp": 1763297091.448724,
+      "metric": "fps",
+      "value": 23.128737322927122,
+      "expected_range": [
+        42.81209367212999,
+        76.0333676945715
+      ],
+      "deviation_sigma": 6.554955117477994
+    },
+    {
+      "timestamp": 1763297091.448724,
+      "metric": "render_ms",
+      "value": 53.28051065372062,
+      "expected_range": [
+        -3.5757905738835962,
+        30.157515685920345
+      ],
+      "deviation_sigma": 7.112788967031066
+    },
+    {
+      "timestamp": 1763297091.485031,
+      "metric": "fps",
+      "value": 23.575953785709686,
+      "expected_range": [
+        41.981418616416505,
+        76.70415731697915
+      ],
+      "deviation_sigma": 6.180417015390881
+    },
+    {
+      "timestamp": 1763297091.485031,
+      "metric": "render_ms",
+      "value": 44.88880451872233,
+      "expected_range": [
+        -4.384996494353599,
+        31.142887457041013
+      ],
+      "deviation_sigma": 5.3214301893949525
+    },
+    {
+      "timestamp": 1763297091.5209038,
+      "metric": "fps",
+      "value": 29.13443839381147,
+      "expected_range": [
+        41.207119912482675,
+        77.32123916737018
+      ],
+      "deviation_sigma": 5.005755383394102
+    },
+    {
+      "timestamp": 1763297091.5209038,
+      "metric": "render_ms",
+      "value": 45.134437616839705,
+      "expected_range": [
+        -4.8411920252168645,
+        31.73758786279386
+      ],
+      "deviation_sigma": 5.197478941899352
+    },
+    {
+      "timestamp": 1763297091.5571206,
+      "metric": "fps",
+      "value": 25.141715590754885,
+      "expected_range": [
+        40.670884392845025,
+        77.72532669952486
+      ],
+      "deviation_sigma": 5.514543655559056
+    },
+    {
+      "timestamp": 1763297091.5571206,
+      "metric": "render_ms",
+      "value": 48.66105458687672,
+      "expected_range": [
+        -5.2861110398288655,
+        32.32148161292363
+      ],
+      "deviation_sigma": 5.606852258503795
+    },
+    {
+      "timestamp": 1763297091.593313,
+      "metric": "fps",
+      "value": 24.802799500549973,
+      "expected_range": [
+        40.009541745864695,
+        78.23762606442453
+      ],
+      "deviation_sigma": 5.386738836075834
+    },
+    {
+      "timestamp": 1763297091.593313,
+      "metric": "render_ms",
+      "value": 49.84473936031131,
+      "expected_range": [
+        -5.825253113099672,
+        33.01442398947815
+      ],
+      "deviation_sigma": 5.59996734674956
+    },
+    {
+      "timestamp": 1763297091.6292286,
+      "metric": "fps",
+      "value": 29.884464007799515,
+      "expected_range": [
+        39.35870132970011,
+        78.73859405960836
+      ],
+      "deviation_sigma": 4.4435139354310795
+    },
+    {
+      "timestamp": 1763297091.6292286,
+      "metric": "render_ms",
+      "value": 59.647250484077645,
+      "expected_range": [
+        -6.379377918307799,
+        33.72684641006673
+      ],
+      "deviation_sigma": 6.877762792396189
+    },
+    {
+      "timestamp": 1763297091.6657627,
+      "metric": "fps",
+      "value": 20.331556658130918,
+      "expected_range": [
+        38.897179016711334,
+        79.07303931949536
+      ],
+      "deviation_sigma": 5.772653362291867
+    },
+    {
+      "timestamp": 1763297091.6657627,
+      "metric": "render_ms",
+      "value": 49.79906094465078,
+      "expected_range": [
+        -7.266346448099084,
+        34.81413527205059
+      ],
+      "deviation_sigma": 5.136609429367563
+    },
+    {
+      "timestamp": 1763297091.7014792,
+      "metric": "fps",
+      "value": 28.497804359091305,
+      "expected_range": [
+        38.11940187545256,
+        79.68275753679774
+      ],
+      "deviation_sigma": 4.388953903735383
+    },
+    {
+      "timestamp": 1763297091.7014792,
+      "metric": "render_ms",
+      "value": 44.68842284597446,
+      "expected_range": [
+        -7.760731769367506,
+        35.46515175215673
+      ],
+      "deviation_sigma": 4.280242809504405
+    },
+    {
+      "timestamp": 1763297091.7374501,
+      "metric": "fps",
+      "value": 21.90277019764421,
+      "expected_range": [
+        37.645855177423115,
+        80.02440282334331
+      ],
+      "deviation_sigma": 5.228922771678963
+    },
+    {
+      "timestamp": 1763297091.7374501,
+      "metric": "render_ms",
+      "value": 50.07270107154005,
+      "expected_range": [
+        -8.096063972266089,
+        35.93426362036803
+      ],
+      "deviation_sigma": 4.926640780234021
+    },
+    {
+      "timestamp": 1763297091.7735229,
+      "metric": "fps",
+      "value": 23.927578697759763,
+      "expected_range": [
+        36.970267464210224,
+        80.5401101954188
+      ],
+      "deviation_sigma": 4.796107759247173
+    },
+    {
+      "timestamp": 1763297091.7735229,
+      "metric": "render_ms",
+      "value": 50.16640401473762,
+      "expected_range": [
+        -8.565419198525396,
+        36.56012794293681
+      ],
+      "deviation_sigma": 4.809122805201284
+    },
+    {
+      "timestamp": 1763297091.8098526,
+      "metric": "fps",
+      "value": 23.80509171850473,
+      "expected_range": [
+        36.383472714948944,
+        80.97646170436883
+      ],
+      "deviation_sigma": 4.692424923491255
+    },
+    {
+      "timestamp": 1763297091.8098526,
+      "metric": "render_ms",
+      "value": 58.74883692151191,
+      "expected_range": [
+        -9.020115610875465,
+        37.17106215071898
+      ],
+      "deviation_sigma": 5.802843635920501
+    },
+    {
+      "timestamp": 1763297091.8463588,
+      "metric": "fps",
+      "value": 29.548907506047883,
+      "expected_range": [
+        35.80894800170023,
+        81.40066367843153
+      ],
+      "deviation_sigma": 3.8238392088649507
+    },
+    {
+      "timestamp": 1763297091.8463588,
+      "metric": "render_ms",
+      "value": 48.66648439564812,
+      "expected_range": [
+        -9.723101798897968,
+        38.06660594068799
+      ],
+      "deviation_sigma": 4.330815226498636
+    },
+    {
+      "timestamp": 1763297091.8830462,
+      "metric": "fps",
+      "value": 20.554810887874805,
+      "expected_range": [
+        35.41503253917402,
+        81.66960753522002
+      ],
+      "deviation_sigma": 4.927621860441202
+    },
+    {
+      "timestamp": 1763297091.8830462,
+      "metric": "render_ms",
+      "value": 47.042248780091334,
+      "expected_range": [
+        -10.100802203359788,
+        38.592670785256274
+      ],
+      "deviation_sigma": 4.041155310093876
+    },
+    {
+      "timestamp": 1763297091.9188604,
+      "metric": "fps",
+      "value": 23.501708972199815,
+      "expected_range": [
+        34.76288527168531,
+        82.15871828275456
+      ],
+      "deviation_sigma": 4.425590679693989
+    },
+    {
+      "timestamp": 1763297091.9188604,
+      "metric": "render_ms",
+      "value": 55.74825266095075,
+      "expected_range": [
+        -10.427619419778608,
+        39.06024471622078
+      ],
+      "deviation_sigma": 5.023284888456982
+    },
+    {
+      "timestamp": 1763297091.9550507,
+      "metric": "fps",
+      "value": 21.216373580336352,
+      "expected_range": [
+        34.221111036806256,
+        82.55077477542798
+      ],
+      "deviation_sigma": 4.614503778896863
+    },
+    {
+      "timestamp": 1763297091.9550507,
+      "metric": "render_ms",
+      "value": 43.31576301908408,
+      "expected_range": [
+        -10.972726815378973,
+        39.78279082707908
+      ],
+      "deviation_sigma": 3.4176458863321204
+    },
+    {
+      "timestamp": 1763297091.9913044,
+      "metric": "fps",
+      "value": 24.884795906370353,
+      "expected_range": [
+        33.623379122474944,
+        82.98966237640124
+      ],
+      "deviation_sigma": 4.062091286616305
+    },
+    {
+      "timestamp": 1763297091.9913044,
+      "metric": "render_ms",
+      "value": 41.86738293844394,
+      "expected_range": [
+        -11.198835781717303,
+        40.1324499259526
+      ],
+      "deviation_sigma": 3.202792467233927
+    },
+    {
+      "timestamp": 1763297092.0272334,
+      "metric": "fps",
+      "value": 29.64646532303467,
+      "expected_range": [
+        33.14759595790035,
+        83.32292219409709
+      ],
+      "deviation_sigma": 3.41866760786579
+    },
+    {
+      "timestamp": 1763297092.0272334,
+      "metric": "render_ms",
+      "value": 42.069623923060604,
+      "expected_range": [
+        -11.392431543101324,
+        40.44289249273674
+      ],
+      "deviation_sigma": 3.188296085024857
+    },
+    {
+      "timestamp": 1763297092.0636535,
+      "metric": "fps",
+      "value": 23.075357748226477,
+      "expected_range": [
+        32.80319523166726,
+        83.5456684788282
+      ],
+      "deviation_sigma": 4.15025975608925
+    },
+    {
+      "timestamp": 1763297092.0636535,
+      "metric": "render_ms",
+      "value": 56.31884853453059,
+      "expected_range": [
+        -11.585251732281291,
+        40.75292286680284
+      ],
+      "deviation_sigma": 4.784463342900017
+    },
+    {
+      "timestamp": 1763297092.099426,
+      "metric": "fps",
+      "value": 23.82081109451284,
+      "expected_range": [
+        32.29544632394871,
+        83.9043767321645
+      ],
+      "deviation_sigma": 3.985252183574039
+    },
+    {
+      "timestamp": 1763297092.099426,
+      "metric": "render_ms",
+      "value": 49.62111266495724,
+      "expected_range": [
+        -12.097819956900286,
+        41.44270983013636
+      ],
+      "deviation_sigma": 3.9165097395208504
+    },
+    {
+      "timestamp": 1763297092.1355503,
+      "metric": "fps",
+      "value": 22.30249371218262,
+      "expected_range": [
+        31.819225923375413,
+        84.23534670717193
+      ],
+      "deviation_sigma": 4.089367019407668
+    },
+    {
+      "timestamp": 1763297092.1355503,
+      "metric": "render_ms",
+      "value": 56.1656383866718,
+      "expected_range": [
+        -12.427306084951578,
+        41.92028353330774
+      ],
+      "deviation_sigma": 4.572694018640858
+    },
+    {
+      "timestamp": 1763297092.1717427,
+      "metric": "fps",
+      "value": 23.52739336550361,
+      "expected_range": [
+        31.31172734254126,
+        84.59178908249618
+      ],
+      "deviation_sigma": 3.8766131707989544
+    },
+    {
+      "timestamp": 1763297092.1717427,
+      "metric": "render_ms",
+      "value": 46.32890123904702,
+      "expected_range": [
+        -12.905684971849027,
+        42.573796245416574
+      ],
+      "deviation_sigma": 3.4061074376948386
+    },
+    {
+      "timestamp": 1763297092.2076921,
+      "metric": "fps",
+      "value": 23.38649394637664,
+      "expected_range": [
+        30.84782628759045,
+        84.91043965286043
+      ],
+      "deviation_sigma": 3.8280767661898123
+    },
+    {
+      "timestamp": 1763297092.2076921,
+      "metric": "render_ms",
+      "value": 44.28937693725027,
+      "expected_range": [
+        -13.147679485277754,
+        42.948680402736706
+      ],
+      "deviation_sigma": 3.143399308317688
+    },
+    {
+      "timestamp": 1763297092.2437565,
+      "metric": "fps",
+      "value": 26.481322897619684,
+      "expected_range": [
+        30.389506102477036,
+        85.22352767366291
+      ],
+      "deviation_sigma": 3.42763777956177
+    },
+    {
+      "timestamp": 1763297092.2437565,
+      "metric": "render_ms",
+      "value": 50.68967759851352,
+      "expected_range": [
+        -13.346737173888576,
+        43.271480729151826
+      ],
+      "deviation_sigma": 3.7861282616205414
+    },
+    {
+      "timestamp": 1763297092.28305,
+      "metric": "fps",
+      "value": 25.502092458605738,
+      "expected_range": [
+        30.01592898701412,
+        85.46548632698106
+      ],
+      "deviation_sigma": 3.48842624665877
+    },
+    {
+      "timestamp": 1763297092.28305,
+      "metric": "render_ms",
+      "value": 47.91646358023727,
+      "expected_range": [
+        -13.665407943385018,
+        43.740266228988105
+      ],
+      "deviation_sigma": 3.436493159757262
+    },
+    {
+      "timestamp": 1763297092.3564346,
+      "metric": "fps",
+      "value": 23.408889698370633,
+      "expected_range": [
+        29.333963983443617,
+        85.89505136160014
+      ],
+      "deviation_sigma": 3.6285318645441604
+    },
+    {
+      "timestamp": 1763297092.3564346,
+      "metric": "render_ms",
+      "value": 58.822328288261716,
+      "expected_range": [
+        -14.074187190431624,
+        44.40138460435389
+      ],
+      "deviation_sigma": 4.4796890299269
+    },
+    {
+      "timestamp": 1763297092.3924325,
+      "metric": "fps",
+      "value": 24.088924832571777,
+      "expected_range": [
+        28.905714155846102,
+        86.18048023732229
+      ],
+      "deviation_sigma": 3.5045980615360914
+    },
+    {
+      "timestamp": 1763297092.3924325,
+      "metric": "render_ms",
+      "value": 46.623441276348274,
+      "expected_range": [
+        -14.559236306024632,
+        45.06872486642415
+      ],
+      "deviation_sigma": 3.156441680649898
+    },
+    {
+      "timestamp": 1763297092.4364324,
+      "metric": "fps",
+      "value": 25.797621723358297,
+      "expected_range": [
+        28.50147915931455,
+        86.44532284900379
+      ],
+      "deviation_sigma": 3.279980470446843
+    },
+    {
+      "timestamp": 1763297092.4364324,
+      "metric": "render_ms",
+      "value": 57.4908650512691,
+      "expected_range": [
+        -14.77089397903711,
+        45.41108544358724
+      ],
+      "deviation_sigma": 4.204325253862356
+    },
+    {
+      "timestamp": 1763297092.4724393,
+      "metric": "fps",
+      "value": 20.47329763416913,
+      "expected_range": [
+        28.143279409081387,
+        86.67181457727935
+      ],
+      "deviation_sigma": 3.7862812646382253
+    },
+    {
+      "timestamp": 1763297092.4724393,
+      "metric": "render_ms",
+      "value": 57.897051207753876,
+      "expected_range": [
+        -15.200342101980125,
+        46.015879800704866
+      ],
+      "deviation_sigma": 4.164512056226184
+    },
+    {
+      "timestamp": 1763297092.508223,
+      "metric": "fps",
+      "value": 24.25458034375604,
+      "expected_range": [
+        27.66463642721959,
+        86.99720341242326
+      ],
+      "deviation_sigma": 3.3448415860025693
+    },
+    {
+      "timestamp": 1763297092.508223,
+      "metric": "render_ms",
+      "value": 54.422569468219,
+      "expected_range": [
+        -15.626713657539607,
+        46.618555432440246
+      ],
+      "deviation_sigma": 3.752251293941473
+    },
+    {
+      "timestamp": 1763297092.5442615,
+      "metric": "render_ms",
+      "value": 47.220238698807975,
+      "expected_range": [
+        -15.964631848861192,
+        47.11766057440684
+      ],
+      "deviation_sigma": 3.0097566008266976
+    },
+    {
+      "timestamp": 1763297092.580679,
+      "metric": "fps",
+      "value": 25.846185369074355,
+      "expected_range": [
+        26.996473192875577,
+        87.40864166476373
+      ],
+      "deviation_sigma": 3.1142439862263664
+    },
+    {
+      "timestamp": 1763297092.580679,
+      "metric": "render_ms",
+      "value": 49.54995356060694,
+      "expected_range": [
+        -16.16068252920953,
+        47.4444704462264
+      ],
+      "deviation_sigma": 3.198614390427801
+    },
+    {
+      "timestamp": 1763297092.6167376,
+      "metric": "fps",
+      "value": 23.195022333320743,
+      "expected_range": [
+        26.66221409225858,
+        87.61359613833024
+      ],
+      "deviation_sigma": 3.341307282218842
+    },
+    {
+      "timestamp": 1763297092.6167376,
+      "metric": "render_ms",
+      "value": 54.53314721920361,
+      "expected_range": [
+        -16.391928772261792,
+        47.81554373918422
+      ],
+      "deviation_sigma": 3.6277403439752476
+    },
+    {
+      "timestamp": 1763297092.6528096,
+      "metric": "render_ms",
+      "value": 51.54974396221486,
+      "expected_range": [
+        -16.711144219784977,
+        48.294517786442974
+      ],
+      "deviation_sigma": 3.3004562441462424
+    },
+    {
+      "timestamp": 1763297092.6886225,
+      "metric": "fps",
+      "value": 25.799125276666732,
+      "expected_range": [
+        25.981491482069252,
+        88.03250312626801
+      ],
+      "deviation_sigma": 3.017633833896041
+    },
+    {
+      "timestamp": 1763297092.724905,
+      "metric": "render_ms",
+      "value": 52.24179215606354,
+      "expected_range": [
+        -17.131965866491367,
+        48.98761389927337
+      ],
+      "deviation_sigma": 3.295299359280724
+    },
+    {
+      "timestamp": 1763297092.7619488,
+      "metric": "fps",
+      "value": 24.457018468206417,
+      "expected_range": [
+        25.359155522436716,
+        88.40244559230061
+      ],
+      "deviation_sigma": 3.085858817320343
+    },
+    {
+      "timestamp": 1763297092.7619488,
+      "metric": "render_ms",
+      "value": 53.3981129734364,
+      "expected_range": [
+        -17.389240813873656,
+        49.39341223372999
+      ],
+      "deviation_sigma": 3.3597970931330146
+    },
+    {
+      "timestamp": 1763297092.7980702,
+      "metric": "fps",
+      "value": 20.78290191155228,
+      "expected_range": [
+        25.020104933693304,
+        88.60915421333314
+      ],
+      "deviation_sigma": 3.399804973039379
+    },
+    {
+      "timestamp": 1763297092.7980702,
+      "metric": "render_ms",
+      "value": 53.02709309447599,
+      "expected_range": [
+        -17.661581275429622,
+        49.81838954125945
+      ],
+      "deviation_sigma": 3.285302751117044
+    },
+    {
+      "timestamp": 1763297092.834082,
+      "metric": "fps",
+      "value": 22.49043380093201,
+      "expected_range": [
+        24.606742797609968,
+        88.87574760130258
+      ],
+      "deviation_sigma": 3.1975735273768886
+    },
+    {
+      "timestamp": 1763297092.8699908,
+      "metric": "fps",
+      "value": 21.85318142018692,
+      "expected_range": [
+        24.23734827766787,
+        89.10591118060026
+      ],
+      "deviation_sigma": 3.220522861995437
+    },
+    {
+      "timestamp": 1763297092.8699908,
+      "metric": "render_ms",
+      "value": 57.726538414195346,
+      "expected_range": [
+        -18.097529119637255,
+        50.53550786623403
+      ],
+      "deviation_sigma": 3.628650358232726
+    },
+    {
+      "timestamp": 1763297092.9420488,
+      "metric": "render_ms",
+      "value": 53.02025372572282,
+      "expected_range": [
+        -18.61151602022463,
+        51.350068597805574
+      ],
+      "deviation_sigma": 3.1432373326335563
+    },
+    {
+      "timestamp": 1763297092.9781404,
+      "metric": "fps",
+      "value": 23.24634598019804,
+      "expected_range": [
+        23.397895753685944,
+        89.58198393609881
+      ],
+      "deviation_sigma": 3.0137389313035667
+    },
+    {
+      "timestamp": 1763297093.0511532,
+      "metric": "fps",
+      "value": 20.408467640308793,
+      "expected_range": [
+        22.812688857579495,
+        89.91706004095113
+      ],
+      "deviation_sigma": 3.214968519177463
+    },
+    {
+      "timestamp": 1763297093.0511532,
+      "metric": "render_ms",
+      "value": 59.6022423091997,
+      "expected_range": [
+        -19.16884246614295,
+        52.31228185214475
+      ],
+      "deviation_sigma": 3.6119064740443565
+    },
+    {
+      "timestamp": 1763297093.1517022,
+      "metric": "render_ms",
+      "value": 56.92255486811071,
+      "expected_range": [
+        -19.512036821833714,
+        52.82828955167567
+      ],
+      "deviation_sigma": 3.3395836476016516
+    },
+    {
+      "timestamp": 1763297093.2602327,
+      "metric": "fps",
+      "value": 20.086061598264706,
+      "expected_range": [
+        21.67982310821315,
+        90.55618145432311
+      ],
+      "deviation_sigma": 3.138836740055824
+    },
+    {
+      "timestamp": 1763297093.3331091,
+      "metric": "render_ms",
+      "value": 56.048613862722156,
+      "expected_range": [
+        -20.380907541869806,
+        54.36605194240259
+      ],
+      "deviation_sigma": 3.135060631115592
+    },
+    {
+      "timestamp": 1763297096.525148,
+      "metric": "render_ms",
+      "value": 81.21030956462077,
+      "expected_range": [
+        -26.84705484927589,
+        68.96912619205924
+      ],
+      "deviation_sigma": 3.766541720168163
+    },
+    {
+      "timestamp": 1763297096.5847335,
+      "metric": "render_ms",
+      "value": 103.69977059808615,
+      "expected_range": [
+        -27.258566286925383,
+        69.51147548514722
+      ],
+      "deviation_sigma": 5.119765238510345
+    },
+    {
+      "timestamp": 1763297096.722503,
+      "metric": "render_ms",
+      "value": 81.16031814149987,
+      "expected_range": [
+        -28.02315493360425,
+        70.38674837726731
+      ],
+      "deviation_sigma": 3.6568588771111443
+    },
+    {
+      "timestamp": 1763297096.9022028,
+      "metric": "render_ms",
+      "value": 107.14165238327298,
+      "expected_range": [
+        -28.304645895288004,
+        70.63825335434963
+      ],
+      "deviation_sigma": 5.21360396586865
+    },
+    {
+      "timestamp": 1763297096.9820626,
+      "metric": "render_ms",
+      "value": 86.20793588657,
+      "expected_range": [
+        -29.141547302723527,
+        71.67880466411957
+      ],
+      "deviation_sigma": 3.864654661822366
+    },
+    {
+      "timestamp": 1763297097.2441895,
+      "metric": "render_ms",
+      "value": 110.98732007567972,
+      "expected_range": [
+        -29.39485409603786,
+        71.8207599309515
+      ],
+      "deviation_sigma": 5.321769848728144
+    },
+    {
+      "timestamp": 1763297097.264067,
+      "metric": "render_ms",
+      "value": 111.40758250295545,
+      "expected_range": [
+        -30.329211391470075,
+        73.03742655706995
+      ],
+      "deviation_sigma": 5.227226697553286
+    },
+    {
+      "timestamp": 1763297097.3843942,
+      "metric": "render_ms",
+      "value": 100.56376367492472,
+      "expected_range": [
+        -31.17680399878837,
+        74.01695274573096
+      ],
+      "deviation_sigma": 4.514166529502344
+    },
+    {
+      "timestamp": 1763297097.5050035,
+      "metric": "render_ms",
+      "value": 100.41205209946881,
+      "expected_range": [
+        -31.756063364812498,
+        74.70438400536082
+      ],
+      "deviation_sigma": 4.448857414888738
+    },
+    {
+      "timestamp": 1763297097.8062396,
+      "metric": "render_ms",
+      "value": 89.25314016160198,
+      "expected_range": [
+        -32.17162241199545,
+        74.97385736917596
+      ],
+      "deviation_sigma": 3.799620263304955
+    },
+    {
+      "timestamp": 1763297097.8670754,
+      "metric": "render_ms",
+      "value": 108.33116218532598,
+      "expected_range": [
+        -32.57720304717774,
+        75.527741454731
+      ],
+      "deviation_sigma": 4.820643128678492
+    },
+    {
+      "timestamp": 1763297097.9071565,
+      "metric": "render_ms",
+      "value": 86.87988707780687,
+      "expected_range": [
+        -33.33139569279445,
+        76.50896518122047
+      ],
+      "deviation_sigma": 3.56650880317928
+    },
+    {
+      "timestamp": 1763297098.672781,
+      "metric": "render_ms",
+      "value": 92.89750764336603,
+      "expected_range": [
+        -33.076387926492174,
+        75.48862204534417
+      ],
+      "deviation_sigma": 3.962126873246068
+    },
+    {
+      "timestamp": 1763297098.79305,
+      "metric": "render_ms",
+      "value": 85.54466486378465,
+      "expected_range": [
+        -33.43362637426178,
+        75.93945507236991
+      ],
+      "deviation_sigma": 3.5269236084987643
+    },
+    {
+      "timestamp": 1763297098.9347095,
+      "metric": "render_ms",
+      "value": 115.50069090908329,
+      "expected_range": [
+        -33.68432938365967,
+        76.21704990239559
+      ],
+      "deviation_sigma": 5.1446668601549845
+    },
+    {
+      "timestamp": 1763297099.4637928,
+      "metric": "render_ms",
+      "value": 100.8471116112922,
+      "expected_range": [
+        -34.076194309315014,
+        76.27877342720609
+      ],
+      "deviation_sigma": 4.335780637048137
+    },
+    {
+      "timestamp": 1763297099.5865977,
+      "metric": "render_ms",
+      "value": 80.93902455592817,
+      "expected_range": [
+        -34.523977247125835,
+        76.83543523357883
+      ],
+      "deviation_sigma": 3.2210997291168564
+    },
+    {
+      "timestamp": 1763297099.6884463,
+      "metric": "render_ms",
+      "value": 88.48669652262205,
+      "expected_range": [
+        -34.7208658860259,
+        77.0995188233691
+      ],
+      "deviation_sigma": 3.6110072539374594
+    },
+    {
+      "timestamp": 1763297099.7916567,
+      "metric": "render_ms",
+      "value": 117.63048939588494,
+      "expected_range": [
+        -34.997996922280706,
+        77.46885611164075
+      ],
+      "deviation_sigma": 5.14258506577743
+    },
+    {
+      "timestamp": 1763297100.039306,
+      "metric": "render_ms",
+      "value": 106.48886154147452,
+      "expected_range": [
+        -35.63089370689842,
+        78.08543442121653
+      ],
+      "deviation_sigma": 4.498646373188809
+    },
+    {
+      "timestamp": 1763297100.1218047,
+      "metric": "render_ms",
+      "value": 92.7313345583114,
+      "expected_range": [
+        -36.17120181670278,
+        78.7767209240837
+      ],
+      "deviation_sigma": 3.728396649621729
+    },
+    {
+      "timestamp": 1763297100.5139508,
+      "metric": "render_ms",
+      "value": 109.07445148595164,
+      "expected_range": [
+        -36.2706502071275,
+        78.62890150977846
+      ],
+      "deviation_sigma": 4.589852154576867
+    },
+    {
+      "timestamp": 1763297100.7632928,
+      "metric": "render_ms",
+      "value": 99.04533965249962,
+      "expected_range": [
+        -36.654122905080165,
+        79.01903932784128
+      ],
+      "deviation_sigma": 4.038769924055489
+    },
+    {
+      "timestamp": 1763297101.218102,
+      "metric": "render_ms",
+      "value": 81.2801218230359,
+      "expected_range": [
+        -36.74261731481241,
+        78.84828186430411
+      ],
+      "deviation_sigma": 3.126230004749603
+    },
+    {
+      "timestamp": 1763297101.4061666,
+      "metric": "render_ms",
+      "value": 113.20957803271709,
+      "expected_range": [
+        -36.84157542852189,
+        78.92208621072221
+      ],
+      "deviation_sigma": 4.777111642970251
+    },
+    {
+      "timestamp": 1763297101.615286,
+      "metric": "render_ms",
+      "value": 108.15456577501399,
+      "expected_range": [
+        -37.302402359527505,
+        79.43527424977755
+      ],
+      "deviation_sigma": 4.476093701334497
+    },
+    {
+      "timestamp": 1763297102.2645156,
+      "metric": "render_ms",
+      "value": 100.52268293543095,
+      "expected_range": [
+        -37.28624261427264,
+        79.06679880474273
+      ],
+      "deviation_sigma": 4.106419765346077
+    },
+    {
+      "timestamp": 1763297102.28548,
+      "metric": "render_ms",
+      "value": 105.2834102798416,
+      "expected_range": [
+        -37.717223536457915,
+        79.67855703644037
+      ],
+      "deviation_sigma": 4.308642599509866
+    },
+    {
+      "timestamp": 1763297102.369504,
+      "metric": "render_ms",
+      "value": 87.84013308814838,
+      "expected_range": [
+        -38.15558996810792,
+        80.246211796692
+      ],
+      "deviation_sigma": 3.384821236413685
+    },
+    {
+      "timestamp": 1763297102.4324176,
+      "metric": "render_ms",
+      "value": 119.16411636955509,
+      "expected_range": [
+        -38.38790569475304,
+        80.59541567245108
+      ],
+      "deviation_sigma": 4.944912963628272
+    },
+    {
+      "timestamp": 1763297102.5791004,
+      "metric": "render_ms",
+      "value": 92.90964718830568,
+      "expected_range": [
+        -38.95526381579623,
+        81.26348242067034
+      ],
+      "deviation_sigma": 3.581248688689251
+    },
+    {
+      "timestamp": 1763297102.9172573,
+      "metric": "render_ms",
+      "value": 90.23850817860648,
+      "expected_range": [
+        -39.025776487212795,
+        81.19144840032962
+      ],
+      "deviation_sigma": 3.4515356158024755
+    },
+    {
+      "timestamp": 1763297103.1080713,
+      "metric": "render_ms",
+      "value": 94.41807949795648,
+      "expected_range": [
+        -39.169405024475026,
+        81.33595274347086
+      ],
+      "deviation_sigma": 3.651363242106341
+    },
+    {
+      "timestamp": 1763297103.2978575,
+      "metric": "render_ms",
+      "value": 84.39129248068063,
+      "expected_range": [
+        -39.337205947393606,
+        81.52804180872812
+      ],
+      "deviation_sigma": 3.142137664470596
+    },
+    {
+      "timestamp": 1763297103.3192055,
+      "metric": "render_ms",
+      "value": 88.25542231011494,
+      "expected_range": [
+        -39.55671723674486,
+        81.88367325840198
+      ],
+      "deviation_sigma": 3.3148087234766064
+    },
+    {
+      "timestamp": 1763297103.3407855,
+      "metric": "render_ms",
+      "value": 100.0844179599891,
+      "expected_range": [
+        -39.80945834399325,
+        82.2805431396553
+      ],
+      "deviation_sigma": 3.8749549318034013
+    },
+    {
+      "timestamp": 1763297103.6370952,
+      "metric": "render_ms",
+      "value": 93.01921283040676,
+      "expected_range": [
+        -40.16641779010334,
+        82.70922929787633
+      ],
+      "deviation_sigma": 3.5034349984003788
+    },
+    {
+      "timestamp": 1763297103.9155993,
+      "metric": "render_ms",
+      "value": 118.3903387962817,
+      "expected_range": [
+        -40.24421911749812,
+        82.7223269053859
+      ],
+      "deviation_sigma": 4.740376372818896
+    }
+  ],
+  "sessions": {
+    "baseline": {
+      "start_time": 1763297083.1028452,
+      "end_time": 1763297088.108006,
+      "samples": 283,
+      "stats": {
+        "samples": 283,
+        "fps_min": 55.18172625493885,
+        "fps_max": 64.9758188618344,
+        "fps_avg": 60.27261262537268,
+        "fps_median": 60.324948051851244,
+        "fps_stddev": 2.783072623706201,
+        "fps_p50": 60.324948051851244,
+        "fps_p95": 64.47252399858469,
+        "fps_p99": 64.89000549297012,
+        "render_min_ms": 10.000216888323443,
+        "render_max_ms": 14.99211418595819,
+        "render_avg_ms": 12.56813604942069,
+        "render_median_ms": 12.429884174371063,
+        "render_stddev_ms": 1.4548337984286088,
+        "frame_min_ms": 11.328026690678586,
+        "frame_max_ms": 17.81914392126902,
+        "frame_avg_ms": 14.533859684880591,
+        "frame_median_ms": 14.455123646648767,
+        "frame_stddev_ms": 1.573573507605405,
+        "memory_avg_mb": 0.0,
+        "memory_peak_mb": 0.0,
+        "cpu_avg_percent": 0.0,
+        "cpu_peak_percent": 0.0
+      },
+      "metadata": {
+        "version": "v1.0",
+        "config": "default"
+      }
+    },
+    "optimized": {
+      "start_time": 1763297088.111676,
+      "end_time": 1763297091.113525,
+      "samples": 161,
+      "stats": {
+        "samples": 161,
+        "fps_min": 55.006079933598414,
+        "fps_max": 64.98871686594303,
+        "fps_avg": 59.781571949688974,
+        "fps_median": 59.71336654056084,
+        "fps_stddev": 3.0854917808736353,
+        "fps_p50": 59.71336654056084,
+        "fps_p95": 64.58710997128824,
+        "fps_p99": 64.98148605806298,
+        "render_min_ms": 10.003811487353747,
+        "render_max_ms": 14.93783160675105,
+        "render_avg_ms": 12.45566729397012,
+        "render_median_ms": 12.468254621184943,
+        "render_stddev_ms": 1.3298732704899987,
+        "frame_min_ms": 11.418550288969007,
+        "frame_max_ms": 17.455035105853785,
+        "frame_avg_ms": 14.43189459587178,
+        "frame_median_ms": 14.344184227385583,
+        "frame_stddev_ms": 1.4042757320518218,
+        "memory_avg_mb": 0.0,
+        "memory_peak_mb": 0.0,
+        "cpu_avg_percent": 0.0,
+        "cpu_peak_percent": 0.0
+      },
+      "metadata": {
+        "version": "v2.0",
+        "config": "optimized"
+      }
+    },
+    "alerts_test": {
+      "start_time": 1763297091.118991,
+      "end_time": 1763297096.139939,
+      "samples": 136,
+      "stats": {
+        "samples": 136,
+        "fps_min": 20.086061598264706,
+        "fps_max": 29.992216801245203,
+        "fps_avg": 24.930341423293758,
+        "fps_median": 24.459091383207614,
+        "fps_stddev": 2.871356953049952,
+        "fps_p50": 24.459091383207614,
+        "fps_p95": 29.548907506047883,
+        "fps_p99": 29.98108176986758,
+        "render_min_ms": 40.547781187606006,
+        "render_max_ms": 59.8921065396277,
+        "render_avg_ms": 50.06080320367913,
+        "render_median_ms": 49.58553311278209,
+        "render_stddev_ms": 5.165666399497773,
+        "frame_min_ms": 45.98077672781063,
+        "frame_max_ms": 69.1075556341078,
+        "frame_avg_ms": 57.49077987618394,
+        "frame_median_ms": 56.970947711151226,
+        "frame_stddev_ms": 5.358885287000362,
+        "memory_avg_mb": 0.0,
+        "memory_peak_mb": 0.0,
+        "cpu_avg_percent": 0.0,
+        "cpu_peak_percent": 0.0
+      },
+      "metadata": {}
+    },
+    "anomalies_test": {
+      "start_time": 1763297096.1496544,
+      "end_time": 1763297104.1515872,
+      "samples": 389,
+      "stats": {
+        "samples": 389,
+        "fps_min": 10.157429951596695,
+        "fps_max": 64.94812396498642,
+        "fps_avg": 55.28938831750632,
+        "fps_median": 59.25301810467748,
+        "fps_stddev": 14.032254585505429,
+        "fps_p50": 59.25301810467748,
+        "fps_p95": 64.37823836938105,
+        "fps_p99": 64.91661070109802,
+        "render_min_ms": 10.023452065336746,
+        "render_max_ms": 119.16411636955509,
+        "render_avg_ms": 21.128132912651395,
+        "render_median_ms": 12.96168057676363,
+        "render_stddev_ms": 25.938192715149963,
+        "frame_min_ms": 11.132430005751145,
+        "frame_max_ms": 120.63483201968744,
+        "frame_avg_ms": 23.150362762736474,
+        "frame_median_ms": 14.938953980449451,
+        "frame_stddev_ms": 25.9410512418488,
+        "memory_avg_mb": 0.0,
+        "memory_peak_mb": 0.0,
+        "cpu_avg_percent": 0.0,
+        "cpu_peak_percent": 0.0
+      },
+      "metadata": {}
+    }
+  },
+  "recommendations": [
+    "\u26a0 High FPS variance detected - investigate frame time spikes",
+    "\u26a0 Maximum render time exceeds 100ms - investigate worst-case scenarios",
+    "\u26a0 136 anomalies detected - review for patterns",
+    "\ud83d\udd34 139 critical alerts triggered",
+    "\ud83d\udfe1 175 warning alerts triggered"
+  ]
+}

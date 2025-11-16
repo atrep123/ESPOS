@@ -1,34 +1,59 @@
-# ESP32OS
+# ESP32OS UI Designer + Firmware Demo
 
-Developer workspace for ESP32 firmware and a fast terminal UI simulator.
+This workspace contains:
+- Python UI Designer, Themes, Animations, Responsive Layout
+- Exporter to JSON/HTML/PNG and C headers/sources
+- ESP-IDF firmware demo with software framebuffer, dirty-rect flush, and SSD1363 driver
 
-## UI Simulator – Quick Start (Windows PowerShell)
+## Quick Start
 
-- New window with auto-selected ports:
-
-```powershell
-./run_sim.ps1 -AutoPorts -Fps 144
-```
-
-- Same window (debug-friendly):
+1) Generate demo UI artifacts
 
 ```powershell
-./run_sim.ps1 -SameWindow -AutoPorts -Fps 144
+python ui_export_c.py
 ```
 
-- RPC control example (change background to red on chosen port):
+Artifacts: `ui_demo.json`, `ui_demo.html`, `ui_demo.png`, and `src/ui_design.h/.c`.
+
+2) Configure display
+- Edit `src/display_config.h` to set `DISPLAY_I2C_SDA_GPIO`, `DISPLAY_I2C_SCL_GPIO`, and `DISPLAY_I2C_ADDR`.
+- Optional: set `DISPLAY_COLOR_BITS` to `1` or `4`.
+- Optional: enable a conservative init with `#define SSD1363_USE_DEFAULT_INIT 1` (verify against your module datasheet).
+
+3) Build and flash (PlatformIO)
 
 ```powershell
-python .\simctl.py 8765 set_bg 255 0 0
+pio run -e esp32-s3-devkitm-1
+pio run -e esp32-s3-devkitm-1 -t upload
+pio device monitor
 ```
 
-For full simulator docs, options, RPC/UART usage, and troubleshooting see:
+You should see a continuous demo render with performance logs.
 
-- `SIMULATOR_README.md`
+## Assets Pipeline (PNG → C)
+Convert PNG to 1bpp/4bpp C arrays:
 
-## Project Layout
+```powershell
+python assets_pipeline.py import path/to/icon.png my_icon --format 1bpp --threshold 128 --out src/assets
+```
 
-- `src/` firmware sources
-- `sim_run.py` Python-based simulator (no C toolchain required)
-- `run_sim.ps1` Windows launcher with `-AutoPorts` and `-SameWindow`
-- `simctl.py` simple RPC client
+Generates `src/assets/my_icon.h/.c` exposing `UiBitmap my_icon_bmp`.
+
+## Visual Preview + Animations
+Run the visual preview with animation controls:
+
+```powershell
+python ui_designer_preview.py
+```
+- Select an animation and press Play to preview on the selected widget.
+- Use Refresh to redraw; Export PNG to snapshot.
+
+## CI
+GitHub Actions runs Python tests and builds firmware for ESP32-S3 on pushes/PRs.
+
+## Performance Metrics
+Firmware logs average flush time, FPS, and throughput every ~20 frames from `src/ui_demo.c`.
+
+## Notes
+- The SSD1363 init is template-based; finalize values per your display datasheet.
+- Dirty-rect updates reduce I2C bandwidth; set `DISPLAY_COLOR_BITS` to match your panel format.

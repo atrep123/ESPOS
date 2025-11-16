@@ -1,0 +1,19 @@
+{
+  "fps": 120,
+  "width": 100,
+  "height": 24,
+  "rpc-port": 8765,
+  "uart-port": 7777,
+  "full-redraw-interval": 300,
+  "no-diff": false,
+  "no-color": false,
+  "no-unicode": false,
+  "auto-size": false,
+  "export-metrics": "",
+  "websocket-port": 0,
+  "record": "",
+  "playback": "",
+  "script": "",
+  "com-port": "",
+  "baud": 115200
+}

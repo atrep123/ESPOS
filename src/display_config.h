@@ -29,3 +29,15 @@
  * or if the display reset is tied to ESP reset. */
 #define DISPLAY_RST_GPIO        (-1)
 
+/* Pixel format for flush helpers (editor->firmware). Set to 1 for 1bpp or 4 for 4bpp grayscale. */
+#ifndef DISPLAY_COLOR_BITS
+#define DISPLAY_COLOR_BITS 1
+#endif
+
+/* Use a conservative built-in SSD1363 init sequence (set to 1 to enable).
+ * Leave disabled until verified against your module's datasheet.
+ */
+#ifndef SSD1363_USE_DEFAULT_INIT
+#define SSD1363_USE_DEFAULT_INIT 0
+#endif
+

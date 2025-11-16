@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "ESP32OS",
-    "project_version":    "eee6b36-dirty",
+    "project_version":    "3fdc08a-dirty",
     "project_path":       "D:/ESP32OS",
     "idf_path":           "C:/Users/atrep/.platformio/packages/framework-espidf",
     "build_dir":          "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1",
@@ -1480,7 +1480,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/src/libsrc.a",
-            "sources": [ "D:/ESP32OS/src/CMakeLists.txt", "D:/ESP32OS/src/display/ssd1363.c", "D:/ESP32OS/src/display/ssd1363.h", "D:/ESP32OS/src/display_config.h", "D:/ESP32OS/src/kernel/msgbus.c", "D:/ESP32OS/src/kernel/msgbus.h", "D:/ESP32OS/src/kernel/timers.c", "D:/ESP32OS/src/kernel/timers.h", "D:/ESP32OS/src/main.c", "D:/ESP32OS/src/services/input/input.c", "D:/ESP32OS/src/services/input/input.h", "D:/ESP32OS/src/services/metrics/metrics.c", "D:/ESP32OS/src/services/metrics/metrics.h", "D:/ESP32OS/src/services/rpc/rpc.c", "D:/ESP32OS/src/services/rpc/rpc.h", "D:/ESP32OS/src/services/store/store.c", "D:/ESP32OS/src/services/store/store.h", "D:/ESP32OS/src/services/ui/renderer.c", "D:/ESP32OS/src/services/ui/renderer.h", "D:/ESP32OS/src/services/ui/ui.c", "D:/ESP32OS/src/services/ui/ui.h", "D:/ESP32OS/src/services/ui/ui_core.c", "D:/ESP32OS/src/services/ui/ui_core.h" ],
+            "sources": [ "D:/ESP32OS/src/CMakeLists.txt", "D:/ESP32OS/src/display/ssd1363.c", "D:/ESP32OS/src/display/ssd1363.h", "D:/ESP32OS/src/display_config.h", "D:/ESP32OS/src/kernel/msgbus.c", "D:/ESP32OS/src/kernel/msgbus.h", "D:/ESP32OS/src/kernel/timers.c", "D:/ESP32OS/src/kernel/timers.h", "D:/ESP32OS/src/main.c", "D:/ESP32OS/src/services/input/input.c", "D:/ESP32OS/src/services/input/input.h", "D:/ESP32OS/src/services/metrics/metrics.c", "D:/ESP32OS/src/services/metrics/metrics.h", "D:/ESP32OS/src/services/rpc/rpc.c", "D:/ESP32OS/src/services/rpc/rpc.h", "D:/ESP32OS/src/services/store/store.c", "D:/ESP32OS/src/services/store/store.h", "D:/ESP32OS/src/services/ui/renderer.c", "D:/ESP32OS/src/services/ui/renderer.h", "D:/ESP32OS/src/services/ui/ui.c", "D:/ESP32OS/src/services/ui/ui.h", "D:/ESP32OS/src/services/ui/ui_core.c", "D:/ESP32OS/src/services/ui/ui_core.h", "D:/ESP32OS/src/ui_demo.c", "D:/ESP32OS/src/ui_demo.h", "D:/ESP32OS/src/ui_design.c", "D:/ESP32OS/src/ui_design.h", "D:/ESP32OS/src/ui_render.c", "D:/ESP32OS/src/ui_render.h", "D:/ESP32OS/src/ui_render_swbuf.c", "D:/ESP32OS/src/ui_render_swbuf.h" ],
             "include_dirs": []
         },
         "tcp_transport": {

@@ -251,7 +251,7 @@ IDF_TOOLCHAIN:STRING=gcc
 LEGACY_INCLUDE_COMMON_HEADERS:UNINITIALIZED=
 
 //No help, variable specified on the command line.
-PROJECT_SOURCE_DIR:UNINITIALIZED=D:\ESP32OS
+PROJECT_SOURCE_DIR:UNINITIALIZED=d:\ESP32OS
 
 //No help, variable specified on the command line.
 PYTHON:UNINITIALIZED=C:\Users\atrep\.platformio\penv\.espidf-5.5.0\Scripts\python.exe
@@ -260,7 +260,7 @@ PYTHON:UNINITIALIZED=C:\Users\atrep\.platformio\penv\.espidf-5.5.0\Scripts\pytho
 PYTHON_DEPS_CHECKED:UNINITIALIZED=1
 
 //No help, variable specified on the command line.
-SDKCONFIG:UNINITIALIZED=D:\ESP32OS\sdkconfig.esp32-s3-devkitm-1
+SDKCONFIG:UNINITIALIZED=d:\ESP32OS\sdkconfig.esp32-s3-devkitm-1
 
 //Value Computed by CMake
 bootloader_BINARY_DIR:STATIC=D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader
