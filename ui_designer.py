@@ -1459,12 +1459,29 @@ def _preflight_scene(scene: SceneConfig) -> Dict[str, Any]:
     """Run basic preflight checks and return results dict."""
     issues: List[str] = []
     warnings: List[str] = []
+    hints: List[str] = []
     n = len(scene.widgets)
     for i, w in enumerate(scene.widgets):
         if w.width < 1 or w.height < 1:
             issues.append(f"[{i}] {w.type}: invalid size {w.width}x{w.height}")
-        if w.x < 0 or w.y < 0 or (w.x + w.width) > scene.width or (w.y + w.height) > scene.height:
-            issues.append(f"[{i}] {w.type}: off-canvas pos=({w.x},{w.y}) size={w.width}x{w.height}")
+        # Off-canvas classification (major if > 25% out)
+        off_left = max(0, -w.x)
+        off_top = max(0, -w.y)
+        off_right = max(0, (w.x + w.width) - scene.width)
+        off_bottom = max(0, (w.y + w.height) - scene.height)
+        off_area = (off_left + off_right) * max(0, min(w.height, scene.height)) + (off_top + off_bottom) * max(0, min(w.width, scene.width))
+        approx_area = max(1, w.width * w.height)
+        if off_left or off_top or off_right or off_bottom:
+            sev = "major" if (off_area / approx_area) > 0.25 else "minor"
+            issues.append(f"[{i}] {w.type}: off-canvas ({sev}) pos=({w.x},{w.y}) size={w.width}x{w.height}")
+            if sev == "minor":
+                hints.append(f"[{i}] Consider nudging into canvas or resizing")
+        # Min-size guidelines for clarity (warnings only)
+        t = (w.type or '').lower()
+        if t in ['progressbar', 'slider'] and w.height < 2:
+            warnings.append(f"[{i}] {w.type}: height < 2 may be hard to see")
+        if t in ['checkbox', 'radiobutton'] and w.height < 2:
+            warnings.append(f"[{i}] {w.type}: very small height may clip symbol")
         if w.type in ['label','button','textbox','checkbox','radiobutton'] and not (w.text or '').strip():
             warnings.append(f"[{i}] {w.type}: empty text")
     def overlap(a: WidgetConfig, b: WidgetConfig) -> bool:
@@ -1476,6 +1493,7 @@ def _preflight_scene(scene: SceneConfig) -> Dict[str, Any]:
     return {
         'issues': issues,
         'warnings': warnings,
+        'hints': hints,
         'ok': not issues,
         'counts': {'issues': len(issues), 'warnings': len(warnings), 'widgets': n}
     }

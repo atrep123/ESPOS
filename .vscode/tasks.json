@@ -88,6 +88,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Tests: Run All",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"python .\\test_ui_designer.py; python .\\test_preview_small.py\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Preview: Small Heights",
+      "type": "shell",
+      "command": "python .\\test_preview_small.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
       "label": "Simulator: UART set_bg ff0000 (auto)",
       "type": "shell",
       "command": "powershell -NoProfile -Command \"$p=Get-Content .\\sim_ports.json | ConvertFrom-Json; if (-not $p.uart_port) { Write-Host 'uart_port not found in sim_ports.json'; exit 1 }; $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1',$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg ff0000'); Start-Sleep -Milliseconds 100; $client.Close()\"",
