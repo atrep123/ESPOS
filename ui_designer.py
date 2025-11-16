@@ -15,6 +15,9 @@ import os
 from pathlib import Path
 
 
+PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py')
+
+
 def _empty_int_list() -> List[int]:
     """Typed default factory for chart data."""
     return []
@@ -553,8 +556,8 @@ class UIDesigner:
             new_widget.x, new_widget.y = sx, sy
             self.scenes[scene_name].widgets.append(new_widget)
     
-    def add_widget_from_template(self, template_name: str, widget_id: str,
-                                 x: int, y: int, **kwargs):
+    def add_widget_from_template(self, template_name: str, _widget_id: str,
+                                 x: int, y: int, **kwargs: Any):
         """Add widget from template with custom properties"""
         if template_name not in self.templates:
             print(f"❌ Template '{template_name}' not found")
@@ -1471,7 +1474,7 @@ def _auto_preflight_and_export(designer: 'UIDesigner', json_path: str) -> None:
             import subprocess, sys as _sys
             cmd = [
                 _sys.executable,
-                os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py'),
+                PREVIEW_SCRIPT,
                 '--headless-preview', '--in-json', json_path, '--out-png', out_png, '--out-html', out_html
             ]
             subprocess.run(cmd, check=False)
@@ -2762,7 +2765,7 @@ if __name__ == '__main__':
             import subprocess, sys as _sys
             cmd = [
                 _sys.executable,
-                os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py'),
+                PREVIEW_SCRIPT,
                 '--headless-preview', '--in-json', out_json, '--out-png', out_png, '--out-html', out_html
             ]
             subprocess.run(cmd, check=False)
@@ -2810,7 +2813,7 @@ if __name__ == '__main__':
             import subprocess, sys as _sys
             cmd = [
                 _sys.executable,
-                os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py'),
+                PREVIEW_SCRIPT,
                 '--headless-preview', '--in-json', out_json, '--out-png', out_png, '--out-html', out_html
             ]
             subprocess.run(cmd, check=False)
