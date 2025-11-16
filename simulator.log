@@ -1,0 +1,4 @@
+[2025-11-16 20:31:03] ERROR: Auto-size detection failed: module 'ctypes' has no attribute 'wintypes'
+[2025-11-16 20:35:40] ERROR: Auto-size detection failed: module 'ctypes' has no attribute 'wintypes'
+[2025-11-16 20:37:06] ERROR: Auto-size detection failed: module 'ctypes' has no attribute 'wintypes'
+[2025-11-16 20:38:40] ERROR: Auto-size detection failed: module 'ctypes' has no attribute 'wintypes'

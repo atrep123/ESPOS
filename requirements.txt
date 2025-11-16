@@ -1,1 +1,2 @@
+# Base runtime dependencies (prefer using pyproject extras: ui, hw, web, metrics)
 pillow>=10.0.0

@@ -1,4 +1,18 @@
 {
     "chat.tools.terminal.autoReplyToPrompts": true,
-    "chat.tools.terminal.blockDetectedFileWrites": "all"
+    "chat.tools.terminal.blockDetectedFileWrites": "all",
+    "files.exclude": {
+        "**/__pycache__/": true,
+        "**/.pio/": true,
+        "**/.venv/": true,
+        "**/.pytest_cache/": true,
+        "**/.mypy_cache/": true,
+        "**/profiler_enhanced.*": true,
+        "**/test_*.html": true,
+        "**/test_*.json": true,
+        // Hide legacy root-level demo artifacts (new ones go to examples/)
+        "ui_demo.*": true,
+        "showcase.*": true,
+        "dashboard_demo.*": true
+    }
 }

@@ -41,6 +41,14 @@ ESP32OS/
 │   ├── .sim_config.json              # Default config template
 │   └── multi_sim_session.json        # Multi-window session (auto-generated)
 │
+├── Examples (generated)
+│   ├── examples/ui_demo.{json,html,png}      # Exporter demo artifacts
+│   ├── examples/dashboard_demo.{json,html,py}# Interactive dashboard demo
+│   └── examples/showcase.{json,html,py}      # Complete widget showcase
+│
+├── Simulator Modules (scaffold)
+│   └── sim/modules/                 # Future modularization (renderer, servers)
+│
 └── ESP32 Firmware
     ├── src/                          # C/C++ source
     │   ├── main.c                    # ESP32 main

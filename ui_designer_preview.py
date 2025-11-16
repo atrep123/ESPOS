@@ -4,9 +4,15 @@ Visual Preview Window for UI Designer
 Real-time graphical preview with mouse interaction and export
 """
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, colorchooser
-from PIL import Image, ImageDraw, ImageFont, ImageTk
+try:
+    import tkinter as tk  # type: ignore
+    from tkinter import ttk, filedialog, messagebox, colorchooser  # type: ignore
+    TK_AVAILABLE = True
+except Exception:
+    TK_AVAILABLE = False
+from PIL import Image, ImageDraw, ImageFont
+if TK_AVAILABLE:
+    from PIL import ImageTk  # type: ignore
 import json
 from typing import Optional, Tuple, List, Dict, Any
 from dataclasses import dataclass
@@ -48,6 +54,8 @@ class VisualPreviewWindow:
         self.drag_offset: Optional[Tuple[int, int]] = None
         self.resize_handle: Optional[str] = None  # ne, nw, se, sw, n, s, e, w
         
+        if not TK_AVAILABLE:
+            raise RuntimeError("Tkinter is not available; use --headless mode")
         # Create main window
         self.root = tk.Tk()
         self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
@@ -818,23 +826,67 @@ class VisualPreviewWindow:
 
 def main():
     """Main entry point"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="UI Designer Preview")
+    parser.add_argument("--headless", action="store_true", help="Run without GUI and export image (deprecated, use --headless-preview)")
+    parser.add_argument("--headless-preview", action="store_true", help="Run without GUI and export PNG/HTML")
+    parser.add_argument("--in-json", default="", help="Design JSON to load (optional)")
+    parser.add_argument("--out-png", default="examples/preview_ci.png", help="Output PNG path in headless mode")
+    parser.add_argument("--out-html", default="", help="Optional HTML preview output path in headless mode")
+    parser.add_argument("--bg", default="#000000", help="Background color (hex)")
+    args = parser.parse_args()
+
     # Create designer with sample scene
     designer = UIDesigner(128, 64)
-    designer.create_scene("preview_test")
-    
-    # Add sample widgets
-    designer.add_widget(WidgetType.LABEL, x=5, y=5, width=50, height=10, 
-                        text="Visual Preview", border=True)
-    designer.add_widget(WidgetType.BUTTON, x=60, y=5, width=30, height=10, 
-                        text="Click Me")
-    designer.add_widget(WidgetType.PROGRESSBAR, x=5, y=20, width=60, height=8, 
-                        value=75)
-    designer.add_widget(WidgetType.CHECKBOX, x=5, y=35, width=50, height=8, 
-                        text="Enable Feature", checked=True)
-    
-    # Launch preview window
+    if args.in_json:
+        try:
+            designer.load_from_json(args.in_json)
+        except Exception as e:
+            print(f"[headless] Failed to load design {args.in_json}: {e}")
+            designer.create_scene("preview_test")
+    else:
+        designer.create_scene("preview_test")
+        # Add sample widgets
+        designer.add_widget(WidgetType.LABEL, x=5, y=5, width=50, height=10, text="Visual Preview", border=True)
+        designer.add_widget(WidgetType.BUTTON, x=60, y=5, width=30, height=10, text="Click Me")
+        designer.add_widget(WidgetType.PROGRESSBAR, x=5, y=20, width=60, height=8, value=75)
+        designer.add_widget(WidgetType.CHECKBOX, x=5, y=35, width=50, height=8, text="Enable Feature", checked=True)
+
+    if args.headless or args.headless_preview or not TK_AVAILABLE:
+        # Headless render to PNG
+        from pathlib import Path
+        Path("examples").mkdir(exist_ok=True)
+        def _hx(col: str):
+            c = col.lstrip("#")
+            return tuple(int(c[i:i+2], 16) for i in (0,2,4))
+        img = Image.new("RGB", (designer.width, designer.height), _hx(args.bg))
+        draw = ImageDraw.Draw(img)
+        scene = designer.scenes.get(designer.current_scene)
+        if scene:
+            for w in scene.widgets:
+                if w.visible:
+                    # Minimal draw: reuse class method via instance
+                    vp = object.__new__(VisualPreviewWindow)
+                    vp.settings = PreviewSettings()
+                    vp._draw_widget(draw, w, False)
+        img = img.resize((designer.width * 4, designer.height * 4), Image.NEAREST)
+        img.save(args.out_png)
+        print(f"[headless] PNG exported: {args.out_png}")
+        # Optional HTML
+        if args.out_html:
+            try:
+                # Use ASCII HTML export from designer
+                designer.export_to_html(args.out_html)
+                print(f"[headless] HTML exported: {args.out_html}")
+            except Exception as e:
+                print(f"[headless] HTML export failed: {e}")
+        return 0
+
+    # GUI mode
     preview = VisualPreviewWindow(designer)
     preview.run()
+    return 0
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 """Interactive UI Designer demo - creates a dashboard"""
 
 import sys
+import os
 sys.path.insert(0, '.')
 
 from ui_designer import UIDesigner
@@ -63,14 +64,17 @@ def create_dashboard_demo():
     print("💾 EXPORTING:")
     print("=" * 70)
     
-    designer.save_to_json('dashboard_demo.json')
-    print("✓ JSON saved: dashboard_demo.json")
+    out_dir = os.path.join('examples')
+    os.makedirs(out_dir, exist_ok=True)
+
+    designer.save_to_json(os.path.join(out_dir, 'dashboard_demo.json'))
+    print("✓ JSON saved: examples/dashboard_demo.json")
     
-    designer.export_code('dashboard_demo.py')
-    print("✓ Python code: dashboard_demo.py")
+    designer.export_code(os.path.join(out_dir, 'dashboard_demo.py'))
+    print("✓ Python code: examples/dashboard_demo.py")
     
-    designer.export_to_html('dashboard_demo.html')
-    print("✓ HTML preview: dashboard_demo.html")
+    designer.export_to_html(os.path.join(out_dir, 'dashboard_demo.html'))
+    print("✓ HTML preview: examples/dashboard_demo.html")
     
     # Widget summary
     print("\n" + "=" * 70)
@@ -106,9 +110,9 @@ def create_dashboard_demo():
     print("✅ DEMO COMPLETED!")
     print("=" * 70)
     print("\nNext steps:")
-    print("  • Open dashboard_demo.html in browser for preview")
+    print("  • Open examples/dashboard_demo.html in browser for preview")
     print("  • Use python ui_designer.py for interactive CLI")
-    print("  • Import dashboard_demo.py into simulator")
+    print("  • Import examples/dashboard_demo.py into simulator")
 
 if __name__ == '__main__':
     create_dashboard_demo()

@@ -42,10 +42,10 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ FILES "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/3rdparty/everest/libeverest.a")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ FILES "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/3rdparty/everest/libeverest.a")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  include("D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/3rdparty/everest/CMakeFiles/everest.dir/install-cxx-module-bmi-noconfig.cmake" OPTIONAL)
+  include("C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/3rdparty/everest/CMakeFiles/everest.dir/install-cxx-module-bmi-noconfig.cmake" OPTIONAL)
 endif()
 

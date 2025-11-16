@@ -4,7 +4,79 @@
     {
       "label": "Simulator: Start (AutoPorts, New Window)",
       "type": "shell",
-      "command": ".\\run_sim.ps1 -AutoPorts -Fps 144",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\run_sim.ps1 -AutoPorts -Fps 144",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup: Python env (Windows)",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\setup_env.ps1",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Self-Check",
+      "type": "shell",
+      "command": "python .\\tools\\self_check.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start (Python, AutoSize)",
+      "type": "shell",
+      "command": "python .\\sim_run.py --auto-size --fps 144",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start (Python + Overlay)",
+      "type": "shell",
+      "command": "python .\\sim_run.py --auto-size --fps 120 --input-overlay",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start (Python + Gamepad)",
+      "type": "shell",
+      "command": "python .\\sim_run.py --auto-size --fps 120 --gamepad",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Designer: Headless Preview (example)",
+      "type": "shell",
+      "command": "python .\\ui_designer_preview.py --headless-preview --in-json .\\examples\\ui_demo.json --out-html .\\examples\\preview.html",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Designer: Demo Export",
+      "type": "shell",
+      "command": "python .\\ui_designer.py --demo --out-json .\\examples\\demo_scene.json --out-html .\\examples\\demo_scene.html --out-png .\\examples\\demo_scene.png",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Designer: Open Demo HTML",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"Start-Process .\\examples\\demo_scene.html\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Designer: Demo (Export + Open)",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"Write-Host 'Run compound Designer Demo'\"",
+      "dependsOn": ["Designer: Demo Export", "Designer: Open Demo HTML"],
+      "dependsOrder": "sequence",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Designer: Anim Preview (CLI)",
+      "type": "shell",
+      "command": "python .\\ui_designer.py --script-file .\\tools\\designer_anim_demo.txt",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
@@ -25,25 +97,14 @@
     {
       "label": "Simulator: Start (AutoPorts, SameWindow)",
       "type": "shell",
-      "command": ".\\run_sim.ps1 -SameWindow -AutoPorts -Fps 144",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\run_sim.ps1 -SameWindow -AutoPorts -Fps 144",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
     {
       "label": "Simulator: Smoke Test (auto)",
       "type": "shell",
-      "command": "powershell -NoProfile -Command \"
-        $ErrorActionPreference = 'Stop';
-        $limit = (Get-Date).AddSeconds(12);
-        while (-not (Test-Path .\\sim_ports.json)) { Start-Sleep -Milliseconds 200; if ((Get-Date) -gt $limit) { Write-Host 'Timeout waiting for sim_ports.json'; exit 1 } }
-        $p = Get-Content .\\sim_ports.json | ConvertFrom-Json;
-        if (-not $p.rpc_port) { Write-Host 'rpc_port missing in sim_ports.json'; exit 1 }
-        if (-not $p.uart_port) { Write-Host 'uart_port missing in sim_ports.json'; exit 1 }
-        python .\\simctl.py $($p.rpc_port) set_bg 255 32 32;
-        python .\\simctl.py $($p.rpc_port) scene 1;
-        python .\\simctl.py $($p.rpc_port) btn B press; Start-Sleep -Milliseconds 120; python .\\simctl.py $($p.rpc_port) btn B release;
-        $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1', [int]$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg 00ff00'); Start-Sleep -Milliseconds 100; $client.Close()
-      \"",
+      "command": "powershell -NoProfile -Command \"$ErrorActionPreference = 'Stop'; $limit = (Get-Date).AddSeconds(12); while (-not (Test-Path .\\sim_ports.json)) { Start-Sleep -Milliseconds 200; if ((Get-Date) -gt $limit) { Write-Host 'Timeout waiting for sim_ports.json'; exit 1 } } $p = Get-Content .\\sim_ports.json | ConvertFrom-Json; if (-not $p.rpc_port) { Write-Host 'rpc_port missing in sim_ports.json'; exit 1 } if (-not $p.uart_port) { Write-Host 'uart_port missing in sim_ports.json'; exit 1 } python .\\simctl.py $($p.rpc_port) set_bg 255 32 32; python .\\simctl.py $($p.rpc_port) scene 1; python .\\simctl.py $($p.rpc_port) btn B press; Start-Sleep -Milliseconds 120; python .\\simctl.py $($p.rpc_port) btn B release; $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1', [int]$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg 00ff00'); Start-Sleep -Milliseconds 100; $client.Close()\"",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
@@ -51,17 +112,14 @@
       "label": "Simulator: Start + Smoke Test",
       "type": "shell",
       "command": "powershell -NoProfile -Command \"Write-Host 'Use the Run button on compound tasks list.'\"",
-      "dependsOn": [
-        "Simulator: Start (AutoPorts, New Window)",
-        "Simulator: Smoke Test (auto)"
-      ],
+      "dependsOn": ["Simulator: Start (AutoPorts, New Window)", "Simulator: Smoke Test (auto)"],
       "dependsOrder": "sequence",
       "problemMatcher": []
-    }
+    },
     {
       "label": "Simulator: Start (RPC 8765 / UART 7777)",
       "type": "shell",
-      "command": ".\\run_sim.ps1 -Port 8765 -UartPort 7777 -Fps 120",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\run_sim.ps1 -Port 8765 -UartPort 7777 -Fps 120",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
@@ -71,6 +129,44 @@
       "command": "python .\\simctl.py 8765 set_bg 255 0 0",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
+    },
+    {
+      "label": "Prepare: QA output dirs",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"New-Item -ItemType Directory -Force -Path .\\reports | Out-Null; New-Item -ItemType Directory -Force -Path .\\src\\generated | Out-Null\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Assets: QA (1bpp)",
+      "type": "shell",
+      "command": "python .\\tools\\asset_pipeline_qa.py --assets .\\ui_sim .\\assets --profile 1bpp --report .\\reports\\assets_qa_1bpp.json --emit-html .\\reports\\assets_qa_1bpp.html --emit-c .\\src\\generated\\assets_embedded_1bpp.c",
+      "dependsOn": ["Prepare: QA output dirs"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Assets: QA (4bpp)",
+      "type": "shell",
+      "command": "python .\\tools\\asset_pipeline_qa.py --assets .\\ui_sim .\\assets --profile 4bpp --report .\\reports\\assets_qa_4bpp.json --emit-html .\\reports\\assets_qa_4bpp.html --emit-c .\\src\\generated\\assets_embedded_4bpp.c",
+      "dependsOn": ["Prepare: QA output dirs"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Assets: Open 1bpp Report",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"Start-Process .\\reports\\assets_qa_1bpp.html\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Assets: QA 1bpp (Run + Open)",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"Write-Host 'Run assets QA 1bpp and open report'\"",
+      "dependsOn": ["Assets: QA (1bpp)", "Assets: Open 1bpp Report"],
+      "dependsOrder": "sequence",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
     }
   ]
-}

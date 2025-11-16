@@ -29,6 +29,9 @@ class BridgeConfig:
     auto_reconnect: bool = True
     sync_interval: float = 0.1  # 100ms
     bidirectional: bool = True
+    healthcheck_interval: float = 5.0
+    reconnect_initial_delay: float = 0.5
+    reconnect_max_delay: float = 8.0
 
 
 class ESP32HardwareBridge:
@@ -39,6 +42,8 @@ class ESP32HardwareBridge:
         self.serial_conn: Optional[serial.Serial] = None
         self.sim_socket: Optional[socket.socket] = None
         self.running = False
+        self._worker_thread: Optional[threading.Thread] = None
+        self._last_activity_ts: float = 0.0
         
         # Event queues
         self.hw_to_sim_queue: queue.Queue = queue.Queue()
@@ -96,6 +101,12 @@ class ESP32HardwareBridge:
             return True
         except Exception as e:
             print(f"⚠️ Failed to send to simulator: {e}")
+            # Mark socket dead to trigger reconnect
+            try:
+                if self.sim_socket:
+                    self.sim_socket.close()
+            finally:
+                self.sim_socket = None
             return False
     
     def send_to_hardware(self, command: str) -> bool:
@@ -108,6 +119,12 @@ class ESP32HardwareBridge:
             return True
         except Exception as e:
             print(f"⚠️ Failed to send to hardware: {e}")
+            # Mark serial dead to trigger reconnect
+            try:
+                if self.serial_conn:
+                    self.serial_conn.close()
+            finally:
+                self.serial_conn = None
             return False
     
     def read_from_hardware(self) -> Optional[str]:
@@ -183,46 +200,67 @@ class ESP32HardwareBridge:
         return None
     
     def hardware_reader_thread(self):
-        """Thread to read from hardware and forward to simulator"""
+        """Thread to read from hardware and enqueue to simulator queue"""
         while self.running:
+            if not self.serial_conn:
+                time.sleep(0.1)
+                continue
             line = self.read_from_hardware()
             if line:
                 print(f"📥 HW → {line}")
-                
                 message = self.parse_hardware_message(line)
                 if message:
-                    self.send_to_simulator(message)
-            
+                    self.hw_to_sim_queue.put(message)
+                    self._last_activity_ts = time.time()
             time.sleep(0.01)  # 10ms poll
     
-    def simulator_monitor_thread(self):
-        """Thread to monitor simulator state (would need simulator state API)"""
-        # This would require simulator to expose state via additional API
-        # For now, this is a placeholder
+    def simulator_sender_thread(self):
+        """Thread to send queued messages to simulator with retry"""
+        backoff = self.config.reconnect_initial_delay
         while self.running:
-            time.sleep(self.config.sync_interval)
+            try:
+                msg = self.hw_to_sim_queue.get(timeout=0.2)
+            except queue.Empty:
+                # Health-check ping
+                now = time.time()
+                if self.sim_socket and (now - self._last_activity_ts) > self.config.healthcheck_interval:
+                    self.send_to_simulator({"method": "ping"})
+                    self._last_activity_ts = now
+                continue
+            # Ensure simulator connected
+            if not self.sim_socket:
+                if not self.config.auto_reconnect:
+                    continue
+                if self.connect_simulator():
+                    backoff = self.config.reconnect_initial_delay
+                else:
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, self.config.reconnect_max_delay)
+                    self.hw_to_sim_queue.put(msg)
+                    continue
+            if not self.send_to_simulator(msg):
+                # Failed send; requeue and try reconnect
+                self.hw_to_sim_queue.put(msg)
+                if self.config.auto_reconnect:
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, self.config.reconnect_max_delay)
+                continue
+            backoff = self.config.reconnect_initial_delay
     
     def start(self) -> bool:
         """Start the bridge"""
         print("🌉 Starting ESP32 Hardware Bridge...")
-        
-        if not self.connect_serial():
-            return False
-        
-        if not self.connect_simulator():
-            self.disconnect()
-            return False
-        
+        # Initial connections (best-effort)
+        self.connect_serial()
+        self.connect_simulator()
         self.running = True
         
-        # Start reader thread
-        hw_thread = threading.Thread(target=self.hardware_reader_thread, daemon=True)
-        hw_thread.start()
+        # Reader from hardware → queue
+        threading.Thread(target=self.hardware_reader_thread, daemon=True).start()
+        # Sender queue → simulator
+        threading.Thread(target=self.simulator_sender_thread, daemon=True).start()
         
-        if self.config.bidirectional:
-            sim_thread = threading.Thread(target=self.simulator_monitor_thread, daemon=True)
-            sim_thread.start()
-        
+        # Optional future: sim→hw monitor could enqueue to sim_to_hw_queue and have similar sender
         print("🚀 Bridge running! Press Ctrl+C to stop...")
         return True
     

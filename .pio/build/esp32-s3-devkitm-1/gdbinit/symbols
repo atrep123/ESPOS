@@ -13,8 +13,8 @@ end
 
 # Load bootloader symbols
 set confirm off
-    add-symbol-file D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader/bootloader.elf
+    add-symbol-file C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader/bootloader.elf
 set confirm on
 
 # Load application symbols
-file D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/ESP32OS.elf
+file C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/ESP32OS.elf

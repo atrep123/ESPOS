@@ -39,10 +39,10 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/include/cmake_install.cmake")
-  include("D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/3rdparty/cmake_install.cmake")
-  include("D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/library/cmake_install.cmake")
-  include("D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/pkgconfig/cmake_install.cmake")
+  include("C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/include/cmake_install.cmake")
+  include("C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/3rdparty/cmake_install.cmake")
+  include("C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/library/cmake_install.cmake")
+  include("C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/mbedtls/mbedtls/pkgconfig/cmake_install.cmake")
 
 endif()
 

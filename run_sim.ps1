@@ -63,6 +63,11 @@ if ($SameWindow) {
         Write-Host "Starting UI Simulator in this window on port $Port (FPS $Fps)" -ForegroundColor Green
     }
     & python $argsList
+    $code = $LASTEXITCODE
+    if ($code -ne 0) {
+        Write-Host "Simulator exited with code $code. Check 'simulator.log' for details (if present)." -ForegroundColor Red
+        exit $code
+    }
 } else {
     if (Get-Command wt.exe -ErrorAction SilentlyContinue) {
         Start-Process wt.exe -ArgumentList @("python", ($argsList -join ' '))

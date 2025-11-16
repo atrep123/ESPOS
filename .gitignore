@@ -3,3 +3,26 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+.env/
+
+# IDE/editor
+.idea/
+
+# Generated analytics/metrics artifacts
+profiler_enhanced.*
+test_metrics.csv
+
+# Coverage & cache
+.coverage
+.ruff_cache/
+
+# OS files
+Thumbs.db
+Desktop.ini

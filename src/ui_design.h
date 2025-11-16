@@ -1,6 +1,8 @@
 #ifndef UI_DESIGN_H
 #define UI_DESIGN_H
 #include <stdint.h>
+    #define UI_ENABLE_CONSTRAINTS 1
+    #define UI_ENABLE_ANIMATIONS  1
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,6 +32,8 @@ typedef struct {
     uint8_t  checked;
     int16_t  value, min_value, max_value;
     const char* text;
+    const char* constraints_json; // optional constraints metadata
+    const char* animations_csv;   // optional animations list (semicolon-separated)
 } UiWidget;
 
 typedef struct {

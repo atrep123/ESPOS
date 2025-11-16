@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 UI Exporter: Produce demo JSON/HTML/PNG and C headers/sources for firmware
-- Generates a small demo scene
-- Writes ui_demo.json, ui_demo.html, ui_demo.png at repo root
+- Generates a small demo scene (or uses presets)
+- Writes examples/ui_demo.* by default
 - Writes src/ui_design.h and src/ui_design.c for firmware integration
 """
 
 import os
 import json
 from dataclasses import asdict
+import argparse
 from typing import Tuple
 
 from ui_designer import UIDesigner, WidgetType, WidgetConfig
@@ -221,7 +222,19 @@ const UiScene UI_SCENE_{scene.name.upper()} = {{
 
 
 def build_demo_and_export():
-    d = UIDesigner(128, 64)
+    parser = argparse.ArgumentParser(description="UI Exporter with presets")
+    parser.add_argument('--preset', default='', help='Device preset: esp32_oled_128x64_1bpp | st7789_240x135_4bpp')
+    parser.add_argument('--out-dir', default='examples', help='Output directory for artifacts')
+    parser.add_argument('--base-name', default='ui_design', help='Base name for C exports in src/')
+    args = parser.parse_args()
+
+    presets = {
+        'esp32_oled_128x64_1bpp': {'width': 128, 'height': 64, 'bpp': 1},
+        'st7789_240x135_4bpp': {'width': 240, 'height': 135, 'bpp': 4},
+    }
+
+    cfg = presets.get(args.preset, {'width': 128, 'height': 64, 'bpp': 1})
+    d = UIDesigner(cfg['width'], cfg['height'])
     d.create_scene("demo")
 
     # Title
@@ -235,17 +248,31 @@ def build_demo_and_export():
     # Checkbox
     d.add_widget(WidgetType.CHECKBOX, x=58, y=24, width=60, height=10, text="Enable", checked=True, border=False)
 
+    # Output dir for demo artifacts
+    out_dir = os.path.join(args.out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+
     # Save JSON and HTML
-    d.save_to_json("ui_demo.json")
-    d.export_to_html("ui_demo.html")
+    d.save_to_json(os.path.join(out_dir, "ui_demo.json"))
+    d.export_to_html(os.path.join(out_dir, "ui_demo.html"))
 
     # PNG
-    exported = export_png_from_scene(d, "ui_demo.png", bg="#000000")
+    exported = export_png_from_scene(d, os.path.join(out_dir, "ui_demo.png"), bg="#000000")
     if exported:
-        print("[ok] PNG exported: ui_demo.png")
+        print("[ok] PNG exported: examples/ui_demo.png")
 
     # C export
-    export_c(d, base_name="ui_design")
+    export_c(d, base_name=args.base_name)
+
+    # Save used preset
+    used_preset = {
+        'name': args.preset or 'custom',
+        'width': cfg['width'],
+        'height': cfg['height'],
+        'bpp': cfg['bpp']
+    }
+    with open(os.path.join(out_dir, 'export_preset_used.json'), 'w', encoding='utf-8') as f:
+        json.dump(used_preset, f, indent=2)
 
 
 if __name__ == "__main__":

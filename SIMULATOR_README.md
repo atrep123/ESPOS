@@ -101,6 +101,16 @@ Další pokročilé parametry:
 - `--websocket-port <port>`: spustit WebSocket server pro remote viewer
 - `--record <path>`: zaznamenat session do souboru
 - `--playback <path>`: přehrát zaznamenaný session
+- `--gamepad`: zapnout podporu gamepadu/joysticku přes pygame (mapuje tlačítka 0/1/2 → A/B/C)
+- `--input-overlay`: otevře malé klikací okno s tlačítky A/B/C (pygame)
+
+Poznámka k závislostem pro vstupy: pro `--gamepad` a `--input-overlay` je potřeba `pygame`. Nainstalujte např.:
+
+```powershell
+pip install pygame
+# nebo pokud používáte projektové extras
+pip install -e .[input]
+```
 
 ### C verze
 
@@ -139,7 +149,7 @@ pio run -e ui-sim
 - **`include/esp32_sim_client.h`** - C/C++ header-only client library
 - **`events_example.json`** - ukázkový skript s časovanými událostmi
 - **`.sim_config.json`** - ukázkový konfigurační soubor
-- **`ui_sim/remote_viewer.html`** - WebSocket remote viewer (web UI)
+- **`web/remote_viewer.html`** - WebSocket remote viewer (web UI)
 - **`SIMULATOR_EXAMPLES.md`** - příklady použití a integrace
 
 ## 🎨 Příklad výstupu

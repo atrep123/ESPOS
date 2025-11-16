@@ -10,18 +10,18 @@ if(NOT EXISTS "C:/Users/atrep/.platformio/packages/framework-espidf/components/b
   file(MAKE_DIRECTORY "C:/Users/atrep/.platformio/packages/framework-espidf/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader"
-  "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix"
-  "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/tmp"
-  "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp"
-  "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src"
-  "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader"
+  "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix"
+  "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/tmp"
+  "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src"
+  "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "D:/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

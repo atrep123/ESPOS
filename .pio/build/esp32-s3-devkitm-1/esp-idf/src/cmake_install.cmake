@@ -1,4 +1,4 @@
-# Install script for directory: D:/ESP32OS/src
+# Install script for directory: C:/Users/atrep/Desktop/ESP32OS/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

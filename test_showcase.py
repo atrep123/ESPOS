@@ -2,6 +2,7 @@
 """Comprehensive widget showcase - all 12 widget types"""
 
 import sys
+import os
 sys.path.insert(0, '.')
 
 from ui_designer import UIDesigner, WidgetType, BorderStyle, WidgetConfig
@@ -77,14 +78,17 @@ def create_widget_showcase():
     print("💾 EXPORTS:")
     print("=" * 70)
     
-    designer.save_to_json('showcase.json')
-    print("✓ JSON: showcase.json")
+    out_dir = os.path.join('examples')
+    os.makedirs(out_dir, exist_ok=True)
+
+    designer.save_to_json(os.path.join(out_dir, 'showcase.json'))
+    print("✓ JSON: examples/showcase.json")
     
-    designer.export_code('showcase.py')
-    print("✓ Python: showcase.py")
+    designer.export_code(os.path.join(out_dir, 'showcase.py'))
+    print("✓ Python: examples/showcase.py")
     
-    designer.export_to_html('showcase.html')
-    print("✓ HTML: showcase.html")
+    designer.export_to_html(os.path.join(out_dir, 'showcase.html'))
+    print("✓ HTML: examples/showcase.html")
     
     # Statistics
     scene = designer.scenes[designer.current_scene]

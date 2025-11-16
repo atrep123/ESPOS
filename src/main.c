@@ -110,7 +110,15 @@ void app_main(void)
     }
 
     init_spiffs();
+
+    #ifndef ENABLE_SPIFFS_STARTUP_TEST
+    #define ENABLE_SPIFFS_STARTUP_TEST 0
+    #endif
+    #if ENABLE_SPIFFS_STARTUP_TEST
     test_spiffs();
+    #else
+    ESP_LOGI(TAG, "SPIFFS startup test disabled (ENABLE_SPIFFS_STARTUP_TEST=0)");
+    #endif
 
     /* Initialise I2C bus and send a minimal
      * placeholder init sequence to the SSD1363 panel.

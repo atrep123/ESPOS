@@ -1,0 +1,11 @@
+# Demo script for non-interactive animation preview
+new DemoCLI
+add label 0 0 128 10 DemoCLI
+edit 0 align center
+edit 0 border false
+edit 0 style bold
+edit 0 color_fg cyan
+# Add a button and preview a bounce animation
+add button 39 18 50 12 Play
+# Play 12 steps with 120ms delay
+anim play 1 bounce 12 120

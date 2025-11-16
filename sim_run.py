@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 ESP32 UI Simulator - Python Version
 Runs without requiring C compiler
@@ -15,9 +16,30 @@ import json
 import queue
 import atexit
 import re
-from typing import Tuple, Any, List, Dict, Optional, TypedDict, Literal, Union
+from typing import Tuple, Any, List, Dict, Optional, TypedDict, Literal, Union, Callable, Set, cast, TYPE_CHECKING, Iterable, Mapping
 from datetime import datetime
 from dataclasses import dataclass
+
+pygame: Any
+try:
+    import pygame  # type: ignore
+except Exception:
+    pygame = None  # type: ignore
+
+if TYPE_CHECKING:
+    import pygame  # type: ignore  # pragma: no cover
+
+class RPCEvent(TypedDict):
+    type: Literal['rpc']
+    data: Dict[str, Any]
+
+
+class UARTEvent(TypedDict):
+    type: Literal['uart']
+    line: str
+
+
+Event = Union[RPCEvent, UARTEvent]
 
 # --- ANSI helpers ---
 ANSI_ESC = "\033["
@@ -107,6 +129,7 @@ class RenderContext:
     compute_ms: float = 0.0
     sleep_ms: float = 0.0
     util: float = 0.0
+    input_src: str = ""
 
 class Widget:
     def render(self, ctx: RenderContext) -> List[str]:
@@ -250,7 +273,6 @@ class ButtonsWidget(Widget):
 class HelpWidget(Widget):
     def render(self, ctx: RenderContext) -> List[str]:
         use_color = ctx.use_color
-        use_unicode = ctx.use_unicode
         width = ctx.width
         cyan = Color.CYAN if use_color else ''
         reset = Color.RESET if use_color else ''
@@ -292,6 +314,17 @@ class BottomBorderWidget(Widget):
         reset = Color.RESET if use_color else ''
         return [f"{cyan}{bl}{hv * width}{br}{reset}"]
 
+class HUDWidget(Widget):
+    """Mini HUD with FPS and timings"""
+    def render(self, ctx: RenderContext) -> List[str]:
+        use_color = ctx.use_color
+        yellow = Color.YELLOW if use_color else ''
+        reset = Color.RESET if use_color else ''
+        src = ctx.input_src or 'kbd'
+        msg = f" HUD  FPS:{ctx.fps:5.1f}  compute:{ctx.compute_ms:4.1f}ms  sleep:{ctx.sleep_ms:4.1f}ms  util:{ctx.util*100:3.0f}%  in:{src} "
+        line = f"{yellow}{msg:{' '}<{ctx.width+2}}{reset}"
+        return [line]
+
 # --- Simple file logger ---
 def log_error(message: str) -> None:
     try:
@@ -305,7 +338,7 @@ def log_error(message: str) -> None:
 
 # --- RPC server (TCP, line-delimited JSON) ---
 
-def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: "queue.Queue[Dict[str, Any]]") -> None:
+def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: queue.Queue[Event]) -> None:
     try:
         with conn:
             buf = b""
@@ -319,6 +352,7 @@ def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: "queue.Que
                     line = line.strip()
                     if not line:
                         continue
+                    decoded = ""
                     try:
                         decoded = line.decode('utf-8', errors='ignore')
                         msg = json.loads(decoded)
@@ -333,7 +367,7 @@ def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: "queue.Que
         log_error(f"RPC client loop error: {e}")
 
 
-def start_rpc_server(port: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional[threading.Thread]:
+def start_rpc_server(port: int, evq: queue.Queue[Event]) -> Optional[threading.Thread]:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -343,7 +377,7 @@ def start_rpc_server(port: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional[
         log_error(f"RPC bind {port} failed: {e}")
         return None
 
-    def _server(s):
+    def _server(s: socket.socket) -> None:
         try:
             while True:
                 conn, addr = s.accept()
@@ -365,9 +399,13 @@ def start_rpc_server(port: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional[
 def apply_rpc_message(state: UIState, msg: Dict[str, Any]) -> None:
     meth = str(msg.get("method", "")).lower()
     if meth == "set_bg":
-        if "rgb" in msg and isinstance(msg["rgb"], (list, tuple)) and len(msg["rgb"]) == 3:
-            r, g, b = msg["rgb"]
-            state.bg = rgb565(int(r), int(g), int(b))
+        rgb_val = msg.get("rgb")
+        if isinstance(rgb_val, (list, tuple)):
+            rgb_seq = cast(Iterable[int | float | str], rgb_val)
+            rgb_list: List[int] = [int(v) for v in rgb_seq]
+            if len(rgb_list) == 3:
+                r_int, g_int, b_int = rgb_list
+                state.bg = rgb565(r_int, g_int, b_int)
         elif "rgb565" in msg:
             try:
                 state.bg = int(msg["rgb565"]) & 0xFFFF
@@ -393,7 +431,7 @@ def apply_rpc_message(state: UIState, msg: Dict[str, Any]) -> None:
 
 # --- UART-like text server (parity with firmware: "set_bg <hex>") ---
 
-def _uart_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: "queue.Queue[Dict[str, Any]]") -> None:
+def _uart_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: queue.Queue[Event]) -> None:
     try:
         with conn:
             buf = b""
@@ -412,7 +450,7 @@ def _uart_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: "queue.Qu
         log_error(f"UART client loop error: {e}")
 
 
-def start_uart_server(port: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional[threading.Thread]:
+def start_uart_server(port: int, evq: queue.Queue[Event]) -> Optional[threading.Thread]:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -422,7 +460,7 @@ def start_uart_server(port: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional
         log_error(f"UART bind {port} failed: {e}")
         return None
 
-    def _server(s):
+    def _server(s: socket.socket) -> None:
         try:
             while True:
                 conn, addr = s.accept()
@@ -442,7 +480,7 @@ def start_uart_server(port: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional
 
 # --- Optional COM-port bridge (pyserial) ---
 
-def _com_bridge_loop(port_name: str, baud: int, evq: "queue.Queue[Dict[str, Any]]") -> None:
+def _com_bridge_loop(port_name: str, baud: int, evq: queue.Queue[Event]) -> None:
     try:
         import serial  # type: ignore
     except Exception as e:
@@ -469,7 +507,7 @@ def _com_bridge_loop(port_name: str, baud: int, evq: "queue.Queue[Dict[str, Any]
     except Exception as e:
         log_error(f"COM loop error: {e}")
 
-def start_com_bridge(port_name: str, baud: int, evq: "queue.Queue[Dict[str, Any]]") -> Optional[threading.Thread]:
+def start_com_bridge(port_name: str, baud: int, evq: queue.Queue[Event]) -> Optional[threading.Thread]:
     try:
         import serial  # type: ignore
     except Exception:
@@ -481,7 +519,7 @@ def start_com_bridge(port_name: str, baud: int, evq: "queue.Queue[Dict[str, Any]
 
 # --- WebSocket server for remote UI viewing ---
 
-def start_websocket_server(port: int, frame_callback) -> Optional[threading.Thread]:
+def start_websocket_server(port: int, frame_callback: Callable[[], Dict[str, Any]]) -> Optional[threading.Thread]:
     """Start WebSocket server for remote UI streaming (requires websockets library)"""
     try:
         import asyncio
@@ -490,9 +528,9 @@ def start_websocket_server(port: int, frame_callback) -> Optional[threading.Thre
         print("websockets not installed. Install with: pip install websockets", file=sys.stderr)
         return None
     
-    clients = set()
+    clients: Set[Any] = set()
     
-    async def handler(websocket, path):
+    async def handler(websocket: Any, path: str) -> None:
         clients.add(websocket)
         try:
             await websocket.wait_closed()
@@ -508,7 +546,7 @@ def start_websocket_server(port: int, frame_callback) -> Optional[threading.Thre
                 await asyncio.gather(*[client.send(message) for client in clients], return_exceptions=True)
     
     async def main_server():
-        async with websockets.serve(handler, "127.0.0.1", port):
+        async with websockets.serve(handler, "127.0.0.1", port):  # type: ignore[arg-type]
             await broadcast_frames()
     
     def run_loop():
@@ -554,7 +592,7 @@ class SessionRecorder:
         self.events: List[Dict[str, Any]] = []
         self.start_time = time.time()
     
-    def record_event(self, event_type: str, data: Dict[str, Any]):
+    def record_event(self, event_type: str, data: Mapping[str, Any] | Event):
         elapsed_ms = int((time.time() - self.start_time) * 1000)
         self.events.append({
             'at_ms': elapsed_ms,
@@ -572,7 +610,8 @@ class SessionRecorder:
 def load_playback(filepath: str) -> List[Dict[str, Any]]:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            events = json.load(f)
+            events_raw = json.load(f)
+            events: List[Dict[str, Any]] = cast(List[Dict[str, Any]], events_raw if isinstance(events_raw, list) else [])
             events.sort(key=lambda e: int(e.get('at_ms', 0)))
             return events
     except Exception as e:
@@ -645,21 +684,23 @@ def get_key_nonblocking() -> Optional[str]:
             return msvcrt.getch().decode('utf-8', errors='ignore').lower()
     else:
         import select
-        import termios
-        import tty
+        import termios  # type: ignore
+        import tty  # type: ignore
         
-        old_settings = termios.tcgetattr(sys.stdin)
+        old_settings = termios.tcgetattr(sys.stdin)  # type: ignore[attr-defined]
         try:
-            tty.setcbreak(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())  # type: ignore[attr-defined]
             if select.select([sys.stdin], [], [], 0)[0]:
                 return sys.stdin.read(1).lower()
         finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)  # type: ignore[attr-defined]
     return None
 
 def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, height: int = 24,
                  use_unicode: bool = True, use_color: bool = True,
-                 compute_ms: float = 0.0, sleep_ms: float = 0.0, util: float = 0.0) -> List[str]:
+                 compute_ms: float = 0.0, sleep_ms: float = 0.0, util: float = 0.0,
+                 hud: bool = False,
+                 input_src: str = "") -> List[str]:
     """Render one frame using widget composition and return list of ANSI lines."""
     ctx = RenderContext(
         state=state,
@@ -672,9 +713,14 @@ def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, h
         compute_ms=compute_ms,
         sleep_ms=sleep_ms,
         util=util,
+        input_src=input_src,
     )
-    widgets = [
+    widgets: List[Widget] = [
         TitleBarWidget(),
+    ]
+    if hud:
+        widgets.append(HUDWidget())
+    widgets += [
         DividerWidget(),
         SceneStatusWidget(),
         ColorInfoWidget(),
@@ -687,7 +733,7 @@ def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, h
         HelpWidget(),
         BottomBorderWidget(),
     ]
-    output = []
+    output: List[str] = []
     for w in widgets:
         output.extend(w.render(ctx))
     return output
@@ -736,7 +782,19 @@ def main() -> None:
     parser.add_argument('--record', type=str, default='', help='Record session to file')
     parser.add_argument('--playback', type=str, default='', help='Playback recorded session from file')
     parser.add_argument('--auto-size', action='store_true', help='Auto-detect terminal size and adjust UI')
+    parser.add_argument('--gamepad', action='store_true', help='Enable pygame-based gamepad input (maps buttons to A/B/C)')
+    parser.add_argument('--input-overlay', action='store_true', help='Show small pygame window with clickable A/B/C buttons')
     args = parser.parse_args()
+
+    # Detect optional pygame for input hints (no hard import)
+    _has_pygame = pygame is not None
+    if not _has_pygame:
+        try:
+            import importlib.util as _ils  # type: ignore
+            _spec = _ils.find_spec('pygame')
+            _has_pygame = _spec is not None
+        except Exception:
+            _has_pygame = False
     
     # Load config file if provided
     if args.config and os.path.exists(args.config):
@@ -757,16 +815,18 @@ def main() -> None:
             if platform.system() == 'Windows':
                 import ctypes
                 kernel32 = ctypes.windll.kernel32
+                COORD = ctypes.wintypes._COORD  # type: ignore[attr-defined]
+                WORD = ctypes.wintypes.WORD
                 STD_OUTPUT_HANDLE = -11
                 handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
                 import ctypes.wintypes
                 class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
                     _fields_ = [
-                        ("dwSize", ctypes.wintypes._COORD),
-                        ("dwCursorPosition", ctypes.wintypes._COORD),
-                        ("wAttributes", ctypes.wintypes.WORD),
+                        ("dwSize", COORD),
+                        ("dwCursorPosition", COORD),
+                        ("wAttributes", WORD),
                         ("srWindow", ctypes.wintypes.SMALL_RECT),
-                        ("dwMaximumWindowSize", ctypes.wintypes._COORD),
+                        ("dwMaximumWindowSize", COORD),
                     ]
                 csbi = CONSOLE_SCREEN_BUFFER_INFO()
                 if kernel32.GetConsoleScreenBufferInfo(handle, ctypes.byref(csbi)):
@@ -783,18 +843,7 @@ def main() -> None:
         except Exception as e:
             log_error(f"Auto-size detection failed: {e}")
 
-    # Event queue and servers (bind before announcing)
-    class RPCEvent(TypedDict):
-        type: Literal['rpc']
-        data: Dict[str, Any]
-
-    class UARTEvent(TypedDict):
-        type: Literal['uart']
-        line: str
-
-    Event = Union[RPCEvent, UARTEvent]
-
-    evq: "queue.Queue[Event]" = queue.Queue()
+    evq: queue.Queue[Event] = queue.Queue()
     rpc_th = None
     uart_th = None
     com_th = None
@@ -846,16 +895,18 @@ def main() -> None:
     frame = 0
     running = True
     auto_demo = False
+    hud_enabled = False
     
     start_time = time.time()
     last_frame_time = start_time
     fps = 0.0
+    current_input_src = 'kbd'
     
     # Write ports discovery file for tools (deleted on exit)
     try:
         base = os.path.dirname(os.path.abspath(__file__))
         ports_path = os.path.join(base, "sim_ports.json")
-        ports_info = {
+        ports_info: Dict[str, Optional[int]] = {
             "rpc_port": int(args.rpc_port) if args.rpc_port else None,
             "uart_port": int(args.uart_port) if args.uart_port else None,
             "com_port": args.com_port or None,
@@ -876,6 +927,117 @@ def main() -> None:
     except Exception as e:
         log_error(f"Failed to write sim_ports.json: {e}")
 
+    # Optional input thread (pygame overlay / gamepad)
+    input_state = {'A': False, 'B': False, 'C': False}
+    input_source = {'src': 'kbd'}
+    input_lock = threading.Lock()
+    stop_input = threading.Event()
+
+    def start_input_thread(enable_overlay: bool, enable_gamepad: bool):
+        if pygame is None:
+            print(f"{Color.DIM}Input: pygame not installed (pip install pygame) — skipping input overlay/gamepad{Color.RESET}")
+            return None
+
+        def _thread():
+            try:
+                pygame.init()
+                screen = None
+                btn_rects = {}
+                if enable_overlay:
+                    screen = pygame.display.set_mode((260, 110))
+                    pygame.display.set_caption('ESP32OS Input Overlay')
+                    font = pygame.font.SysFont(None, 24)
+                    def _layout(w: int, h: int) -> Dict[str, Any]:
+                        m, pad = 10, 10
+                        bw, bh = 70, 60
+                        ax = m; bx = m + bw + pad; cx = m + 2*(bw + pad)
+                        y = (h - bh)//2
+                        return {
+                            'A': pygame.Rect(ax, y, bw, bh),
+                            'B': pygame.Rect(bx, y, bw, bh),
+                            'C': pygame.Rect(cx, y, bw, bh),
+                        }
+                    btn_rects = _layout(260, 110)
+                # Gamepad
+                have_gp = False
+                try:
+                    pygame.joystick.init()
+                    if pygame.joystick.get_count() > 0:
+                        gp = pygame.joystick.Joystick(0)
+                        gp.init()
+                        have_gp = True
+                except Exception:
+                    have_gp = False
+
+                clock = pygame.time.Clock()
+                running_local = True
+                while running_local and not stop_input.is_set():
+                    for event in pygame.event.get():
+                        if event.type == getattr(pygame, 'QUIT', None):
+                            running_local = False
+                            break
+                        if enable_overlay and screen is not None:
+                            if event.type == getattr(pygame, 'MOUSEBUTTONDOWN', None):
+                                pos = getattr(event, "pos", (0, 0))
+                                x, y = int(pos[0]), int(pos[1])
+                                for k, r in btn_rects.items():
+                                    if r.collidepoint(x, y):
+                                        with input_lock:
+                                            input_state[k] = True
+                                            input_source['src'] = 'overlay'
+                            elif event.type == getattr(pygame, 'MOUSEBUTTONUP', None):
+                                with input_lock:
+                                    for k in input_state:
+                                        input_state[k] = False
+                        if enable_gamepad and have_gp:
+                            if event.type == getattr(pygame, 'JOYBUTTONDOWN', None):
+                                # Map 0,1,2 -> A,B,C
+                                b = getattr(event, 'button', -1)
+                                if b in (0,1,2):
+                                    with input_lock:
+                                        input_state['ABC'[b]] = True
+                                        input_source['src'] = 'gamepad'
+                            elif event.type == getattr(pygame, 'JOYBUTTONUP', None):
+                                b = getattr(event, 'button', -1)
+                                if b in (0,1,2):
+                                    with input_lock:
+                                        input_state['ABC'[b]] = False
+                    if enable_overlay and screen is not None:
+                        screen.fill((20,20,24))
+                        for k, r in btn_rects.items():
+                            with input_lock:
+                                pressed = input_state[k]
+                            col = (47,129,247) if pressed else (40,45,60)
+                            pygame.draw.rect(screen, col, r, border_radius=8)
+                            pygame.draw.rect(screen, (90,100,120), r, 2, border_radius=8)
+                            # Label
+                            try:
+                                font = pygame.font.SysFont(None, 28)
+                                img = font.render(k, True, (230,237,243))
+                                screen.blit(img, (r.x + (r.w - img.get_width())//2, r.y + (r.h - img.get_height())//2))
+                            except Exception:
+                                pass
+                        pygame.display.flip()
+                    clock.tick(60)
+            except Exception as e:
+                try:
+                    print(f"{Color.DIM}Input thread error: {e}{Color.RESET}")
+                except Exception:
+                    pass
+            finally:
+                try:
+                    if pygame is not None:
+                        pygame.quit()
+                except Exception:
+                    pass
+        th = threading.Thread(target=_thread, daemon=True)
+        th.start()
+        return th
+
+    input_th = None
+    if args.gamepad or args.input_overlay:
+        input_th = start_input_thread(args.input_overlay, args.gamepad)
+
     # Print startup info briefly, then clear and start rendering
     print(f"{Color.BOLD}{Color.GREEN}\n=== ESP32 UI SIMULATOR STARTED ==={Color.RESET}")
     if rpc_th is not None:
@@ -884,7 +1046,16 @@ def main() -> None:
         print(f"{Color.DIM}UART: 127.0.0.1:{args.uart_port}{Color.RESET}")
     if com_th is not None:
         print(f"{Color.DIM}COM: {args.com_port} @ {args.baud}{Color.RESET}")
-    print(f"{Color.DIM}Press Q to quit, D for demo{Color.RESET}")
+    if args.websocket_port:
+        print(f"{Color.DIM}Remote Viewer: open web/remote_viewer.html?port={args.websocket_port}{Color.RESET}")
+    controls = "Q quit | D demo | H HUD | M metrics CSV | E export HTML"
+    if args.gamepad:
+        controls += " | GAMEPAD 0/1/2 → A/B/C"
+    if args.input_overlay:
+        controls += " | Mouse overlay window for A/B/C"
+    print(f"{Color.DIM}Controls: {controls}{Color.RESET}")
+    if _has_pygame and not (args.gamepad or args.input_overlay):
+        print(f"{Color.DIM}Tip: pygame detected — enable --gamepad or --input-overlay for A/B/C input{Color.RESET}")
     time.sleep(0.8)
     
     try:
@@ -896,9 +1067,8 @@ def main() -> None:
         prev_lines: List[str] = []
 
         # Load script if provided
-        script_events = []
+        script_events: List[Dict[str, Any]] = []
         next_event_idx = 0
-        playback_idx = 0
         run_start = time.time()
         
         # Prefer playback over script
@@ -941,10 +1111,13 @@ def main() -> None:
                     state.btnA = not state.btnA
                     if state.btnA:
                         state.scene = (state.scene + 1) % 3
+                    current_input_src = 'kbd'
                 elif key == 'b':
                     state.btnB = not state.btnB
+                    current_input_src = 'kbd'
                 elif key == 'c':
                     state.btnC = not state.btnC
+                    current_input_src = 'kbd'
                 elif key == 'r':
                     state.bg = rgb565(255, 0, 0)
                 elif key == 'g':
@@ -957,6 +1130,33 @@ def main() -> None:
                     state.bg = rgb565(0, 0, 0)
                 elif key == 'd':
                     auto_demo = not auto_demo
+                elif key == 'h':
+                    hud_enabled = not hud_enabled
+                elif key == 'm':
+                    if not metrics_recorder:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        out_dir = os.path.join(base, 'examples')
+                        os.makedirs(out_dir, exist_ok=True)
+                        csv_path = os.path.join(out_dir, 'sim_metrics.csv')
+                        metrics_recorder = MetricsRecorder(csv_path)
+                        print(f"{Color.DIM}Metrics recording: ON → {csv_path}{Color.RESET}")
+                    else:
+                        metrics_recorder.export()
+                        print(f"{Color.DIM}Metrics exported to {metrics_recorder.filepath}{Color.RESET}")
+                elif key == 'e':
+                    if metrics_recorder and metrics_recorder.data:
+                        html_path = metrics_recorder.filepath.replace('.csv', '.html')
+                        try:
+                            with open(html_path, 'w', encoding='utf-8') as f:
+                                f.write('<!DOCTYPE html><meta charset="utf-8"><title>Simulator Metrics</title>')
+                                f.write('<style>body{font-family:Arial}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px}</style>')
+                                f.write('<h1>Simulator Metrics</h1><table><tr><th>frame</th><th>fps</th><th>compute_ms</th><th>sleep_ms</th><th>util</th></tr>')
+                                for row in metrics_recorder.data:
+                                    f.write(f"<tr><td>{row['frame']}</td><td>{row['fps']:.1f}</td><td>{row['compute_ms']:.2f}</td><td>{row['sleep_ms']:.2f}</td><td>{row['util']:.2f}</td></tr>")
+                                f.write('</table>')
+                            print(f"{Color.DIM}HTML exported: {html_path}{Color.RESET}")
+                        except Exception as _e:
+                            print(f"{Color.DIM}HTML export failed: {_e}{Color.RESET}")
             
             # Apply queued events (RPC/ UART)
             try:
@@ -1020,10 +1220,20 @@ def main() -> None:
                     state.scene = 0
                     state.bg = rgb565(8, 8, 8)
             
+            # Apply input state from overlay/gamepad (if enabled)
+            if input_th is not None:
+                with input_lock:
+                    state.btnA = bool(input_state['A'])
+                    state.btnB = bool(input_state['B'])
+                    state.btnC = bool(input_state['C'])
+                    current_input_src = input_source.get('src', 'kbd')
+
             # Render frame using previous timing metrics
             lines = render_frame(state, frame, fps, width=args.width, height=args.height,
                                  use_unicode=(not args.no_unicode), use_color=(not args.no_color),
-                                 compute_ms=compute_ms_prev, sleep_ms=sleep_ms_prev, util=util_prev)
+                                 compute_ms=compute_ms_prev, sleep_ms=sleep_ms_prev, util=util_prev,
+                                 hud=hud_enabled,
+                                 input_src=current_input_src)
 
             # Cache footer index once
             if footer_index_cached is None:
@@ -1090,7 +1300,8 @@ def main() -> None:
                     'tick': state.t,
                     'compute_ms': compute_ms_prev,
                     'sleep_ms': sleep_ms_prev,
-                    'util': util_prev
+                    'util': util_prev,
+                    'input_src': current_input_src
                 }
             
             # Update only footer line with new metrics next loop; no second full render here
@@ -1107,6 +1318,13 @@ def main() -> None:
         session_recorder.save()
         print(f"{Color.DIM}Session recorded to {args.record}{Color.RESET}")
     
+    # Stop input thread if any
+    try:
+        if input_th is not None:
+            stop_input.set()
+    except Exception:
+        pass
+
     # Show cursor again and clear
     sys.stdout.write("\033[?25h\n")
     clear_screen()
