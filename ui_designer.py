@@ -1212,6 +1212,12 @@ class UIDesigner:
         lines = [''.join(row) for row in canvas]
         return '\n'.join(lines)
     
+    # --- ASCII Preview Helpers ---
+    # Lightweight type aliases to improve clarity
+    BorderChars = Dict[str, str]
+    SceneState = Dict[str, Any]
+    GuideSpec = Dict[str, Any]
+
     def _render_widget_to_canvas(self, canvas: List[List[str]], widget: WidgetConfig, 
                                  idx: int, width: int, height: int):
         """Render single widget to canvas"""
@@ -1330,7 +1336,7 @@ class UIDesigner:
         except Exception:
             pass
     
-    def _get_border_chars(self, style: str) -> Dict[str, str]:
+    def _get_border_chars(self, style: str) -> BorderChars:
         """Get border characters for style"""
         styles = {
             'single': {'h': '─', 'v': '│', 'tl': '┌', 'tr': '┐', 'bl': '└', 'br': '┘'},
@@ -1359,32 +1365,47 @@ class UIDesigner:
         
         if 0 <= text_y < height:
             self._write_text_line(canvas, text_y, text_x, widget.text, width)
+
+    # Small utility helpers to reduce duplication in ASCII drawing
+    def _inner_box(self, widget: WidgetConfig) -> Tuple[int, int, int, int]:
+        """Return (x_start, y_start, inner_width, inner_height) considering border."""
+        x_start = widget.x + (1 if widget.border else 0)
+        y_start = widget.y + (1 if widget.border else 0)
+        inner_w = widget.width - (2 if widget.border else 0)
+        inner_h = widget.height - (2 if widget.border else 0)
+        return x_start, y_start, inner_w, inner_h
+
+    def _calc_progress_value(self, value: int, max_value: int, span: int) -> int:
+        """Compute filled span for bars; preserves existing normalization semantics."""
+        return int((value / max(max_value, 1)) * max(0, span))
+
+    def _calc_slider_pos(self, value: int, max_value: int, span: int) -> int:
+        """Compute slider knob position within [0, span]."""
+        span = max(0, span)
+        if span == 0:
+            return 0
+        return int((value / max(max_value, 1)) * span)
     
     def _draw_progressbar(self, canvas: List[List[str]], widget: WidgetConfig,
                           width: int, height: int):
         """Draw progress bar"""
-        inner_width = widget.width - (2 if widget.border else 0)
-        progress = int((widget.value / max(widget.max_value, 1)) * inner_width)
-        
+        x0, _y0, inner_w, _inner_h = self._inner_box(widget)
+        progress = self._calc_progress_value(widget.value, widget.max_value, inner_w)
         bar_y = widget.y + widget.height // 2
-        bar_x_start = widget.x + (1 if widget.border else 0)
-        
         if 0 <= bar_y < height:
-            for i in range(inner_width):
-                x = bar_x_start + i
+            for i in range(inner_w):
+                x = x0 + i
                 if 0 <= x < width:
                     canvas[bar_y][x] = '█' if i < progress else '░'
     
     def _draw_gauge(self, canvas: List[List[str]], widget: WidgetConfig,
                     width: int, height: int):
         """Draw gauge (simple bar)"""
-        inner_height = widget.height - (2 if widget.border else 0)
-        progress = int((widget.value / max(widget.max_value, 1)) * inner_height)
-        
+        _x0, y0, _inner_w, inner_h = self._inner_box(widget)
+        progress = self._calc_progress_value(widget.value, widget.max_value, inner_h)
         gauge_x = widget.x + widget.width // 2
         gauge_y_start = widget.y + widget.height - (1 if widget.border else 0) - 1
-        
-        for i in range(inner_height):
+        for i in range(inner_h):
             y = gauge_y_start - i
             if 0 <= y < height and 0 <= gauge_x < width:
                 canvas[y][gauge_x] = '█' if i < progress else '░'
@@ -1409,43 +1430,27 @@ class UIDesigner:
     def _draw_slider(self, canvas: List[List[str]], widget: WidgetConfig,
                      width: int, height: int):
         """Draw slider"""
-        inner_width = widget.width - (2 if widget.border else 0)
-        slider_pos = int((widget.value / max(widget.max_value, 1)) * (inner_width - 1))
-        
+        x0, _y0, inner_w, _inner_h = self._inner_box(widget)
+        slider_pos = self._calc_slider_pos(widget.value, widget.max_value, max(0, inner_w - 1))
         slider_y = widget.y + widget.height // 2
-        slider_x_start = widget.x + (1 if widget.border else 0)
-        
         if 0 <= slider_y < height:
-            for i in range(inner_width):
-                x = slider_x_start + i
+            for i in range(inner_w):
+                x = x0 + i
                 if 0 <= x < width:
-                    if i == slider_pos:
-                        canvas[slider_y][x] = '▓'
-                    else:
-                        canvas[slider_y][x] = '─'
+                    canvas[slider_y][x] = '▓' if i == slider_pos else '─'
     
     def _draw_chart(self, canvas: List[List[str]], widget: WidgetConfig,
                     width: int, height: int):
         """Draw simple chart"""
         if not widget.data_points:
             return
-        
-        inner_width = widget.width - (2 if widget.border else 0)
-        inner_height = widget.height - (2 if widget.border else 0)
-        
-        # Normalize data points
+        x0, y0, inner_w, inner_h = self._inner_box(widget)
         max_val = max(widget.data_points) if widget.data_points else 1
-        
-        chart_x_start = widget.x + (1 if widget.border else 0)
-        chart_y_start = widget.y + (1 if widget.border else 0)
-        
-        # Draw bars
-        for i, val in enumerate(widget.data_points[:inner_width]):
-            bar_height = int((val / max(max_val, 1)) * inner_height)
-            x = chart_x_start + i
-            
-            for j in range(bar_height):
-                y = chart_y_start + inner_height - 1 - j
+        for i, val in enumerate(widget.data_points[:inner_w]):
+            bar_h = self._calc_progress_value(val, max_val, inner_h)
+            x = x0 + i
+            for j in range(bar_h):
+                y = y0 + inner_h - 1 - j
                 if 0 <= y < height and 0 <= x < width:
                     canvas[y][x] = '▌'
 
