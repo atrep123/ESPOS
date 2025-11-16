@@ -81,6 +81,13 @@
       "problemMatcher": []
     },
     {
+      "label": "Designer: Anim Smoke",
+      "type": "shell",
+      "command": "python .\\ui_designer.py --script-file .\\scripts\\anim_smoke.txt",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
       "label": "Simulator: UART set_bg ff0000 (auto)",
       "type": "shell",
       "command": "powershell -NoProfile -Command \"$p=Get-Content .\\sim_ports.json | ConvertFrom-Json; if (-not $p.uart_port) { Write-Host 'uart_port not found in sim_ports.json'; exit 1 }; $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1',$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg ff0000'); Start-Sleep -Milliseconds 100; $client.Close()\"",

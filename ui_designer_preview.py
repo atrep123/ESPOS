@@ -314,7 +314,7 @@ class VisualPreviewWindow:
             box_size = max(0, min(h - 4, 6))
             box_x = x + 2
             box_y = y + (h - box_size) // 2
-            y0, y1 = (box_y, box_y + box_size) if box_y <= box_y + box_size else (box_y + box_size, box_y)
+            y0, y1 = self._clamp_rect_y_order(box_y, box_y + box_size)
             draw.rectangle([box_x, y0, box_x + box_size, y1], outline=fg_color, width=1)
             if widget.checked:
                 draw.line([(box_x + 1, box_y + 1), (box_x + box_size - 1, box_y + box_size - 1)], 
@@ -336,7 +336,7 @@ class VisualPreviewWindow:
                 y_top = y + 2
                 y_bottom = y + h - 3
                 # Ensure correct ordering for PIL rectangle (y1 >= y0)
-                y0, y1 = (y_top, y_bottom) if y_top <= y_bottom else (y_bottom, y_top)
+                y0, y1 = self._clamp_rect_y_order(y_top, y_bottom)
                 x1 = x0 + progress
                 # Clamp within the inner bar area
                 x1 = min(x + w - 2, max(x0, x1))
@@ -367,7 +367,7 @@ class VisualPreviewWindow:
             x1 = max(x + 2, min(handle_x + 2, x + w - 2))
             y_top = y + 2
             y_bottom = y + h - 2
-            y0, y1 = (y_top, y_bottom) if y_top <= y_bottom else (y_bottom, y_top)
+            y0, y1 = self._clamp_rect_y_order(y_top, y_bottom)
             draw.rectangle([x0, y0, x1, y1], fill=fg_color, outline=fg_color)
         
         elif widget.type == WidgetType.BOX.value:
@@ -836,6 +836,10 @@ class VisualPreviewWindow:
                     self._widget_overlays[anim.widget_id] = cur
             self.refresh()
         self._schedule_tick()
+
+    def _clamp_rect_y_order(self, y0: int, y1: int) -> Tuple[int, int]:
+        """Ensure y0 <= y1 for PIL rectangle operations."""
+        return (y0, y1) if y0 <= y1 else (y1, y0)
 
 
 def main():
