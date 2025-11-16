@@ -2,7 +2,8 @@
 
 ## 🎨 Overview
 
-Pokročilý vizuální návrháž UI pro ESP32 simulátor s podporou:
+Pokročilý vizuální návrhář UI pro ESP32 simulátor s podporou:
+
 - **12 typů widgetů** (label, box, button, gauge, progressbar, checkbox, radiobutton, slider, textbox, panel, icon, chart)
 - **5 border stylů** (single, double, rounded, bold, dashed)
 - **Undo/Redo** s 50-level historií
@@ -12,6 +13,49 @@ Pokročilý vizuální návrháž UI pro ESP32 simulátor s podporou:
 - **Alignment tools** (left, right, top, bottom, center)
 - **Distribution** (horizontal, vertical)
 - **Multi-format export** (Python, JSON, HTML)
+
+---
+
+## 🧪 Test & Preview Workflow
+
+Rychlé ověření konzistence designeru a exportů:
+
+- `python test_ui_designer.py` – kompletní sada kontrol (šablony, undo/redo, exporty, border styly).
+- `python test_preview_small.py` – PNG pro extrémně malé výšky (clamping / žádné výjimky).
+- `python test_preview_ascii_extra.py` – ASCII preview: state overrides, animace, různé border styly.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ci_smoke.ps1` – sekvenční smoke (log + artefakty v `reports/`).
+
+VS Code Tasks pro rychlý běh: `Tests: Run All`, `Preview: Small Heights`, `CI: Smoke`.
+
+## 🖱️ Drag & Drop (GUI)
+
+Pro vizuální editaci pomocí myši použij GUI nástroj:
+
+- VS Code Task: `Designer: Open GUI (Drag & Drop)` a zvol JSON (např. `examples/demo_scene.json`).
+- Na plátně můžeš widgety chytit a přetáhnout; rohové/okrajové úchopy mění velikost.
+- Dvojklik otevře vlastnosti widgetu.
+- Uložení `Ctrl+S` zapíše změny do JSON (a spustí auto-exporty, pokud jsou zapnuté).
+- Pro čistý start: `Designer: New GUI (Blank)`.
+
+### Preflight Severity
+
+Export / test výstup obsahuje klasifikaci:
+
+- `off-canvas (minor|major)` – widgety mimo hranice scény (major = větší část mimo).
+- `height < 2` / "very small height" – vizuální omezení renderu symbolů.
+- `overlaps` – překryvy widgetů (informativní warning).
+
+Tip k Unicode exportům (HTML/PNG): nastavte před spuštěním:
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+```
+
+nebo:
+
+```powershell
+python -X utf8 ui_designer.py
+```
 
 ---
 
@@ -45,9 +89,10 @@ python ui_designer.py
 ## 📦 Widget Types
 
 ### 1. Label
+
 Text widget s alignmentem a styly.
 
-```
+```powershell
 > add label 10 10 100 10 "Hello ESP32"
 > edit 0 align center
 > edit 0 style bold
@@ -55,6 +100,7 @@ Text widget s alignmentem a styly.
 ```
 
 **Vlastnosti:**
+
 - `text` - zobrazený text
 - `align` - left, center, right
 - `valign` - top, middle, bottom
@@ -64,9 +110,10 @@ Text widget s alignmentem a styly.
 ---
 
 ### 2. Box / Panel
+
 Kontejner s borderem pro seskupování.
 
-```
+```powershell
 > add box 5 5 118 54
 > edit 0 border_style double
 > add panel 10 10 50 40
@@ -74,6 +121,7 @@ Kontejner s borderem pro seskupování.
 ```
 
 **Border styly:**
+
 - `single` - ┌─┐│└┘
 - `double` - ╔═╗║╚╝
 - `rounded` - ╭─╮│╰╯
@@ -83,9 +131,10 @@ Kontejner s borderem pro seskupování.
 ---
 
 ### 3. Button
+
 Interaktivní tlačítko.
 
-```
+```powershell
 > add button 20 30 40 12 "OK"
 > edit 0 color_bg green
 > edit 0 color_fg black
@@ -96,9 +145,10 @@ Interaktivní tlačítko.
 ---
 
 ### 4. Progressbar
+
 Horizontální progress indikátor.
 
-```
+```powershell
 > add progressbar 10 20 100 8
 > edit 0 value 75
 > edit 0 min_value 0
@@ -107,7 +157,8 @@ Horizontální progress indikátor.
 ```
 
 **Preview:**
-```
+
+```text
 ┌──────────────────────────────────┐
 │████████████████████░░░░░░░░░░░░░│
 └──────────────────────────────────┘
@@ -116,16 +167,18 @@ Horizontální progress indikátor.
 ---
 
 ### 5. Gauge
+
 Vertikální měřič (sloupcový graf).
 
-```
+```powershell
 > add gauge 50 10 20 40
 > edit 0 value 60
 > edit 0 color_fg yellow
 ```
 
 **Preview:**
-```
+
+```text
 ┌────┐
 │ █  │
 │ █  │
@@ -139,15 +192,17 @@ Vertikální měřič (sloupcový graf).
 ---
 
 ### 6. Checkbox
+
 Zaškrtávací políčko.
 
-```
+```powershell
 > add checkbox 10 20 60 10 "Enable WiFi"
 > edit 0 checked true
 ```
 
 **Preview:**
-```
+
+```text
 ☑ Enable WiFi
 ☐ Disabled option
 ```
@@ -155,9 +210,10 @@ Zaškrtávací políčko.
 ---
 
 ### 7. Radiobutton
+
 Radio button (podobný checkbox).
 
-```
+```powershell
 > add radiobutton 10 30 50 10 "Option A"
 > edit 0 checked true
 ```
@@ -165,9 +221,10 @@ Radio button (podobný checkbox).
 ---
 
 ### 8. Slider
+
 Posuvník s aktuální pozicí.
 
-```
+```powershell
 > add slider 10 40 100 8
 > edit 0 value 50
 > edit 0 min_value 0
@@ -175,7 +232,8 @@ Posuvník s aktuální pozicí.
 ```
 
 **Preview:**
-```
+
+```text
 ┌──────────────────────────────┐
 │──────────────▓───────────────│
 └──────────────────────────────┘
@@ -184,15 +242,17 @@ Posuvník s aktuální pozicí.
 ---
 
 ### 9. Chart
+
 Sloupcový graf s datovými body.
 
-```
+```powershell
 > add chart 10 10 100 40
 > edit 0 data_points "[10, 20, 15, 30, 25, 35]"
 ```
 
 **Preview:**
-```
+
+```text
 ┌────────────────┐
 │    ▌           │
 │    ▌    ▌   ▌ │
@@ -208,37 +268,43 @@ Sloupcový graf s datovými body.
 Předdefinované šablony pro rychlý start:
 
 ### title_label
-```
+
+```powershell
 > template title_label 0 0
 ```
 Centrovaný nadpis (128x10, cyan, bold)
 
 ### button_primary
-```
+
+```powershell
 > template button_primary 20 30
 ```
 Zelené tlačítko OK (40x12, rounded border)
 
 ### button_secondary
-```
+
+```powershell
 > template button_secondary 70 30
 ```
 Červené tlačítko Cancel (40x12, rounded border)
 
 ### info_panel
-```
+
+```powershell
 > template info_panel 4 10
 ```
 Modrý informační panel (120x50, double border)
 
 ### progress_bar
-```
+
+```powershell
 > template progress_bar 10 30
 ```
 Zelený progress bar (100x8, 50% hodnota)
 
 ### gauge_half
-```
+
+```powershell
 > template gauge_half 50 20
 ```
 Žlutý gauge (40x20, 75% hodnota)
@@ -249,7 +315,7 @@ Zelený progress bar (100x8, 50% hodnota)
 
 ### Undo / Redo
 
-```
+```powershell
 > add label 10 10 50 10 "Test"
 > move 0 10 5
 > undo              # Vrátí move
@@ -262,7 +328,7 @@ Zelený progress bar (100x8, 50% hodnota)
 
 ### Grid & Snap
 
-```
+```powershell
 > grid on           # Zapne grid overlay
 > snap on           # Snap pozice na grid (4px)
 > preview grid      # Náhled s gridem
@@ -276,7 +342,8 @@ Zelený progress bar (100x8, 50% hodnota)
 ### Auto-Layout
 
 **Vertical layout:**
-```
+
+```powershell
 > add label 0 0 100 10 "Item 1"
 > add label 0 0 100 10 "Item 2"
 > add label 0 0 100 10 "Item 3"
@@ -286,12 +353,14 @@ Zelený progress bar (100x8, 50% hodnota)
 Result: Widgety uspořádány vertikálně se spacingem 8px
 
 **Horizontal layout:**
-```
+
+```powershell
 > layout horizontal 10
 ```
 
 **Grid layout:**
-```
+
+```powershell
 > layout grid 4
 ```
 
@@ -300,7 +369,8 @@ Result: Widgety uspořádány vertikálně se spacingem 8px
 ### Alignment Tools
 
 **Zarovnat na levou hranu:**
-```
+
+```powershell
 > add box 10 10 50 20
 > add box 25 40 50 20
 > add box 15 70 50 20
@@ -308,6 +378,7 @@ Result: Widgety uspořádány vertikálně se spacingem 8px
 ```
 
 **Dostupné alignmenty:**
+
 - `left` - zarovnat vlevo
 - `right` - zarovnat vpravo
 - `top` - zarovnat nahoru
@@ -321,7 +392,7 @@ Result: Widgety uspořádány vertikálně se spacingem 8px
 
 Rovnoměrně rozložit widgety:
 
-```
+```powershell
 > add box 10 10 30 20
 > add box 60 10 30 20
 > add box 110 10 30 20
@@ -332,7 +403,7 @@ Rovnoměrně rozložit widgety:
 
 ### Clone Widget
 
-```
+```powershell
 > add button 20 20 40 12 "Button 1"
 > clone 0 50 0       # Klonuje s offsetem (50, 0)
 > clone 0 0 20       # Další klon s offsetem (0, 20)
@@ -342,7 +413,7 @@ Rovnoměrně rozložit widgety:
 
 ### Edit Properties
 
-```
+```powershell
 > edit 0 text "New Text"
 > edit 0 value 85
 > edit 0 border_style double
@@ -357,6 +428,7 @@ Rovnoměrně rozložit widgety:
 ```
 
 **Všechny vlastnosti:**
+
 - Základní: `x`, `y`, `width`, `height`
 - Text: `text`, `align` (left/center/right), `valign` (top/middle/bottom)
 - Vzhled: `color_fg`, `color_bg`, `style`, `border`, `border_style`
@@ -554,12 +626,14 @@ python ui_designer.py
 ## 🔍 Command Reference
 
 ### Scene Management
+
 - `new <name>` - Vytvoř scénu
 - `scenes` - Seznam scén
 - `switch <name>` - Přepni scénu
 - `list` - Seznam widgetů
 
 ### Widget Operations
+
 - `add <type> <x> <y> <w> <h> [text]` - Přidej widget
 - `template <name> <x> <y>` - Z šablony
 - `clone <idx> [dx] [dy]` - Klonuj
@@ -569,6 +643,7 @@ python ui_designer.py
 - `edit <idx> <prop> <val>` - Edituj vlastnost
 
 ### Advanced
+
 - `undo` / `redo` - Historie
 - `grid on|off` - Grid
 - `snap on|off` - Snap
@@ -577,12 +652,14 @@ python ui_designer.py
 - `distribute <dir> <ids...>` - Distribuce
 
 ### Export
+
 - `save <file>` - JSON
 - `export <file>` - Python
 - `export <file> html` - HTML
 - `preview [grid]` - ASCII náhled
 
 ### Help
+
 - `help` - Všechny příkazy
 - `help <cmd>` - Detail příkazu
 - `widgets` - Typy widgetů
@@ -593,7 +670,8 @@ python ui_designer.py
 ## 🎨 Tips & Tricks
 
 ### 1. Rychlé prototypování
-```
+
+```powershell
 > template info_panel 4 4
 > template title_label 0 8
 > template button_primary 20 45
@@ -602,14 +680,16 @@ python ui_designer.py
 ```
 
 ### 2. Zarovnání buttonů
-```
+
+```powershell
 > add button 20 40 40 12 "OK"
 > add button 70 40 40 12 "Cancel"
 > align top 0 1        # Stejná výška
 ```
 
 ### 3. Symetrické rozložení
-```
+
+```powershell
 > add box 10 20 30 20
 > add box 50 20 30 20
 > add box 90 20 30 20
@@ -617,7 +697,8 @@ python ui_designer.py
 ```
 
 ### 4. Z-index layering
-```
+
+```powershell
 > add panel 0 0 128 64      # Pozadí
 > edit 0 z_index 0
 > add label 10 10 108 10    # Popředí
@@ -625,7 +706,8 @@ python ui_designer.py
 ```
 
 ### 5. Grid workflow
-```
+
+```powershell
 > grid on
 > snap on
 # Všechny widgety automaticky snapnou na 4px grid
@@ -657,28 +739,33 @@ python ui_designer.py
 Po vytvoření UI v designeru:
 
 1. **Export Python kódu**
-   ```
+   
+  ```text
    > export my_ui.py
    ```
 
-2. **Integrace do simulátoru**
-   ```python
+1. **Integrace do simulátoru**
+   
+  ```python
    from my_ui import create_dashboard_scene
    
    widgets = create_dashboard_scene()
    # Použij ve scéně
    ```
 
-3. **Testování**
-   ```powershell
+1. **Testování**
+   
+  ```powershell
    python sim_run.py --scene my_ui
    ```
 
-4. **Deploy na ESP32**
+1. **Deploy na ESP32**
    - Convert widgets → C structs
    - Render na OLED display
    - Bind na button events
 
 ---
 
-**Happy designing! 🎨**
+### Happy Designing 🎨
+
+Pokračuj v iteraci: ukládej často, využívej `preview`, a před exportem vždy projdi preflight.

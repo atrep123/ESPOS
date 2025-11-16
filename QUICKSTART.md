@@ -15,9 +15,37 @@ python sim_run.py
 # Q - ukončit
 ```
 
-## 📋 Co bylo implementováno
+## 🔧 Workflow Tasks
+
+Rychlé VS Code Tasks (Ctrl+Shift+P → Run Task):
+
+- `Simulator: Start (AutoPorts, New Window)` – okamžité spuštění simulátoru s volnými porty.
+- `Simulator: Start (AutoPorts, SameWindow)` – běh v aktuálním terminálu (snadné logování).
+- `UI Designer: Live Preview` – živý náhled designu s auto-refresh v prohlížeči.
+- `UI Designer: Export C Header` – export JSON designu do C hlavičkového souboru.
+- `Tests: Run All` – kompletní sada testů UI / preview.
+- `Preview: Small Heights` – headless export extrémně malých widgetů do PNG.
+- `CI: Smoke` – skript `tools/ci_smoke.ps1` (rychlá verifikace + artefakty v `reports/`).
+
+
+Manuální spuštění smoke:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ci_smoke.ps1
+```
+
+Jednotlivé testy:
+```powershell
+python test_ui_designer.py
+python test_preview_small.py
+python test_preview_ascii_extra.py
+```
+
+Tip k Unicode: při chybách `charmap codec` nastavte `PYTHONIOENCODING=utf-8` nebo použijte `python -X utf8`.
+
+## 📋 Implementované funkce
 
 ### ✅ Jádro simulátoru
+
 - ✅ Widget-based rendering (modulární UI)
 - ✅ Substring diff rendering (efektivní překreslování)
 - ✅ ANSI optimalizace (odstranění redundantních sekvencí)
@@ -26,6 +54,7 @@ python sim_run.py
 - ✅ Footer stabilizace (bez duplikátů)
 
 ### ✅ Nové funkce
+
 - ✅ **Auto-size layout** - automatická detekce velikosti terminálu
 - ✅ **Config file** - načítání nastavení z JSON (.sim_config.json)
 - ✅ **Metrics export** - export timing dat do CSV
@@ -36,6 +65,7 @@ python sim_run.py
 - ✅ **Web viewer** - ui_sim/remote_viewer.html
 
 ### ✅ CLI rozšíření
+
 - ✅ `--full-redraw-interval` - perioda full redraw
 - ✅ `--no-diff` - vypnout diff rendering
 - ✅ `--config` - načíst config ze souboru
@@ -48,21 +78,25 @@ python sim_run.py
 ## 🎯 Příklady použití
 
 ### Základní spuštění
+
 ```powershell
 python sim_run.py --fps 120
 ```
 
 ### S RPC serverem
+
 ```powershell
 python sim_run.py --rpc-port 8765 --fps 120
 ```
 
 ### Auto-size s exportem metrik
+
 ```powershell
 python sim_run.py --auto-size --export-metrics metrics.csv
 ```
 
 ### WebSocket remote viewer
+
 ```powershell
 # Terminál 1
 python sim_run.py --websocket-port 9999 --rpc-port 8765
@@ -72,11 +106,13 @@ python sim_run.py --websocket-port 9999 --rpc-port 8765
 ```
 
 ### Použití config souboru
+
 ```powershell
 python sim_run.py --config .sim_config.json
 ```
 
 ### Recording session
+
 ```powershell
 # Zaznamenat
 python sim_run.py --record my_session.json --rpc-port 8765
@@ -86,6 +122,7 @@ python sim_run.py --playback my_session.json
 ```
 
 ### PowerShell launcher
+
 ```powershell
 .\run_sim.ps1 -AutoPorts -AutoSize -Fps 120 -ExportMetrics metrics.csv
 ```

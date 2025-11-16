@@ -40,6 +40,32 @@ Vylepšený UI simulátor pro vývoj a testování uživatelského rozhraní ESP
 
 ## 🚀 Spuštění
 
+### ⚡ Rychlé VS Code Tasks
+
+Ve VS Code jsou k dispozici předpřipravené úlohy pro rychlé workflow (Ctrl+Shift+P → Run Task):
+
+- `Simulator: Start (AutoPorts, New Window)` – nový terminál, automatické porty.
+- `Simulator: Start (AutoPorts, SameWindow)` – běh v aktuálním okně (snadné čtení logu).
+- `Simulator: UART set_bg ff0000 (auto)` – odešle příkaz na UART‑like port z `sim_ports.json`.
+- `Simulator: simctl set_bg red (auto)` – RPC volání přes `simctl.py` na aktivní `rpc_port`.
+- `Tests: Run All` – kompletní sada Python testů.
+- `Preview: Small Heights` – headless export extrémně malých widgetů (PNG artefakt).
+- `CI: Smoke` – rychlá verifikace (designer + preview) a uložení artefaktů do `reports/`.
+
+Manuální spuštění smoke skriptu:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ci_smoke.ps1
+```
+
+Unicode / kódování: pokud narazíte na chyby `charmap codec`, nastavte předem:
+
+```powershell
+$env:PYTHONIOENCODING = 'utf-8'
+```
+
+nebo používejte `python -X utf8` (již zahrnuto ve skriptech).
+
 ### Spuštění přes PowerShell launcher (doporučeno)
 
 Spustí simulátor v novém okně nebo ve stejném okně, bez potřeby nástrojového řetězce.
@@ -94,6 +120,7 @@ Přímé přepínače `sim_run.py` jsou ekvivalentní k těm v `run_sim.ps1`:
 `--fps`, `--width`, `--height`, `--rpc-port`, `--uart-port`, `--no-color`, `--no-unicode`, `--script`, `--full-redraw-interval`, `--no-diff`.
 
 Další pokročilé parametry:
+
 - `--com-port <port>`: připojit COM port (vyžaduje pyserial)
 - `--baud <rate>`: rychlost COM portu (výchozí 115200)
 - `--config <path>`: načíst konfiguraci ze souboru (JSON)

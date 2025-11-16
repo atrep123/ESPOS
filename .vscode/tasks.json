@@ -102,6 +102,13 @@
       "problemMatcher": []
     },
     {
+      "label": "CI: Smoke",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\ci_smoke.ps1",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
       "label": "Simulator: UART set_bg ff0000 (auto)",
       "type": "shell",
       "command": "powershell -NoProfile -Command \"$p=Get-Content .\\sim_ports.json | ConvertFrom-Json; if (-not $p.uart_port) { Write-Host 'uart_port not found in sim_ports.json'; exit 1 }; $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1',$p.uart_port); $w = New-Object System.IO.StreamWriter($client.GetStream()); $w.AutoFlush = $true; $w.WriteLine('set_bg ff0000'); Start-Sleep -Milliseconds 100; $client.Close()\"",
@@ -189,5 +196,79 @@
       "dependsOrder": "sequence",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
+    }
+    ,
+    {
+      "label": "Simulator: Profile Metrics",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"python .\\sim_run.py --export-metrics metrics.csv --fps 144 --width 64 --height 16; python .\\performance_profiler.py metrics.csv profiler_enhanced.html\"",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Runs simulator for metrics then generates enhanced profiler report. Outputs metrics.csv + profiler_enhanced.*"
+    },
+    {
+      "label": "UI Designer: Live Preview",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "ui_designer.py",
+        "--live-preview",
+        "${input:jsonFilePath}"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Watch JSON design file and auto-refresh browser preview on changes. Press Ctrl+C to stop."
+    },
+    {
+      "label": "Designer: Open GUI (Drag & Drop)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "ui_designer_preview.py",
+        "--in-json",
+        "${input:jsonFilePath}"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Open the interactive GUI Designer. Drag to move/resize widgets, Ctrl+S to save."
+    },
+    {
+      "label": "Designer: New GUI (Blank)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "ui_designer_preview.py"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Open the GUI Designer with a blank scene for quick prototyping."
+    },
+    {
+      "label": "UI Designer: Export C Header",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "ui_designer.py",
+        "--export-c-header",
+        "${input:jsonFilePath}",
+        "${input:outputHeaderPath}"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Export JSON design to C header with const ui_widget_t arrays"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "jsonFilePath",
+      "type": "promptString",
+      "description": "JSON design file path (e.g., examples/demo_scene.json)",
+      "default": "examples/demo_scene.json"
+    },
+    {
+      "id": "outputHeaderPath",
+      "type": "promptString",
+      "description": "Output C header path (e.g., src/ui_scenes.h)",
+      "default": "src/generated/ui_scenes.h"
     }
   ]

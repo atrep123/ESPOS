@@ -2762,7 +2762,37 @@ if __name__ == '__main__':
     parser.add_argument('--out-json', default='examples/guided_scene.json')
     parser.add_argument('--out-html', default='examples/guided_scene.html')
     parser.add_argument('--out-png', default='examples/guided_scene.png')
+    parser.add_argument('--live-preview', metavar='JSON', help='Start live preview server watching JSON file')
+    parser.add_argument('--export-c-header', nargs=2, metavar=('JSON', 'HEADER'), help='Export JSON design to C header file')
     args = parser.parse_args()
+
+    # Live preview mode
+    if args.live_preview:
+        import subprocess
+        live_script = Path(__file__).parent / 'ui_designer_live.py'
+        if not live_script.exists():
+            print(f"❌ Live preview script not found: {live_script}")
+            sys.exit(1)
+        try:
+            subprocess.run([sys.executable, str(live_script), '--json', args.live_preview], check=True)
+        except KeyboardInterrupt:
+            print("\n✓ Live preview stopped")
+        sys.exit(0)
+    
+    # C header export mode
+    if args.export_c_header:
+        json_file, header_file = args.export_c_header
+        import subprocess
+        export_script = Path(__file__).parent / 'ui_export_c_header.py'
+        if not export_script.exists():
+            print(f"❌ C export script not found: {export_script}")
+            sys.exit(1)
+        try:
+            subprocess.run([sys.executable, str(export_script), json_file, '-o', header_file], check=True)
+        except Exception as e:
+            print(f"❌ C export failed: {e}")
+            sys.exit(1)
+        sys.exit(0)
 
     if args.web:
         print("🌐 Web interface not yet implemented")

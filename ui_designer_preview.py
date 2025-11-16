@@ -126,9 +126,28 @@ class VisualPreviewWindow:
         ttk.Button(toolbar, text="🎨 BG Color", 
                   command=self._choose_bg_color).pack(side=tk.LEFT, padx=5)
         
-        # Canvas frame with scrollbars
+        # Left-side palette (widget add shortcuts)
+        palette = ttk.Frame(main_frame)
+        palette.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+
+        ttk.Label(palette, text="Add Widgets").pack(anchor=tk.W)
+        ttk.Separator(palette, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=4)
+
+        def add_btn(text, cb):
+            ttk.Button(palette, text=text, command=cb).pack(fill=tk.X, pady=2)
+
+        add_btn("➕ Label", lambda: self._palette_add("label"))
+        add_btn("➕ Button", lambda: self._palette_add("button"))
+        add_btn("➕ Box", lambda: self._palette_add("box"))
+        add_btn("➕ Panel", lambda: self._palette_add("panel"))
+        add_btn("➕ Progress", lambda: self._palette_add("progressbar"))
+        add_btn("➕ Gauge", lambda: self._palette_add("gauge"))
+        add_btn("➕ Checkbox", lambda: self._palette_add("checkbox"))
+        add_btn("➕ Slider", lambda: self._palette_add("slider"))
+
+        # Canvas frame with scrollbars (to the right of palette)
         canvas_frame = ttk.Frame(main_frame)
-        canvas_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Canvas
         canvas_width = int(self.designer.width * self.settings.zoom)
@@ -156,6 +175,58 @@ class VisualPreviewWindow:
         
         # Properties panel
         self._setup_properties_panel()
+
+    def _center_coords(self, w: int, h: int) -> Tuple[int, int]:
+        """Compute top-left coords to center a widget of size w×h."""
+        cx = max(0, (self.designer.width - w) // 2)
+        cy = max(0, (self.designer.height - h) // 2)
+        return cx, cy
+
+    def _palette_add(self, kind: str):
+        """Add a widget of given kind near center and select it."""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            # Ensure at least one scene exists
+            self.designer.create_scene("scene")
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if not scene:
+                return
+
+        # Defaults per widget type
+        defaults = {
+            "label":      (60, 10, {"text": "Label", "border": False}),
+            "button":     (50, 12, {"text": "Button"}),
+            "box":        (60, 40, {}),
+            "panel":      (60, 40, {}),
+            "progressbar":(80, 8,  {"value": 50}),
+            "gauge":      (20, 30, {"value": 70}),
+            "checkbox":   (60, 10, {"text": "Check me", "checked": True}),
+            "slider":     (80, 8,  {"value": 50}),
+        }
+
+        w, h, props = defaults.get(kind, (40, 12, {}))
+        x, y = self._center_coords(w, h)
+
+        # Map to enum
+        kind_map = {
+            "label": WidgetType.LABEL,
+            "button": WidgetType.BUTTON,
+            "box": WidgetType.BOX if hasattr(WidgetType, 'BOX') else WidgetType.PANEL,
+            "panel": WidgetType.PANEL,
+            "progressbar": WidgetType.PROGRESSBAR,
+            "gauge": WidgetType.GAUGE,
+            "checkbox": WidgetType.CHECKBOX,
+            "slider": WidgetType.SLIDER,
+        }
+        wtype = kind_map.get(kind, WidgetType.LABEL)
+
+        # Create widget via designer API
+        self.designer.add_widget(wtype, x=x, y=y, width=w, height=h, **props)
+        # Select the new widget
+        self.selected_widget_idx = len(scene.widgets) - 1
+        # Save state and refresh
+        self.designer._save_state()
+        self.refresh()
     
     def _setup_properties_panel(self):
         """Setup widget properties panel"""
