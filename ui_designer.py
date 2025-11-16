@@ -1220,29 +1220,7 @@ class UIDesigner:
         
         # Draw border
         if widget.border:
-            # Top/bottom
-            for x in range(widget.x, min(widget.x + widget.width, width)):
-                if widget.y < height:
-                    canvas[widget.y][x] = border_chars['h']
-                if widget.y + widget.height - 1 < height:
-                    canvas[widget.y + widget.height - 1][x] = border_chars['h']
-            
-            # Left/right
-            for y in range(widget.y, min(widget.y + widget.height, height)):
-                if widget.x < width:
-                    canvas[y][widget.x] = border_chars['v']
-                if widget.x + widget.width - 1 < width:
-                    canvas[y][widget.x + widget.width - 1] = border_chars['v']
-            
-            # Corners
-            if widget.y < height and widget.x < width:
-                canvas[widget.y][widget.x] = border_chars['tl']
-            if widget.y < height and widget.x + widget.width - 1 < width:
-                canvas[widget.y][widget.x + widget.width - 1] = border_chars['tr']
-            if widget.y + widget.height - 1 < height and widget.x < width:
-                canvas[widget.y + widget.height - 1][widget.x] = border_chars['bl']
-            if widget.y + widget.height - 1 < height and widget.x + widget.width - 1 < width:
-                canvas[widget.y + widget.height - 1][widget.x + widget.width - 1] = border_chars['br']
+            self._draw_border(canvas, widget, border_chars, width, height)
         
         # Draw widget-specific content
         if widget.type == 'progressbar':
@@ -1265,10 +1243,43 @@ class UIDesigner:
         num_y = widget.y if not widget.border else widget.y + 1
         num_x = widget.x + 1
         if 0 <= num_y < height:
-            for i, ch in enumerate(num_str):
-                x = num_x + i
-                if 0 <= x < width:
-                    canvas[num_y][x] = ch
+            self._write_text_line(canvas, num_y, num_x, num_str, width)
+
+    def _draw_border(self, canvas: List[List[str]], widget: WidgetConfig, border_chars: Dict[str, str], width: int, height: int) -> None:
+        """Draw widget border with bounds checks."""
+        x0, y0 = widget.x, widget.y
+        x1 = widget.x + widget.width - 1
+        y1 = widget.y + widget.height - 1
+        # Top/bottom
+        for x in range(max(0, x0), min(x1 + 1, width)):
+            if 0 <= y0 < height:
+                canvas[y0][x] = border_chars['h']
+            if 0 <= y1 < height:
+                canvas[y1][x] = border_chars['h']
+        # Left/right
+        for y in range(max(0, y0), min(y1 + 1, height)):
+            if 0 <= x0 < width:
+                canvas[y][x0] = border_chars['v']
+            if 0 <= x1 < width:
+                canvas[y][x1] = border_chars['v']
+        # Corners
+        if 0 <= y0 < height and 0 <= x0 < width:
+            canvas[y0][x0] = border_chars['tl']
+        if 0 <= y0 < height and 0 <= x1 < width:
+            canvas[y0][x1] = border_chars['tr']
+        if 0 <= y1 < height and 0 <= x0 < width:
+            canvas[y1][x0] = border_chars['bl']
+        if 0 <= y1 < height and 0 <= x1 < width:
+            canvas[y1][x1] = border_chars['br']
+
+    def _write_text_line(self, canvas: List[List[str]], y: int, x_start: int, text: str, width: int) -> None:
+        """Write a text string to a single canvas row with bounds checks."""
+        if not (0 <= y < len(canvas)):
+            return
+        for i, ch in enumerate(text):
+            x = x_start + i
+            if 0 <= x < width:
+                canvas[y][x] = ch
 
     def _apply_state_overrides_inplace(self, widget: WidgetConfig) -> None:
         try:
@@ -1347,10 +1358,7 @@ class UIDesigner:
             text_x = widget.x + widget.width - len(widget.text) - widget.padding_x - (1 if widget.border else 0)
         
         if 0 <= text_y < height:
-            for i, ch in enumerate(widget.text):
-                x = text_x + i
-                if 0 <= x < width:
-                    canvas[text_y][x] = ch
+            self._write_text_line(canvas, text_y, text_x, widget.text, width)
     
     def _draw_progressbar(self, canvas: List[List[str]], widget: WidgetConfig,
                           width: int, height: int):
