@@ -7,7 +7,7 @@ Drag-and-drop widget editor with live preview and code generation
 import sys
 import json
 import copy
-from typing import List, Dict, Optional, Tuple, Any, Iterable, TypedDict, Union
+from typing import List, Dict, Optional, Tuple, Any, Iterable, TypedDict, Union, cast
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
 from enum import Enum
@@ -26,6 +26,16 @@ def _empty_int_list() -> List[int]:
 def _normalize_int_list(values: Iterable[Any]) -> List[int]:
     """Coerce an arbitrary iterable into a list of ints for chart data."""
     return [int(v) for v in values]
+
+
+def _empty_str_list() -> List[str]:
+    """Typed default factory for string lists (e.g., animations)."""
+    return []
+
+
+def _empty_state_overrides() -> Dict[str, Dict[str, Any]]:
+    """Typed default factory for state overrides mapping."""
+    return {}
 
 
 class ConstraintBaseline(TypedDict, total=False):
@@ -52,6 +62,11 @@ class Constraints(TypedDict, total=False):
 def _empty_constraints() -> Constraints:
     """Typed default factory for constraints metadata."""
     return {}
+
+
+def _make_baseline(x: int, y: int, width: int, height: int, bw: int, bh: int) -> ConstraintBaseline:
+    """Helper to build a typed ConstraintBaseline dict."""
+    return {'x': x, 'y': y, 'width': width, 'height': height, 'bw': bw, 'bh': bh}
 
 
 class ResponsiveRule(TypedDict, total=False):
@@ -129,7 +144,7 @@ class WidgetConfig:
     # Responsive/constraints metadata (stored as simple dicts for export)
     constraints: Constraints = field(default_factory=_empty_constraints)
     responsive_rules: List[ResponsiveRule] = field(default_factory=_empty_responsive_rules)
-    animations: List[str] = field(default_factory=list)
+    animations: List[str] = field(default_factory=_empty_str_list)
     # Editing safeguards
     locked: bool = False
     # Theme role bindings (used when applying themes)
@@ -137,7 +152,7 @@ class WidgetConfig:
     theme_bg_role: str = ""
     # State variants
     state: str = "default"
-    state_overrides: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    state_overrides: Dict[str, Dict[str, Any]] = field(default_factory=_empty_state_overrides)
 
 
 @dataclass
@@ -405,10 +420,10 @@ class UIDesigner:
 
         # Store baseline into widget.constraints.b for later use
         for w in sc.widgets:
-            b = {
-                'x': w.x, 'y': w.y, 'width': w.width, 'height': w.height,
-                'bw': sc.base_width, 'bh': sc.base_height,
-            }
+            b = _make_baseline(
+                w.x, w.y, w.width, w.height,
+                sc.base_width, sc.base_height,
+            )
             w.constraints = w.constraints or _empty_constraints()
             w.constraints['b'] = b
             # Provide default anchors if absent
@@ -436,7 +451,7 @@ class UIDesigner:
         sy_ratio = sc.height / bh
         for w in sc.widgets:
             c: Constraints = w.constraints or _empty_constraints()
-            b = c.get('b') or {'x': w.x, 'y': w.y, 'width': w.width, 'height': w.height}
+            b = cast(ConstraintBaseline, c.get('b') or _make_baseline(w.x, w.y, w.width, w.height, bw, bh))
             ax = c.get('ax', 'left')
             ay = c.get('ay', 'top')
             scale_x = bool(c.get('sx', False))
@@ -509,13 +524,19 @@ class UIDesigner:
                 wtype = str(widget)
 
             # Required fields
+            raw_x = kw.get('x')
+            raw_y = kw.get('y')
+            raw_w = kw.get('width')
+            raw_h = kw.get('height')
+            if raw_x is None or raw_y is None or raw_w is None or raw_h is None:
+                raise TypeError("add_widget requires x, y, width, height when providing a type")
             try:
-                x = int(kw.get('x'))
-                y = int(kw.get('y'))
-                width = int(kw.get('width'))
-                height = int(kw.get('height'))
+                x = int(raw_x)
+                y = int(raw_y)
+                width = int(raw_w)
+                height = int(raw_h)
             except Exception as e:
-                raise TypeError("add_widget requires x, y, width, height when providing a type") from e
+                raise TypeError("add_widget requires x, y, width, height as integers") from e
 
             # Build WidgetConfig with optional fields
             new_widget = WidgetConfig(

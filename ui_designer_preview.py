@@ -310,12 +310,12 @@ class VisualPreviewWindow:
             self._draw_text(draw, widget.text, x, y, w, h, fg_color, "center", "middle")
         
         elif widget.type == WidgetType.CHECKBOX.value:
-            # Draw checkbox
-            box_size = min(h - 4, 6)
+            # Draw checkbox (clamped for very small heights)
+            box_size = max(0, min(h - 4, 6))
             box_x = x + 2
             box_y = y + (h - box_size) // 2
-            draw.rectangle([box_x, box_y, box_x + box_size, box_y + box_size], 
-                         outline=fg_color, width=1)
+            y0, y1 = (box_y, box_y + box_size) if box_y <= box_y + box_size else (box_y + box_size, box_y)
+            draw.rectangle([box_x, y0, box_x + box_size, y1], outline=fg_color, width=1)
             if widget.checked:
                 draw.line([(box_x + 1, box_y + 1), (box_x + box_size - 1, box_y + box_size - 1)], 
                          fill=fg_color, width=1)
@@ -327,11 +327,20 @@ class VisualPreviewWindow:
                               w - box_size - 4, h, fg_color, "left", "middle")
         
         elif widget.type == WidgetType.PROGRESSBAR.value:
-            # Draw progress bar
-            progress = int((widget.value - widget.min_value) / 
-                          (widget.max_value - widget.min_value) * (w - 4))
+            # Draw progress bar with safe clamping for very small heights
+            span = max(0, (w - 4))
+            denom = max(1, (widget.max_value - widget.min_value))
+            progress = int((widget.value - widget.min_value) / denom * span)
             if progress > 0:
-                draw.rectangle([x + 2, y + 2, x + 2 + progress, y + h - 3], fill=fg_color)
+                x0 = x + 2
+                y_top = y + 2
+                y_bottom = y + h - 3
+                # Ensure correct ordering for PIL rectangle (y1 >= y0)
+                y0, y1 = (y_top, y_bottom) if y_top <= y_bottom else (y_bottom, y_top)
+                x1 = x0 + progress
+                # Clamp within the inner bar area
+                x1 = min(x + w - 2, max(x0, x1))
+                draw.rectangle([x0, y0, x1, y1], fill=fg_color)
         
         elif widget.type == WidgetType.GAUGE.value:
             # Draw gauge as arc (simplified)
@@ -350,11 +359,16 @@ class VisualPreviewWindow:
             # Draw slider track
             track_y = y + h // 2
             draw.line([(x + 2, track_y), (x + w - 2, track_y)], fill=fg_color, width=1)
-            # Draw handle
-            handle_x = x + 2 + int((widget.value - widget.min_value) / 
-                                  (widget.max_value - widget.min_value) * (w - 4))
-            draw.rectangle([handle_x - 2, y + 2, handle_x + 2, y + h - 2], 
-                          fill=fg_color, outline=fg_color)
+            # Draw handle with safe clamping
+            span = max(0, (w - 4))
+            denom = max(1, (widget.max_value - widget.min_value))
+            handle_x = x + 2 + int((widget.value - widget.min_value) / denom * span)
+            x0 = max(x + 2, min(handle_x - 2, x + w - 2))
+            x1 = max(x + 2, min(handle_x + 2, x + w - 2))
+            y_top = y + 2
+            y_bottom = y + h - 2
+            y0, y1 = (y_top, y_bottom) if y_top <= y_bottom else (y_bottom, y_top)
+            draw.rectangle([x0, y0, x1, y1], fill=fg_color, outline=fg_color)
         
         elif widget.type == WidgetType.BOX.value:
             # Just the border and background, already drawn
