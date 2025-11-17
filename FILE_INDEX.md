@@ -2,7 +2,7 @@
 
 ## 📂 Project Structure Overview
 
-```
+```text
 ESP32OS/
 │
 ├── Core Simulator
@@ -302,7 +302,7 @@ python esp32_sim_client.py localhost 5556
 
 ### Web Browsers
 
-```
+```text
 # WebSocket remote viewer
 file:///d:/ESP32OS/ui_sim/remote_viewer.html
 
@@ -314,7 +314,7 @@ http://localhost:8080
 
 ## 🔗 Module Dependencies
 
-```
+```text
 sim_run.py
 ├── screenshot_capture.py (optional integration)
 ├── performance_profiler.py (optional integration)
@@ -384,22 +384,22 @@ remote_viewer.html
 
 ## 🆘 Troubleshooting Guide
 
-**File not found?**
+### File not found?
 → Check `FILE_INDEX.md` (this file) for correct path
 
-**Module import error?**
+### Module import error?
 → Check `Installation Dependencies` section above
 
-**Port already in use?**
+### Port already in use?
 → See `By Port Usage` table for port assignments
 
-**Can't connect to simulator?**
+### Can't connect to simulator?
 → Ensure `sim_run.py` is running with correct RPC port
 
-**Performance issues?**
+### Performance issues?
 → Use `performance_profiler.py` to diagnose
 
-**UI not rendering correctly?**
+### UI not rendering correctly?
 → Use `state_inspector.py` to debug state
 
 ---

@@ -35,7 +35,7 @@ python esp32_hardware_bridge.py --serial-port COM3 --bidirectional
 ```
 
 **ESP32 protokol:**
-```
+```text
 STATE bg=0x0821 scene=0 btnA=0 btnB=0 btnC=0
 BTN A 1         # Button A pressed
 BTN A 0         # Button A released
@@ -168,7 +168,7 @@ python state_inspector.py localhost 5556
 ```
 
 **Výstup:**
-```
+```text
 ==============================================================
 CURRENT STATE
 ==============================================================
@@ -525,4 +525,4 @@ Všech **8 advanced features** bylo úspěšně implementováno:
 
 ---
 
-**Vše implementováno a připraveno k použití! 🎉**
+## ✅ Vše implementováno a připraveno k použití! 🎉

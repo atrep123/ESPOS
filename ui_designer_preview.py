@@ -46,12 +46,13 @@ class VisualPreviewWindow:
         # Per-animation current values and per-widget overlay transform cache
         self._anim_values: Dict[str, Dict[str, Any]] = {}
         self._widget_overlays: Dict[int, Dict[str, Any]] = {}
-        
+
         # Selection and drag state
         self.selected_widget_idx: Optional[int] = None
         self.dragging = False
         self.drag_start: Optional[Tuple[int, int]] = None
         self.drag_offset: Optional[Tuple[int, int]] = None
+        self.drag_origin: Optional[Tuple[int, int]] = None
         self.resize_handle: Optional[str] = None  # ne, nw, se, sw, n, s, e, w
         
         if not TK_AVAILABLE:
@@ -258,6 +259,10 @@ class VisualPreviewWindow:
         self.root.bind("<Control-z>", lambda e: self.designer.undo())
         self.root.bind("<Control-y>", lambda e: self.designer.redo())
         self.root.bind("<Control-s>", self._on_save)
+        self.root.bind("<Left>", lambda e: self._on_nudge(e, -1, 0))
+        self.root.bind("<Right>", lambda e: self._on_nudge(e, 1, 0))
+        self.root.bind("<Up>", lambda e: self._on_nudge(e, 0, -1))
+        self.root.bind("<Down>", lambda e: self._on_nudge(e, 0, 1))
     
     def refresh(self):
         """Refresh the preview"""
@@ -626,21 +631,25 @@ class VisualPreviewWindow:
             self.resize_handle = handle
             self.dragging = True
             self.drag_start = (event.x, event.y)
+            self.drag_origin = None
             return
         
         # Check for widget selection
         widget_idx = self._find_widget_at(event.x, event.y)
         if widget_idx is not None:
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if not scene or not (0 <= widget_idx < len(scene.widgets)):
+                return
             self.selected_widget_idx = widget_idx
             self.dragging = True
             self.drag_start = (event.x, event.y)
-            
+
             # Calculate offset for smooth dragging
-            scene = self.designer.scenes.get(self.designer.current_scene)
             widget = scene.widgets[widget_idx]
             wx, wy = self._canvas_to_widget_coords(event.x, event.y)
             self.drag_offset = (wx - widget.x, wy - widget.y)
-            
+            self.drag_origin = (widget.x, widget.y)
+
             self.refresh()
         else:
             self.selected_widget_idx = None
@@ -678,8 +687,23 @@ class VisualPreviewWindow:
         else:
             # Move widget
             wx, wy = self._canvas_to_widget_coords(event.x, event.y)
-            widget.x = wx - self.drag_offset[0]
-            widget.y = wy - self.drag_offset[1]
+            if self.drag_offset is None:
+                return
+            dx, dy = self.drag_offset
+            new_x = wx - dx
+            new_y = wy - dy
+
+            # Optional axis-lock when Shift is held:
+            # move převážně v jedné ose podle směru tahu
+            if event.state & 0x0001 and self.drag_origin is not None and self.drag_start is not None:
+                sx, sy = self.drag_start
+                if abs(event.x - sx) >= abs(event.y - sy):
+                    new_y = self.drag_origin[1]
+                else:
+                    new_x = self.drag_origin[0]
+
+            widget.x = new_x
+            widget.y = new_y
             
             # Clamp to canvas
             widget.x = max(0, min(widget.x, self.designer.width - widget.width))
@@ -697,6 +721,7 @@ class VisualPreviewWindow:
         self.drag_start = None
         self.drag_offset = None
         self.resize_handle = None
+        self.drag_origin = None
     
     def _on_mouse_move(self, event):
         """Handle mouse move (for cursor changes)"""
@@ -719,6 +744,38 @@ class VisualPreviewWindow:
             self.canvas.configure(cursor=cursors.get(handle, "arrow"))
         else:
             self.canvas.configure(cursor="arrow")
+
+    def _on_nudge(self, event, dx: int, dy: int):
+        """Nudge selected widget with arrow keys.
+
+        Holds Shift to nudge by grid size instead of 1 pixel.
+        """
+        if self.selected_widget_idx is None or not self.designer.current_scene:
+            return
+
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene or not (0 <= self.selected_widget_idx < len(scene.widgets)):
+            return
+
+        widget = scene.widgets[self.selected_widget_idx]
+
+        step = 1
+        if event.state & 0x0001:
+            step = max(1, self.settings.snap_size)
+
+        new_x = widget.x + dx * step
+        new_y = widget.y + dy * step
+
+        new_x = max(0, min(new_x, self.designer.width - widget.width))
+        new_y = max(0, min(new_y, self.designer.height - widget.height))
+
+        if new_x == widget.x and new_y == widget.y:
+            return
+
+        widget.x = new_x
+        widget.y = new_y
+        self.designer._save_state()
+        self.refresh()
     
     def _on_double_click(self, event):
         """Handle double click to edit widget properties"""

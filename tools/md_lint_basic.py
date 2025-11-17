@@ -12,16 +12,33 @@ missing = []
 invalid_heading = []
 code_fence_re = re.compile(r"^```(.*)$")
 emphasis_heading_re = re.compile(r"^\*\*[^*]+\*\*$")
+
 for f in md_files:
     lines = f.read_text(encoding="utf-8", errors="ignore").splitlines()
-    for i,l in enumerate(lines):
+    in_code = False
+    for i, l in enumerate(lines):
+        # Track fenced code blocks and require language only on opening fence
         m = code_fence_re.match(l)
         if m:
             lang = m.group(1).strip()
-            if lang == "" and (i+1) < len(lines):
-                missing.append((f,i+1))
-        if emphasis_heading_re.match(l.strip()) and (i==0 or not lines[i-1].startswith("#")):
-            invalid_heading.append((f,i+1))
+            if not in_code:
+                # Opening fence
+                if lang == "" and (i + 1) < len(lines):
+                    missing.append((f, i + 1))
+                in_code = True
+            else:
+                # Closing fence
+                in_code = False
+
+        # Heuristic for emphasis-used-as-heading:
+        # keep allowing label-style lines like **Funkce:** (ending with :)
+        stripped = l.strip()
+        if emphasis_heading_re.match(stripped):
+            inner = stripped[2:-2].strip()
+            if inner.endswith(":"):
+                continue
+            if i == 0 or not lines[i - 1].lstrip().startswith("#"):
+                invalid_heading.append((f, i + 1))
 
 if missing or invalid_heading:
     print("Markdown lint FAILED")

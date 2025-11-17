@@ -126,6 +126,39 @@ class RenderContext:
     height: int
     use_unicode: bool
     use_color: bool
+
+# --- Shared state snapshot for RPC get_state ---
+_snapshot_lock = threading.Lock()
+_current_state_snapshot: Dict[str, Any] = {}
+
+
+def _update_state_snapshot(state: UIState, frame: int, fps: float,
+                           event_queue_size: int, render_time_ms: float,
+                           input_src: str) -> None:
+    """Update global state snapshot used by RPC get_state."""
+    global _current_state_snapshot
+    snap: Dict[str, Any] = {
+        "scene": int(state.scene),
+        "bg_color": int(state.bg),
+        "buttons": {
+            "A": bool(state.btnA),
+            "B": bool(state.btnB),
+            "C": bool(state.btnC),
+        },
+        "fps": float(fps),
+        "frame_count": int(frame),
+        "event_queue_size": int(event_queue_size),
+        "render_time_ms": float(render_time_ms),
+        "custom": {"input_src": input_src},
+    }
+    with _snapshot_lock:
+        _current_state_snapshot = snap
+
+
+def get_state_snapshot() -> Dict[str, Any]:
+    """Return a shallow copy of the latest state snapshot for RPC/inspector."""
+    with _snapshot_lock:
+        return dict(_current_state_snapshot)
     compute_ms: float = 0.0
     sleep_ms: float = 0.0
     util: float = 0.0
@@ -356,7 +389,22 @@ def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: queue.Queu
                     try:
                         decoded = line.decode('utf-8', errors='ignore')
                         msg = json.loads(decoded)
-                        # Expected shapes:
+
+                        # JSON-RPC get_state support (for StateInspector):
+                        # {"jsonrpc":"2.0","method":"get_state","id":1}
+                        if isinstance(msg, dict) and str(msg.get("method", "")).lower() == "get_state":
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": msg.get("id"),
+                                "result": get_state_snapshot(),
+                            }
+                            try:
+                                conn.sendall((json.dumps(response) + "\n").encode("utf-8"))
+                            except Exception as send_err:
+                                log_error(f"RPC get_state send failed: {send_err}")
+                            continue
+
+                        # Expected shapes for command-style RPC:
                         # {"method":"set_bg","rgb":[r,g,b]} or {"rgb565":4660}
                         # {"method":"btn","id":"A|B|C","pressed":true}
                         # {"method":"scene","value":0}
@@ -814,12 +862,14 @@ def main() -> None:
         try:
             if platform.system() == 'Windows':
                 import ctypes
+                import ctypes.wintypes
+
                 kernel32 = ctypes.windll.kernel32
                 COORD = ctypes.wintypes._COORD  # type: ignore[attr-defined]
                 WORD = ctypes.wintypes.WORD
                 STD_OUTPUT_HANDLE = -11
                 handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
-                import ctypes.wintypes
+
                 class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
                     _fields_ = [
                         ("dwSize", COORD),
@@ -828,6 +878,7 @@ def main() -> None:
                         ("srWindow", ctypes.wintypes.SMALL_RECT),
                         ("dwMaximumWindowSize", COORD),
                     ]
+
                 csbi = CONSOLE_SCREEN_BUFFER_INFO()
                 if kernel32.GetConsoleScreenBufferInfo(handle, ctypes.byref(csbi)):
                     term_width = csbi.srWindow.Right - csbi.srWindow.Left + 1
@@ -901,6 +952,19 @@ def main() -> None:
     last_frame_time = start_time
     fps = 0.0
     current_input_src = 'kbd'
+
+    # Initialize state snapshot so RPC get_state has data immediately
+    try:
+        _update_state_snapshot(
+            state=state,
+            frame=frame,
+            fps=fps,
+            event_queue_size=evq.qsize(),
+            render_time_ms=0.0,
+            input_src=current_input_src,
+        )
+    except Exception:
+        pass
     
     # Write ports discovery file for tools (deleted on exit)
     try:
@@ -1303,6 +1367,20 @@ def main() -> None:
                     'util': util_prev,
                     'input_src': current_input_src
                 }
+
+            # Update RPC state snapshot for get_state
+            try:
+                _update_state_snapshot(
+                    state=state,
+                    frame=frame,
+                    fps=fps,
+                    event_queue_size=evq.qsize(),
+                    render_time_ms=compute_ms_prev,
+                    input_src=current_input_src,
+                )
+            except Exception:
+                # Snapshot is best-effort; never break render loop
+                pass
             
             # Update only footer line with new metrics next loop; no second full render here
     

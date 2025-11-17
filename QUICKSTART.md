@@ -175,7 +175,7 @@ esp32_sim_disconnect(&client);
 
 ## 📁 Struktura souborů
 
-```
+```text
 ESP32OS/
 ├── sim_run.py                      # Hlavní simulátor
 ├── esp32_sim_client.py             # Python client library

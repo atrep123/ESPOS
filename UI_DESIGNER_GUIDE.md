@@ -443,7 +443,7 @@ Rovnoměrně rozložit widgety:
 
 ### 1. JSON (uložení projektu)
 
-```
+```text
 > save my_design.json
 ```
 
@@ -478,7 +478,7 @@ Rovnoměrně rozložit widgety:
 
 ### 2. Python Code
 
-```
+```text
 > export my_ui.py
 ```
 
@@ -540,7 +540,7 @@ if __name__ == '__main__':
 
 ### 3. HTML Preview
 
-```
+```text
 > export preview.html html
 ```
 
@@ -601,7 +601,7 @@ python ui_designer.py
 ```
 
 **ASCII Preview:**
-```
+```text
 ╔══════════════════════════════════════════════════════════════╗
 ║              ESP32 System Monitor                            ║
 ║                                                              ║

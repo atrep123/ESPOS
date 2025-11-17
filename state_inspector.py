@@ -101,8 +101,6 @@ class StateInspector:
     
     def get_state(self) -> Optional[StateSnapshot]:
         """Get current simulator state"""
-        # This would require adding a new RPC method to sim_run.py: "get_state"
-        # For now, we'll simulate it
         result = self.send_command("get_state")
         
         if result:

@@ -34,7 +34,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "icon",
@@ -62,7 +70,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "label",
@@ -90,7 +106,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "icon",
@@ -118,7 +142,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "label",
@@ -146,7 +178,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "label",
@@ -174,7 +214,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "panel",
@@ -202,7 +250,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "icon",
@@ -230,7 +286,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "label",
@@ -258,7 +322,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "label",
@@ -286,7 +358,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "label",
@@ -314,7 +394,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         },
         {
           "type": "button",
@@ -342,7 +430,15 @@
           "padding_x": 1,
           "padding_y": 0,
           "margin_x": 0,
-          "margin_y": 0
+          "margin_y": 0,
+          "constraints": {},
+          "responsive_rules": [],
+          "animations": [],
+          "locked": false,
+          "theme_fg_role": "",
+          "theme_bg_role": "",
+          "state": "default",
+          "state_overrides": {}
         }
       ]
     }

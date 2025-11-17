@@ -14,7 +14,7 @@ from ui_responsive import ResponsiveLayoutSystem, LayoutConstraints
 from ui_designer_pro import UIDesignerPro
 
 
-def test_visual_preview():
+def test_visual_preview() -> None:
     """Test visual preview capabilities"""
     print("\n" + "="*60)
     print("TEST 1: VISUAL PREVIEW WINDOW")
@@ -43,14 +43,12 @@ def test_visual_preview():
         print("  • Grid & snap")
         print("  • PNG export")
         print("  • Properties panel")
-        
-        return True
     except ImportError as e:
         print(f"✗ Preview requires tkinter and PIL: {e}")
-        return False
+        assert False
 
 
-def test_theme_system():
+def test_theme_system() -> None:
     """Test theme system"""
     print("\n" + "="*60)
     print("TEST 2: THEME SYSTEM")
@@ -86,11 +84,9 @@ def test_theme_system():
     # Test search
     dark_themes = manager.search_themes("dark")
     print(f"✓ Found {len(dark_themes)} dark themes")
-    
-    return True
 
 
-def test_component_library():
+def test_component_library() -> None:
     """Test component library"""
     print("\n" + "="*60)
     print("TEST 3: COMPONENT LIBRARY")
@@ -121,11 +117,9 @@ def test_component_library():
     for category in ["form", "navigation", "display"]:
         cat_comps = library.list_components(category)
         print(f"✓ Category '{category}': {len(cat_comps)} components")
-    
-    return True
 
 
-def test_animation_system():
+def test_animation_system() -> None:
     """Test animation system"""
     print("\n" + "="*60)
     print("TEST 4: ANIMATION DESIGNER")
@@ -174,11 +168,9 @@ def test_animation_system():
     easing_funcs = ["linear", "ease_in", "ease_out", "ease_in_out", 
                    "ease_out_bounce", "ease_out_elastic"]
     print(f"✓ {len(easing_funcs)} easing functions available")
-    
-    return True
 
 
-def test_responsive_system():
+def test_responsive_system() -> None:
     """Test responsive layout system"""
     print("\n" + "="*60)
     print("TEST 5: RESPONSIVE LAYOUT SYSTEM")
@@ -227,11 +219,9 @@ def test_responsive_system():
     grid_widgets = [{"type": "label"} for _ in range(4)]
     grid = system.create_grid_layout(grid_widgets, 320, 240, columns=2, rows=2)
     print(f"✓ Grid layout: 2×2 grid created")
-    
-    return True
 
 
-def test_integration():
+def test_integration() -> None:
     """Test complete integration"""
     print("\n" + "="*60)
     print("TEST 6: COMPLETE INTEGRATION")
@@ -271,11 +261,9 @@ def test_integration():
     scene = designer_pro.designer.scenes.get(designer_pro.designer.current_scene)
     if scene:
         print(f"✓ Final scene: {len(scene.widgets)} widgets")
-    
-    return True
 
 
-def run_all_tests():
+def run_all_tests() -> bool:
     """Run complete test suite"""
     print("\n" + "="*60)
     print("     UI DESIGNER PRO TEST SUITE")
@@ -294,8 +282,8 @@ def run_all_tests():
     
     for test_name, test_func in tests:
         try:
-            result = test_func()
-            results.append((test_name, result))
+            test_func()
+            results.append((test_name, True))
         except Exception as e:
             print(f"\n✗ Test failed: {e}")
             results.append((test_name, False))

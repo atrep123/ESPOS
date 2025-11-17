@@ -13,6 +13,7 @@ from datetime import datetime
 from enum import Enum
 import os
 from pathlib import Path
+from html import escape
 
 
 PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py')
@@ -24,8 +25,38 @@ def _empty_int_list() -> List[int]:
 
 
 def _normalize_int_list(values: Iterable[Any]) -> List[int]:
-    """Coerce an arbitrary iterable into a list of ints for chart data."""
-    return [int(v) for v in values]
+    """Coerce an arbitrary iterable into a list of ints for chart data; ignores bad entries."""
+    normalized: List[int] = []
+    for v in values or []:
+        try:
+            normalized.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    return normalized
+
+
+def _coerce_bool_flag(value: Any, default: bool) -> bool:
+    """Convert loose truthy/falsey inputs into a bool with sane string handling."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("1", "true", "yes", "on"):
+            return True
+        if lowered in ("0", "false", "no", "off"):
+            return False
+    try:
+        return bool(value)
+    except Exception:
+        return default
+
+
+def _coerce_choice(value: Any, allowed: Iterable[str], default: str) -> str:
+    """Return value if in allowed choices, else default."""
+    if value is None:
+        return default
+    sval = str(value)
+    return sval if sval in allowed else default
 
 
 def _empty_str_list() -> List[str]:
@@ -546,19 +577,23 @@ class UIDesigner:
                 width=width,
                 height=height,
                 text=kw.get('text', ''),
-                style=kw.get('style', 'default'),
-                color_fg=kw.get('color_fg', 'white'),
-                color_bg=kw.get('color_bg', 'black'),
-                border=bool(kw.get('border', True)),
-                border_style=str(kw.get('border_style', 'single')),
-                align=str(kw.get('align', 'left')),
-                valign=str(kw.get('valign', 'middle')),
+                style=str(kw.get('style', 'default')),
+                color_fg=str(kw.get('color_fg', 'white')),
+                color_bg=str(kw.get('color_bg', 'black')),
+                border=_coerce_bool_flag(kw.get('border', True), True),
+                border_style=_coerce_choice(
+                    kw.get('border_style', 'single'),
+                    ('none', 'single', 'double', 'rounded', 'bold', 'dashed'),
+                    'single',
+                ),
+                align=_coerce_choice(kw.get('align', 'left'), ('left', 'center', 'right'), 'left'),
+                valign=_coerce_choice(kw.get('valign', 'middle'), ('top', 'middle', 'bottom'), 'middle'),
                 value=int(kw.get('value', 0)) if kw.get('value') is not None else 0,
                 min_value=int(kw.get('min_value', 0)),
                 max_value=int(kw.get('max_value', 100)),
-                checked=bool(kw.get('checked', False)),
-                enabled=bool(kw.get('enabled', True)),
-                visible=bool(kw.get('visible', True)),
+                checked=_coerce_bool_flag(kw.get('checked', False), False),
+                enabled=_coerce_bool_flag(kw.get('enabled', True), True),
+                visible=_coerce_bool_flag(kw.get('visible', True), True),
                 icon_char=str(kw.get('icon_char', '')),
                 data_points=_normalize_int_list(kw.get('data_points', []) or []),
                 z_index=int(kw.get('z_index', 0)),
@@ -570,12 +605,14 @@ class UIDesigner:
 
         self._save_state()
         scene_name = scene_name or self.current_scene
-        if scene_name and scene_name in self.scenes:
-            # Snap to grid and magnetic snap against existing widgets
-            sx, sy = self.snap_position(new_widget.x, new_widget.y)
-            sx, sy = self._apply_snapping(new_widget, sx, sy, self.scenes[scene_name])
-            new_widget.x, new_widget.y = sx, sy
-            self.scenes[scene_name].widgets.append(new_widget)
+        if not scene_name or scene_name not in self.scenes:
+            print(f"⚠️ Scene '{scene_name or ''}' not found; widget not added.")
+            return
+        # Snap to grid and magnetic snap against existing widgets
+        sx, sy = self.snap_position(new_widget.x, new_widget.y)
+        sx, sy = self._apply_snapping(new_widget, sx, sy, self.scenes[scene_name])
+        new_widget.x, new_widget.y = sx, sy
+        self.scenes[scene_name].widgets.append(new_widget)
     
     def add_widget_from_template(self, template_name: str, _widget_id: str,
                                  x: int, y: int, **kwargs: Any):
@@ -1118,7 +1155,8 @@ class UIDesigner:
             return
         
         scene = self.scenes[scene_name]
-        preview = self.preview_ascii(scene_name)
+        preview_raw = self.preview_ascii(scene_name)
+        preview = escape(preview_raw)
         
         html = f"""<!DOCTYPE html>
 <html lang="en">

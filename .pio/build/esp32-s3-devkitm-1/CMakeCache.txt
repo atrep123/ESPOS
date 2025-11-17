@@ -314,7 +314,7 @@ ESP32OS_IS_TOP_LEVEL:STATIC=ON
 ESP32OS_SOURCE_DIR:STATIC=C:/Users/atrep/Desktop/ESP32OS
 
 //No help, variable specified on the command line.
-EXTRA_COMPONENT_DIRS:PATH=c:/Users/atrep/Desktop/ESP32OS/src
+EXTRA_COMPONENT_DIRS:PATH=C:/Users/atrep/Desktop/ESP32OS/src
 
 //Generate the auto-generated files as needed
 GEN_FILES:BOOL=
@@ -362,7 +362,7 @@ PYTHON:UNINITIALIZED=C:\Users\atrep\.platformio\penv\.espidf-5.5.0\Scripts\pytho
 PYTHON_DEPS_CHECKED:UNINITIALIZED=1
 
 //No help, variable specified on the command line.
-SDKCONFIG:UNINITIALIZED=c:\Users\atrep\Desktop\ESP32OS\sdkconfig.esp32-s3-devkitm-1
+SDKCONFIG:UNINITIALIZED=C:\Users\atrep\Desktop\ESP32OS\sdkconfig.esp32-s3-devkitm-1
 
 //Allow unsafe builds. These builds ARE NOT SECURE.
 UNSAFE_BUILD:BOOL=OFF

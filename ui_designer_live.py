@@ -20,10 +20,11 @@ clients = set()
 
 class DesignFileHandler(FileSystemEventHandler):
     """Watches for JSON file changes and triggers reload."""
-    def __init__(self, json_path: str, html_path: str):
+    def __init__(self, json_path: str, html_path: str, ws_port: int):
         self.json_path = Path(json_path).resolve()
         self.html_path = Path(html_path).resolve()
         self.last_modified = 0
+        self.ws_port = ws_port
         
     def on_modified(self, event):
         if event.is_directory:
@@ -40,7 +41,7 @@ class DesignFileHandler(FileSystemEventHandler):
             asyncio.run(self._notify_clients())
     
     def _regenerate_html(self):
-        """Re-export HTML from JSON."""
+        """Re-export HTML from JSON and re-inject live script."""
         try:
             import subprocess
             preview_script = Path(__file__).parent / 'ui_designer_preview.py'
@@ -52,6 +53,11 @@ class DesignFileHandler(FileSystemEventHandler):
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
+                try:
+                    content = create_live_html_template(self.html_path, self.ws_port)
+                    self.html_path.write_text(content, encoding='utf-8')
+                except Exception as inject_err:
+                    print(f"  [WARN] Live script injection failed: {inject_err}")
                 print(f"  [OK] Regenerated: {self.html_path.name}")
             else:
                 print(f"  [ERROR] Export failed: {result.stderr[:200]}")
@@ -150,12 +156,8 @@ def main():
 """)
     
     # Initial HTML generation
-    handler = DesignFileHandler(str(json_path), str(html_path))
+    handler = DesignFileHandler(str(json_path), str(html_path), args.ws_port)
     handler._regenerate_html()
-    
-    # Inject WebSocket client
-    live_html = create_live_html_template(html_path, args.ws_port)
-    html_path.write_text(live_html, encoding='utf-8')
     
     # Start file watcher
     observer = Observer()

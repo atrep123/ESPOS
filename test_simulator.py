@@ -5,19 +5,23 @@ import time
 import sys
 import os
 
-# Add current directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pytest
+
+# Add project root to path so esp32_sim_client can be imported
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, PROJECT_ROOT)
 
 from esp32_sim_client import ESP32SimulatorClient
 
-def test_simulator(port=8765):
+
+def test_simulator(port: int = 8765) -> None:
     print(f"🧪 Testing simulator on port {port}...")
     
     with ESP32SimulatorClient(port=port) as client:
         if not client.connected:
             print("❌ Failed to connect to simulator")
             print(f"   Make sure simulator is running with: python sim_run.py --rpc-port {port}")
-            return False
+            pytest.skip(f"Simulator is not running on port {port}")
         
         print("✅ Connected to simulator")
         
@@ -73,7 +77,6 @@ def test_simulator(port=8765):
         client.set_scene(0)
         
         print("\n🎉 All tests passed!")
-        return True
 
 if __name__ == '__main__':
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765

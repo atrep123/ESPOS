@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>preview_test - UI Design Preview</title>
+    <title>Demo - UI Design Preview</title>
     <style>
         body {
             background: #1a1a1a;
@@ -26,8 +26,41 @@
     </style>
 </head>
 <body>
-    <h1>🎨 preview_test</h1>
-    <div class="preview">                                                                                                                                
+    <h1>🎨 Demo</h1>
+    <div class="preview"> 0                                                                                                                              
+                                                                                                                                
+                                                                                                                                
+                                                                                                                                
+                                                                                                                                
+                                                              Demo                                                              
+                                                                                                                                
+                                                                                                                                
+                                                                                                                                
+                                                                                                                                
+        ┌──────────────────────────────┐                                                                                        
+        │2              ░              │                                                                                        
+        │               ░              │                                                                                        
+        │               ░              │                                                                                        
+        │               ░              │                                                                                        
+        │               ░              │                                                                                        
+        │               ░              │────────────────────────────────────────────────┐                                       
+        │               ░              │1                                               │                                       
+        │               █              │                                                │                                       
+        │               █              │                                                │                                       
+        │               █              │                                                │                                       
+        │               █              │                                                │                                       
+        │               █              │ Play                                           │                                       
+        │               █              │                                                │                                       
+        │               █              │                                                │                                       
+        │               █              │                                                │                                       
+        │               █              │                                                │                                       
+        │               █              │────────────────────────────────────────────────┘                                       
+        │               █              │                                                                                        
+        │               █              │                                                                                        
+        │               █              │                                                                                        
+        │               █              │                                                                                        
+        │               █              │                                                                                        
+        └──────────────────────────────┘                                                                                        
                                                                                                                                 
                                                                                                                                 
                                                                                                                                 
@@ -46,60 +79,27 @@
                                                                                                                                 
                                                                                                                                 
                                                                                                                                 
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
-                                                                                                                                
+        ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐        
+        │3                                                                                                             │        
+        │                                                                                                              │        
+        │                                                                                                              │        
+        │████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│        
+        │                                                                                                              │        
+        │                                                                                                              │        
+        └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘        
                                                                                                                                 
                                                                                                                                 
                                                                                                                                 
                                                                                                                                 </div>
     <div class="info">
         <p>Size: 128 × 64</p>
-        <p>Widgets: 0</p>
-        <p>Generated: 2025-11-16 22:28:03</p>
+        <p>Widgets: 4</p>
+        <p>Generated: 2025-11-17 09:15:26</p>
     </div>
 
 <script>
 (function() {
-    const ws = new WebSocket('ws://localhost:8765');
+    const ws = new WebSocket('ws://localhost:0');
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'reload') {

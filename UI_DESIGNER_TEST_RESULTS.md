@@ -114,7 +114,7 @@
 ## 🧪 Test Results
 
 ### Test 1: Basic Features
-```
+```text
 ✓ Templates: 6 widgets added
 ✓ Clone: 1 widget cloned
 ✓ Undo/Redo: 3 undo, 2 redo
@@ -124,7 +124,7 @@
 ```
 
 ### Test 2: Widget Showcase
-```
+```text
 ✓ All 12 widget types rendered
 ✓ Unicode characters displayed
 ✓ Border styles (5) working
@@ -133,7 +133,7 @@
 ```
 
 ### Test 3: Dashboard Demo
-```
+```text
 ✓ 7 widgets created
 ✓ Grid snapping enabled
 ✓ Templates used
@@ -142,7 +142,7 @@
 ```
 
 ### Test 4: Complete Feature Test
-```
+```text
 [13/13] Features tested ✅
   ✓ Templates
   ✓ Undo/Redo
@@ -231,7 +231,7 @@ python ui_designer.py
 5. **Simulator Integration** - Direct import to sim_run.py
 
 ### Integration Workflow
-```
+```text
 Design (CLI) → Export (Python) → Test (Simulator) → Deploy (ESP32)
 ```
 
