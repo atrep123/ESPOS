@@ -5,11 +5,6 @@ Real-time graphical preview with mouse interaction and export
 """
 
 import os
-import time
-import atexit
-import statistics
-
-HEADLESS = os.environ.get("ESP32OS_HEADLESS", "0") == "1"
 
 try:
     import tkinter as tk  # type: ignore
@@ -19,36 +14,7 @@ except Exception:
     TK_AVAILABLE = False
 from PIL import Image, ImageDraw
 
-if HEADLESS:
-    TK_AVAILABLE = False
-
-if not TK_AVAILABLE:
-    # Minimal dummies to allow import in headless mode (GUI classes are not instantiated in tests).
-    class _DummyTk:
-        Toplevel = object
-        Canvas = object
-        Text = object
-        StringVar = staticmethod(lambda *_, **__: None)
-        BooleanVar = staticmethod(lambda *_, **__: None)
-        NW = "nw"
-    tk = _DummyTk()
-
-    class _DummyTTK:
-        Frame = object
-        Label = object
-        Button = object
-        Combobox = object
-        Scrollbar = object
-        Separator = object
-        Treeview = object
-    ttk = _DummyTTK()
-
-    class _DummyMsg:
-        def __getattr__(self, _name):
-            return lambda *_, **__: None
-    colorchooser = filedialog = messagebox = _DummyMsg()
-
-if TK_AVAILABLE and not HEADLESS:
+if TK_AVAILABLE:
     from PIL import ImageTk  # type: ignore
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
@@ -76,40 +42,6 @@ from ui_components_library_ascii import (
     create_vertical_menu_ascii,
 )
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
-from ui_icons import MATERIAL_ICONS, ICON_PALETTE, get_all_categories
-
-_PROFILE_ENABLED = os.environ.get("ESP32OS_PREVIEW_PROFILE", "0") == "1"
-_PROFILE_EVERY = max(1, int(os.environ.get("ESP32OS_PREVIEW_PROFILE_EVERY", "50")))
-
-
-class _RenderProfile:
-    def __init__(self):
-        self.samples: List[float] = []
-        self.count = 0
-
-    def add(self, ms: float):
-        self.samples.append(ms)
-        self.count += 1
-        if self.count % _PROFILE_EVERY == 0:
-            self.report()
-
-    def report(self):
-        if not self.samples:
-            return
-        avg = sum(self.samples) / len(self.samples)
-        if len(self.samples) >= 20:
-            p95 = statistics.quantiles(self.samples, n=20, method="inclusive")[18]
-        else:
-            p95 = max(self.samples)
-        print(f"[preview-prof] renders={len(self.samples)} avg={avg:.3f}ms p95={p95:.3f}ms")
-
-    def report_final(self):
-        self.report()
-
-
-_render_profiler = _RenderProfile() if _PROFILE_ENABLED else None
-if _render_profiler:
-    atexit.register(_render_profiler.report_final)
 
 
 @dataclass
@@ -124,15 +56,8 @@ class PreviewSettings:
     show_handles: bool = True
     background_color: str = "#000000"
     pixel_perfect: bool = True
-
-
-class _DummyUI:
-    def after(self, *_, **__): return None
-    def bind(self, *_, **__): return None
-    def mainloop(self, *_, **__): return None
-    def configure(self, *_, **__): return None
-    def delete(self, *_, **__): return None
-    def create_image(self, *_, **__): return None
+    nudge_distance: int = 1  # Normal arrow nudge distance (px)
+    nudge_shift_distance: int = 8  # Shift+arrow nudge distance (px)
 
 
 class VisualPreviewWindow:
@@ -142,6 +67,28 @@ class VisualPreviewWindow:
         self.designer = designer
         self.settings = PreviewSettings()
         self.anim = AnimationDesigner()
+        # UX helpers
+        self._show_hints: bool = True
+        self._show_guides: bool = True
+        # Pan/zoom runtime state
+        self._pan_enabled: bool = False  # Space held
+        self._pan_dragging: bool = False
+        self._zoom_min: float = 0.5
+        self._zoom_max: float = 10.0
+        
+        # Quick insert components (for Ctrl+1-9 shortcuts)
+        self.quick_insert_components = [
+            {"type": "label", "name": "Label", "defaults": {"text": "Label", "width": 40, "height": 10}},
+            {"type": "button", "name": "Button", "defaults": {"text": "Button", "width": 40, "height": 12}},
+            {"type": "box", "name": "Box", "defaults": {"width": 50, "height": 30}},
+            {"type": "panel", "name": "Panel", "defaults": {"width": 60, "height": 40}},
+            {"type": "progressbar", "name": "Progress Bar", "defaults": {"value": 50, "width": 60, "height": 8}},
+            {"type": "gauge", "name": "Gauge", "defaults": {"value": 75, "width": 30, "height": 30}},
+            {"type": "checkbox", "name": "Checkbox", "defaults": {"text": "Check", "checked": False, "width": 50, "height": 10}},
+            {"type": "slider", "name": "Slider", "defaults": {"value": 50, "width": 60, "height": 8}},
+            {"type": "icon", "name": "Icon", "defaults": {"width": 16, "height": 16}},
+        ]
+        
         # ASCII component palette definitions
         self.ascii_components = [
             {"name": "AlertDialog", "category": "Dialogs", "description": "Alert dialog with OK button", "factory": lambda: create_alert_dialog_ascii()},
@@ -188,14 +135,27 @@ class VisualPreviewWindow:
         self._ascii_cache: Optional[List[str]] = None
         self._ascii_cache_valid = False
         self._last_widget_count = 0
-
-        if HEADLESS or not TK_AVAILABLE:
-            # Headless mode: stub minimal UI surfaces for logic-only tests.
-            self.root = _DummyUI()
-            self.canvas = _DummyUI()
-            self.status_bar = _DummyUI()
+        # Content-change signatures to avoid stale caches when count is unchanged
+        self._last_signature: Optional[int] = None
+        self._last_ascii_signature: Optional[int] = None
+        
+        # Headless mode: allow construction without Tk for tests/CI
+        headless_env = os.environ.get("ESP32OS_HEADLESS") == "1" or os.environ.get("PYTEST_CURRENT_TEST") is not None
+        if not TK_AVAILABLE or headless_env:
+            class _HeadlessRoot:
+                def after(self, *args, **kwargs):
+                    return None
+                def bind(self, *args, **kwargs):
+                    return None
+                def mainloop(self, *args, **kwargs):
+                    return None
+                def configure(self, *args, **kwargs):
+                    return None
+            self.root = _HeadlessRoot()
+            # Skip UI setup in headless mode; ASCII rendering APIs remain usable
+            self._headless = True
             return
-
+        # GUI mode below
         # Create main window
         self.root = tk.Tk()
         self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
@@ -222,11 +182,11 @@ class VisualPreviewWindow:
         
         # Zoom controls
         ttk.Label(toolbar, text="Zoom:").pack(side=tk.LEFT, padx=5)
-        zoom_var = tk.StringVar(value=f"{self.settings.zoom:.1f}x")
-        zoom_combo = ttk.Combobox(toolbar, textvariable=zoom_var, width=6,
-                                  values=["1.0x", "2.0x", "4.0x", "6.0x", "8.0x", "10.0x"])
-        zoom_combo.pack(side=tk.LEFT, padx=5)
-        zoom_combo.bind("<<ComboboxSelected>>", self._on_zoom_change)
+        self._zoom_var = tk.StringVar(value=f"{self.settings.zoom:.1f}x")
+        self._zoom_combo = ttk.Combobox(toolbar, textvariable=self._zoom_var, width=6,
+                      values=["0.5x", "1.0x", "2.0x", "4.0x", "6.0x", "8.0x", "10.0x"])
+        self._zoom_combo.pack(side=tk.LEFT, padx=5)
+        self._zoom_combo.bind("<<ComboboxSelected>>", self._on_zoom_change)
         
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         
@@ -239,6 +199,16 @@ class VisualPreviewWindow:
         self.snap_var = tk.BooleanVar(value=self.settings.snap_enabled)
         ttk.Checkbutton(toolbar, text="Snap", variable=self.snap_var,
                        command=self._on_snap_toggle).pack(side=tk.LEFT, padx=5)
+
+        # Hints toggle
+        self.hints_var = tk.BooleanVar(value=self._show_hints)
+        ttk.Checkbutton(toolbar, text="Hints", variable=self.hints_var,
+                   command=self._on_hints_toggle).pack(side=tk.LEFT, padx=5)
+
+        # Guides toggle
+        self.guides_var = tk.BooleanVar(value=self._show_guides)
+        ttk.Checkbutton(toolbar, text="Guides", variable=self.guides_var,
+               command=self._on_guides_toggle).pack(side=tk.LEFT, padx=5)
         
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         
@@ -273,7 +243,8 @@ class VisualPreviewWindow:
         ttk.Button(toolbar, text="💾 Export JSON", command=self._export_json).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="📝 Export C", command=self._export_c).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="📄 Export WidgetConfig", command=self._export_widgetconfig).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="👁️ Live ASCII Preview", command=self._open_ascii_preview).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="👁️ Live ASCII Preview", command=self._show_ascii_tab).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="❓ Help", command=self._show_quick_help).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(toolbar, text="🔄 Refresh", 
                   command=self.refresh).pack(side=tk.LEFT, padx=5)
@@ -324,7 +295,7 @@ class VisualPreviewWindow:
         ttk.Button(palette, text="🎨 Icons", 
                   command=self._open_icon_palette).pack(fill=tk.X, pady=2)
 
-        # Canvas frame with scrollbars (to the right of palette)
+        # Canvas frame with scrollbars (center area)
         canvas_frame = ttk.Frame(main_frame)
         canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
@@ -347,13 +318,101 @@ class VisualPreviewWindow:
         h_scroll.pack(side=tk.BOTTOM, fill=tk.X, padx=5)
         
         self.canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+        # Context menu bindings (Right-click / Ctrl+Click)
+        self.canvas.bind("<Button-3>", self._on_context_menu)
+        self.canvas.bind("<Control-Button-1>", self._on_context_menu)
         
+        # Right-side panel with tabs (Properties, ASCII)
+        right_panel = ttk.Frame(main_frame)
+        right_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+
+        self.right_tabs = ttk.Notebook(right_panel)
+        self.right_tabs.pack(fill=tk.BOTH, expand=True)
+
+        # Properties tab
+        props_container = ttk.Frame(self.right_tabs)
+        self.right_tabs.add(props_container, text="Properties")
+
+        # Settings section at top (nudge distances, grid, snap)
+        settings_frame = ttk.LabelFrame(props_container, text="Editor Settings", padding=10)
+        settings_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Nudge distance settings
+        ttk.Label(settings_frame, text="Nudge Distance:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.nudge_distance_var = tk.IntVar(value=self.settings.nudge_distance)
+        nudge_spin = ttk.Spinbox(settings_frame, from_=1, to=16, width=8, 
+                                 textvariable=self.nudge_distance_var,
+                                 command=self._on_nudge_distance_change)
+        nudge_spin.grid(row=0, column=1, sticky=tk.W, padx=5, pady=2)
+        ttk.Label(settings_frame, text="px", foreground="#888").grid(row=0, column=2, sticky=tk.W)
+        
+        ttk.Label(settings_frame, text="Shift+Nudge:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        self.nudge_shift_distance_var = tk.IntVar(value=self.settings.nudge_shift_distance)
+        nudge_shift_spin = ttk.Spinbox(settings_frame, from_=1, to=32, width=8,
+                                       textvariable=self.nudge_shift_distance_var,
+                                       command=self._on_nudge_shift_distance_change)
+        nudge_shift_spin.grid(row=1, column=1, sticky=tk.W, padx=5, pady=2)
+        ttk.Label(settings_frame, text="px", foreground="#888").grid(row=1, column=2, sticky=tk.W)
+        
+        ttk.Separator(settings_frame, orient=tk.HORIZONTAL).grid(row=2, column=0, columnspan=3, sticky="ew", pady=8)
+        
+        # Grid/Snap settings
+        ttk.Label(settings_frame, text="Grid Size:").grid(row=3, column=0, sticky=tk.W, pady=2)
+        self.grid_size_var = tk.IntVar(value=self.settings.grid_size)
+        grid_spin = ttk.Spinbox(settings_frame, from_=1, to=32, width=8,
+                               textvariable=self.grid_size_var,
+                               command=lambda: setattr(self.settings, 'grid_size', self.grid_size_var.get()) or self.refresh())
+        grid_spin.grid(row=3, column=1, sticky=tk.W, padx=5, pady=2)
+        ttk.Label(settings_frame, text="px", foreground="#888").grid(row=3, column=2, sticky=tk.W)
+
+        self.props_frame = ttk.Frame(props_container, padding=10)
+        self.props_frame.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(self.props_frame, text="No widget selected").pack()
+
+        # ASCII Preview tab
+        ascii_container = ttk.Frame(self.right_tabs)
+        self.right_tabs.add(ascii_container, text="ASCII Preview")
+
+        ascii_toolbar = ttk.Frame(ascii_container)
+        ascii_toolbar.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+        ttk.Label(ascii_toolbar, text="ASCII Renderer v2.0", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
+        # Placeholders; actual actions wired in _show_ascii_tab
+        self._ascii_refresh_btn = ttk.Button(ascii_toolbar, text="🔄 Refresh")
+        self._ascii_refresh_btn.pack(side=tk.LEFT, padx=5)
+        self._ascii_copy_btn = ttk.Button(ascii_toolbar, text="💾 Copy to Clipboard")
+        self._ascii_copy_btn.pack(side=tk.LEFT, padx=5)
+
+        ascii_frame = ttk.Frame(ascii_container)
+        ascii_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        ascii_scrollbar = ttk.Scrollbar(ascii_frame)
+        ascii_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.ascii_text_widget = tk.Text(
+            ascii_frame,
+            font=("Consolas", 9),
+            bg="#1a1a1a",
+            fg="#d4d4d4",
+            insertbackground="#ffffff",
+            yscrollcommand=ascii_scrollbar.set,
+            wrap=tk.NONE,
+            relief=tk.FLAT,
+            borderwidth=0,
+        )
+        self.ascii_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ascii_scrollbar.config(command=self.ascii_text_widget.yview)
+        # Syntax highlighting tags
+        self.ascii_text_widget.tag_config("border", foreground="#569cd6")
+        self.ascii_text_widget.tag_config("fill_button", foreground="#4ec9b0")
+        self.ascii_text_widget.tag_config("fill_box", foreground="#808080")
+        self.ascii_text_widget.tag_config("fill_icon", foreground="#dcdcaa")
+        self.ascii_text_widget.tag_config("text_label", foreground="#ce9178")
+
+        # Wire toolbar actions now that widgets exist
+        self._ascii_refresh_btn.configure(command=lambda: self._refresh_ascii_preview(self.ascii_text_widget, self.designer.scenes.get(self.designer.current_scene)))
+        self._ascii_copy_btn.configure(command=lambda: self._copy_ascii_to_clipboard(self.ascii_text_widget))
+
         # Status bar
         self.status_bar = ttk.Label(main_frame, text="Ready", relief=tk.SUNKEN)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        
-        # Properties panel
-        self._setup_properties_panel()
 
     def _center_coords(self, w: int, h: int) -> Tuple[int, int]:
         """Compute top-left coords to center a widget of size w×h."""
@@ -436,6 +495,10 @@ class VisualPreviewWindow:
         self.canvas.bind("<B1-Motion>", self._on_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_mouse_up)
         self.canvas.bind("<Motion>", self._on_mouse_move)
+        # Zoom with Ctrl+Wheel (Windows/Mac) and Button4/5 fallback (Linux)
+        self.canvas.bind("<Control-MouseWheel>", self._on_ctrl_wheel_zoom)
+        self.canvas.bind("<Control-Button-4>", lambda e: self._on_ctrl_wheel_zoom(self._mk_wheel_event(e, +120)))
+        self.canvas.bind("<Control-Button-5>", lambda e: self._on_ctrl_wheel_zoom(self._mk_wheel_event(e, -120)))
         self.canvas.bind("<Double-Button-1>", self._on_double_click)
         
         # Keyboard shortcuts
@@ -452,93 +515,98 @@ class VisualPreviewWindow:
         self.root.bind("<Up>", lambda e: self._on_nudge(e, 0, -1))
         self.root.bind("<Down>", lambda e: self._on_nudge(e, 0, 1))
         
+        # Quick Add Search dialog (Ctrl+Shift+A)
+        self.root.bind("<Control-Shift-A>", self._open_quick_add_search)
+        self.root.bind("<Control-Shift-a>", self._open_quick_add_search)
+        
         # Keyboard shortcuts for quick component insertion (Ctrl+1-9)
         for i in range(1, 10):
             self.root.bind(f"<Control-Key-{i}>", lambda e, idx=i-1: self._on_quick_insert(idx))
             self.root.bind(f"<Control-KP_{i}>", lambda e, idx=i-1: self._on_quick_insert(idx))  # Numpad support
+        # Space = hand pan
+        self.root.bind("<KeyPress-space>", self._on_space_down)
+        self.root.bind("<KeyRelease-space>", self._on_space_up)
+        # Space = hand pan
+        self.root.bind("<KeyPress-space>", self._on_space_down)
+        self.root.bind("<KeyRelease-space>", self._on_space_up)
     
     def refresh(self, force=False):
         """Refresh the preview with caching"""
-        if HEADLESS or not TK_AVAILABLE or isinstance(self.canvas, _DummyUI):
+        # Headless fast-exit
+        if getattr(self, '_headless', False):
             return
-        self.canvas.delete("all")
-        
+
+        # Scene present?
         if not self.designer.current_scene:
             return
-        
-        # Get current scene
+
+        # Resolve scene
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
             return
-        
-        # Check if cache is valid
+
+        # Determine whether to re-render image cache (also detect content changes)
         widget_count = len(scene.widgets)
-        if not force and self._cache_valid and self._render_cache is not None and widget_count == self._last_widget_count:
-            # Use cached image
-            img = self._render_cache
-        else:
+        current_sig = self._compute_scene_signature(scene)
+        need_render = (
+            force
+            or not self._cache_valid
+            or self._render_cache is None
+            or widget_count != self._last_widget_count
+            or self._last_signature != current_sig
+        )
+
+        if need_render:
             img = self._render_scene_image(
                 scene,
+                background_color=self.settings.background_color,
                 include_grid=self.settings.grid_enabled,
                 use_overlays=True,
                 highlight_selection=True,
             )
-            # Cache the rendered image
             self._render_cache = img.copy()
             self._cache_valid = True
             self._last_widget_count = widget_count
-        
-        # Scale image
-        img_width = self.designer.width
-        img_height = self.designer.height
-        scaled_width = int(img_width * self.settings.zoom)
-        scaled_height = int(img_height * self.settings.zoom)
+            self._last_signature = current_sig
+        else:
+            img = self._render_cache
+
+        # Scale for zoom
+        scaled_width = int(self.designer.width * self.settings.zoom)
+        scaled_height = int(self.designer.height * self.settings.zoom)
         img_scaled = img.resize((scaled_width, scaled_height), Image.NEAREST)
-        
-        # Convert to PhotoImage
+
+        # Prepare PhotoImage (GUI path only; safe because headless returned earlier)
         self.photo = ImageTk.PhotoImage(img_scaled)
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
-        
-        # Update canvas scroll region
-        self.canvas.configure(scrollregion=(0, 0, scaled_width, scaled_height))
-        
-        # Draw selection handles
-        if self.selected_widget_idx is not None and self.settings.show_handles:
-            self._draw_selection_handles()
-        
-        # Update status
-        widget_count = len(scene.widgets)
-        selected_info = ""
-        if self.selected_widget_idx is not None:
-            w = scene.widgets[self.selected_widget_idx]
-            selected_info = f" | Selected: {w.type} at ({w.x},{w.y}) {w.width}×{w.height}"
-        self.status_bar.configure(text=f"Widgets: {widget_count} | Zoom: {self.settings.zoom:.1f}x{selected_info}")
 
-    def _render_scene_image(self, scene, include_grid=True, use_overlays=True, highlight_selection=True):
-        """Render scene into a PIL image (no Tk required)."""
-        img_width = self.designer.width
-        img_height = self.designer.height
+        # Safe canvas usage: ensure attributes exist (defensive for partial headless init)
+        if hasattr(self, 'canvas'):
+            self.canvas.delete("all")
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+            self.canvas.configure(scrollregion=(0, 0, scaled_width, scaled_height))
+            if self.selected_widget_idx is not None and self.settings.show_handles:
+                self._draw_selection_handles()
+            # On-canvas UX hints
+            if self._show_hints:
+                self._draw_hints_overlay()
+            # Magnetic alignment guides (only during drag/resize to reduce clutter)
+            if self._show_guides and self.dragging and self.selected_widget_idx is not None:
+                self._draw_guides_overlay()
 
-        bg_color = self._hex_to_rgb(self.settings.background_color)
-        img = Image.new("RGB", (img_width, img_height), bg_color)
-        draw = ImageDraw.Draw(img)
-
-        if include_grid:
-            self._draw_grid(draw, img_width, img_height)
-
-        t0 = time.perf_counter() if _render_profiler else 0.0
-
-        for idx, widget in enumerate(scene.widgets):
-            if not widget.visible:
-                continue
-            overlay = self._widget_overlays.get(idx, {}) if use_overlays else {}
-            self._draw_widget(draw, widget, highlight_selection and idx == self.selected_widget_idx, overlay)
-
-        if _render_profiler:
-            dt_ms = (time.perf_counter() - t0) * 1000.0
-            _render_profiler.add(dt_ms)
-
-        return img
+        # Update status bar with live hints
+        self._update_status_bar()
+        # Keep combobox in sync if present
+        if hasattr(self, "_zoom_var"):
+            try:
+                self._zoom_var.set(f"{self.settings.zoom:.1f}x")
+            except Exception:
+                pass
+        # Keep combobox in sync if present
+        if hasattr(self, "_zoom_var"):
+            try:
+                self._zoom_var.set(f"{self.settings.zoom:.1f}x")
+            except Exception:
+                pass
     
     def _draw_grid(self, draw: ImageDraw.ImageDraw, width: int, height: int):
         """Draw grid on canvas"""
@@ -547,6 +615,62 @@ class VisualPreviewWindow:
             draw.line([(x, 0), (x, height)], fill=grid_color, width=1)
         for y in range(0, height, self.settings.grid_size):
             draw.line([(0, y), (width, y)], fill=grid_color, width=1)
+    
+    def _update_status_bar(self):
+        """Update status bar with current state and contextual hints."""
+        if not hasattr(self, 'status_bar'):
+            return
+        
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            self.status_bar.configure(text="No active scene")
+            return
+        
+        widget_count = len(scene.widgets)
+        parts = [f"Widgets: {widget_count}", f"Zoom: {self.settings.zoom:.1f}x"]
+        
+        # Selection info
+        if self.selected_widget_idx is not None and self.selected_widget_idx < len(scene.widgets):
+            w = scene.widgets[self.selected_widget_idx]
+            parts.append(f"Selected: {w.type} ({w.x},{w.y}) {w.width}×{w.height}")
+        
+        # Multi-selection count
+        if len(self.selected_widgets) > 1:
+            parts.append(f"{len(self.selected_widgets)} selected")
+        
+        # Live hints based on mode
+        hint = self._get_context_hint()
+        if hint:
+            parts.append(f"💡 {hint}")
+        
+        self.status_bar.configure(text=" | ".join(parts))
+    
+    def _get_context_hint(self) -> str:
+        """Get contextual hint based on current state."""
+        # Panning mode
+        if self._pan_enabled:
+            return "Drag to pan • Release Space to exit"
+        
+        # Dragging/resizing
+        if self.dragging:
+            if self.resize_handle:
+                return "Drag to resize • Shift=constrain"
+            else:
+                return "Drag to move • Shift=axis lock"
+        
+        # Multi-selection
+        if len(self.selected_widgets) > 1:
+            return "Multi-select active • Use Align/Distribute tools"
+        
+        # Single selection with handles visible
+        if self.selected_widget_idx is not None and self.settings.show_handles:
+            return "Click handles to resize • Drag to move • Arrows to nudge"
+        
+        # No selection
+        if self.selected_widget_idx is None:
+            return "Click widget to select • Right-click for menu • Ctrl+1-9 quick add"
+        
+        return ""
     
     def _draw_widget(self, draw: ImageDraw.ImageDraw, widget: WidgetConfig, selected: bool, overlay: Optional[Dict[str, Any]] = None):
         """Draw a widget on the image"""
@@ -774,9 +898,15 @@ class VisualPreviewWindow:
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
     
     def _canvas_to_widget_coords(self, canvas_x: int, canvas_y: int) -> Tuple[int, int]:
-        """Convert canvas coordinates to widget coordinates"""
-        widget_x = int(canvas_x / self.settings.zoom)
-        widget_y = int(canvas_y / self.settings.zoom)
+        """Convert canvas event coords to logical widget coords (accounts for scroll + zoom)."""
+        # Translate event-local coords through canvas scroll offset
+        try:
+            abs_x = int(self.canvas.canvasx(canvas_x))
+            abs_y = int(self.canvas.canvasy(canvas_y))
+        except Exception:
+            abs_x, abs_y = canvas_x, canvas_y
+        widget_x = int(abs_x / self.settings.zoom)
+        widget_y = int(abs_y / self.settings.zoom)
         
         # Apply snapping
         if self.settings.snap_enabled:
@@ -845,6 +975,16 @@ class VisualPreviewWindow:
     
     def _on_mouse_down(self, event):
         """Handle mouse down"""
+        # Pan mode (space held)
+        if self._pan_enabled:
+            try:
+                self.canvas.scan_mark(event.x, event.y)
+                self._pan_dragging = True
+            except Exception:
+                pass
+            # Do not start widget interaction while panning
+            self.dragging = False
+            return
         # Check for resize handle first
         handle = self._find_resize_handle(event.x, event.y)
         if handle:
@@ -892,6 +1032,12 @@ class VisualPreviewWindow:
     
     def _on_mouse_drag(self, event):
         """Handle mouse drag"""
+        if self._pan_dragging:
+            try:
+                self.canvas.scan_dragto(event.x, event.y, gain=1)
+            except Exception:
+                pass
+            return
         if not self.dragging or self.selected_widget_idx is None:
             return
         
@@ -948,6 +1094,9 @@ class VisualPreviewWindow:
     
     def _on_mouse_up(self, event):
         """Handle mouse up"""
+        if self._pan_dragging:
+            self._pan_dragging = False
+            return
         if self.dragging:
             # Save state for undo
             self.designer._save_state()
@@ -961,6 +1110,13 @@ class VisualPreviewWindow:
     def _on_mouse_move(self, event):
         """Handle mouse move (for cursor changes)"""
         if self.dragging:
+            return
+        # Hand cursor when panning active
+        if self._pan_enabled:
+            try:
+                self.canvas.configure(cursor="fleur")
+            except Exception:
+                pass
             return
         
         # Check for resize handle hover
@@ -983,7 +1139,7 @@ class VisualPreviewWindow:
     def _on_nudge(self, event, dx: int, dy: int):
         """Nudge selected widget with arrow keys.
 
-        Holds Shift to nudge by grid size instead of 1 pixel.
+        Holds Shift to nudge by configurable distance (default: 1px normal, 8px shift).
         """
         if self.selected_widget_idx is None or not self.designer.current_scene:
             return
@@ -994,9 +1150,10 @@ class VisualPreviewWindow:
 
         widget = scene.widgets[self.selected_widget_idx]
 
-        step = 1
-        if event.state & 0x0001:
-            step = max(1, self.settings.snap_size)
+        # Use configurable nudge distances
+        step = self.settings.nudge_distance
+        if event.state & 0x0001:  # Shift key
+            step = self.settings.nudge_shift_distance
 
         new_x = widget.x + dx * step
         new_y = widget.y + dy * step
@@ -1049,6 +1206,14 @@ class VisualPreviewWindow:
         self._anim_values.clear()
         self.refresh()
     
+    def _on_nudge_distance_change(self):
+        """Update nudge distance setting"""
+        self.settings.nudge_distance = self.nudge_distance_var.get()
+    
+    def _on_nudge_shift_distance_change(self):
+        """Update shift+nudge distance setting"""
+        self.settings.nudge_shift_distance = self.nudge_shift_distance_var.get()
+    
     def _open_animation_editor(self):
         """Open animation timeline editor"""
         if not hasattr(self, 'anim_editor_window') or not self.anim_editor_window.winfo_exists():
@@ -1083,6 +1248,140 @@ class VisualPreviewWindow:
             self.icon_palette_window = IconPaletteWindow(self.root, self)
         else:
             self.icon_palette_window.lift()
+    
+    def _open_quick_add_search(self, event=None):
+        """Open quick add search dialog for fast component insertion"""
+        # Create dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Quick Add Component")
+        dialog.geometry("500x400")
+        dialog.configure(bg="#2b2b2b")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Search entry at top
+        search_frame = ttk.Frame(dialog)
+        search_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(search_frame, text="Search:", foreground="#aaa").pack(side=tk.LEFT, padx=5)
+        search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_frame, textvariable=search_var, font=("Arial", 12))
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        search_entry.focus_set()
+        
+        # Listbox for results
+        list_frame = ttk.Frame(dialog)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        
+        scrollbar = ttk.Scrollbar(list_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        results_list = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
+                                   font=("Arial", 10), bg="#1e1e1e", fg="#ffffff",
+                                   selectbackground="#4CAF50", selectforeground="#000000",
+                                   height=15)
+        results_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=results_list.yview)
+        
+        # Filtered components list
+        filtered_components = []
+        
+        def update_results(*args):
+            """Update filtered results based on search text"""
+            query = search_var.get().lower().strip()
+            results_list.delete(0, tk.END)
+            filtered_components.clear()
+            
+            # Filter components
+            for comp in self.ascii_components:
+                name_match = query in comp["name"].lower()
+                cat_match = query in comp["category"].lower()
+                desc_match = query in comp["description"].lower()
+                
+                if not query or name_match or cat_match or desc_match:
+                    filtered_components.append(comp)
+                    # Format: "ComponentName [Category] - Description"
+                    display_text = f"{comp['name']} [{comp['category']}] - {comp['description']}"
+                    results_list.insert(tk.END, display_text)
+            
+            # Auto-select first result
+            if results_list.size() > 0:
+                results_list.selection_set(0)
+                results_list.activate(0)
+        
+        def add_selected_component():
+            """Add the selected component to canvas"""
+            selection = results_list.curselection()
+            if not selection:
+                return
+            
+            idx = selection[0]
+            if idx >= len(filtered_components):
+                return
+            
+            component = filtered_components[idx]
+            try:
+                widgets = component["factory"]()
+                scene = self.designer.scenes.get(self.designer.current_scene)
+                if not scene:
+                    messagebox.showerror("Error", "No active scene")
+                    return
+                
+                # Add widgets at center of canvas
+                start_idx = len(scene.widgets)
+                for w in widgets:
+                    scene.widgets.append(w)
+                
+                self.refresh()
+                
+                # Select newly added widgets
+                new_indices = list(range(start_idx, start_idx + len(widgets)))
+                self.selected_widgets = new_indices
+                if new_indices:
+                    self.selected_widget_idx = new_indices[0]
+                
+                dialog.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to add component: {e}")
+        
+        # Bind events
+        search_var.trace("w", update_results)
+        results_list.bind("<Double-Button-1>", lambda e: add_selected_component())
+        results_list.bind("<Return>", lambda e: add_selected_component())
+        dialog.bind("<Escape>", lambda e: dialog.destroy())
+        
+        # Arrow key navigation
+        def on_arrow(event):
+            if event.keysym == "Down":
+                current = results_list.curselection()
+                if current and current[0] < results_list.size() - 1:
+                    results_list.selection_clear(0, tk.END)
+                    results_list.selection_set(current[0] + 1)
+                    results_list.activate(current[0] + 1)
+                    results_list.see(current[0] + 1)
+            elif event.keysym == "Up":
+                current = results_list.curselection()
+                if current and current[0] > 0:
+                    results_list.selection_clear(0, tk.END)
+                    results_list.selection_set(current[0] - 1)
+                    results_list.activate(current[0] - 1)
+                    results_list.see(current[0] - 1)
+        
+        search_entry.bind("<Down>", on_arrow)
+        search_entry.bind("<Up>", on_arrow)
+        search_entry.bind("<Return>", lambda e: add_selected_component())
+        
+        # Button frame
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        ttk.Button(button_frame, text="Add Component", 
+                  command=add_selected_component).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancel", 
+                  command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+        
+        # Initialize with all components
+        update_results()
     
     def _edit_widget_properties(self, widget_idx: int):
         """Open widget properties editor"""
@@ -1181,10 +1480,84 @@ class VisualPreviewWindow:
         """Handle zoom change"""
         zoom_str = event.widget.get()
         try:
-            self.settings.zoom = float(zoom_str.rstrip('x'))
-            self.refresh()
+            new_zoom = float(zoom_str.rstrip('x'))
+            # Zoom around canvas center by default for combobox changes
+            cx = getattr(self.canvas, 'winfo_width', lambda: 0)() // 2
+            cy = getattr(self.canvas, 'winfo_height', lambda: 0)() // 2
+            self._apply_zoom_at(cx, cy, new_zoom)
         except ValueError:
             pass
+
+    def _mk_wheel_event(self, e, delta):
+        """Create a proxy object carrying delta like MouseWheel events."""
+        class _E:
+            pass
+        ne = _E()
+        ne.widget = getattr(e, 'widget', None)
+        ne.x = getattr(e, 'x', 0)
+        ne.y = getattr(e, 'y', 0)
+        ne.delta = delta
+        return ne
+
+    def _on_ctrl_wheel_zoom(self, event):
+        """Zoom in/out centered at cursor when Ctrl+Wheel is used."""
+        # Determine zoom step
+        step = 1.1 if event.delta > 0 else (1/1.1)
+        new_zoom = max(self._zoom_min, min(self._zoom_max, self.settings.zoom * step))
+        self._apply_zoom_at(event.x, event.y, new_zoom)
+
+    def _apply_zoom_at(self, win_x: int, win_y: int, new_zoom: float):
+        """Apply zoom keeping the world point under (win_x, win_y) fixed on screen."""
+        try:
+            # Current absolute canvas coordinates under cursor
+            abs_x = self.canvas.canvasx(win_x)
+            abs_y = self.canvas.canvasy(win_y)
+        except Exception:
+            abs_x, abs_y = win_x, win_y
+        # World coords before zoom
+        old_z = max(self._zoom_min, min(self._zoom_max, self.settings.zoom))
+        world_x = abs_x / max(1e-6, old_z)
+        world_y = abs_y / max(1e-6, old_z)
+        # Apply new zoom
+        self.settings.zoom = max(self._zoom_min, min(self._zoom_max, float(new_zoom)))
+        self.refresh()
+        # Compute new absolute position of that world point
+        scaled_w = int(self.designer.width * self.settings.zoom)
+        scaled_h = int(self.designer.height * self.settings.zoom)
+        new_abs_x = world_x * self.settings.zoom
+        new_abs_y = world_y * self.settings.zoom
+        # Desired left/top so that cursor stays over same world point
+        view_w = getattr(self.canvas, 'winfo_width', lambda: 1)()
+        view_h = getattr(self.canvas, 'winfo_height', lambda: 1)()
+        left = max(0, min(scaled_w - view_w, int(new_abs_x - win_x)))
+        top = max(0, min(scaled_h - view_h, int(new_abs_y - win_y)))
+        # Move view
+        try:
+            self.canvas.xview_moveto(0 if scaled_w <= 0 else left / scaled_w)
+            self.canvas.yview_moveto(0 if scaled_h <= 0 else top / scaled_h)
+        except Exception:
+            pass
+        # Sync combobox text
+        if hasattr(self, "_zoom_var"):
+            try:
+                self._zoom_var.set(f"{self.settings.zoom:.1f}x")
+            except Exception:
+                pass
+
+    def _on_space_down(self, event):
+        self._pan_enabled = True
+        try:
+            self.canvas.configure(cursor="fleur")
+        except Exception:
+            pass
+
+    def _on_space_up(self, event):
+        self._pan_enabled = False
+        if not self._pan_dragging:
+            try:
+                self.canvas.configure(cursor="arrow")
+            except Exception:
+                pass
     
     def _on_grid_toggle(self):
         """Toggle grid"""
@@ -1194,6 +1567,16 @@ class VisualPreviewWindow:
     def _on_snap_toggle(self):
         """Toggle snap"""
         self.settings.snap_enabled = self.snap_var.get()
+    
+    def _on_hints_toggle(self):
+        """Toggle on-canvas usage hints"""
+        self._show_hints = bool(self.hints_var.get())
+        self.refresh()
+
+    def _on_guides_toggle(self):
+        """Toggle magnetic guides overlay"""
+        self._show_guides = bool(self.guides_var.get())
+        self.refresh()
     
     def _choose_bg_color(self):
         """Choose background color"""
@@ -1213,23 +1596,18 @@ class VisualPreviewWindow:
         if not filename:
             return
         
-        # Create export image
-        img_width = self.designer.width
-        img_height = self.designer.height
-        
-        bg_color = self._hex_to_rgb(self.settings.background_color)
-        img = Image.new("RGB", (img_width, img_height), bg_color)
-        draw = ImageDraw.Draw(img)
-        
-        # Draw all widgets
+        # Create export image using unified renderer (no grid, no selection, no overlays)
         scene = self.designer.scenes.get(self.designer.current_scene)
         if scene:
-            for widget in scene.widgets:
-                if widget.visible:
-                    self._draw_widget(draw, widget, False)
-        
-        # Save
-        img.save(filename)
+            img = self._render_scene_image(
+                scene,
+                background_color=self.settings.background_color,
+                include_grid=False,
+                use_overlays=False,
+                highlight_selection=False,
+            )
+            # Save
+            img.save(filename)
         messagebox.showinfo("Export Complete", f"Saved to: {filename}")
     
     def _export_json(self):
@@ -1325,6 +1703,37 @@ class VisualPreviewWindow:
         
         # Render ASCII UI
         self._refresh_ascii_preview(text_widget, scene)
+
+    def _show_ascii_tab(self):
+        """Show the inline ASCII Preview tab and refresh its content."""
+        if getattr(self, '_headless', False):
+            return
+        try:
+            # Select ASCII tab
+            for i in range(self.right_tabs.index('end')):
+                if self.right_tabs.tab(i, 'text') == 'ASCII Preview':
+                    self.right_tabs.select(i)
+                    break
+            # Refresh content
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if scene and hasattr(self, 'ascii_text_widget'):
+                self._refresh_ascii_preview(self.ascii_text_widget, scene)
+        except Exception:
+            pass
+    
+    def _show_quick_help(self):
+        """Show quick usage cheatsheet."""
+        help_text = (
+            "Drag: Move widget | Corners/Edges: Resize\n"
+            "Shift+Drag: Axis lock | Shift+Click: Multi-select\n"
+            "Arrows: Nudge | Shift+Arrows: Nudge by grid\n"
+            "Ctrl+C/V: Copy/Paste | Ctrl+D: Duplicate | Delete: Remove\n"
+            "Right-click: Context menu | Grid/Snap/Hints in toolbar"
+        )
+        try:
+            messagebox.showinfo("Designer Help", help_text)
+        except Exception:
+            pass
         
     def _refresh_ascii_preview(self, text_widget, scene):
         """Refresh ASCII preview with syntax highlighting"""
@@ -1366,35 +1775,157 @@ class VisualPreviewWindow:
         self.root.clipboard_append(content)
         messagebox.showinfo("Copied", "ASCII preview copied to clipboard!")
 
+    def _draw_hints_overlay(self):
+        """Draw a small on-canvas hint box with basic instructions."""
+        try:
+            # Background box
+            x0, y0 = 8, 8
+            x1, y1 = 8 + 360, 8 + 56
+            # Simulated translucency via stipple
+            self.canvas.create_rectangle(x0, y0, x1, y1, fill="#000", outline="#444", stipple="gray25")
+            lines = [
+                "Drag to move • Resize via corners/edges",
+                "Shift+Drag=axis lock • Shift+Click=multi-select",
+                "Arrows nudge (Shift=grid) • Right-click menu",
+                "Toolbar: Grid • Snap • Hints • Export • Help",
+            ]
+            ty = y0 + 10
+            for ln in lines:
+                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill="#fff")
+                ty += 14
+        except Exception:
+            pass
+
+    def _compute_alignment_guides(self) -> List[Tuple[str, int]]:
+        """Compute alignment guide lines ('v', x) and ('h', y) for the selected widget.
+
+        Guides indicate near alignment between the selected widget edges/centers
+        and other visible widgets. Does not change positions; purely visual.
+        """
+        if self.selected_widget_idx is None or not self.designer.current_scene:
+            return []
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene or not (0 <= self.selected_widget_idx < len(scene.widgets)):
+            return []
+
+        target = scene.widgets[self.selected_widget_idx]
+        lx, rx = target.x, target.x + target.width
+        cx = target.x + target.width // 2
+        ty, by = target.y, target.y + target.height
+        cy = target.y + target.height // 2
+
+        # Tolerance: prefer snap size or a small default window
+        tol = max(2, int(getattr(self.settings, 'snap_size', 4)))
+
+        # Track nearest deltas for left/center/right and top/middle/bottom
+        nearest_v = {"left": (10**9, None), "center": (10**9, None), "right": (10**9, None)}
+        nearest_h = {"top": (10**9, None), "middle": (10**9, None), "bottom": (10**9, None)}
+
+        for idx, w, _, _ in self._iter_visible_widgets(scene):
+            if idx == self.selected_widget_idx:
+                continue
+            wl, wr = w.x, w.x + w.width
+            wc = w.x + w.width // 2
+            wt, wb = w.y, w.y + w.height
+            wm = w.y + w.height // 2
+
+            # Vertical alignment candidates (x positions)
+            for key, target_x in (("left", lx), ("center", cx), ("right", rx)):
+                for other_x in (wl, wc, wr):
+                    d = abs(target_x - other_x)
+                    if d < nearest_v[key][0]:
+                        nearest_v[key] = (d, other_x)
+
+            # Horizontal alignment candidates (y positions)
+            for key, target_y in (("top", ty), ("middle", cy), ("bottom", by)):
+                for other_y in (wt, wm, wb):
+                    d = abs(target_y - other_y)
+                    if d < nearest_h[key][0]:
+                        nearest_h[key] = (d, other_y)
+
+        guides: List[Tuple[str, int]] = []
+        # Use nearest within tolerance per category to avoid clutter
+        for key in ("left", "center", "right"):
+            dist, x_pos = nearest_v[key]
+            if x_pos is not None and dist <= tol:
+                guides.append(("v", int(x_pos)))
+        for key in ("top", "middle", "bottom"):
+            dist, y_pos = nearest_h[key]
+            if y_pos is not None and dist <= tol:
+                guides.append(("h", int(y_pos)))
+        return guides
+
+    def _draw_guides_overlay(self):
+        """Draw magnetic alignment guide lines on the canvas during drag/resize."""
+        try:
+            guides = self._compute_alignment_guides()
+            if not guides:
+                return
+            z = self.settings.zoom
+            # Canvas extents in pixels (zoomed)
+            width_px = int(self.designer.width * z)
+            height_px = int(self.designer.height * z)
+            color = "#00FF88"
+            for orient, pos in guides:
+                if orient == "v":
+                    x = int(pos * z)
+                    self.canvas.create_line(x, 0, x, height_px, fill=color, dash=(4, 2), width=1)
+                else:
+                    y = int(pos * z)
+                    self.canvas.create_line(0, y, width_px, y, fill=color, dash=(4, 2), width=1)
+        except Exception:
+            pass
+
+    def _on_context_menu(self, event):
+        """Show context menu with common actions."""
+        try:
+            # Detect widget under cursor and select it
+            idx = self._find_widget_at(event.x, event.y)
+            if idx is not None:
+                self.selected_widget_idx = idx
+                if idx not in self.selected_widgets:
+                    self.selected_widgets = [idx]
+                self.refresh()
+
+            menu = tk.Menu(self.canvas, tearoff=0)
+            if self.selected_widget_idx is not None:
+                menu.add_command(label="Properties…", command=lambda: self._edit_widget_properties(self.selected_widget_idx))
+                menu.add_command(label="Duplicate", command=lambda: self._on_duplicate(None))
+                menu.add_command(label="Delete", command=lambda: self._on_delete_widget(None))
+                menu.add_separator()
+            # Quick add submenu
+            add_menu = tk.Menu(menu, tearoff=0)
+            for label, kind in (
+                ("Label", "label"), ("Button", "button"), ("Box", "box"), ("Panel", "panel"),
+                ("Progress", "progressbar"), ("Gauge", "gauge"), ("Checkbox", "checkbox"), ("Slider", "slider"),
+            ):
+                add_menu.add_command(label=f"{label}", command=lambda k=kind: self._palette_add(k))
+            menu.add_cascade(label="Add", menu=add_menu)
+            # Show
+            menu.tk_popup(event.x_root, event.y_root)
+        except Exception:
+            pass
+
     def _render_ascii_scene(self, scene, use_cache=True):
         """Render the scene as ASCII art with enhanced visuals and caching"""
-        # Use cache if valid
+        # Use cache if valid (compare by content signature, not just count)
         if use_cache and self._ascii_cache_valid and self._ascii_cache is not None:
-            widget_count = len(scene.widgets)
-            if widget_count == self._last_widget_count:
+            current_sig = self._compute_scene_signature(scene)
+            if self._last_ascii_signature == current_sig:
                 return self._ascii_cache
         
         # Create a 2D buffer
         buf = [[" " for _ in range(scene.width)] for _ in range(scene.height)]
         
-        # Draw each widget with borders and enhanced styling
-        for w in scene.widgets:
-            if not w.visible:
-                continue
+        # Draw each widget with borders and enhanced styling (use unified iteration)
+        for _, w, _, _ in self._iter_visible_widgets(scene):
             
             # Determine widget character/style based on type
             fill_char = self._get_widget_fill_char(w)
             
-            # Draw widget area with clamping to buffer bounds
-            start_y = max(0, w.y)
-            end_y = min(w.y + w.height, scene.height)
-            start_x = max(0, w.x)
-            end_x = min(w.x + w.width, scene.width)
-            if start_x >= end_x or start_y >= end_y:
-                continue
-
-            for y in range(start_y, end_y):
-                for x in range(start_x, end_x):
+            # Draw widget area
+            for y in range(w.y, min(w.y + w.height, scene.height)):
+                for x in range(w.x, min(w.x + w.width, scene.width)):
                     # Draw borders for widgets >= 3x3
                     if w.width >= 3 and w.height >= 3:
                         is_top = (y == w.y)
@@ -1435,6 +1966,7 @@ class VisualPreviewWindow:
         # Cache the result
         self._ascii_cache = lines
         self._ascii_cache_valid = True
+        self._last_ascii_signature = self._compute_scene_signature(scene)
         
         return lines
     
@@ -1554,7 +2086,7 @@ class VisualPreviewWindow:
         from copy import deepcopy
         self.clipboard = [deepcopy(scene.widgets[i]) for i in self.selected_widgets 
                          if i < len(scene.widgets)]
-        self.status_bar.configure(text=f"Copied {len(self.clipboard)} widget(s)")
+        self._update_status_bar()
     
     def _on_paste(self, event):
         """Paste widgets from clipboard"""
@@ -1581,7 +2113,7 @@ class VisualPreviewWindow:
         
         self.designer._save_state()
         self.refresh()
-        self.status_bar.configure(text=f"Pasted {len(self.clipboard)} widget(s)")
+        self._update_status_bar()
     
     def _on_duplicate(self, event):
         """Duplicate selected widgets (Ctrl+D)"""
@@ -1598,55 +2130,119 @@ class VisualPreviewWindow:
         if self.selected_widgets:
             self.selected_widget_idx = 0
         self.refresh()
-        self.status_bar.configure(text=f"Selected {len(self.selected_widgets)} widget(s)")
     
-    def _on_quick_insert(self, component_index: int):
-        """Quick insert component from palette using keyboard shortcut (Ctrl+1-9)"""
-        if component_index >= len(self.ascii_components):
-            # No component at this index
-            return
-        
-        component = self.ascii_components[component_index]
+    def _on_quick_insert(self, index):
+        """Handle number key press for quick insert."""
         try:
-            widgets = component["factory"]()
+            # Check if index is valid
+            if not (0 <= index < len(self.quick_insert_components)):
+                return
+                
+            component = self.quick_insert_components[index]
+            
+            # Check if UI is initialized (for tests)
+            if not hasattr(self, 'canvas'):
+                # In test mode, just add widget directly
+                scene = self.designer.scenes.get(self.designer.current_scene)
+                if not scene:
+                    self.designer.create_scene("test_scene")
+                    scene = self.designer.scenes.get(self.designer.current_scene)
+                
+                # Map component type to WidgetType
+                from ui_designer import WidgetType
+                type_map = {
+                    "label": WidgetType.LABEL,
+                    "button": WidgetType.BUTTON,
+                    "box": WidgetType.BOX if hasattr(WidgetType, 'BOX') else WidgetType.PANEL,
+                    "panel": WidgetType.PANEL,
+                    "progressbar": WidgetType.PROGRESSBAR,
+                    "gauge": WidgetType.GAUGE,
+                    "checkbox": WidgetType.CHECKBOX,
+                    "slider": WidgetType.SLIDER,
+                    "icon": WidgetType.LABEL,  # Use LABEL as fallback for icon
+                }
+                
+                widget_type = type_map.get(component["type"], WidgetType.LABEL)
+                defaults = component.get("defaults", {})
+                
+                # Add widget
+                self.designer.add_widget(
+                    widget_type,
+                    x=10,
+                    y=10,
+                    width=defaults.get("width", 40),
+                    height=defaults.get("height", 12),
+                    text=defaults.get("text", ""),
+                    value=defaults.get("value", 0),
+                    checked=defaults.get("checked", False)
+                )
+                
+                # Select the new widget
+                self.selected_widget_idx = len(scene.widgets) - 1
+                return
+                
+            # Normal GUI flow
             scene = self.designer.scenes.get(self.designer.current_scene)
             if not scene:
-                return
+                self.designer.create_scene("scene")
+                scene = self.designer.scenes.get(self.designer.current_scene)
             
-            # Add widgets at center of view or last mouse position
-            start_idx = len(scene.widgets)
-            offset_x = 10 + (component_index * 5)  # Slight offset to avoid overlap
-            offset_y = 10 + (component_index * 5)
-            
-            for w in widgets:
-                w.x += offset_x
-                w.y += offset_y
-                scene.widgets.append(w)
-            
-            self.refresh()
-            
-            # Select newly added widgets
-            new_indices = list(range(start_idx, start_idx + len(widgets)))
-            self.selected_widgets = new_indices
-            if new_indices:
-                self.selected_widget_idx = new_indices[0]
-            
-            self.status_bar.configure(
-                text=f"Quick inserted: {component['name']} ({len(widgets)} widgets) - Use Ctrl+{component_index+1} again"
+            # Find next available position
+            x, y = self._center_coords(
+                component.get("defaults", {}).get("width", 40),
+                component.get("defaults", {}).get("height", 12)
             )
+            
+            # Map component type to WidgetType
+            from ui_designer import WidgetType
+            type_map = {
+                "label": WidgetType.LABEL,
+                "button": WidgetType.BUTTON,
+                "box": WidgetType.BOX if hasattr(WidgetType, 'BOX') else WidgetType.PANEL,
+                "panel": WidgetType.PANEL,
+                "progressbar": WidgetType.PROGRESSBAR,
+                "gauge": WidgetType.GAUGE,
+                "checkbox": WidgetType.CHECKBOX,
+                "slider": WidgetType.SLIDER,
+                "icon": WidgetType.LABEL,
+            }
+            
+            widget_type = type_map.get(component["type"], WidgetType.LABEL)
+            defaults = component.get("defaults", {})
+            
+            # Add widget
+            self.designer.add_widget(
+                widget_type,
+                x=x,
+                y=y,
+                width=defaults.get("width", 40),
+                height=defaults.get("height", 12),
+                text=defaults.get("text", ""),
+                value=defaults.get("value", 0),
+                checked=defaults.get("checked", False)
+            )
+            
+            # Select the new widget
+            self.selected_widget_idx = len(scene.widgets) - 1
+            
+            # Update UI
+            self._invalidate_cache()
+            self.refresh()
+                
         except Exception as e:
-            self.status_bar.configure(text=f"Failed to insert {component['name']}: {e}")
-    
+            # Only update status bar if it exists
+            if hasattr(self, 'status_bar'):
+                self.status_bar.configure(text=f"Failed to insert: {e}")
+            else:
+                # Re-raise in tests so we can see the error
+                raise
+
     def run(self):
         """Run the preview window"""
-        if HEADLESS or not TK_AVAILABLE:
-            return
         self.root.mainloop()
 
     def _schedule_tick(self):
         # ~60 FPS
-        if HEADLESS or not TK_AVAILABLE:
-            return
         self.root.after(16, self._tick)
 
     def _tick(self):
@@ -1669,6 +2265,75 @@ class VisualPreviewWindow:
     def _clamp_rect_y_order(self, y0: int, y1: int) -> Tuple[int, int]:
         """Ensure y0 <= y1 for PIL rectangle operations."""
         return (y0, y1) if y0 <= y1 else (y1, y0)
+
+    def _iter_visible_widgets(self, scene):
+        """Yield (idx, widget, overlay, is_selected) for visible widgets in draw order."""
+        for idx, widget in enumerate(getattr(scene, 'widgets', [])):
+            if not getattr(widget, 'visible', True):
+                continue
+            overlay = self._widget_overlays.get(idx, {})
+            yield idx, widget, overlay, (idx == self.selected_widget_idx)
+
+    def _render_scene_image(
+        self,
+        scene,
+        background_color: Optional[str] = None,
+        include_grid: bool = True,
+        use_overlays: bool = True,
+        highlight_selection: bool = True,
+    ) -> Image.Image:
+        """Render the given scene into a PIL Image using current settings.
+
+        - Respects background color and optional grid.
+        - Can draw with/without overlays and selection highlighting.
+        """
+        img_width = self.designer.width
+        img_height = self.designer.height
+        bg_hex = background_color or self.settings.background_color
+        bg_color = self._hex_to_rgb(bg_hex)
+        img = Image.new("RGB", (img_width, img_height), bg_color)
+        draw = ImageDraw.Draw(img)
+
+        if include_grid:
+            self._draw_grid(draw, img_width, img_height)
+
+        for idx, widget, overlay, is_sel in self._iter_visible_widgets(scene):
+            ov = overlay if use_overlays else None
+            sel = is_sel if highlight_selection else False
+            self._draw_widget(draw, widget, sel, ov)
+
+        return img
+
+    def _compute_scene_signature(self, scene) -> int:
+        """Compute a lightweight signature of scene content to validate caches.
+
+        Only includes properties that affect visual output. This avoids stale caches
+        when widget count stays the same but positions/text/values change.
+        """
+        try:
+            items: List[Tuple[Any, ...]] = []
+            # Include canvas/background parameters
+            items.append((getattr(scene, 'width', self.designer.width),
+                          getattr(scene, 'height', self.designer.height),
+                          self.settings.background_color,
+                          self.settings.grid_enabled,
+                          self.settings.grid_size))
+            for w in scene.widgets:
+                # Collect common properties defensively
+                items.append((
+                    getattr(w, 'type', None),
+                    getattr(w, 'x', None), getattr(w, 'y', None),
+                    getattr(w, 'width', None), getattr(w, 'height', None),
+                    getattr(w, 'text', None),
+                    getattr(w, 'value', None), getattr(w, 'checked', None),
+                    getattr(w, 'color_fg', None), getattr(w, 'color_bg', None),
+                    getattr(w, 'border', None), getattr(w, 'border_style', None),
+                    getattr(w, 'visible', True),
+                ))
+            return hash(tuple(items))
+        except Exception:
+            # Fallback to changing number to force re-render in error cases
+            return object.__hash__(scene)
 
 
 class AnimationEditorWindow:
@@ -2199,652 +2864,3 @@ class AnimationEditorWindow:
         except Exception as e:
             messagebox.showerror("Export Failed", f"Error: {str(e)}",
                                parent=self.window)
-
-
-def main():
-    """Main entry point"""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="UI Designer Preview")
-    parser.add_argument("--headless", action="store_true", help="Run without GUI and export image (deprecated, use --headless-preview)")
-    parser.add_argument("--headless-preview", action="store_true", help="Run without GUI and export PNG/HTML")
-    parser.add_argument("--in-json", default="", help="Design JSON to load (optional)")
-    parser.add_argument("--out-png", default="examples/preview_ci.png", help="Output PNG path in headless mode")
-    parser.add_argument("--out-html", default="", help="Optional HTML preview output path in headless mode")
-    parser.add_argument("--bg", default="#000000", help="Background color (hex)")
-    args = parser.parse_args()
-
-    # Create designer with sample scene
-    designer = UIDesigner(128, 64)
-    if args.in_json:
-        try:
-            designer.load_from_json(args.in_json)
-        except Exception as e:
-            print(f"[headless] Failed to load design {args.in_json}: {e}")
-            designer.create_scene("preview_test")
-    else:
-        designer.create_scene("preview_test")
-        # Add sample widgets
-        designer.add_widget(WidgetType.LABEL, x=5, y=5, width=50, height=10, text="Visual Preview", border=True)
-        designer.add_widget(WidgetType.BUTTON, x=60, y=5, width=30, height=10, text="Click Me")
-        designer.add_widget(WidgetType.PROGRESSBAR, x=5, y=20, width=60, height=8, value=75)
-        designer.add_widget(WidgetType.CHECKBOX, x=5, y=35, width=50, height=8, text="Enable Feature", checked=True)
-
-    if args.headless or args.headless_preview or not TK_AVAILABLE:
-        # Headless render to PNG
-        from pathlib import Path
-        Path("examples").mkdir(exist_ok=True)
-        def _hx(col: str):
-            c = col.lstrip("#")
-            return tuple(int(c[i:i+2], 16) for i in (0,2,4))
-        img = Image.new("RGB", (designer.width, designer.height), _hx(args.bg))
-        draw = ImageDraw.Draw(img)
-        scene = designer.scenes.get(designer.current_scene)
-        if scene:
-            for w in scene.widgets:
-                if w.visible:
-                    # Minimal draw: reuse class method via instance
-                    vp = object.__new__(VisualPreviewWindow)
-                    vp.settings = PreviewSettings()
-                    vp._draw_widget(draw, w, False)
-        img = img.resize((designer.width * 4, designer.height * 4), Image.NEAREST)
-        img.save(args.out_png)
-        print(f"[headless] PNG exported: {args.out_png}")
-        # Optional HTML
-        if args.out_html:
-            try:
-                # Use ASCII HTML export from designer
-                designer.export_to_html(args.out_html)
-                print(f"[headless] HTML exported: {args.out_html}")
-            except Exception as e:
-                print(f"[headless] HTML export failed: {e}")
-        return 0
-
-    # GUI mode
-    preview = VisualPreviewWindow(designer)
-    preview.run()
-
-
-# ========== TEMPLATE MANAGER WINDOW ==========
-
-class TemplateManagerWindow(tk.Toplevel):
-    """Template manager for saving and loading custom widget combinations"""
-    
-    def __init__(self, parent, preview_window: VisualPreviewWindow):
-        super().__init__(parent)
-        self.preview_window = preview_window
-        self.designer = preview_window.designer
-        self.templates_dir = "templates"
-        
-        # Create templates directory if it doesn't exist
-        import os
-        os.makedirs(self.templates_dir, exist_ok=True)
-        
-        self.title("Template Manager")
-        self.geometry("500x600")
-        self.configure(bg="#2b2b2b")
-        
-        self._setup_ui()
-        self._load_templates()
-    
-    def _setup_ui(self):
-        """Setup template manager UI"""
-        # Header
-        header = ttk.Frame(self)
-        header.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-        
-        ttk.Label(header, text="📑 Template Manager", 
-                 font=("Arial", 14, "bold")).pack(side=tk.LEFT)
-        
-        # Toolbar
-        toolbar = ttk.Frame(self)
-        toolbar.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        
-        ttk.Button(toolbar, text="💾 Save Selection as Template", 
-                  command=self._save_template).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="🔄 Refresh", 
-                  command=self._load_templates).pack(side=tk.LEFT, padx=5)
-        
-        # Template list (scrollable)
-        list_frame = ttk.Frame(self)
-        list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Canvas with scrollbar
-        canvas = tk.Canvas(list_frame, bg="#1e1e1e", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=canvas.yview)
-        
-        self.templates_frame = ttk.Frame(canvas)
-        self.templates_frame.bind("<Configure>", 
-                                  lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        
-        canvas.create_window((0, 0), window=self.templates_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.canvas = canvas
-    
-    def _load_templates(self):
-        """Load and display all saved templates"""
-        import json
-        import os
-        
-        # Clear existing
-        for widget in self.templates_frame.winfo_children():
-            widget.destroy()
-        
-        # Get all template files
-        template_files = []
-        if os.path.exists(self.templates_dir):
-            template_files = [f for f in os.listdir(self.templates_dir) if f.endswith('.json')]
-        
-        if not template_files:
-            ttk.Label(self.templates_frame, text="No templates found. Save a selection to create one.", 
-                     font=("Arial", 10), foreground="#888").pack(padx=20, pady=20)
-            return
-        
-        # Display templates
-        for template_file in sorted(template_files):
-            template_path = os.path.join(self.templates_dir, template_file)
-            try:
-                with open(template_path, 'r') as f:
-                    template_data = json.load(f)
-                self._create_template_card(template_file, template_data)
-            except Exception as e:
-                print(f"Failed to load template {template_file}: {e}")
-    
-    def _create_template_card(self, filename: str, template_data: dict):
-        """Create a template card in the list"""
-        card = ttk.Frame(self.templates_frame, relief=tk.RAISED, borderwidth=1)
-        card.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Header with name
-        header = ttk.Frame(card)
-        header.pack(fill=tk.X, padx=10, pady=5)
-        
-        name = template_data.get("name", filename.replace(".json", ""))
-        ttk.Label(header, text=name, font=("Arial", 11, "bold")).pack(side=tk.LEFT)
-        
-        # Info
-        widget_count = len(template_data.get("widgets", []))
-        ttk.Label(header, text=f"{widget_count} widgets", 
-                 font=("Arial", 9), foreground="#888").pack(side=tk.RIGHT)
-        
-        # Description
-        desc = template_data.get("description", "No description")
-        ttk.Label(card, text=desc, font=("Arial", 9), foreground="#aaa").pack(anchor=tk.W, padx=10)
-        
-        # Buttons
-        button_frame = ttk.Frame(card)
-        button_frame.pack(fill=tk.X, padx=10, pady=5)
-        
-        ttk.Button(button_frame, text="➕ Add to Canvas", 
-                  command=lambda: self._load_template(filename)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(button_frame, text="👁️ Preview", 
-                  command=lambda: self._preview_template(template_data)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(button_frame, text="🗑️ Delete", 
-                  command=lambda: self._delete_template(filename)).pack(side=tk.LEFT, padx=2)
-    
-    def _save_template(self):
-        """Save currently selected widgets as a template"""
-        import json
-        from tkinter import simpledialog
-        
-        if not self.preview_window.selected_widgets:
-            messagebox.showwarning("No Selection", "Select widgets to save as template")
-            return
-        
-        # Ask for template name and description
-        name = simpledialog.askstring("Template Name", "Enter template name:")
-        if not name:
-            return
-        
-        description = simpledialog.askstring("Template Description", 
-                                            "Enter template description (optional):", 
-                                            initialvalue="Custom component template")
-        
-        # Get selected widgets
-        scene = self.designer.scenes.get(self.designer.current_scene)
-        if not scene:
-            return
-        
-        selected_widgets = [scene.widgets[i] for i in self.preview_window.selected_widgets 
-                          if i < len(scene.widgets)]
-        
-        # Create template data
-        template_data = {
-            "name": name,
-            "description": description or "Custom component template",
-            "widgets": [self._widget_to_dict(w) for w in selected_widgets]
-        }
-        
-        # Save to file
-        import os
-        filename = f"{name.lower().replace(' ', '_')}.json"
-        filepath = os.path.join(self.templates_dir, filename)
-        
-        try:
-            with open(filepath, 'w') as f:
-                json.dump(template_data, f, indent=2)
-            messagebox.showinfo("Template Saved", f"Template '{name}' saved successfully!")
-            self._load_templates()
-        except Exception as e:
-            messagebox.showerror("Save Error", f"Failed to save template: {e}")
-    
-    def _widget_to_dict(self, widget) -> dict:
-        """Convert widget to dictionary"""
-        return {
-            "type": widget.type,
-            "x": widget.x,
-            "y": widget.y,
-            "width": widget.width,
-            "height": widget.height,
-            "text": getattr(widget, "text", ""),
-            "visible": widget.visible,
-            "border": getattr(widget, "border", False),
-            "checked": getattr(widget, "checked", False),
-            "value": getattr(widget, "value", 0),
-        }
-    
-    def _load_template(self, filename: str):
-        """Load template and add widgets to canvas"""
-        import json
-        import os
-        
-        filepath = os.path.join(self.templates_dir, filename)
-        try:
-            with open(filepath, 'r') as f:
-                template_data = json.load(f)
-            
-            scene = self.designer.scenes.get(self.designer.current_scene)
-            if not scene:
-                messagebox.showerror("Error", "No active scene")
-                return
-            
-            # Add widgets from template
-            start_idx = len(scene.widgets)
-            for widget_data in template_data.get("widgets", []):
-                widget = self._dict_to_widget(widget_data)
-                scene.widgets.append(widget)
-            
-            # Select newly added widgets
-            new_indices = list(range(start_idx, len(scene.widgets)))
-            self.preview_window.selected_widgets = new_indices
-            if new_indices:
-                self.preview_window.selected_widget_idx = new_indices[0]
-            
-            self.preview_window.refresh()
-            messagebox.showinfo("Template Loaded", 
-                              f"Added {len(template_data.get('widgets', []))} widgets from template")
-        except Exception as e:
-            messagebox.showerror("Load Error", f"Failed to load template: {e}")
-    
-    def _dict_to_widget(self, data: dict):
-        """Convert dictionary to widget"""
-        from ui_designer import WidgetConfig
-        return WidgetConfig(
-            type=data.get("type", "label"),
-            x=data.get("x", 0),
-            y=data.get("y", 0),
-            width=data.get("width", 10),
-            height=data.get("height", 10),
-            text=data.get("text", ""),
-            visible=data.get("visible", True),
-            border=data.get("border", False),
-            checked=data.get("checked", False),
-            value=data.get("value", 0),
-        )
-    
-    def _preview_template(self, template_data: dict):
-        """Show template preview"""
-        preview_text = f"Template: {template_data.get('name', 'Unknown')}\n\n"
-        preview_text += f"Description: {template_data.get('description', 'None')}\n\n"
-        preview_text += f"Widgets ({len(template_data.get('widgets', []))}):\n"
-        
-        for i, widget in enumerate(template_data.get("widgets", []), 1):
-            preview_text += f"  {i}. {widget.get('type', 'unknown')} at ({widget.get('x')},{widget.get('y')})\n"
-        
-        messagebox.showinfo("Template Preview", preview_text)
-    
-    def _delete_template(self, filename: str):
-        """Delete a template"""
-        import os
-        
-        if messagebox.askyesno("Delete Template", f"Delete template '{filename}'?"):
-            filepath = os.path.join(self.templates_dir, filename)
-            try:
-                os.remove(filepath)
-                messagebox.showinfo("Deleted", "Template deleted successfully")
-                self._load_templates()
-            except Exception as e:
-                messagebox.showerror("Delete Error", f"Failed to delete template: {e}")
-
-
-# ========== COMPONENT PALETTE WINDOW ==========
-
-class ComponentPaletteWindow(tk.Toplevel):
-    """Component palette window for drag-and-drop component templates"""
-    
-    def __init__(self, parent, preview_window: VisualPreviewWindow):
-        super().__init__(parent)
-        self.preview_window = preview_window
-        self.library = preview_window.component_library
-        
-        self.title("Component Palette")
-        self.geometry("400x600")
-        self.configure(bg="#2b2b2b")
-        
-        # Setup UI
-        self._setup_ui()
-        self._load_components()
-    
-    def _setup_ui(self):
-        """Setup palette UI"""
-        # Header
-        header = ttk.Frame(self)
-        header.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-        
-        ttk.Label(header, text="📦 Component Library", 
-                 font=("Arial", 14, "bold")).pack(side=tk.LEFT)
-        
-        # Category filter
-        filter_frame = ttk.Frame(self)
-        filter_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        
-        ttk.Label(filter_frame, text="Category:").pack(side=tk.LEFT, padx=5)
-        
-        categories = ["All"] + sorted(set(c["category"] for c in self.preview_window.ascii_components))
-        self.category_var = tk.StringVar(value="All")
-        category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var,
-                          values=categories, width=20, state="readonly")
-        category_combo.pack(side=tk.LEFT, padx=5)
-        category_combo.bind("<<ComboboxSelected>>", lambda e: self._load_components())
-        
-        # Search box
-        search_frame = ttk.Frame(self)
-        search_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        
-        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
-        self.search_var = tk.StringVar()
-        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
-        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        search_entry.bind("<KeyRelease>", lambda e: self._load_components())
-        
-        # Component list (scrollable)
-        list_frame = ttk.Frame(self)
-        list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Canvas with scrollbar
-        canvas = tk.Canvas(list_frame, bg="#1e1e1e", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=canvas.yview)
-        
-        self.components_frame = ttk.Frame(canvas)
-        self.components_frame.bind("<Configure>", 
-                                   lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        
-        canvas.create_window((0, 0), window=self.components_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.canvas = canvas
-    
-    def _load_components(self):
-        """Load and display components based on filters"""
-        # Clear existing
-        for widget in self.components_frame.winfo_children():
-            widget.destroy()
-        
-        # Get filtered components
-        category = self.category_var.get()
-        search = self.search_var.get().lower()
-        components = self.preview_window.ascii_components
-        if category != "All":
-            components = [c for c in components if c["category"] == category]
-        if search:
-            components = [c for c in components if search in c["name"].lower() or search in c["description"].lower()]
-        # Display components
-        for i, component in enumerate(components):
-            self._create_component_card(component, i)
-    
-    def _create_component_card(self, component, index):
-        """Create a component card in the palette"""
-        card = ttk.Frame(self.components_frame, relief=tk.RAISED, borderwidth=1)
-        card.pack(fill=tk.X, padx=5, pady=5)
-        # Header with name and category
-        header = ttk.Frame(card)
-        header.pack(fill=tk.X, padx=10, pady=5)
-        ttk.Label(header, text=component["name"], font=("Arial", 11, "bold")).pack(side=tk.LEFT)
-        
-        # Show keyboard shortcut if available (Ctrl+1-9)
-        component_idx = self.preview_window.ascii_components.index(component)
-        if component_idx < 9:
-            ttk.Label(header, text=f"Ctrl+{component_idx+1}", 
-                     font=("Courier", 9), foreground="#4CAF50", 
-                     background="#263238", relief=tk.RAISED, padding=2).pack(side=tk.RIGHT, padx=5)
-        
-        ttk.Label(header, text=f"[{component["category"]}]", font=("Arial", 9), foreground="#888").pack(side=tk.RIGHT)
-        # Description
-        ttk.Label(card, text=component["description"], font=("Arial", 9), foreground="#aaa").pack(anchor=tk.W, padx=10)
-        # Add button
-        button_frame = ttk.Frame(card)
-        button_frame.pack(fill=tk.X, padx=10, pady=5)
-        ttk.Button(button_frame, text="➕ Add to Canvas", command=lambda: self._add_component_to_canvas(component)).pack(fill=tk.X)
-    
-    def _add_component_to_canvas(self, component):
-        """Add ASCII component widgets to designer canvas"""
-        try:
-            widgets = component["factory"]()
-            scene = self.preview_window.designer.scenes.get(self.preview_window.designer.current_scene)
-            if not scene:
-                raise RuntimeError("No active scene")
-            start_idx = len(scene.widgets)
-            for w in widgets:
-                scene.widgets.append(w)
-            self.preview_window.refresh()
-            # Select added widgets
-            new_indices = list(range(start_idx, start_idx + len(widgets)))
-            self.preview_window.selected_widgets = new_indices
-            if new_indices:
-                self.preview_window.selected_widget_idx = new_indices[0]
-            messagebox.showinfo("Component Added", f"Added {component['name']} with {len(widgets)} widgets")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to add component: {e}")
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(0)
-# Icon Palette Window Implementation
-# This file extends ui_designer_preview.py with the IconPaletteWindow class
-# Append this to the end of ui_designer_preview.py
-
-class IconPaletteWindow(tk.Toplevel):
-    """Icon palette window for browsing and selecting Material Icons"""
-    
-    def __init__(self, parent, preview_window: VisualPreviewWindow):
-        super().__init__(parent)
-        self.preview_window = preview_window
-        
-        self.title("Icon Palette - Material Icons")
-        self.geometry("500x700")
-        self.configure(bg="#2b2b2b")
-        
-        # Setup UI
-        self._setup_ui()
-        self._load_icons()
-    
-    def _setup_ui(self):
-        """Setup palette UI"""
-        # Header
-        header = ttk.Frame(self)
-        header.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-        
-        ttk.Label(header, text="đźŽ¨ Material Icons (53)", 
-                 font=("Arial", 14, "bold")).pack(side=tk.LEFT)
-        
-        # Size selector
-        size_frame = ttk.Frame(self)
-        size_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        
-        ttk.Label(size_frame, text="Size:").pack(side=tk.LEFT, padx=5)
-        self.size_var = tk.StringVar(value="16px")
-        ttk.Radiobutton(size_frame, text="16Ă—16", variable=self.size_var, value="16px").pack(side=tk.LEFT, padx=5)
-        ttk.Radiobutton(size_frame, text="24Ă—24", variable=self.size_var, value="24px").pack(side=tk.LEFT, padx=5)
-        
-        # Category filter
-        filter_frame = ttk.Frame(self)
-        filter_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        
-        ttk.Label(filter_frame, text="Category:").pack(side=tk.LEFT, padx=5)
-        
-        categories = ["All"] + get_all_categories()
-        self.category_var = tk.StringVar(value="All")
-        category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var,
-                          values=categories, width=20, state="readonly")
-        category_combo.pack(side=tk.LEFT, padx=5)
-        category_combo.bind("<<ComboboxSelected>>", lambda e: self._load_icons())
-        
-        # Search box
-        search_frame = ttk.Frame(self)
-        search_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        
-        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
-        self.search_var = tk.StringVar()
-        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
-        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        search_entry.bind("<KeyRelease>", lambda e: self._load_icons())
-        
-        # Icon list (scrollable)
-        list_frame = ttk.Frame(self)
-        list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Canvas with scrollbar
-        canvas = tk.Canvas(list_frame, bg="#1e1e1e", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=canvas.yview)
-        
-        self.icons_frame = ttk.Frame(canvas)
-        self.icons_frame.bind("<Configure>", 
-                             lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        
-        canvas.create_window((0, 0), window=self.icons_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.canvas = canvas
-        
-        # Info footer
-        info = ttk.Label(self, text="Click icon to copy symbol name â€˘ Drag to add to canvas (future)", 
-                        font=("Arial", 9), foreground="#8b949e", background="#2b2b2b")
-        info.pack(side=tk.BOTTOM, pady=10)
-    
-    def _load_icons(self):
-        """Load and display icons based on filters"""
-        # Clear existing
-        for widget in self.icons_frame.winfo_children():
-            widget.destroy()
-        
-        # Get filtered icons
-        category = self.category_var.get()
-        search = self.search_var.get().lower()
-        icons = MATERIAL_ICONS
-        
-        if category != "All":
-            icons = [i for i in icons if i["category"] == category]
-        if search:
-            icons = [i for i in icons if search in i["name"].lower() or 
-                    search in i["usage"].lower() or 
-                    search in i["symbol"].lower()]
-        
-        # Display icons
-        for i, icon in enumerate(icons):
-            self._create_icon_card(icon, i)
-    
-    def _create_icon_card(self, icon, index):
-        """Create an icon card in the palette"""
-        card = ttk.Frame(self.icons_frame, relief=tk.RAISED, borderwidth=1)
-        card.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Header with icon symbol and name
-        header = ttk.Frame(card)
-        header.pack(fill=tk.X, padx=10, pady=8)
-        
-        # ASCII preview
-        ascii_label = ttk.Label(header, text=icon["ascii"], font=("Segoe UI Emoji", 20))
-        ascii_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # Name and category
-        info_frame = ttk.Frame(header)
-        info_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        ttk.Label(info_frame, text=icon["name"], font=("Arial", 11, "bold")).pack(anchor=tk.W)
-        ttk.Label(info_frame, text=f"{icon['category'].title()} â€˘ {icon['symbol']}", 
-                 font=("Courier", 9), foreground="#58a6ff").pack(anchor=tk.W)
-        
-        # Usage description
-        ttk.Label(card, text=icon["usage"], font=("Arial", 9), 
-                 foreground="#8b949e", wraplength=450).pack(anchor=tk.W, padx=10, pady=(0, 8))
-        
-        # Action buttons
-        button_frame = ttk.Frame(card)
-        button_frame.pack(fill=tk.X, padx=10, pady=5)
-        
-        ttk.Button(button_frame, text="đź“‹ Copy Symbol", 
-                  command=lambda: self._copy_symbol(icon["symbol"])).pack(side=tk.LEFT, padx=2)
-        ttk.Button(button_frame, text="â„ą Info", 
-                  command=lambda: self._show_icon_info(icon)).pack(side=tk.LEFT, padx=2)
-    
-    def _copy_symbol(self, symbol: str):
-        """Copy icon symbol to clipboard"""
-        self.clipboard_clear()
-        self.clipboard_append(symbol)
-        # Show toast notification
-        messagebox.showinfo("Copied", f"Symbol '{symbol}' copied to clipboard!")
-    
-    def _show_icon_info(self, icon):
-        """Show detailed icon information"""
-        size = self.size_var.get()
-        size_field = "size_16" if size == "16px" else "size_24"
-        
-        info_text = f"""Icon: {icon['name']}
-Category: {icon['category'].title()}
-Usage: {icon['usage']}
-
-C Symbol ({size}): {icon[size_field]}
-ASCII Fallback: {icon['ascii']}
-
-Example (C):
-  #include "icons.h"
-  display_draw_icon(&{icon[size_field]}, x, y);
-
-Example (JSON/Python):
-  {{"type": "icon", "icon": "{icon['symbol']}", "x": 10, "y": 20}}
-"""
-        
-        # Create info dialog
-        dialog = tk.Toplevel(self)
-        dialog.title(f"Icon Info - {icon['name']}")
-        dialog.geometry("500x400")
-        dialog.configure(bg="#1e1e1e")
-        
-        # ASCII preview (large)
-        preview = ttk.Label(dialog, text=icon["ascii"], font=("Segoe UI Emoji", 48), 
-                           background="#1e1e1e", foreground="#58a6ff")
-        preview.pack(pady=20)
-        
-        # Info text
-        text = tk.Text(dialog, width=60, height=15, bg="#2b2b2b", fg="#c9d1d9", 
-                      font=("Courier", 10), wrap=tk.WORD)
-        text.insert("1.0", info_text)
-        text.config(state=tk.DISABLED)
-        text.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
-        
-        # Close button
-        ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=10)
-
-
-# Add this class to the end of ui_designer_preview.py

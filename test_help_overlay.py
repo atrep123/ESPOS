@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Test help overlay feature in simulator"""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from sim_run import render_frame, UIState, rgb565
+from sim_run import UIState, render_frame, rgb565
 
 
 def test_help_overlay_render():

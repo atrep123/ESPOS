@@ -1,0 +1,72 @@
+{
+  "name": "Icon Demo - Status Bar",
+  "width": 128,
+  "height": 64,
+  "scene": "status_bar",
+  "widgets": [
+    {
+      "type": "text",
+      "x": 4,
+      "y": 4,
+      "text": "ESP32 OS",
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "line",
+      "x1": 0,
+      "y1": 15,
+      "x2": 128,
+      "y2": 15,
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "icon",
+      "x": 94,
+      "y": 2,
+      "icon": "mi_network_wifi_24px",
+      "size": "16px"
+    },
+    {
+      "type": "icon",
+      "x": 110,
+      "y": 2,
+      "icon": "mi_battery_full_24px",
+      "size": "16px"
+    },
+    {
+      "type": "text",
+      "x": 4,
+      "y": 24,
+      "text": "System Info",
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "icon",
+      "x": 4,
+      "y": 38,
+      "icon": "mi_info_24px",
+      "size": "16px"
+    },
+    {
+      "type": "text",
+      "x": 24,
+      "y": 40,
+      "text": "CPU: 240MHz",
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "icon",
+      "x": 4,
+      "y": 52,
+      "icon": "mi_sd_storage_24px",
+      "size": "16px"
+    },
+    {
+      "type": "text",
+      "x": 24,
+      "y": 54,
+      "text": "Free: 2.4GB",
+      "color": "0xFFFFFF"
+    }
+  ]
+}

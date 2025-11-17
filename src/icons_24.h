@@ -1,0 +1,64 @@
+#pragma once
+#include <stdint.h>
+
+typedef struct {
+    const char* name;
+    uint16_t width;
+    uint16_t height;
+    uint16_t stride_bytes;
+    const uint8_t* data;
+} icon_t;
+
+extern const icon_t mi_arrow_back_24px;
+extern const icon_t mi_arrow_forward_24px;
+extern const icon_t mi_audio_file_24px;
+extern const icon_t mi_battery_charging_full_24px;
+extern const icon_t mi_battery_full_24px;
+extern const icon_t mi_bluetooth_24px;
+extern const icon_t mi_brightness_high_24px;
+extern const icon_t mi_check_24px;
+extern const icon_t mi_check_circle_24px;
+extern const icon_t mi_close_24px;
+extern const icon_t mi_cloud_24px;
+extern const icon_t mi_cloud_download_24px;
+extern const icon_t mi_cloud_upload_24px;
+extern const icon_t mi_code_24px;
+extern const icon_t mi_content_copy_24px;
+extern const icon_t mi_content_paste_24px;
+extern const icon_t mi_delete_24px;
+extern const icon_t mi_description_24px;
+extern const icon_t mi_drive_file_move_24px;
+extern const icon_t mi_drive_file_rename_outline_24px;
+extern const icon_t mi_error_24px;
+extern const icon_t mi_file_upload_24px;
+extern const icon_t mi_folder_24px;
+extern const icon_t mi_folder_open_24px;
+extern const icon_t mi_help_24px;
+extern const icon_t mi_home_24px;
+extern const icon_t mi_html_24px;
+extern const icon_t mi_image_24px;
+extern const icon_t mi_info_24px;
+extern const icon_t mi_integration_instructions_24px;
+extern const icon_t mi_javascript_24px;
+extern const icon_t mi_lock_24px;
+extern const icon_t mi_lock_open_24px;
+extern const icon_t mi_menu_24px;
+extern const icon_t mi_more_horiz_24px;
+extern const icon_t mi_more_vert_24px;
+extern const icon_t mi_network_wifi_24px;
+extern const icon_t mi_pause_24px;
+extern const icon_t mi_picture_as_pdf_24px;
+extern const icon_t mi_play_arrow_24px;
+extern const icon_t mi_power_settings_new_24px;
+extern const icon_t mi_save_24px;
+extern const icon_t mi_save_alt_24px;
+extern const icon_t mi_sd_storage_24px;
+extern const icon_t mi_search_24px;
+extern const icon_t mi_settings_24px;
+extern const icon_t mi_stop_24px;
+extern const icon_t mi_text_snippet_24px;
+extern const icon_t mi_upload_file_24px;
+extern const icon_t mi_video_file_24px;
+extern const icon_t mi_volume_off_24px;
+extern const icon_t mi_volume_up_24px;
+extern const icon_t mi_warning_24px;

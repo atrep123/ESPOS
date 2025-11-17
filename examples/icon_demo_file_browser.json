@@ -1,0 +1,80 @@
+{
+  "name": "Icon Demo - File Browser",
+  "width": 128,
+  "height": 64,
+  "scene": "file_browser",
+  "widgets": [
+    {
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 12,
+      "filled": true,
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "text",
+      "x": 20,
+      "y": 2,
+      "text": "File Browser",
+      "color": "0x000000"
+    },
+    {
+      "type": "icon",
+      "x": 4,
+      "y": 0,
+      "icon": "mi_folder_24px",
+      "size": "16px"
+    },
+    {
+      "type": "icon",
+      "x": 110,
+      "y": 0,
+      "icon": "mi_search_24px",
+      "size": "16px"
+    },
+    {
+      "type": "icon",
+      "x": 4,
+      "y": 18,
+      "icon": "mi_folder_24px",
+      "size": "16px"
+    },
+    {
+      "type": "text",
+      "x": 24,
+      "y": 20,
+      "text": "Documents",
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "icon",
+      "x": 4,
+      "y": 34,
+      "icon": "mi_description_24px",
+      "size": "16px"
+    },
+    {
+      "type": "text",
+      "x": 24,
+      "y": 36,
+      "text": "readme.txt",
+      "color": "0xFFFFFF"
+    },
+    {
+      "type": "icon",
+      "x": 4,
+      "y": 50,
+      "icon": "mi_code_24px",
+      "size": "16px"
+    },
+    {
+      "type": "text",
+      "x": 24,
+      "y": 52,
+      "text": "main.c",
+      "color": "0xFFFFFF"
+    }
+  ]
+}

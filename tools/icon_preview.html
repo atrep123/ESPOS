@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32OS Icon Reference - 53 Material Icons</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 2rem;
+        }
+        .header {
+            max-width: 1400px;
+            margin: 0 auto 2rem;
+            text-align: center;
+        }
+        h1 {
+            color: #58a6ff;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #8b949e;
+            margin-bottom: 1rem;
+        }
+        .stats {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        .stat {
+            background: #161b22;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+        .controls {
+            max-width: 1400px;
+            margin: 0 auto 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .search {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 1rem;
+        }
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .filter-btn {
+            padding: 0.75rem 1rem;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #8b949e;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            background: #30363d;
+            color: #c9d1d9;
+        }
+        .filter-btn.active {
+            background: #238636;
+            border-color: #238636;
+            color: #fff;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .category {
+            margin-bottom: 3rem;
+        }
+        .category-title {
+            font-size: 1.25rem;
+            color: #58a6ff;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #30363d;
+        }
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        .icon-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .icon-card:hover {
+            background: #21262d;
+            border-color: #58a6ff;
+            transform: translateY(-2px);
+        }
+        .icon-display {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 0.75rem;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        .icon-name {
+            font-size: 0.85rem;
+            color: #c9d1d9;
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+        .icon-usage {
+            font-size: 0.75rem;
+            color: #8b949e;
+            line-height: 1.3;
+        }
+        .copied-toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #238636;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .copied-toast.show {
+            opacity: 1;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ESP32OS Icon Reference</h1>
+        <p class="subtitle">Material Design Icons - 16×16 & 24×24 1bpp for OLED displays</p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Total Icons</div>
+                <div class="stat-value">53</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Sizes</div>
+                <div class="stat-value">16×16, 24×24</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Format</div>
+                <div class="stat-value">1bpp C</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <input type="text" class="search" placeholder="Search icons..." id="searchInput">
+        <div class="filter-group">
+            <button class="filter-btn active" data-category="all">All</button>
+            <button class="filter-btn" data-category="navigation">Navigation</button>
+            <button class="filter-btn" data-category="files">Files</button>
+            <button class="filter-btn" data-category="types">Types</button>
+            <button class="filter-btn" data-category="status">Status</button>
+        </div>
+    </div>
+
+    <div class="container" id="iconContainer"></div>
+    <div class="copied-toast" id="toast">Copied to clipboard!</div>
+
+    <script>
+        const icons = {
+            navigation: [
+                { name: 'mi_arrow_back_24px', icon: '←', usage: 'Navigate back, return' },
+                { name: 'mi_arrow_forward_24px', icon: '→', usage: 'Navigate forward, next' },
+                { name: 'mi_home_24px', icon: '⌂', usage: 'Home screen' },
+                { name: 'mi_search_24px', icon: '🔍', usage: 'Search functionality' },
+                { name: 'mi_settings_24px', icon: '⚙', usage: 'Settings menu' },
+                { name: 'mi_menu_24px', icon: '☰', usage: 'Menu, navigation' },
+                { name: 'mi_more_vert_24px', icon: '⋮', usage: 'More options (vertical)' },
+                { name: 'mi_more_horiz_24px', icon: '⋯', usage: 'More options (horizontal)' },
+                { name: 'mi_close_24px', icon: '✕', usage: 'Close, dismiss' },
+                { name: 'mi_check_24px', icon: '✓', usage: 'Confirm, OK' },
+                { name: 'mi_check_circle_24px', icon: '✓', usage: 'Success confirmation' },
+                { name: 'mi_help_24px', icon: '?', usage: 'Help, documentation' }
+            ],
+            files: [
+                { name: 'mi_folder_24px', icon: '📁', usage: 'Directory, folder' },
+                { name: 'mi_folder_open_24px', icon: '📂', usage: 'Opened folder' },
+                { name: 'mi_description_24px', icon: '📄', usage: 'Generic document' },
+                { name: 'mi_save_24px', icon: '💾', usage: 'Save file' },
+                { name: 'mi_save_alt_24px', icon: '💾', usage: 'Save as, export' },
+                { name: 'mi_delete_24px', icon: '🗑', usage: 'Delete, trash' },
+                { name: 'mi_content_copy_24px', icon: '📋', usage: 'Copy to clipboard' },
+                { name: 'mi_content_paste_24px', icon: '📋', usage: 'Paste from clipboard' },
+                { name: 'mi_drive_file_move_24px', icon: '📦', usage: 'Move file' },
+                { name: 'mi_drive_file_rename_outline_24px', icon: '✏', usage: 'Rename file' },
+                { name: 'mi_file_upload_24px', icon: '📤', usage: 'Upload file' },
+                { name: 'mi_upload_file_24px', icon: '⬆', usage: 'Upload action' },
+                { name: 'mi_cloud_24px', icon: '☁', usage: 'Cloud storage' },
+                { name: 'mi_sd_storage_24px', icon: '💳', usage: 'SD card' }
+            ],
+            types: [
+                { name: 'mi_text_snippet_24px', icon: '📝', usage: 'Text file' },
+                { name: 'mi_code_24px', icon: '<>', usage: 'Code file' },
+                { name: 'mi_html_24px', icon: 'H', usage: 'HTML file' },
+                { name: 'mi_javascript_24px', icon: 'JS', usage: 'JavaScript file' },
+                { name: 'mi_image_24px', icon: '🖼', usage: 'Image file' },
+                { name: 'mi_audio_file_24px', icon: '🎵', usage: 'Audio file' },
+                { name: 'mi_video_file_24px', icon: '🎬', usage: 'Video file' },
+                { name: 'mi_picture_as_pdf_24px', icon: 'PDF', usage: 'PDF document' }
+            ],
+            cloud: [
+                { name: 'mi_cloud_upload_24px', icon: '☁⬆', usage: 'Upload to cloud' },
+                { name: 'mi_cloud_download_24px', icon: '☁⬇', usage: 'Download from cloud' },
+                { name: 'mi_network_wifi_24px', icon: '📶', usage: 'WiFi status' },
+                { name: 'mi_bluetooth_24px', icon: 'Ⓑ', usage: 'Bluetooth status' },
+                { name: 'mi_integration_instructions_24px', icon: '⚡', usage: 'Integration, API' }
+            ],
+            status: [
+                { name: 'mi_battery_full_24px', icon: '🔋', usage: 'Battery full' },
+                { name: 'mi_battery_charging_full_24px', icon: '⚡', usage: 'Battery charging' },
+                { name: 'mi_brightness_high_24px', icon: '☀', usage: 'Screen brightness' },
+                { name: 'mi_volume_up_24px', icon: '🔊', usage: 'Volume on' },
+                { name: 'mi_volume_off_24px', icon: '🔇', usage: 'Volume muted' },
+                { name: 'mi_power_settings_new_24px', icon: '⏻', usage: 'Power, shutdown' }
+            ],
+            media: [
+                { name: 'mi_play_arrow_24px', icon: '▶', usage: 'Play' },
+                { name: 'mi_pause_24px', icon: '⏸', usage: 'Pause' },
+                { name: 'mi_stop_24px', icon: '⏹', usage: 'Stop' }
+            ],
+            alerts: [
+                { name: 'mi_lock_24px', icon: '🔒', usage: 'Locked, secure' },
+                { name: 'mi_lock_open_24px', icon: '🔓', usage: 'Unlocked' },
+                { name: 'mi_info_24px', icon: 'ℹ', usage: 'Information' },
+                { name: 'mi_warning_24px', icon: '⚠', usage: 'Warning' },
+                { name: 'mi_error_24px', icon: '⛔', usage: 'Error, critical' }
+            ]
+        };
+
+        const categoryMap = {
+            navigation: 'Navigation & UI Control',
+            files: 'File Operations',
+            types: 'File Types / MIME',
+            cloud: 'Cloud & Network',
+            status: 'Device Status',
+            media: 'Media Control',
+            alerts: 'Security & Alerts'
+        };
+
+        function renderIcons(filter = 'all', search = '') {
+            const container = document.getElementById('iconContainer');
+            container.innerHTML = '';
+            
+            const searchLower = search.toLowerCase();
+
+            Object.entries(icons).forEach(([category, items]) => {
+                const filteredItems = items.filter(icon => 
+                    (filter === 'all' || 
+                     (filter === 'navigation' && category === 'navigation') ||
+                     (filter === 'files' && (category === 'files' || category === 'cloud')) ||
+                     (filter === 'types' && category === 'types') ||
+                     (filter === 'status' && (category === 'status' || category === 'media' || category === 'alerts'))
+                    ) &&
+                    (search === '' || 
+                     icon.name.toLowerCase().includes(searchLower) ||
+                     icon.usage.toLowerCase().includes(searchLower))
+                );
+
+                if (filteredItems.length === 0) return;
+
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'category';
+                
+                const title = document.createElement('h2');
+                title.className = 'category-title';
+                title.textContent = categoryMap[category];
+                categoryDiv.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'icon-grid';
+
+                filteredItems.forEach(icon => {
+                    const card = document.createElement('div');
+                    card.className = 'icon-card';
+                    card.onclick = () => copyToClipboard(icon.name);
+
+                    card.innerHTML = `
+                        <div class="icon-display">${icon.icon}</div>
+                        <div class="icon-name">${icon.name}</div>
+                        <div class="icon-usage">${icon.usage}</div>
+                    `;
+
+                    grid.appendChild(card);
+                });
+
+                categoryDiv.appendChild(grid);
+                container.appendChild(categoryDiv);
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            });
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.category;
+            renderIcons(activeFilter, e.target.value);
+        });
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const search = document.getElementById('searchInput').value;
+                renderIcons(e.target.dataset.category, search);
+            });
+        });
+
+        // Initial render
+        renderIcons();
+    </script>
+</body>
+</html>

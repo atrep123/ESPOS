@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Test pause/step/continue functionality in simulator"""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # This test verifies the pause/step logic conceptually
@@ -64,7 +65,7 @@ def test_pause_logic():
 
 def test_help_overlay_updated():
     """Verify help overlay shows correct pause/step/continue bindings"""
-    from sim_run import render_frame, UIState, rgb565
+    from sim_run import UIState, render_frame, rgb565
     
     state = UIState()
     state.bg = rgb565(0, 0, 0)

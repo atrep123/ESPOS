@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "ESP32OS",
-    "project_version":    "8e61242-dirty",
+    "project_version":    "96c9024-dirty",
     "project_path":       "C:/Users/atrep/Desktop/ESP32OS",
     "idf_path":           "C:/Users/atrep/.platformio/packages/framework-espidf",
     "build_dir":          "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1",
@@ -1480,7 +1480,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/atrep/Desktop/ESP32OS/.pio/build/esp32-s3-devkitm-1/esp-idf/src/libsrc.a",
-            "sources": [ "C:/Users/atrep/Desktop/ESP32OS/src/CMakeLists.txt", "C:/Users/atrep/Desktop/ESP32OS/src/display/ssd1363.c", "C:/Users/atrep/Desktop/ESP32OS/src/display/ssd1363.h", "C:/Users/atrep/Desktop/ESP32OS/src/display_config.h", "C:/Users/atrep/Desktop/ESP32OS/src/kernel/msgbus.c", "C:/Users/atrep/Desktop/ESP32OS/src/kernel/msgbus.h", "C:/Users/atrep/Desktop/ESP32OS/src/kernel/timers.c", "C:/Users/atrep/Desktop/ESP32OS/src/kernel/timers.h", "C:/Users/atrep/Desktop/ESP32OS/src/main.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/input/input.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/input/input.h", "C:/Users/atrep/Desktop/ESP32OS/src/services/metrics/metrics.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/metrics/metrics.h", "C:/Users/atrep/Desktop/ESP32OS/src/services/rpc/rpc.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/rpc/rpc.h", "C:/Users/atrep/Desktop/ESP32OS/src/services/store/store.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/store/store.h", "C:/Users/atrep/Desktop/ESP32OS/src/services/ui/renderer.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/ui/renderer.h", "C:/Users/atrep/Desktop/ESP32OS/src/services/ui/ui.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/ui/ui.h", "C:/Users/atrep/Desktop/ESP32OS/src/services/ui/ui_core.c", "C:/Users/atrep/Desktop/ESP32OS/src/services/ui/ui_core.h", "C:/Users/atrep/Desktop/ESP32OS/src/ui_demo.c", "C:/Users/atrep/Desktop/ESP32OS/src/ui_demo.h", "C:/Users/atrep/Desktop/ESP32OS/src/ui_design.c", "C:/Users/atrep/Desktop/ESP32OS/src/ui_design.h", "C:/Users/atrep/Desktop/ESP32OS/src/ui_render.c", "C:/Users/atrep/Desktop/ESP32OS/src/ui_render.h", "C:/Users/atrep/Desktop/ESP32OS/src/ui_render_swbuf.c", "C:/Users/atrep/Desktop/ESP32OS/src/ui_render_swbuf.h" ],
+            "sources": [ "C:/Users/atrep/Desktop/ESP32OS/src/CMakeLists.txt", "C:/Users/atrep/Desktop/ESP32OS/src/icons.c", "C:/Users/atrep/Desktop/ESP32OS/src/icons.h", "C:/Users/atrep/Desktop/ESP32OS/src/icons_24.c", "C:/Users/atrep/Desktop/ESP32OS/src/icons_24.h", "C:/Users/atrep/Desktop/ESP32OS/src/ui_demo_icons.c", "C:/Users/atrep/Desktop/ESP32OS/src/ui_demo_icons.h" ],
             "include_dirs": []
         },
         "tcp_transport": {
