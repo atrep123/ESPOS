@@ -14,23 +14,27 @@ Tento dokument má hlavně pomoci lidem/agentům rychle najít „kam co patří
 
 ## 2. Python nástroje – logické skupiny
 
-**Simulátor + runtime nástroje**
+### Simulátor + runtime nástroje
+
 - `sim_run.py` – simulátor.
 - `esp32_sim_client.py` – Python klient pro RPC.
 - `esp32_hardware_bridge.py` – bridge mezi ESP32 UART a simulátorem.
 - `state_inspector.py` – inspektor stavu (nyní využívá RPC `get_state`).
 
-**Designer / UI**
+### Designer / UI
+
 - `ui_designer.py`, `ui_designer_pro.py` – logika designeru.
 - `ui_designer_preview.py` – vizuální náhled (drag & drop, zoom, export).
 - `ui_themes.py`, `ui_components.py`, `ui_animations.py`, `ui_responsive.py` – témata, komponenty, animace, responsive layout.
 - `ui_export_c.py`, `ui_export_c_header.py` – export do C kódu / hlaviček.
 
-**Výkon a analýza**
+### Výkon a analýza
+
 - `performance_profiler.py` – pokročilý profiler (FPS, časy, alerts, anomálie).
 - `analytics_dashboard.py` – webový dashboard/analytics.
 
-**Další nástroje**
+### Další nástroje
+
 - `multi_window_manager.py` – více instancí simulátoru.
 - `screenshot_capture.py` – screenshoty a záznam.
 - `simctl.py` – jednoduchý CLI klient pro simulátor.
@@ -68,7 +72,7 @@ Tento dokument má hlavně pomoci lidem/agentům rychle najít „kam co patří
 - **Nástroje / Dev** – `tools/` (Dev Hub, self-check, CI skripty), `docs/`.
 
 Pokud něco potřebuješ, je dobré začít:
+
 - `tools/dev_hub.py` pro běžné úkony,
 - `docs/INDEX.md` pro rychlý rozcestník,
 - `FILE_INDEX.md` pokud hledáš konkrétní soubor / modul.
-
