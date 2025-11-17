@@ -22,8 +22,17 @@ if [ ! -d ".venv" ]; then
   python3 -m venv .venv
 fi
 
-# shellcheck source=/dev/null
-source .venv/bin/activate
+# Activate venv (handle both Unix and Windows/Git Bash paths)
+if [ -f ".venv/bin/activate" ]; then
+  # shellcheck source=/dev/null
+  source .venv/bin/activate
+elif [ -f ".venv/Scripts/activate" ]; then
+  # Windows Git Bash
+  # shellcheck source=/dev/null
+  source .venv/Scripts/activate
+else
+  echo "[setup] Warning: Could not find venv activation script"
+fi
 
 echo "[setup] Upgrading pip"
 python -m pip install --upgrade pip

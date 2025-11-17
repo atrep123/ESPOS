@@ -1,8 +1,8 @@
 # Performance Profiler Report
 
-**Generated:** 2025-11-17 09:15:50  
-**Duration:** 21.1 seconds  
-**Samples:** 981
+**Generated:** 2025-11-17 11:25:32  
+**Duration:** 21.3 seconds  
+**Samples:** 908
 
 ---
 
@@ -11,23 +11,23 @@
 ### FPS (Frames Per Second)
 | Metric | Value |
 |--------|-------|
-| Average | 53.3 |
-| Median | 58.7 |
-| Min | 10.3 |
+| Average | 53.4 |
+| Median | 58.9 |
+| Min | 11.6 |
 | Max | 65.0 |
-| Std Dev | 14.50 |
-| P50 | 58.7 |
-| P95 | 64.2 |
-| P99 | 64.9 |
+| Std Dev | 14.42 |
+| P50 | 58.9 |
+| P95 | 64.3 |
+| P99 | 64.8 |
 
 ### Render Time (milliseconds)
 | Metric | Value |
 |--------|-------|
-| Average | 21.30 ms |
-| Median | 13.06 ms |
-| Min | 10.01 ms |
-| Max | 116.54 ms |
-| Std Dev | 20.92 ms |
+| Average | 20.67 ms |
+| Median | 13.07 ms |
+| Min | 10.00 ms |
+| Max | 117.57 ms |
+| Std Dev | 19.66 ms |
 
 ### Resources
 | Metric | Value |
@@ -43,51 +43,51 @@
 
 1. ⚠ High FPS variance detected - investigate frame time spikes
 2. ⚠ Maximum render time exceeds 100ms - investigate worst-case scenarios
-3. ⚠ 133 anomalies detected - review for patterns
-4. 🔴 119 critical alerts triggered
-5. 🟡 174 warning alerts triggered
+3. ⚠ 118 anomalies detected - review for patterns
+4. 🔴 108 critical alerts triggered
+5. 🟡 161 warning alerts triggered
 
 ---
 
 ## 🚨 Alerts
 
-**Total Alerts:** 293  
-**Critical:** 119  
-**Warnings:** 174
+**Total Alerts:** 269  
+**Critical:** 108  
+**Warnings:** 161
 
 
 ### Recent Alerts
 
-- 🔴 [09:15:48] very_low_fps: fps=15.99 (threshold: <25.0)
-- 🟡 [09:15:48] low_fps: fps=10.69 (threshold: <30.0)
-- 🔴 [09:15:48] critical_fps: fps=10.69 (threshold: <15.0)
-- 🔴 [09:15:48] very_low_fps: fps=10.69 (threshold: <25.0)
-- 🟡 [09:15:49] low_fps: fps=10.82 (threshold: <30.0)
-- 🔴 [09:15:49] critical_fps: fps=10.82 (threshold: <15.0)
-- 🔴 [09:15:49] very_low_fps: fps=10.82 (threshold: <25.0)
-- 🟡 [09:15:49] low_fps: fps=13.25 (threshold: <30.0)
-- 🔴 [09:15:49] critical_fps: fps=13.25 (threshold: <15.0)
-- 🔴 [09:15:49] very_low_fps: fps=13.25 (threshold: <25.0)
+- 🔴 [11:25:30] critical_fps: fps=14.37 (threshold: <15.0)
+- 🔴 [11:25:30] very_low_fps: fps=14.37 (threshold: <25.0)
+- 🟡 [11:25:30] low_fps: fps=13.50 (threshold: <30.0)
+- 🔴 [11:25:30] critical_fps: fps=13.50 (threshold: <15.0)
+- 🔴 [11:25:30] very_low_fps: fps=13.50 (threshold: <25.0)
+- 🟡 [11:25:31] low_fps: fps=14.94 (threshold: <30.0)
+- 🔴 [11:25:31] critical_fps: fps=14.94 (threshold: <15.0)
+- 🔴 [11:25:31] very_low_fps: fps=14.94 (threshold: <25.0)
+- 🟡 [11:25:31] low_fps: fps=19.17 (threshold: <30.0)
+- 🔴 [11:25:31] very_low_fps: fps=19.17 (threshold: <25.0)
 
 ---
 
 ## 🔍 Anomalies
 
-**Total Anomalies Detected:** 133
+**Total Anomalies Detected:** 118
 
 
 ### Recent Anomalies
 
-- [09:15:47] render_ms: 113.11 (deviation: 4.5σ)
-- [09:15:47] render_ms: 91.57 (deviation: 3.4σ)
-- [09:15:47] render_ms: 94.55 (deviation: 3.6σ)
-- [09:15:48] render_ms: 103.33 (deviation: 4.0σ)
-- [09:15:48] render_ms: 111.63 (deviation: 4.4σ)
-- [09:15:48] render_ms: 101.37 (deviation: 3.8σ)
-- [09:15:48] render_ms: 106.06 (deviation: 4.0σ)
-- [09:15:48] render_ms: 100.22 (deviation: 3.7σ)
-- [09:15:49] render_ms: 87.32 (deviation: 3.1σ)
-- [09:15:49] render_ms: 111.56 (deviation: 4.3σ)
+- [11:25:29] render_ms: 108.98 (deviation: 4.6σ)
+- [11:25:29] render_ms: 103.94 (deviation: 4.3σ)
+- [11:25:29] render_ms: 81.66 (deviation: 3.1σ)
+- [11:25:29] render_ms: 89.09 (deviation: 3.5σ)
+- [11:25:30] render_ms: 100.12 (deviation: 4.1σ)
+- [11:25:30] render_ms: 103.07 (deviation: 4.3σ)
+- [11:25:30] render_ms: 117.57 (deviation: 5.0σ)
+- [11:25:30] render_ms: 95.02 (deviation: 3.8σ)
+- [11:25:31] render_ms: 85.04 (deviation: 3.3σ)
+- [11:25:31] render_ms: 97.64 (deviation: 3.9σ)
 
 ---
 

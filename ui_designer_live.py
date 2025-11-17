@@ -78,7 +78,7 @@ async def websocket_handler(websocket):
     client_addr = websocket.remote_address
     print(f"[{time.strftime('%H:%M:%S')}] Client connected: {client_addr[0]}:{client_addr[1]}")
     try:
-        async for message in websocket:
+        async for _ in websocket:
             # Echo back for debugging
             pass
     except websockets.exceptions.ConnectionClosed:
@@ -99,7 +99,7 @@ def create_live_html_template(original_html: Path, ws_port: int) -> str:
     """Inject WebSocket client into HTML."""
     try:
         content = original_html.read_text(encoding='utf-8')
-    except:
+    except (FileNotFoundError, IOError):
         content = "<html><body><h1>Waiting for design...</h1></body></html>"
     
     ws_script = f"""
