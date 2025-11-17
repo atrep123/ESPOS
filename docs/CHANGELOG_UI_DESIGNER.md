@@ -1,5 +1,57 @@
 # UI Designer Pro - Changelog
 
+## [1.2.0] - 2025-11-17
+
+### ✨ Animation Timeline Editor
+
+#### Timeline Window
+
+- **AnimationEditorWindow** - Standalone editor for animation management
+- **Timeline canvas** - Visual representation with keyframe markers
+- **Easing curve preview** - Real-time visualization of easing functions
+- **Properties panel** - Configure type, duration, easing, loop
+- **Playback controls** - Play, pause, stop with preview integration
+
+#### Keyframe System
+
+- **Click to add** - Click timeline to create keyframe at position
+- **Drag to move** - Drag keyframe markers to new time positions
+- **Right-click to delete** - Remove keyframes with context menu
+- **Visual markers** - Color-coded keyframe indicators (red circles)
+- **Time labels** - 0%, 25%, 50%, 75%, 100% markers on timeline
+
+#### Animation Management
+
+- **➕ Create animations** - Dialog for new animation with custom name
+- **🗑️ Delete animations** - Remove with confirmation dialog
+- **Load properties** - Auto-populate UI from selected animation
+- **Apply changes** - Save modifications to animation config
+- **Sync with main window** - Updates reflected in preview dropdown
+
+#### Easing Visualization
+
+- **200x150px canvas** - Dedicated easing curve preview
+- **6 easing functions** - linear, ease_in, ease_out, ease_in_out, quad variants
+- **Grid overlay** - 25% interval reference lines
+- **Labeled axes** - Time (x) and Progress (y) labels
+- **Real-time update** - Curve updates on easing selection
+
+#### Integration
+
+- **✏ Edit button** - Opens timeline editor from preview toolbar
+- **Preview sync** - Play/pause/stop controls affect main window
+- **Widget selection** - Animations apply to selected widget
+- **State persistence** - Window singleton pattern prevents duplicates
+
+### 🧪 Testing
+
+- **11 test cases** - Complete coverage of animation features
+- **MockPreviewWindow** - Testing without Tkinter dependencies
+- **Animation CRUD** - Create, read, update, delete operations
+- **Keyframe operations** - Add, move, delete keyframe tests
+- **Easing functions** - All 6 easing curves validated
+- **Timeline rendering** - Canvas drawing and marker positioning
+
 ## [1.1.0] - 2025-11-17
 
 ### ✨ Nové funkce
