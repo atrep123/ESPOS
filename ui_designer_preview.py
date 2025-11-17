@@ -76,6 +76,10 @@ class VisualPreviewWindow:
         self._zoom_min: float = 0.5
         self._zoom_max: float = 10.0
         
+        # Box select state
+        self.box_select_start = None  # (canvas_x, canvas_y) or None
+        self.box_select_rect = None   # Canvas rectangle ID or None
+        
         # Quick insert components (for Ctrl+1-9 shortcuts)
         self.quick_insert_components = [
             {"type": "label", "name": "Label", "defaults": {"text": "Label", "width": 40, "height": 10}},
@@ -1025,9 +1029,13 @@ class VisualPreviewWindow:
 
             self.refresh()
         else:
+            # Clicked on empty canvas - start box select (unless Shift is held to keep selection)
             if not (event.state & 0x0001):  # Clear selection if Shift not pressed
                 self.selected_widget_idx = None
                 self.selected_widgets = []
+            
+            # Start box select
+            self.box_select_start = (event.x, event.y)
             self.refresh()
     
     def _on_mouse_drag(self, event):
@@ -1038,6 +1046,25 @@ class VisualPreviewWindow:
             except Exception:
                 pass
             return
+        
+        # Box select in progress
+        if self.box_select_start is not None:
+            # Update box select rectangle
+            x1, y1 = self.box_select_start
+            x2, y2 = event.x, event.y
+            
+            # Delete old rectangle if exists
+            if self.box_select_rect is not None:
+                self.canvas.delete(self.box_select_rect)
+            
+            # Draw new rectangle
+            self.box_select_rect = self.canvas.create_rectangle(
+                x1, y1, x2, y2,
+                outline="#00AAFF", width=2, dash=(4, 4),
+                tags="box_select"
+            )
+            return
+        
         if not self.dragging or self.selected_widget_idx is None:
             return
         
@@ -1097,6 +1124,57 @@ class VisualPreviewWindow:
         if self._pan_dragging:
             self._pan_dragging = False
             return
+        
+        # Finish box select
+        if self.box_select_start is not None:
+            x1, y1 = self.box_select_start
+            x2, y2 = event.x, event.y
+            
+            # Normalize rectangle (x1 < x2, y1 < y2)
+            if x1 > x2:
+                x1, x2 = x2, x1
+            if y1 > y2:
+                y1, y2 = y2, y1
+            
+            # Find widgets within rectangle
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if scene:
+                selected_indices = []
+                for idx, widget in enumerate(scene.widgets):
+                    if not widget.visible:
+                        continue
+                    
+                    # Widget bounds in canvas coordinates
+                    wx1 = int(widget.x * self.settings.zoom)
+                    wy1 = int(widget.y * self.settings.zoom)
+                    wx2 = int((widget.x + widget.width) * self.settings.zoom)
+                    wy2 = int((widget.y + widget.height) * self.settings.zoom)
+                    
+                    # Check if widget overlaps with selection rectangle
+                    if not (wx2 < x1 or wx1 > x2 or wy2 < y1 or wy1 > y2):
+                        selected_indices.append(idx)
+                
+                # Update selection (Shift adds to existing, otherwise replaces)
+                if event.state & 0x0001:  # Shift key
+                    for idx in selected_indices:
+                        if idx not in self.selected_widgets:
+                            self.selected_widgets.append(idx)
+                else:
+                    self.selected_widgets = selected_indices
+                
+                if self.selected_widgets:
+                    self.selected_widget_idx = self.selected_widgets[0]
+                else:
+                    self.selected_widget_idx = None
+            
+            # Clean up box select
+            if self.box_select_rect is not None:
+                self.canvas.delete(self.box_select_rect)
+                self.box_select_rect = None
+            self.box_select_start = None
+            self.refresh()
+            return
+        
         if self.dragging:
             # Save state for undo
             self.designer._save_state()
@@ -1384,71 +1462,107 @@ class VisualPreviewWindow:
         update_results()
     
     def _edit_widget_properties(self, widget_idx: int):
-        """Open widget properties editor"""
+        """Open widget properties editor (supports multi-selection)"""
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
             return
         
-        widget = scene.widgets[widget_idx]
+        # Determine which widgets to edit
+        widget_indices = self.selected_widgets if len(self.selected_widgets) > 1 else [widget_idx]
+        widgets = [scene.widgets[i] for i in widget_indices if i < len(scene.widgets)]
+        
+        if not widgets:
+            return
         
         # Clear properties panel
         for child in self.props_frame.winfo_children():
             child.destroy()
         
-        # Add property editors
-        ttk.Label(self.props_frame, text=f"Widget: {widget.type}", 
-                 font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=5)
+        # Show multi-selection header
+        if len(widgets) > 1:
+            ttk.Label(self.props_frame, text=f"{len(widgets)} widgets selected", 
+                     font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=5)
+            ttk.Label(self.props_frame, text="(changes apply to all)", 
+                     font=("Arial", 9, "italic")).pack(anchor=tk.W, pady=2)
+        else:
+            widget = widgets[0]
+            ttk.Label(self.props_frame, text=f"Widget: {widget.type}", 
+                     font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=5)
         
-        # Text property
-        if hasattr(widget, 'text'):
+        # Find common properties
+        common_props = set(dir(widgets[0]))
+        for w in widgets[1:]:
+            common_props &= set(dir(w))
+        
+        # Text property (if common)
+        if 'text' in common_props:
             frame = ttk.Frame(self.props_frame)
             frame.pack(fill=tk.X, pady=2)
             ttk.Label(frame, text="Text:", width=10).pack(side=tk.LEFT)
-            text_var = tk.StringVar(value=widget.text)
+            # Show first widget's value for multi-selection
+            text_value = widgets[0].text if len(widgets) == 1 else ""
+            text_var = tk.StringVar(value=text_value)
             entry = ttk.Entry(frame, textvariable=text_var)
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_widget_text(widget_idx, text_var.get()))
+            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'text', text_var.get()))
 
-        # Label property
-        if hasattr(widget, 'label'):
+        # Label property (if common)
+        if 'label' in common_props:
             frame = ttk.Frame(self.props_frame)
             frame.pack(fill=tk.X, pady=2)
             ttk.Label(frame, text="Label:", width=10).pack(side=tk.LEFT)
-            label_var = tk.StringVar(value=widget.label)
+            label_value = widgets[0].label if len(widgets) == 1 else ""
+            label_var = tk.StringVar(value=label_value)
             entry = ttk.Entry(frame, textvariable=label_var)
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_widget_prop(widget_idx, 'label', label_var.get()))
+            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'label', label_var.get()))
 
-        # Value property
-        if hasattr(widget, 'value'):
+        # Value property (if common)
+        if 'value' in common_props:
             frame = ttk.Frame(self.props_frame)
             frame.pack(fill=tk.X, pady=2)
             ttk.Label(frame, text="Value:", width=10).pack(side=tk.LEFT)
-            value_var = tk.StringVar(value=str(widget.value))
+            value_value = str(widgets[0].value) if len(widgets) == 1 else ""
+            value_var = tk.StringVar(value=value_value)
             entry = ttk.Entry(frame, textvariable=value_var)
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_widget_prop(widget_idx, 'value', value_var.get()))
+            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'value', value_var.get()))
 
-        # Color property
-        if hasattr(widget, 'color'):
+        # Color property (if common)
+        if 'color' in common_props:
             frame = ttk.Frame(self.props_frame)
             frame.pack(fill=tk.X, pady=2)
             ttk.Label(frame, text="Color:", width=10).pack(side=tk.LEFT)
-            color_var = tk.StringVar(value=widget.color)
+            color_value = widgets[0].color if len(widgets) == 1 else ""
+            color_var = tk.StringVar(value=color_value)
             entry = ttk.Entry(frame, textvariable=color_var)
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_widget_prop(widget_idx, 'color', color_var.get()))
+            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'color', color_var.get()))
 
-        # Position and size
+        # Position and size (always available for all widgets)
         ttk.Label(self.props_frame, text="Position & Size:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(10, 5))
         for prop in ['x', 'y', 'width', 'height']:
             frame = ttk.Frame(self.props_frame)
             frame.pack(fill=tk.X, pady=2)
             ttk.Label(frame, text=f"{prop.capitalize()}:", width=10).pack(side=tk.LEFT)
-            var = tk.IntVar(value=getattr(widget, prop))
+            prop_value = getattr(widgets[0], prop) if len(widgets) == 1 else 0
+            var = tk.IntVar(value=prop_value)
             spinbox = ttk.Spinbox(frame, from_=0, to=200, textvariable=var, width=10)
             spinbox.pack(side=tk.LEFT)
-            spinbox.bind("<Return>", lambda e, p=prop, v=var: self._update_widget_prop(widget_idx, p, v.get()))
+            spinbox.bind("<Return>", lambda e, p=prop, v=var: self._update_batch_prop(widget_indices, p, v.get()))
+    
+    def _update_batch_prop(self, widget_indices: list, prop: str, value: Any):
+        """Update property for multiple widgets"""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        for idx in widget_indices:
+            if idx < len(scene.widgets) and hasattr(scene.widgets[idx], prop):
+                setattr(scene.widgets[idx], prop, value)
+        
+        self.designer._save_state()
+        self.refresh()
     
     def _update_widget_text(self, widget_idx: int, text: str):
         """Update widget text"""
@@ -1467,10 +1581,25 @@ class VisualPreviewWindow:
             self.refresh()
     
     def _on_delete_widget(self, event):
-        """Delete selected widget"""
-        if self.selected_widget_idx is not None:
-            scene = self.designer.scenes.get(self.designer.current_scene)
-            if scene:
+        """Delete selected widget(s)"""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        # Delete all selected widgets
+        if self.selected_widgets:
+            # Sort indices in reverse order to avoid index shifting issues
+            for idx in sorted(self.selected_widgets, reverse=True):
+                if idx < len(scene.widgets):
+                    del scene.widgets[idx]
+            
+            self.selected_widget_idx = None
+            self.selected_widgets = []
+            self.designer._save_state()
+            self.refresh()
+        elif self.selected_widget_idx is not None:
+            # Fallback: delete single selected widget
+            if self.selected_widget_idx < len(scene.widgets):
                 del scene.widgets[self.selected_widget_idx]
                 self.selected_widget_idx = None
                 self.designer._save_state()
