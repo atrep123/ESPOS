@@ -375,6 +375,45 @@ class HUDWidget(Widget):
         line = f"{yellow}{msg:{' '}<{ctx.width+2}}{reset}"
         return [line]
 
+class HelpOverlayWidget(Widget):
+    """Compact help overlay with key bindings"""
+    def render(self, ctx: RenderContext) -> List[str]:
+        use_color = ctx.use_color
+        use_unicode = ctx.use_unicode
+        width = ctx.width
+        cyan = Color.CYAN if use_color else ''
+        yellow = Color.YELLOW if use_color else ''
+        reset = Color.RESET if use_color else ''
+        bold = Color.BOLD if use_color else ''
+        
+        # Border chars
+        if use_unicode:
+            tl, tr, bl, br = '┌', '┐', '└', '┘'
+            h, v = '─', '│'
+        else:
+            tl, tr, bl, br = '+', '+', '+', '+'
+            h, v = '-', '|'
+        
+        # Compact help content (2 lines + borders)
+        help_width = min(width, 76)
+        content = [
+            f"{bold}Q{reset}=Quit  {bold}H{reset}=Help  {bold}F10{reset}=HUD  {bold}D{reset}=Demo  {bold}A/B/C{reset}=Buttons  {bold}R/G/Y/W/K{reset}=Colors",
+            f"{bold}M{reset}=Metrics  {bold}E{reset}=Export  {bold}Space{reset}=Pause(future)  {bold}S{reset}=Step(future)"
+        ]
+        
+        lines = []
+        # Top border
+        lines.append(f"{cyan}{tl}{h * help_width}{tr}{reset}")
+        # Content lines
+        for text in content:
+            vis_len = _col_of_index(text, len(text))
+            padding = max(0, help_width - vis_len)
+            lines.append(f"{cyan}{v}{reset}{text}{' ' * padding}{cyan}{v}{reset}")
+        # Bottom border
+        lines.append(f"{cyan}{bl}{h * help_width}{br}{reset}")
+        
+        return lines
+
 # --- Simple file logger ---
 def log_error(message: str) -> None:
     try:
@@ -766,6 +805,7 @@ def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, h
                  use_unicode: bool = True, use_color: bool = True,
                  compute_ms: float = 0.0, sleep_ms: float = 0.0, util: float = 0.0,
                  hud: bool = False,
+                 help_overlay: bool = False,
                  input_src: str = "") -> List[str]:
     """Render one frame using widget composition and return list of ANSI lines."""
     ctx = RenderContext(
@@ -799,6 +839,8 @@ def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, h
         HelpWidget(),
         BottomBorderWidget(),
     ]
+    if help_overlay:
+        widgets.append(HelpOverlayWidget())
     output: List[str] = []
     for w in widgets:
         output.extend(w.render(ctx))
@@ -851,6 +893,7 @@ def main() -> None:
     parser.add_argument('--gamepad', action='store_true', help='Enable pygame-based gamepad input (maps buttons to A/B/C)')
     parser.add_argument('--input-overlay', action='store_true', help='Show small pygame window with clickable A/B/C buttons')
     parser.add_argument('--max-frames', type=int, default=0, help='Exit after rendering N frames (0=run indefinitely)')
+    parser.add_argument('--help-overlay', action='store_true', help='Show help overlay with key bindings (toggle with H)')
     args = parser.parse_args()
 
     # Detect optional pygame for input hints (no hard import)
@@ -966,6 +1009,7 @@ def main() -> None:
     running = True
     auto_demo = False
     hud_enabled = False
+    help_overlay_enabled = args.help_overlay
     
     start_time = time.time()
     last_frame_time = start_time
@@ -1214,6 +1258,8 @@ def main() -> None:
                 elif key == 'd':
                     auto_demo = not auto_demo
                 elif key == 'h':
+                    help_overlay_enabled = not help_overlay_enabled
+                elif key == '\x1b[21~':  # F10
                     hud_enabled = not hud_enabled
                 elif key == 'm':
                     if not metrics_recorder:
@@ -1316,6 +1362,7 @@ def main() -> None:
                                  use_unicode=(not args.no_unicode), use_color=(not args.no_color),
                                  compute_ms=compute_ms_prev, sleep_ms=sleep_ms_prev, util=util_prev,
                                  hud=hud_enabled,
+                                 help_overlay=help_overlay_enabled,
                                  input_src=current_input_src)
 
             # Cache footer index once
