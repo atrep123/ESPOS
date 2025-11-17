@@ -6,7 +6,6 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from ui_designer import UIDesigner, WidgetType
 
 
 def test_handle_hitbox_tolerance():
@@ -105,7 +104,7 @@ def test_hover_color_brightness():
     
     brightness_increase = ((hover_green - normal_green) / normal_green) * 100
     
-    print(f"✅ Hover color brightness:")
+    print("✅ Hover color brightness:")
     print(f"   Normal: {normal_color} (green={normal_green})")
     print(f"   Hover: {hover_color} (green={hover_green}, +{brightness_increase:.1f}%)")
 
@@ -125,7 +124,7 @@ def test_total_hitbox_area():
     
     area_ratio = clickable_area / visual_area
     
-    print(f"✅ Total clickable area:")
+    print("✅ Total clickable area:")
     print(f"   Visual: {visual_size}x{visual_size} = {visual_area}px²")
     print(f"   Hitbox: {total_hitbox}x{total_hitbox} = {clickable_area}px²")
     print(f"   Ratio: {area_ratio:.1f}x easier to click!")

@@ -473,6 +473,114 @@ class VisualPreviewWindow:
         self.designer._save_state()
         self._invalidate_cache()
         self.refresh()
+        
+        # Show Quick Tips on first run
+        self.root.after(500, self._check_and_show_quick_tips)
+    
+    def _check_and_show_quick_tips(self):
+        """Check if Quick Tips should be shown (first run)"""
+        import json
+        import tempfile
+        
+        # Settings file in temp directory
+        settings_dir = os.path.join(tempfile.gettempdir(), "esp32os_designer")
+        os.makedirs(settings_dir, exist_ok=True)
+        settings_file = os.path.join(settings_dir, "settings.json")
+        
+        # Load settings
+        settings = {}
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+            except Exception:
+                pass
+        
+        # Check if tips should be shown
+        if settings.get("hide_quick_tips", False):
+            return
+        
+        # Show Quick Tips dialog
+        self._show_quick_tips_dialog(settings_file)
+    
+    def _show_quick_tips_dialog(self, settings_file):
+        """Display Quick Tips dialog for first-time users"""
+        import json
+        
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Quick Tips - UI Designer")
+        dialog.geometry("500x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Header
+        header = ttk.Frame(dialog)
+        header.pack(fill=tk.X, padx=20, pady=10)
+        ttk.Label(header, text="🎨 UI Designer Quick Tips", 
+                 font=("Arial", 14, "bold")).pack()
+        
+        # Tips content
+        tips_frame = ttk.Frame(dialog)
+        tips_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        tips_text = tk.Text(tips_frame, wrap=tk.WORD, font=("Arial", 10), 
+                           height=15, width=50, bg="#f9f9f9")
+        tips_text.pack(fill=tk.BOTH, expand=True)
+        
+        tips_content = """Základní ovládání:
+
+🖱️ Myš:
+• Kliknutím vyberte widget
+• Shift+klik přidá do výběru
+• Tažení na prázdném plátně = box select
+• Tažení handlu = změna velikosti
+• Dvojklik = editace vlastností
+
+⌨️ Klávesnice:
+• Ctrl+Shift+A = Rychlé přidání komponenty
+• Šipky = posun o 1px (Shift = 8px)
+• Delete = smazání vybraných widgetů
+• Ctrl+C/V = kopírovat/vložit
+• Ctrl+Z/Y = zpět/vpřed
+• Space+tažení = posun plátna
+
+🔍 Zoom:
+• Ctrl+kolečko myši = zoom
+• Dropdown v toolbaru
+
+📤 Export:
+• PNG export s @1x-@4x scalováním
+• Možnost Scene-only nebo With-guides
+• Nastavení se pamatuje
+
+💡 Tip: Všechny funkce najdete v menu Help > Keyboard Shortcuts"""
+        
+        tips_text.insert("1.0", tips_content)
+        tips_text.configure(state="disabled")
+        
+        # Checkbox and buttons
+        bottom_frame = ttk.Frame(dialog)
+        bottom_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        dont_show_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(bottom_frame, text="Nezobrazovat znovu", 
+                       variable=dont_show_var).pack(anchor=tk.W, pady=5)
+        
+        btn_frame = ttk.Frame(bottom_frame)
+        btn_frame.pack(fill=tk.X)
+        
+        def close_dialog():
+            # Save preference
+            if dont_show_var.get():
+                try:
+                    with open(settings_file, 'w') as f:
+                        json.dump({"hide_quick_tips": True}, f)
+                except Exception:
+                    pass
+            dialog.destroy()
+        
+        ttk.Button(btn_frame, text="Zavřít", command=close_dialog, 
+                  width=15).pack(side=tk.RIGHT, padx=5)
     
     def _invalidate_cache(self):
         """Invalidate render caches"""
