@@ -4,17 +4,16 @@ Visual UI Designer for ESP32 Simulator
 Drag-and-drop widget editor with live preview and code generation
 """
 
-import sys
-import json
 import copy
-from typing import List, Dict, Optional, Tuple, Any, Iterable, TypedDict, Union, cast
-from dataclasses import dataclass, asdict, field
+import json
+import os
+import sys
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
-import os
-from pathlib import Path
 from html import escape
-
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict, Union, cast
 
 PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py')
 
@@ -201,6 +200,22 @@ class SceneConfig:
     theme: str = "default"
     contrast_lock: bool = True
 
+# Backward-compatibility shim for tests expecting `Scene(name, width, height)`
+# Provides a lightweight container with the same public attributes used by tests.
+class Scene:
+    def __init__(self, name: str, width: int, height: int, bg_color: str = "black"):
+        self.name = name
+        self.width = int(width)
+        self.height = int(height)
+        self.bg_color = bg_color
+        # Defaults aligned with SceneConfig
+        self.base_width = self.width
+        self.base_height = self.height
+        self.theme = "default"
+        self.contrast_lock = True
+        # Mutable list expected by tests for direct append
+        self.widgets: List[WidgetConfig] = []
+
 
 class UIDesigner:
     """Visual UI designer with layout editor"""
@@ -292,11 +307,27 @@ class UIDesigner:
     def _save_state(self):
         """Save current state for undo"""
         if self.current_scene and self.current_scene in self.scenes:
-            state = json.dumps(asdict(self.scenes[self.current_scene]))
+            scene_obj = self.scenes[self.current_scene]
+            payload = asdict(scene_obj)
+            state = json.dumps(payload)
             self.undo_stack.append(state)
             if len(self.undo_stack) > self.max_undo:
                 self.undo_stack.pop(0)
             self.redo_stack.clear()
+            # Lightweight diff summary (store alongside state for history preview)
+            try:
+                if not hasattr(self, '_history_meta'):
+                    self._history_meta = []  # parallel to undo_stack indices
+                diff_summary = {
+                    'widgets': len(payload.get('widgets', [])),
+                    'name': payload.get('name'),
+                    'ts': datetime.now().isoformat(timespec='seconds')
+                }
+                self._history_meta.append(diff_summary)
+                if len(self._history_meta) > self.max_undo:
+                    self._history_meta.pop(0)
+            except Exception:
+                pass
             # Autosave snapshot (undo-safe)
             try:
                 backup_dir = Path.home() / ".esp32os" / "designer_backups"
@@ -317,6 +348,12 @@ class UIDesigner:
         # Save current state to redo
         current_state = json.dumps(asdict(self.scenes[self.current_scene]))
         self.redo_stack.append(current_state)
+        # Move meta entry to redo_meta for potential redo preview
+        if hasattr(self, '_history_meta'):
+            if not hasattr(self, '_redo_meta'):
+                self._redo_meta = []
+            if self._history_meta:
+                self._redo_meta.append(self._history_meta.pop())
         
         # Restore previous state
         prev_state = json.loads(self.undo_stack.pop())
@@ -338,6 +375,11 @@ class UIDesigner:
         # Save current state to undo
         current_state = json.dumps(asdict(self.scenes[self.current_scene]))
         self.undo_stack.append(current_state)
+        if hasattr(self, '_redo_meta') and self._redo_meta:
+            if not hasattr(self, '_history_meta'):
+                self._history_meta = []
+            # Restore meta back to history
+            self._history_meta.append(self._redo_meta.pop())
         
         # Restore next state
         next_state = json.loads(self.redo_stack.pop())
@@ -350,6 +392,36 @@ class UIDesigner:
             bg_color=next_state.get('bg_color', 'black')
         )
         return True
+
+    def list_history(self, limit: int = 15) -> List[Dict[str, Any]]:
+        """Return recent undo history metadata (most recent last).
+
+        Each entry contains: index, scene name, widget count, timestamp.
+        Does not deserialize full states (keeps operation lightweight).
+        """
+        if not hasattr(self, '_history_meta'):
+            return []
+        items = self._history_meta[-limit:]
+        start_index = len(self._history_meta) - len(items)
+        return [
+            {
+                'i': start_index + idx,
+                'scene': meta.get('name'),
+                'widgets': meta.get('widgets'),
+                'ts': meta.get('ts')
+            }
+            for idx, meta in enumerate(items)
+        ]
+
+    def history_snapshot(self, index: int) -> Optional[Dict[str, Any]]:
+        """Return deserialized snapshot of a given history index (without altering stacks)."""
+        if index < 0 or index >= len(self.undo_stack):
+            return None
+        try:
+            data = json.loads(self.undo_stack[index])
+            return data
+        except Exception:
+            return None
     
     def snap_position(self, x: int, y: int) -> Tuple[int, int]:
         """Snap coordinates to grid"""
@@ -945,6 +1017,13 @@ class UIDesigner:
             self.current_scene = list(self.scenes.keys())[0]
         
         print(f"📂 Design loaded: {filename}")
+        # Record path + mtime for potential auto-reload watcher
+        try:
+            self._last_loaded_json = filename
+            self._json_watch_mtime = os.path.getmtime(filename)
+        except Exception:
+            self._last_loaded_json = None
+            self._json_watch_mtime = None
     
     def generate_python_code(self, scene_name: Optional[str] = None) -> str:
         """Generate Python code for scene"""
@@ -1561,7 +1640,8 @@ def _auto_preflight_and_export(designer: 'UIDesigner', json_path: str) -> None:
         out_png = base + '.png'
         designer.export_to_html(out_html)
         try:
-            import subprocess, sys as _sys
+            import subprocess
+            import sys as _sys
             cmd = [
                 _sys.executable,
                 PREVIEW_SCRIPT,
@@ -2882,7 +2962,8 @@ if __name__ == '__main__':
         except Exception:
             pass
         try:
-            import subprocess, sys as _sys
+            import subprocess
+            import sys as _sys
             cmd = [
                 _sys.executable,
                 PREVIEW_SCRIPT,
@@ -2930,7 +3011,8 @@ if __name__ == '__main__':
         except Exception:
             pass
         try:
-            import subprocess, sys as _sys
+            import subprocess
+            import sys as _sys
             cmd = [
                 _sys.executable,
                 PREVIEW_SCRIPT,

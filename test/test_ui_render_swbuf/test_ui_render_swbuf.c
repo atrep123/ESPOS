@@ -1,5 +1,6 @@
 #include <string.h>
 #include <unity.h>
+#include "esp_err.h"
 
 #include "display_config.h"
 #include "ui_render_swbuf.h"

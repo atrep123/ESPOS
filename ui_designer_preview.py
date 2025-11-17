@@ -5,6 +5,7 @@ Real-time graphical preview with mouse interaction and export
 """
 
 import os
+import time
 
 try:
     import tkinter as tk  # type: ignore
@@ -19,6 +20,7 @@ if TK_AVAILABLE:
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
+from svg_export import export_scene_to_svg
 from ui_animations import AnimationDesigner
 from ui_components_library_ascii import (
     create_alert_dialog_ascii,
@@ -42,6 +44,10 @@ from ui_components_library_ascii import (
     create_vertical_menu_ascii,
 )
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
+from ui_template_manager import TemplateManagerWindow
+
+# Public headless indicator for tests
+HEADLESS: bool = (os.environ.get("ESP32OS_HEADLESS") == "1" or os.environ.get("PYTEST_CURRENT_TEST") is not None or not TK_AVAILABLE)
 
 
 @dataclass
@@ -58,6 +64,18 @@ class PreviewSettings:
     pixel_perfect: bool = True
     nudge_distance: int = 1  # Normal arrow nudge distance (px)
     nudge_shift_distance: int = 8  # Shift+arrow nudge distance (px)
+    # Alignment guides
+    snap_to_widgets: bool = True  # Snap to other widget edges
+    snap_distance: int = 4  # Snap tolerance in pixels
+    show_alignment_guides: bool = True  # Show alignment guide lines
+    # Debug overlay
+    show_debug_overlay: bool = False
+    # Auto JSON hot-reload of last loaded design file
+    auto_reload_json: bool = False
+    # Performance budgeting
+    performance_budget_enabled: bool = True
+    performance_budget_ms: float = 16.7  # Target frame time (~60 FPS)
+    performance_warn_ms: float = 25.0    # Soft warning threshold
 
 
 class VisualPreviewWindow:
@@ -70,6 +88,16 @@ class VisualPreviewWindow:
         # UX helpers
         self._show_hints: bool = True
         self._show_guides: bool = True
+        # Perf metrics
+        self._last_render_ms: float = 0.0
+        # Animation playback speed multiplier (1.0 = normal)
+        self._anim_speed_multiplier: float = 1.0
+        # JSON auto-reload watcher state
+        self._json_watch_job = None
+        self._json_watch_interval_ms = 1200  # ms between checks
+        # Perf budget state
+        self._perf_over_budget: bool = False
+        self._perf_soft_warn: bool = False
         # Pan/zoom runtime state
         self._pan_enabled: bool = False  # Space held
         self._pan_dragging: bool = False
@@ -132,6 +160,9 @@ class VisualPreviewWindow:
         
         # Handle hover state for visual feedback
         self.hovered_handle: Optional[str] = None
+        
+        # Alignment guides state
+        self.alignment_guides: List[Tuple[str, int]] = []  # [(type, position), ...] type: 'v'|'h'
         
         # Clipboard for copy/paste
         self.clipboard: List[WidgetConfig] = []
@@ -247,6 +278,7 @@ class VisualPreviewWindow:
         
         # Export buttons
         ttk.Button(toolbar, text="📷 Export PNG", command=self._export_png).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="🖼️ Export SVG", command=self._export_svg).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="💾 Export JSON", command=self._export_json).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="📝 Export C", command=self._export_c).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="📄 Export WidgetConfig", command=self._export_widgetconfig).pack(side=tk.LEFT, padx=5)
@@ -270,6 +302,10 @@ class VisualPreviewWindow:
         ttk.Button(toolbar, text="⏸", width=3, command=self._on_anim_pause).pack(side=tk.LEFT, padx=1)
         ttk.Button(toolbar, text="⏹", width=3, command=self._on_anim_stop).pack(side=tk.LEFT, padx=1)
         ttk.Button(toolbar, text="✏", width=3, command=self._open_animation_editor).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="⤴", width=3, command=self._on_anim_step).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="½x", width=3, command=self._on_anim_speed_down).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="2x", width=3, command=self._on_anim_speed_up).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="1x", width=3, command=self._on_anim_speed_reset).pack(side=tk.LEFT, padx=1)
         
         # Background color
         ttk.Button(toolbar, text="🎨 BG Color", 
@@ -629,6 +665,8 @@ class VisualPreviewWindow:
         self.root.bind("<Right>", lambda e: self._on_nudge(e, 1, 0))
         self.root.bind("<Up>", lambda e: self._on_nudge(e, 0, -1))
         self.root.bind("<Down>", lambda e: self._on_nudge(e, 0, 1))
+        # Toggle Debug Overlay
+        self.root.bind("<F12>", self._toggle_debug_overlay)
         
         # Quick Add Search dialog (Ctrl+Shift+A)
         self.root.bind("<Control-Shift-A>", self._open_quick_add_search)
@@ -661,6 +699,7 @@ class VisualPreviewWindow:
             return
 
         # Determine whether to re-render image cache (also detect content changes)
+        t0 = time.perf_counter()
         widget_count = len(scene.widgets)
         current_sig = self._compute_scene_signature(scene)
         need_render = (
@@ -705,8 +744,21 @@ class VisualPreviewWindow:
             if self._show_hints:
                 self._draw_hints_overlay()
             # Magnetic alignment guides (only during drag/resize to reduce clutter)
-            if self._show_guides and self.dragging and self.selected_widget_idx is not None:
+            if self.settings.show_alignment_guides and self.dragging and self.selected_widget_idx is not None:
+                # Prefer built-in overlay computation to avoid duplication
                 self._draw_guides_overlay()
+            # Draw selection bounds when debug overlay is on
+            if getattr(self.settings, 'show_debug_overlay', False):
+                self._draw_bounds_selected_overlay()
+            # Debug overlay with live info
+            if getattr(self.settings, 'show_debug_overlay', False):
+                self._draw_debug_overlay()
+
+        # Perf end
+        self._last_render_ms = (time.perf_counter() - t0) * 1000.0
+        if self.settings.performance_budget_enabled:
+            self._perf_over_budget = self._last_render_ms > self.settings.performance_budget_ms
+            self._perf_soft_warn = self._last_render_ms > self.settings.performance_warn_ms
 
         # Update status bar with live hints
         self._update_status_bar()
@@ -722,6 +774,9 @@ class VisualPreviewWindow:
                 self._zoom_var.set(f"{self.settings.zoom:.1f}x")
             except Exception:
                 pass
+        # Schedule JSON watcher if enabled
+        if self.settings.auto_reload_json:
+            self._schedule_json_watch()
     
     def _draw_grid(self, draw: ImageDraw.ImageDraw, width: int, height: int):
         """Draw grid on canvas"""
@@ -743,6 +798,9 @@ class VisualPreviewWindow:
         
         widget_count = len(scene.widgets)
         parts = [f"Widgets: {widget_count}", f"Zoom: {self.settings.zoom:.1f}x"]
+        if hasattr(self, '_anim_speed_multiplier'):
+            state = '▶' if self.playing else '⏸'
+            parts.append(f"Anim {state} {self._anim_speed_multiplier:.2f}x")
         
         # Selection info
         if self.selected_widget_idx is not None and self.selected_widget_idx < len(scene.widgets):
@@ -758,7 +816,49 @@ class VisualPreviewWindow:
         if hint:
             parts.append(f"💡 {hint}")
         
+        # Performance budget indicators
+        if getattr(self.settings, 'performance_budget_enabled', False):
+            if getattr(self, '_perf_soft_warn', False):
+                parts.append(f"Perf WARN {self._last_render_ms:.1f}ms")
+            elif getattr(self, '_perf_over_budget', False):
+                parts.append(f"Perf {self._last_render_ms:.1f}>{self.settings.performance_budget_ms:.1f}ms")
         self.status_bar.configure(text=" | ".join(parts))
+
+    # ---------------- JSON Hot-Reload Watcher -----------------
+    def _schedule_json_watch(self):
+        """Schedule polling for JSON design file changes (if enabled)."""
+        if HEADLESS or not hasattr(self, 'root'):
+            return
+        if not self.settings.auto_reload_json:
+            return
+        if self._json_watch_job is None:
+            self._json_watch_job = self.root.after(self._json_watch_interval_ms, self._poll_json_watch)
+
+    def _poll_json_watch(self):
+        """Poll last loaded JSON file for external modifications."""
+        self._json_watch_job = None
+        if not self.settings.auto_reload_json or HEADLESS or not hasattr(self, 'root'):
+            return
+        path = getattr(self.designer, '_last_loaded_json', None)
+        if path and os.path.isfile(path):
+            try:
+                mtime = os.path.getmtime(path)
+                last = getattr(self.designer, '_json_watch_mtime', None)
+                if last is not None and mtime > last:
+                    # Update mtime first to avoid repeat reloads
+                    self.designer._json_watch_mtime = mtime
+                    print(f"🔄 JSON file changed, reloading: {os.path.basename(path)}")
+                    try:
+                        self.designer.load_from_json(path)
+                        self._cache_valid = False
+                        self.refresh(force=True)
+                    except Exception as e:
+                        print(f"⚠️ Auto-reload failed: {e}")
+            except Exception:
+                pass
+        # Reschedule if still enabled
+        if self.settings.auto_reload_json:
+            self._json_watch_job = self.root.after(self._json_watch_interval_ms, self._poll_json_watch)
     
     def _get_context_hint(self) -> str:
         """Get contextual hint based on current state."""
@@ -995,6 +1095,178 @@ class VisualPreviewWindow:
                 tags=f"handle_{handle_type}"
             )
     
+    def _find_alignment_guides(self, widget: WidgetConfig) -> List[Tuple[str, int, str]]:
+        """
+        Find nearby alignment opportunities with other widgets.
+        Returns list of (direction, position, label) where direction is 'h' or 'v'.
+        """
+        if not self.settings.snap_to_widgets:
+            return []
+        
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return []
+        
+        guides = []
+        threshold = self.settings.snap_distance
+        
+        # Widget edges to check
+        w_left = widget.x
+        w_right = widget.x + widget.width
+        w_top = widget.y
+        w_bottom = widget.y + widget.height
+        w_center_x = widget.x + widget.width // 2
+        w_center_y = widget.y + widget.height // 2
+        
+        # Check against all other widgets
+        for idx, other in enumerate(scene.widgets):
+            if idx == self.selected_widget_idx:
+                continue  # Skip self
+            
+            o_left = other.x
+            o_right = other.x + other.width
+            o_top = other.y
+            o_bottom = other.y + other.height
+            o_center_x = other.x + other.width // 2
+            o_center_y = other.y + other.height // 2
+            
+            # Vertical guides (aligned horizontally)
+            if abs(w_left - o_left) <= threshold:
+                guides.append(('v', o_left, 'left'))
+            if abs(w_left - o_right) <= threshold:
+                guides.append(('v', o_right, 'left-to-right'))
+            if abs(w_right - o_right) <= threshold:
+                guides.append(('v', o_right, 'right'))
+            if abs(w_right - o_left) <= threshold:
+                guides.append(('v', o_left, 'right-to-left'))
+            if abs(w_center_x - o_center_x) <= threshold:
+                guides.append(('v', o_center_x, 'center-x'))
+            
+            # Horizontal guides (aligned vertically)
+            if abs(w_top - o_top) <= threshold:
+                guides.append(('h', o_top, 'top'))
+            if abs(w_top - o_bottom) <= threshold:
+                guides.append(('h', o_bottom, 'top-to-bottom'))
+            if abs(w_bottom - o_bottom) <= threshold:
+                guides.append(('h', o_bottom, 'bottom'))
+            if abs(w_bottom - o_top) <= threshold:
+                guides.append(('h', o_top, 'bottom-to-top'))
+            if abs(w_center_y - o_center_y) <= threshold:
+                guides.append(('h', o_center_y, 'center-y'))
+        
+        return guides
+    
+    def _apply_widget_snapping(self, widget: WidgetConfig, new_x: int, new_y: int) -> Tuple[int, int]:
+        """
+        Apply magnetic snapping to widget edges.
+        Returns adjusted (x, y) coordinates.
+        """
+        # Temporarily set position to detect guides
+        old_x, old_y = widget.x, widget.y
+        widget.x = new_x
+        widget.y = new_y
+        
+        guides = self._find_alignment_guides(widget)
+        
+        # Restore original position
+        widget.x = old_x
+        widget.y = old_y
+        
+        # Apply snapping
+        snapped_x, snapped_y = new_x, new_y
+        
+        for direction, position, label in guides:
+            if direction == 'v':  # Vertical guide, snap X
+                if 'left' in label:
+                    snapped_x = position
+                elif 'right' in label:
+                    snapped_x = position - widget.width
+                elif 'center' in label:
+                    snapped_x = position - widget.width // 2
+            elif direction == 'h':  # Horizontal guide, snap Y
+                if 'top' in label:
+                    snapped_y = position
+                elif 'bottom' in label:
+                    snapped_y = position - widget.height
+                elif 'center' in label:
+                    snapped_y = position - widget.height // 2
+        
+        # Update alignment guides for rendering
+        widget.x = snapped_x
+        widget.y = snapped_y
+        self.alignment_guides = self._find_alignment_guides(widget)
+        widget.x = old_x
+        widget.y = old_y
+        
+        return snapped_x, snapped_y
+    
+    
+
+    def _toggle_debug_overlay(self, event=None):
+        """Toggle the on-canvas debug overlay (F12)."""
+        try:
+            self.settings.show_debug_overlay = not getattr(self.settings, 'show_debug_overlay', False)
+            self.refresh(force=False)
+        except Exception:
+            pass
+
+    def _draw_debug_overlay(self):
+        """Draw a compact debug overlay with selection and scene info."""
+        try:
+            z = self.settings.zoom
+            x0, y0 = 8, int(self.designer.height * z) - 90
+            x1, y1 = x0 + 360, y0 + 82
+            self.canvas.create_rectangle(x0, y0, x1, y1, fill="#000", outline="#555", stipple="gray25")
+            lines = []
+            # Scene info
+            sc = self.designer.scenes.get(self.designer.current_scene) if self.designer.current_scene else None
+            widget_count = len(sc.widgets) if sc else 0
+            lines.append(f"Scene: {self.designer.current_scene or '-'}  Size: {self.designer.width}x{self.designer.height}  Zoom: {z:.1f}x  Widgets: {widget_count}")
+            # Selection info
+            if self.selected_widget_idx is not None and sc and 0 <= self.selected_widget_idx < len(sc.widgets):
+                w = sc.widgets[self.selected_widget_idx]
+                lines.append(f"Selected[{self.selected_widget_idx}]: {w.type}  pos=({w.x},{w.y}) size={w.width}x{w.height} z={w.z_index} vis={'1' if w.visible else '0'} en={'1' if w.enabled else '0'}")
+            else:
+                lines.append("Selected: none")
+            # Guides hint
+            lines.append(f"Guides: {'on' if self.settings.show_alignment_guides else 'off'}  Grid: {'on' if self.settings.grid_enabled else 'off'} Snap: {'on' if self.settings.snap_enabled else 'off'}  Render: {self._last_render_ms:.1f} ms")
+            # Paint
+            ty = y0 + 10
+            for ln in lines:
+                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill="#fff")
+                ty += 14
+        except Exception:
+            pass
+
+    def _draw_alignment_guides(self):
+        """Backwards-compatible shim for tests; delegates to _draw_guides_overlay."""
+        try:
+            self._draw_guides_overlay()
+        except Exception:
+            pass
+
+    def _draw_bounds_selected_overlay(self):
+        """Draw thin outlines for selected widgets (debug-only overlay)."""
+        try:
+            if self.selected_widget_idx is None and not self.selected_widgets:
+                return
+            scene = self.designer.scenes.get(self.designer.current_scene) if self.designer.current_scene else None
+            if not scene:
+                return
+            z = self.settings.zoom
+            indices = self.selected_widgets or ([self.selected_widget_idx] if self.selected_widget_idx is not None else [])
+            for idx in indices:
+                if 0 <= idx < len(scene.widgets):
+                    w = scene.widgets[idx]
+                    x = int(w.x * z)
+                    y = int(w.y * z)
+                    rw = int(w.width * z)
+                    rh = int(w.height * z)
+                    self.canvas.create_rectangle(x, y, x + rw, y + rh, outline="#66FF66", width=1, dash=(2,2))
+                    self.canvas.create_text(x + 2, y + 2, anchor=tk.NW, text=f"#{idx} z={getattr(w,'z_index',0)}", fill="#66FF66")
+        except Exception:
+            pass
+    
     def _get_color(self, color_name: str) -> Tuple[int, int, int]:
         """Convert color name to RGB tuple"""
         colors = {
@@ -1226,6 +1498,15 @@ class VisualPreviewWindow:
                 else:
                     new_x = self.drag_origin[0]
 
+            # Apply snap-to-grid
+            if self.settings.snap_enabled:
+                new_x = round(new_x / self.settings.snap_size) * self.settings.snap_size
+                new_y = round(new_y / self.settings.snap_size) * self.settings.snap_size
+            
+            # Apply snap-to-widget (magnetic alignment)
+            if self.settings.snap_to_widgets:
+                new_x, new_y = self._apply_widget_snapping(widget, new_x, new_y)
+
             widget.x = new_x
             widget.y = new_y
             
@@ -1409,6 +1690,35 @@ class VisualPreviewWindow:
         self._anim_values.clear()
         self.refresh()
     
+    # Advanced animation playback controls
+    def _on_anim_step(self):
+        """Advance animations by one frame (16ms * speed)."""
+        if not self.selected_anim:
+            return
+        delta = 0.016 * self._anim_speed_multiplier
+        vals = self.anim.update_animations(delta)
+        self._anim_values = vals
+        self._widget_overlays.clear()
+        for anim_name, v in vals.items():
+            anim = self.anim.animations.get(anim_name)
+            if anim and anim.widget_id is not None:
+                cur = self._widget_overlays.get(anim.widget_id, {})
+                cur.update(v)
+                self._widget_overlays[anim.widget_id] = cur
+        self.refresh(force=True)
+
+    def _on_anim_speed_down(self):
+        self._anim_speed_multiplier = max(0.1, self._anim_speed_multiplier / 2.0)
+        self._update_status_bar()
+
+    def _on_anim_speed_up(self):
+        self._anim_speed_multiplier = min(4.0, self._anim_speed_multiplier * 2.0)
+        self._update_status_bar()
+
+    def _on_anim_speed_reset(self):
+        self._anim_speed_multiplier = 1.0
+        self._update_status_bar()
+    
     def _on_nudge_distance_change(self):
         """Update nudge distance setting"""
         self.settings.nudge_distance = self.nudge_distance_var.get()
@@ -1437,13 +1747,6 @@ class VisualPreviewWindow:
             self.template_manager_window = TemplateManagerWindow(self.root, self)
         else:
             self.template_manager_window.lift()
-    
-    def _open_icon_palette(self):
-        """Open icon palette window"""
-        if not hasattr(self, 'icon_palette_window') or not self.icon_palette_window.winfo_exists():
-            self.icon_palette_window = IconPaletteWindow(self.root, self)
-        else:
-            self.icon_palette_window.lift()
     
     def _open_icon_palette(self):
         """Open icon palette window"""
@@ -1983,6 +2286,25 @@ class VisualPreviewWindow:
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed: {e}")
 
+    def _export_svg(self):
+        """Export current scene as SVG vector file."""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            messagebox.showerror("Export Error", "No scene to export")
+            return
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".svg",
+            filetypes=[("SVG files", "*.svg"), ("All files", "*.*")],
+            initialfile=f"{self.designer.current_scene}.svg"
+        )
+        if not filename:
+            return
+        try:
+            export_scene_to_svg(scene, filename, scale=1.0)
+            messagebox.showinfo("Export Complete", f"Saved SVG to: {filename}")
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed: {e}")
+
     def _open_ascii_preview(self):
         """Open live ASCII preview window with enhanced styling"""
         scene = self.designer.scenes.get(self.designer.current_scene)
@@ -2058,17 +2380,38 @@ class VisualPreviewWindow:
             pass
         
     def _refresh_ascii_preview(self, text_widget, scene):
-        """Refresh ASCII preview with syntax highlighting"""
+        """Refresh ASCII preview with syntax highlighting (robust resolution).
+
+        Previously this assumed a valid scene object was always passed. Some
+        test/code paths supply None or a scene key; handle those gracefully and
+        show a fallback message if no scene can be resolved instead of raising.
+        """
+        # Resolve scene if a key or None was provided
+        try:
+            if scene is None:
+                if getattr(self.designer, "current_scene", None):
+                    scene = self.designer.scenes.get(self.designer.current_scene)
+            elif isinstance(scene, str):  # scene name key
+                scene = self.designer.scenes.get(scene)
+        except Exception:
+            scene = None
+
         text_widget.config(state=tk.NORMAL)
         text_widget.delete("1.0", tk.END)
-        
-        # Render ASCII lines
-        ascii_lines = self._render_ascii_scene(scene)
-        
-        # Insert with highlighting
-        for line_num, line in enumerate(ascii_lines, 1):
-            for char_num, char in enumerate(line):
-                # Determine tag based on character
+
+        if not scene:
+            # Fallback content when no scene available
+            text_widget.insert(tk.END, "[no scene]")
+            text_widget.config(state=tk.DISABLED)
+            return
+
+        try:
+            ascii_lines = self._render_ascii_scene(scene)
+        except Exception as e:
+            ascii_lines = [f"[ascii render error: {e.__class__.__name__}]"]
+
+        for line in ascii_lines:
+            for char in line:
                 tag = None
                 if char in "┌┐└┘─│":
                     tag = "border"
@@ -2080,14 +2423,13 @@ class VisualPreviewWindow:
                     tag = "fill_icon"
                 elif char.isalnum():
                     tag = "text_label"
-                
+
                 if tag:
                     text_widget.insert(tk.END, char, tag)
                 else:
                     text_widget.insert(tk.END, char)
-            
             text_widget.insert(tk.END, "\n")
-        
+
         text_widget.config(state=tk.DISABLED)
     
     def _copy_ascii_to_clipboard(self, text_widget):
@@ -2230,66 +2572,66 @@ class VisualPreviewWindow:
 
     def _render_ascii_scene(self, scene, use_cache=True):
         """Render the scene as ASCII art with enhanced visuals and caching"""
-        # Use cache if valid (compare by content signature, not just count)
-        if use_cache and self._ascii_cache_valid and self._ascii_cache is not None:
-            current_sig = self._compute_scene_signature(scene)
-            if self._last_ascii_signature == current_sig:
-                return self._ascii_cache
-        
-        # Create a 2D buffer
-        buf = [[" " for _ in range(scene.width)] for _ in range(scene.height)]
-        
-        # Draw each widget with borders and enhanced styling (use unified iteration)
+        if self._can_return_cached_ascii(scene, use_cache):
+            return self._ascii_cache  # type: ignore
+        buf = self._init_ascii_buffer(scene)
         for _, w, _, _ in self._iter_visible_widgets(scene):
-            
-            # Determine widget character/style based on type
-            fill_char = self._get_widget_fill_char(w)
-            
-            # Draw widget area
-            for y in range(w.y, min(w.y + w.height, scene.height)):
-                for x in range(w.x, min(w.x + w.width, scene.width)):
-                    # Draw borders for widgets >= 3x3
-                    if w.width >= 3 and w.height >= 3:
-                        is_top = (y == w.y)
-                        is_bottom = (y == w.y + w.height - 1)
-                        is_left = (x == w.x)
-                        is_right = (x == w.x + w.width - 1)
-                        
-                        if is_top and is_left:
-                            buf[y][x] = "┌"
-                        elif is_top and is_right:
-                            buf[y][x] = "┐"
-                        elif is_bottom and is_left:
-                            buf[y][x] = "└"
-                        elif is_bottom and is_right:
-                            buf[y][x] = "┘"
-                        elif is_top or is_bottom:
-                            buf[y][x] = "─"
-                        elif is_left or is_right:
-                            buf[y][x] = "│"
-                        else:
-                            buf[y][x] = fill_char
+            self._draw_widget_ascii(scene, buf, w)
+        lines = self._finalize_ascii_buffer(scene, buf)
+        return lines
+
+    def _can_return_cached_ascii(self, scene, use_cache: bool) -> bool:
+        if not use_cache:
+            return False
+        if not (self._ascii_cache_valid and self._ascii_cache is not None):
+            return False
+        current_sig = self._compute_scene_signature(scene)
+        return self._last_ascii_signature == current_sig
+
+    def _init_ascii_buffer(self, scene) -> List[List[str]]:
+        return [[" " for _ in range(scene.width)] for _ in range(scene.height)]
+
+    def _draw_widget_ascii(self, scene, buf: List[List[str]], w: WidgetConfig) -> None:
+        fill_char = self._get_widget_fill_char(w)
+        max_y = min(w.y + w.height, scene.height)
+        max_x = min(w.x + w.width, scene.width)
+        large = (w.width >= 3 and w.height >= 3)
+        for y in range(w.y, max_y):
+            is_top = (y == w.y)
+            is_bottom = (y == w.y + w.height - 1)
+            for x in range(w.x, max_x):
+                if large:
+                    is_left = (x == w.x)
+                    is_right = (x == w.x + w.width - 1)
+                    if is_top and is_left:
+                        buf[y][x] = "┌"
+                    elif is_top and is_right:
+                        buf[y][x] = "┐"
+                    elif is_bottom and is_left:
+                        buf[y][x] = "└"
+                    elif is_bottom and is_right:
+                        buf[y][x] = "┘"
+                    elif is_top or is_bottom:
+                        buf[y][x] = "─"
+                    elif is_left or is_right:
+                        buf[y][x] = "│"
                     else:
-                        # Small widgets: just fill
                         buf[y][x] = fill_char
-            
-            # Draw text label if widget has text and is large enough
-            if hasattr(w, "text") and w.text and w.width >= len(w.text) + 2 and w.height >= 3:
-                text_x = w.x + 1
-                text_y = w.y + w.height // 2
-                if text_y < scene.height:
-                    for i, char in enumerate(w.text[:w.width - 2]):
-                        if text_x + i < scene.width:
-                            buf[text_y][text_x + i] = char
-        
-        # Convert buffer to lines
+                else:
+                    buf[y][x] = fill_char
+        if hasattr(w, "text") and w.text and large and w.width >= len(w.text) + 2:
+            text_x = w.x + 1
+            text_y = w.y + w.height // 2
+            if text_y < scene.height:
+                for i, char in enumerate(w.text[: w.width - 2]):
+                    if text_x + i < scene.width:
+                        buf[text_y][text_x + i] = char
+
+    def _finalize_ascii_buffer(self, scene, buf: List[List[str]]) -> List[str]:
         lines = ["".join(row) for row in buf]
-        
-        # Cache the result
         self._ascii_cache = lines
         self._ascii_cache_valid = True
         self._last_ascii_signature = self._compute_scene_signature(scene)
-        
         return lines
     
     def _get_widget_fill_char(self, widget):
@@ -2375,7 +2717,7 @@ class VisualPreviewWindow:
             gap = (total_space - total_widget_width) / (len(widgets) - 1)
             
             current_x = first.x + first.width + gap
-            for idx, widget in widgets[1:-1]:
+            for widget in widgets[1:-1]:
                 widget.x = int(current_x)
                 current_x += widget.width + gap
         
@@ -2389,7 +2731,7 @@ class VisualPreviewWindow:
             gap = (total_space - total_widget_height) / (len(widgets) - 1)
             
             current_y = first.y + first.height + gap
-            for idx, widget in widgets[1:-1]:
+            for widget in widgets[1:-1]:
                 widget.y = int(current_y)
                 current_y += widget.height + gap
         
@@ -2571,7 +2913,7 @@ class VisualPreviewWindow:
         # Update animations and apply overlays
         self._widget_overlays.clear()
         if self.playing:
-            vals = self.anim.update_animations(0.016)
+            vals = self.anim.update_animations(0.016 * self._anim_speed_multiplier)
             self._anim_values = vals
             # Assign per-widget overlays from any active animations
             for anim_name, v in vals.items():
@@ -2619,7 +2961,7 @@ class VisualPreviewWindow:
         if include_grid:
             self._draw_grid(draw, img_width, img_height)
 
-        for idx, widget, overlay, is_sel in self._iter_visible_widgets(scene):
+        for _idx, widget, overlay, is_sel in self._iter_visible_widgets(scene):
             ov = overlay if use_overlays else None
             sel = is_sel if highlight_selection else False
             self._draw_widget(draw, widget, sel, ov)
@@ -2677,7 +3019,7 @@ class AnimationEditorWindow:
         """Check if window exists"""
         try:
             return self.window.winfo_exists()
-        except:
+        except Exception:
             return False
     
     def lift(self):
@@ -2858,7 +3200,7 @@ class AnimationEditorWindow:
         
         # Time markers (0%, 25%, 50%, 75%, 100%)
         bar_width = canvas_width - 100
-        for i, pct in enumerate([0, 0.25, 0.5, 0.75, 1.0]):
+        for pct in [0, 0.25, 0.5, 0.75, 1.0]:
             x = 50 + int(bar_width * pct)
             self.timeline_canvas.create_line(x, timeline_y + timeline_height, x, timeline_y + timeline_height + 10,
                                             fill="white", width=1)
@@ -3186,3 +3528,209 @@ class AnimationEditorWindow:
         except Exception as e:
             messagebox.showerror("Export Failed", f"Error: {str(e)}",
                                parent=self.window)
+
+# ---------------- Component / Template / Icon Palette Windows -----------------
+class ComponentPaletteWindow(tk.Toplevel):
+    """Component library manager with search, preview, and insert."""
+    def __init__(self, root, preview: 'VisualPreviewWindow'):
+        super().__init__(root)
+        self.title("Component Library")
+        self.configure(bg="#2b2b2b")
+        self.preview = preview
+        self.geometry("640x520")
+        self.recent = getattr(preview, 'recent_components', [])
+        preview.recent_components = self.recent  # ensure attribute
+        self._build_ui()
+
+    def _build_ui(self):
+        top = ttk.Frame(self)
+        top.pack(fill=tk.X, padx=8, pady=6)
+        ttk.Label(top, text="Search:").pack(side=tk.LEFT)
+        self.search_var = tk.StringVar()
+        entry = ttk.Entry(top, textvariable=self.search_var, width=32)
+        entry.pack(side=tk.LEFT, padx=6)
+        entry.bind("<KeyRelease>", lambda e: self._refresh_list())
+        # Category dropdown
+        ttk.Label(top, text="Category:").pack(side=tk.LEFT)
+        self.category_var = tk.StringVar(value="All")
+        self.category_combo = ttk.Combobox(top, textvariable=self.category_var, width=14, state="readonly")
+        self.category_combo.pack(side=tk.LEFT, padx=6)
+        self.category_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
+        # Tags entry
+        ttk.Label(top, text="Tags:").pack(side=tk.LEFT)
+        self.tags_var = tk.StringVar()
+        tags_entry = ttk.Entry(top, textvariable=self.tags_var, width=18)
+        tags_entry.pack(side=tk.LEFT, padx=6)
+        tags_entry.bind("<KeyRelease>", lambda e: self._refresh_list())
+        ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+
+        body = ttk.Frame(self)
+        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+
+        self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#4CAF50")
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
+        self.listbox.bind("<Return>", lambda e: self._insert_selected())
+
+        right = ttk.Frame(body)
+        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
+        ttk.Label(right, text="Preview:").pack(anchor=tk.W)
+        self.preview_text = tk.Text(right, height=20, bg="#111", fg="#ddd", state=tk.DISABLED)
+        self.preview_text.pack(fill=tk.BOTH, expand=True)
+        btn_row = ttk.Frame(right)
+        btn_row.pack(fill=tk.X, pady=4)
+        ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
+        ttk.Button(btn_row, text="Add ButtonGroup", command=lambda: self._insert_component("ButtonGroup")).pack(side=tk.LEFT, padx=4)
+
+        self._build_library()
+        self._refresh_list()
+
+    def _build_library(self):
+        self._entries = []
+        seen = set()
+        def make_tags(text: str):
+            base = (text or '').lower().replace(',', ' ').split()
+            return [t for t in base if len(t) > 2][:10]
+        for comp in self.preview.ascii_components:
+            name = comp.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            cat = comp.get("category", "Misc")
+            desc = comp.get("description", "")
+            self._entries.append({
+                'name': name,
+                'category': cat,
+                'desc': desc,
+                'factory': comp.get("factory"),
+                'tags': make_tags(name + ' ' + desc)
+            })
+        for qi in self.preview.quick_insert_components:
+            name = qi.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            cat = 'Quick'
+            desc = f"Quick insert {qi.get('type')}"
+            self._entries.append({
+                'name': name,
+                'category': cat,
+                'desc': desc,
+                'defaults': qi.get('defaults'),
+                'type': qi.get('type'),
+                'tags': make_tags(name + ' ' + desc)
+            })
+        # Add recent pseudo entries
+        for r in self.recent:
+            if r not in seen:
+                self._entries.append({
+                    'name': r,
+                    'category': 'Recent',
+                    'desc': 'Recently used component',
+                    'tags': make_tags(r)
+                })
+        self._entries.sort(key=lambda e: (e['category'], e['name']))
+        cats = sorted({e['category'] for e in self._entries})
+        if 'Recent' in cats:
+            cats.remove('Recent')
+            cats.insert(0, 'Recent')
+        self.category_combo['values'] = ['All'] + cats
+
+    def _refresh_list(self):
+        term = self.search_var.get().lower().strip()
+        cat = self.category_var.get()
+        tags_filter = [t for t in self.tags_var.get().lower().split() if t]
+        self.listbox.delete(0, tk.END)
+        for e in self._entries:
+            if cat != 'All' and e['category'] != cat:
+                continue
+            if term and term not in e['name'].lower() and term not in e.get('desc','').lower():
+                continue
+            if tags_filter and not all(any(tf in tag for tag in e.get('tags', [])) for tf in tags_filter):
+                continue
+            self.listbox.insert(tk.END, f"{e['name']}  [{e['category']}]")
+
+    def _get_selected_entry(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            return None
+        label = self.listbox.get(sel[0])
+        name = label.split('  [',1)[0]
+        for e in self._entries:
+            if e['name'] == name:
+                return e
+        return None
+
+    def _show_preview(self):
+        e = self._get_selected_entry()
+        self.preview_text.config(state=tk.NORMAL)
+        self.preview_text.delete('1.0', tk.END)
+        if not e:
+            self.preview_text.insert(tk.END, 'No selection')
+        else:
+            self.preview_text.insert(tk.END, f"{e['name']}\n{e.get('desc','')}\n\n")
+            if e.get('factory'):
+                try:
+                    ascii_art = e['factory']()
+                    ascii_lines = ascii_art if isinstance(ascii_art, (list, tuple)) else str(ascii_art).splitlines()
+                    for ln in ascii_lines:
+                        self.preview_text.insert(tk.END, ln + '\n')
+                except Exception as ex:
+                    self.preview_text.insert(tk.END, f"[preview error: {ex}]")
+            elif e.get('defaults'):
+                self.preview_text.insert(tk.END, f"Widget defaults: {e['defaults']}")
+        self.preview_text.config(state=tk.DISABLED)
+
+    def _insert_selected(self):
+        e = self._get_selected_entry()
+        if e:
+            self._insert_component(e['name'])
+
+    def _insert_component(self, name: str):
+        scene = self.preview.designer.scenes.get(self.preview.designer.current_scene) if self.preview.designer.current_scene else None
+        if not scene:
+            return
+        cx = max(0, scene.width // 2 - 30)
+        cy = max(0, scene.height // 2 - 10)
+        entry = next((e for e in self._entries if e['name'] == name), None)
+        if not entry:
+            return
+        wtype = entry.get('type') or 'label'
+        defaults = entry.get('defaults', {})
+        if wtype == 'label':
+            widget_enum = WidgetType.LABEL
+        elif wtype == 'button':
+            widget_enum = WidgetType.BUTTON
+        else:
+            widget_enum = WidgetType.PANEL
+        self.preview.designer.add_widget(
+            widget_enum,
+            x=cx,
+            y=cy,
+            width=defaults.get('width', 40),
+            height=defaults.get('height', 12),
+            text=defaults.get('text', name),
+            value=defaults.get('value', 0),
+            checked=defaults.get('checked', False)
+        )
+        self.preview.selected_widget_idx = len(scene.widgets) - 1
+        self.preview._invalidate_cache()
+        self.preview.refresh(force=True)
+        # Track recent usage (MRU up to 12)
+        if name not in self.recent:
+            self.recent.insert(0, name)
+        else:
+            self.recent.remove(name)
+            self.recent.insert(0, name)
+        if len(self.recent) > 12:
+            self.recent = self.recent[:12]
+        self._build_library()
+        self._refresh_list()
+
+class IconPaletteWindow(tk.Toplevel):
+    def __init__(self, root, preview: 'VisualPreviewWindow'):
+        super().__init__(root)
+        self.title("Icon Palette")
+        self.geometry("400x300")
+        ttk.Label(self, text="(Stub) Icon palette UI pending.").pack(pady=20)
+
