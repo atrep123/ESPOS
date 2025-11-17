@@ -1715,29 +1715,97 @@ class VisualPreviewWindow:
             self.refresh()
     
     def _export_png(self):
-        """Export preview as PNG"""
+        """Export preview as PNG with preset options"""
+        # Show export options dialog
+        export_dialog = tk.Toplevel(self.root)
+        export_dialog.title("PNG Export Options")
+        export_dialog.geometry("350x250")
+        export_dialog.transient(self.root)
+        export_dialog.grab_set()
+        
+        # Load last used settings (or defaults)
+        last_scale = getattr(self, '_last_export_scale', 1)
+        last_guides = getattr(self, '_last_export_guides', False)
+        
+        # Scale preset
+        scale_frame = ttk.LabelFrame(export_dialog, text="Scale", padding=10)
+        scale_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        scale_var = tk.IntVar(value=last_scale)
+        ttk.Radiobutton(scale_frame, text="@1x (Original size)", variable=scale_var, value=1).pack(anchor=tk.W)
+        ttk.Radiobutton(scale_frame, text="@2x (Double size)", variable=scale_var, value=2).pack(anchor=tk.W)
+        ttk.Radiobutton(scale_frame, text="@3x (Triple size)", variable=scale_var, value=3).pack(anchor=tk.W)
+        ttk.Radiobutton(scale_frame, text="@4x (Quadruple size)", variable=scale_var, value=4).pack(anchor=tk.W)
+        
+        # Content preset
+        content_frame = ttk.LabelFrame(export_dialog, text="Content", padding=10)
+        content_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        guides_var = tk.BooleanVar(value=last_guides)
+        ttk.Radiobutton(content_frame, text="Scene only (clean export)", variable=guides_var, value=False).pack(anchor=tk.W)
+        ttk.Radiobutton(content_frame, text="With guides (grid/bounds)", variable=guides_var, value=True).pack(anchor=tk.W)
+        
+        # Buttons
+        btn_frame = ttk.Frame(export_dialog)
+        btn_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        result = {"cancelled": True}
+        
+        def do_export():
+            result["cancelled"] = False
+            result["scale"] = scale_var.get()
+            result["guides"] = guides_var.get()
+            # Remember choices
+            self._last_export_scale = result["scale"]
+            self._last_export_guides = result["guides"]
+            export_dialog.destroy()
+        
+        ttk.Button(btn_frame, text="Export", command=do_export, width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=export_dialog.destroy, width=15).pack(side=tk.LEFT, padx=5)
+        
+        # Wait for dialog
+        export_dialog.wait_window()
+        
+        if result.get("cancelled"):
+            return
+        
+        # Get export settings
+        scale = result["scale"]
+        include_guides = result["guides"]
+        
+        # Ask for filename
         filename = filedialog.asksaveasfilename(
             defaultextension=".png",
             filetypes=[("PNG files", "*.png"), ("All files", "*.*")],
-            initialfile="ui_preview.png"
+            initialfile=f"ui_preview_{scale}x.png"
         )
         
         if not filename:
             return
         
-        # Create export image using unified renderer (no grid, no selection, no overlays)
+        # Create export image
         scene = self.designer.scenes.get(self.designer.current_scene)
         if scene:
+            # Temporarily adjust zoom for export scale
+            original_zoom = self.settings.zoom
+            self.settings.zoom = scale
+            
             img = self._render_scene_image(
                 scene,
                 background_color=self.settings.background_color,
-                include_grid=False,
-                use_overlays=False,
+                include_grid=include_guides,
+                use_overlays=include_guides,
                 highlight_selection=False,
             )
+            
+            # Restore zoom
+            self.settings.zoom = original_zoom
+            
             # Save
             img.save(filename)
-        messagebox.showinfo("Export Complete", f"Saved to: {filename}")
+            messagebox.showinfo("Export Complete", f"Saved @{scale}x PNG to:\n{filename}")
+        else:
+            messagebox.showerror("Export Error", "No scene to export")
     
     def _export_json(self):
         """Export design as JSON"""
