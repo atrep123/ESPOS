@@ -894,6 +894,7 @@ def main() -> None:
     parser.add_argument('--input-overlay', action='store_true', help='Show small pygame window with clickable A/B/C buttons')
     parser.add_argument('--max-frames', type=int, default=0, help='Exit after rendering N frames (0=run indefinitely)')
     parser.add_argument('--help-overlay', action='store_true', help='Show help overlay with key bindings (toggle with H)')
+    parser.add_argument('--hud', action='store_true', help='Show HUD with FPS and timing metrics (toggle with F10)')
     args = parser.parse_args()
 
     # Detect optional pygame for input hints (no hard import)
@@ -1008,7 +1009,7 @@ def main() -> None:
     frame = 0
     running = True
     auto_demo = False
-    hud_enabled = False
+    hud_enabled = args.hud
     help_overlay_enabled = args.help_overlay
     
     start_time = time.time()
