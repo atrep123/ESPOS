@@ -49,11 +49,15 @@ class VisualPreviewWindow:
 
         # Selection and drag state
         self.selected_widget_idx: Optional[int] = None
+        self.selected_widgets: List[int] = []  # Multi-selection support
         self.dragging = False
         self.drag_start: Optional[Tuple[int, int]] = None
         self.drag_offset: Optional[Tuple[int, int]] = None
         self.drag_origin: Optional[Tuple[int, int]] = None
         self.resize_handle: Optional[str] = None  # ne, nw, se, sw, n, s, e, w
+        
+        # Clipboard for copy/paste
+        self.clipboard: List[WidgetConfig] = []
         
         if not TK_AVAILABLE:
             raise RuntimeError("Tkinter is not available; use --headless mode")
@@ -100,6 +104,32 @@ class VisualPreviewWindow:
         self.snap_var = tk.BooleanVar(value=self.settings.snap_enabled)
         ttk.Checkbutton(toolbar, text="Snap", variable=self.snap_var,
                        command=self._on_snap_toggle).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
+        
+        # Alignment tools
+        ttk.Label(toolbar, text="Align:").pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="⬅", width=3,
+                  command=lambda: self._align_widgets("left")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="⬆", width=3,
+                  command=lambda: self._align_widgets("top")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="⬇", width=3,
+                  command=lambda: self._align_widgets("bottom")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="➡", width=3,
+                  command=lambda: self._align_widgets("right")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="↔", width=3,
+                  command=lambda: self._align_widgets("center_h")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="↕", width=3,
+                  command=lambda: self._align_widgets("center_v")).pack(side=tk.LEFT, padx=1)
+        
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
+        
+        # Distribute tools
+        ttk.Label(toolbar, text="Distribute:").pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="H", width=3,
+                  command=lambda: self._distribute_widgets("horizontal")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(toolbar, text="V", width=3,
+                  command=lambda: self._distribute_widgets("vertical")).pack(side=tk.LEFT, padx=1)
         
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         
@@ -259,6 +289,10 @@ class VisualPreviewWindow:
         self.root.bind("<Control-z>", lambda e: self.designer.undo())
         self.root.bind("<Control-y>", lambda e: self.designer.redo())
         self.root.bind("<Control-s>", self._on_save)
+        self.root.bind("<Control-c>", self._on_copy)
+        self.root.bind("<Control-v>", self._on_paste)
+        self.root.bind("<Control-d>", self._on_duplicate)
+        self.root.bind("<Control-a>", self._on_select_all)
         self.root.bind("<Left>", lambda e: self._on_nudge(e, -1, 0))
         self.root.bind("<Right>", lambda e: self._on_nudge(e, 1, 0))
         self.root.bind("<Up>", lambda e: self._on_nudge(e, 0, -1))
@@ -640,7 +674,20 @@ class VisualPreviewWindow:
             scene = self.designer.scenes.get(self.designer.current_scene)
             if not scene or not (0 <= widget_idx < len(scene.widgets)):
                 return
-            self.selected_widget_idx = widget_idx
+            
+            # Multi-selection with Shift key
+            if event.state & 0x0001:  # Shift pressed
+                if widget_idx in self.selected_widgets:
+                    self.selected_widgets.remove(widget_idx)
+                else:
+                    self.selected_widgets.append(widget_idx)
+                self.selected_widget_idx = widget_idx
+            else:
+                # Single selection
+                if widget_idx not in self.selected_widgets:
+                    self.selected_widgets = [widget_idx]
+                self.selected_widget_idx = widget_idx
+            
             self.dragging = True
             self.drag_start = (event.x, event.y)
 
@@ -652,7 +699,9 @@ class VisualPreviewWindow:
 
             self.refresh()
         else:
-            self.selected_widget_idx = None
+            if not (event.state & 0x0001):  # Clear selection if Shift not pressed
+                self.selected_widget_idx = None
+                self.selected_widgets = []
             self.refresh()
     
     def _on_mouse_drag(self, event):
@@ -939,6 +988,143 @@ class VisualPreviewWindow:
         if filename:
             self.designer.save_to_json(filename)
             messagebox.showinfo("Saved", f"Design saved to: {filename}")
+    
+    def _align_widgets(self, alignment: str):
+        """Align selected widgets"""
+        if len(self.selected_widgets) < 2:
+            messagebox.showwarning("Alignment", "Select at least 2 widgets to align")
+            return
+        
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        widgets = [scene.widgets[i] for i in self.selected_widgets if i < len(scene.widgets)]
+        if not widgets:
+            return
+        
+        # Use first widget as reference
+        ref = widgets[0]
+        
+        for widget in widgets[1:]:
+            if alignment == "left":
+                widget.x = ref.x
+            elif alignment == "right":
+                widget.x = ref.x + ref.width - widget.width
+            elif alignment == "top":
+                widget.y = ref.y
+            elif alignment == "bottom":
+                widget.y = ref.y + ref.height - widget.height
+            elif alignment == "center_h":
+                widget.x = ref.x + (ref.width - widget.width) // 2
+            elif alignment == "center_v":
+                widget.y = ref.y + (ref.height - widget.height) // 2
+        
+        self.designer._save_state()
+        self.refresh()
+    
+    def _distribute_widgets(self, direction: str):
+        """Distribute selected widgets evenly"""
+        if len(self.selected_widgets) < 3:
+            messagebox.showwarning("Distribution", "Select at least 3 widgets to distribute")
+            return
+        
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        widgets = [(i, scene.widgets[i]) for i in self.selected_widgets if i < len(scene.widgets)]
+        if len(widgets) < 3:
+            return
+        
+        if direction == "horizontal":
+            # Sort by x position
+            widgets.sort(key=lambda w: w[1].x)
+            first = widgets[0][1]
+            last = widgets[-1][1]
+            total_space = (last.x - (first.x + first.width))
+            total_widget_width = sum(w[1].width for w in widgets[1:-1])
+            gap = (total_space - total_widget_width) / (len(widgets) - 1)
+            
+            current_x = first.x + first.width + gap
+            for idx, widget in widgets[1:-1]:
+                widget.x = int(current_x)
+                current_x += widget.width + gap
+        
+        elif direction == "vertical":
+            # Sort by y position
+            widgets.sort(key=lambda w: w[1].y)
+            first = widgets[0][1]
+            last = widgets[-1][1]
+            total_space = (last.y - (first.y + first.height))
+            total_widget_height = sum(w[1].height for w in widgets[1:-1])
+            gap = (total_space - total_widget_height) / (len(widgets) - 1)
+            
+            current_y = first.y + first.height + gap
+            for idx, widget in widgets[1:-1]:
+                widget.y = int(current_y)
+                current_y += widget.height + gap
+        
+        self.designer._save_state()
+        self.refresh()
+    
+    def _on_copy(self, event):
+        """Copy selected widgets to clipboard"""
+        if not self.selected_widgets:
+            return
+        
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        from copy import deepcopy
+        self.clipboard = [deepcopy(scene.widgets[i]) for i in self.selected_widgets 
+                         if i < len(scene.widgets)]
+        self.status_bar.configure(text=f"Copied {len(self.clipboard)} widget(s)")
+    
+    def _on_paste(self, event):
+        """Paste widgets from clipboard"""
+        if not self.clipboard:
+            return
+        
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        from copy import deepcopy
+        self.selected_widgets = []
+        
+        # Paste with offset to make it visible
+        for widget in self.clipboard:
+            new_widget = deepcopy(widget)
+            new_widget.x += 10
+            new_widget.y += 10
+            scene.widgets.append(new_widget)
+            self.selected_widgets.append(len(scene.widgets) - 1)
+        
+        if self.selected_widgets:
+            self.selected_widget_idx = self.selected_widgets[0]
+        
+        self.designer._save_state()
+        self.refresh()
+        self.status_bar.configure(text=f"Pasted {len(self.clipboard)} widget(s)")
+    
+    def _on_duplicate(self, event):
+        """Duplicate selected widgets (Ctrl+D)"""
+        self._on_copy(event)
+        self._on_paste(event)
+    
+    def _on_select_all(self, event):
+        """Select all widgets"""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        self.selected_widgets = list(range(len(scene.widgets)))
+        if self.selected_widgets:
+            self.selected_widget_idx = 0
+        self.refresh()
+        self.status_bar.configure(text=f"Selected {len(self.selected_widgets)} widget(s)")
     
     def run(self):
         """Run the preview window"""
