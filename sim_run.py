@@ -397,8 +397,8 @@ class HelpOverlayWidget(Widget):
         # Compact help content (2 lines + borders)
         help_width = min(width, 76)
         content = [
-            f"{bold}Q{reset}=Quit  {bold}H{reset}=Help  {bold}F10{reset}=HUD  {bold}D{reset}=Demo  {bold}A/B/C{reset}=Buttons  {bold}R/G/Y/W/K{reset}=Colors",
-            f"{bold}M{reset}=Metrics  {bold}E{reset}=Export  {bold}Space{reset}=Pause(future)  {bold}S{reset}=Step(future)"
+            f"{bold}Q{reset}=Quit  {bold}Space{reset}=Pause  {bold}S{reset}=Step  {bold}C{reset}=Continue  {bold}H{reset}=Help  {bold}F10{reset}=HUD",
+            f"{bold}D{reset}=Demo  {bold}A/B/C{reset}=Buttons  {bold}R/G/Y/W/K{reset}=Colors  {bold}M{reset}=Metrics  {bold}E{reset}=Export"
         ]
         
         lines = []
@@ -1011,6 +1011,8 @@ def main() -> None:
     auto_demo = False
     hud_enabled = args.hud
     help_overlay_enabled = args.help_overlay
+    paused = False
+    step_one_frame = False
     
     start_time = time.time()
     last_frame_time = start_time
@@ -1243,9 +1245,20 @@ def main() -> None:
                 elif key == 'b':
                     state.btnB = not state.btnB
                     current_input_src = 'kbd'
-                elif key == 'c':
+                elif key == 'c' and not paused:
                     state.btnC = not state.btnC
                     current_input_src = 'kbd'
+                elif key == 'C':  # Shift+C for button C when paused
+                    state.btnC = not state.btnC
+                    current_input_src = 'kbd'
+                elif key == ' ':  # Space = pause/unpause
+                    paused = not paused
+                    step_one_frame = False
+                elif key == 's' and paused:  # Step when paused
+                    step_one_frame = True
+                elif key == 'c' and paused:  # Continue (unpause)
+                    paused = False
+                    step_one_frame = False
                 elif key == 'r':
                     state.bg = rgb565(255, 0, 0)
                 elif key == 'g':
@@ -1326,30 +1339,6 @@ def main() -> None:
                         apply_rpc_message(state, evt)
                     next_event_idx += 1
 
-            # Auto demo
-            if auto_demo:
-                if frame == 30:
-                    state.btnA = True
-                    state.scene = 1
-                if frame == 35:
-                    state.btnA = False
-                if frame == 50:
-                    state.bg = rgb565(255, 0, 0)
-                if frame == 80:
-                    state.bg = rgb565(0, 160, 64)
-                if frame == 110:
-                    state.bg = rgb565(64, 128, 255)
-                if frame == 140:
-                    state.bg = rgb565(255, 192, 0)
-                if frame == 170:
-                    state.btnB = True
-                if frame == 175:
-                    state.btnB = False
-                if frame >= 200:
-                    frame = 0
-                    state.scene = 0
-                    state.bg = rgb565(8, 8, 8)
-            
             # Apply input state from overlay/gamepad (if enabled)
             if input_th is not None:
                 with input_lock:
@@ -1357,6 +1346,36 @@ def main() -> None:
                     state.btnB = bool(input_state['B'])
                     state.btnC = bool(input_state['C'])
                     current_input_src = input_source.get('src', 'kbd')
+
+            # Skip frame updates if paused (unless stepping)
+            should_update = not paused or step_one_frame
+            if step_one_frame:
+                step_one_frame = False  # Reset after executing step
+            
+            if should_update:
+                # Auto demo
+                if auto_demo:
+                    if frame == 30:
+                        state.btnA = True
+                        state.scene = 1
+                    if frame == 35:
+                        state.btnA = False
+                    if frame == 50:
+                        state.bg = rgb565(255, 0, 0)
+                    if frame == 80:
+                        state.bg = rgb565(0, 160, 64)
+                    if frame == 110:
+                        state.bg = rgb565(64, 128, 255)
+                    if frame == 140:
+                        state.bg = rgb565(255, 192, 0)
+                    if frame == 170:
+                        state.btnB = True
+                    if frame == 175:
+                        state.btnB = False
+                    if frame >= 200:
+                        frame = 0
+                        state.scene = 0
+                        state.bg = rgb565(8, 8, 8)
 
             # Render frame using previous timing metrics
             lines = render_frame(state, frame, fps, width=args.width, height=args.height,
