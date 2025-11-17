@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from ui_animations import AnimationDesigner
+from ui_components_library import ComponentLibrary, create_default_library
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
 
 
@@ -42,6 +43,7 @@ class VisualPreviewWindow:
         self.designer = designer
         self.settings = PreviewSettings()
         self.anim = AnimationDesigner()
+        self.component_library: ComponentLibrary = create_default_library()
         self.playing = False
         self.selected_anim: Optional[str] = None
         # Per-animation current values and per-widget overlay transform cache
@@ -178,6 +180,10 @@ class VisualPreviewWindow:
         add_btn("➕ Gauge", lambda: self._palette_add("gauge"))
         add_btn("➕ Checkbox", lambda: self._palette_add("checkbox"))
         add_btn("➕ Slider", lambda: self._palette_add("slider"))
+        
+        ttk.Separator(palette, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=8)
+        ttk.Button(palette, text="📦 Components", 
+                  command=self._open_component_palette).pack(fill=tk.X, pady=2)
 
         # Canvas frame with scrollbars (to the right of palette)
         canvas_frame = ttk.Frame(main_frame)
@@ -872,6 +878,13 @@ class VisualPreviewWindow:
             self.anim_editor_window = AnimationEditorWindow(self.root, self)
         else:
             self.anim_editor_window.lift()
+    
+    def _open_component_palette(self):
+        """Open component palette window"""
+        if not hasattr(self, 'component_palette_window') or not self.component_palette_window.winfo_exists():
+            self.component_palette_window = ComponentPaletteWindow(self.root, self)
+        else:
+            self.component_palette_window.lift()
     
     def _edit_widget_properties(self, widget_idx: int):
         """Open widget properties editor"""
@@ -1765,6 +1778,174 @@ def main():
     # GUI mode
     preview = VisualPreviewWindow(designer)
     preview.run()
+
+
+# ========== COMPONENT PALETTE WINDOW ==========
+
+class ComponentPaletteWindow(tk.Toplevel):
+    """Component palette window for drag-and-drop component templates"""
+    
+    def __init__(self, parent, preview_window: VisualPreviewWindow):
+        super().__init__(parent)
+        self.preview_window = preview_window
+        self.library = preview_window.component_library
+        
+        self.title("Component Palette")
+        self.geometry("400x600")
+        self.configure(bg="#2b2b2b")
+        
+        # Setup UI
+        self._setup_ui()
+        self._load_components()
+    
+    def _setup_ui(self):
+        """Setup palette UI"""
+        # Header
+        header = ttk.Frame(self)
+        header.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(header, text="📦 Component Library", 
+                 font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+        
+        # Category filter
+        filter_frame = ttk.Frame(self)
+        filter_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(filter_frame, text="Category:").pack(side=tk.LEFT, padx=5)
+        
+        categories = ["All"] + self.library.get_categories()
+        self.category_var = tk.StringVar(value="All")
+        category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var,
+                                      values=categories, width=20, state="readonly")
+        category_combo.pack(side=tk.LEFT, padx=5)
+        category_combo.bind("<<ComboboxSelected>>", lambda e: self._load_components())
+        
+        # Search box
+        search_frame = ttk.Frame(self)
+        search_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
+        self.search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        search_entry.bind("<KeyRelease>", lambda e: self._load_components())
+        
+        # Component list (scrollable)
+        list_frame = ttk.Frame(self)
+        list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Canvas with scrollbar
+        canvas = tk.Canvas(list_frame, bg="#1e1e1e", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=canvas.yview)
+        
+        self.components_frame = ttk.Frame(canvas)
+        self.components_frame.bind("<Configure>", 
+                                   lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        
+        canvas.create_window((0, 0), window=self.components_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.canvas = canvas
+    
+    def _load_components(self):
+        """Load and display components based on filters"""
+        # Clear existing
+        for widget in self.components_frame.winfo_children():
+            widget.destroy()
+        
+        # Get filtered components
+        category = self.category_var.get()
+        search = self.search_var.get().lower()
+        
+        components = self.library.list_components(
+            category if category != "All" else None
+        )
+        
+        if search:
+            components = [c for c in components 
+                         if search in c.name.lower() or 
+                            search in c.description.lower() or
+                            any(search in tag for tag in c.tags)]
+        
+        # Display components
+        for i, component in enumerate(components):
+            self._create_component_card(component, i)
+    
+    def _create_component_card(self, component, index):
+        """Create a component card in the palette"""
+        # Card frame
+        card = ttk.Frame(self.components_frame, relief=tk.RAISED, borderwidth=1)
+        card.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Header with name and category
+        header = ttk.Frame(card)
+        header.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(header, text=component.name, 
+                 font=("Arial", 11, "bold")).pack(side=tk.LEFT)
+        ttk.Label(header, text=f"[{component.category}]", 
+                 font=("Arial", 9), foreground="#888").pack(side=tk.RIGHT)
+        
+        # Description
+        ttk.Label(card, text=component.description, 
+                 font=("Arial", 9), foreground="#aaa").pack(anchor=tk.W, padx=10)
+        
+        # Preview thumbnail (simplified - just show size)
+        info_frame = ttk.Frame(card)
+        info_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(info_frame, text=f"Size: {component.width}×{component.height}",
+                 font=("Arial", 8), foreground="#666").pack(side=tk.LEFT)
+        ttk.Label(info_frame, text=f"Widgets: {len(component.widgets)}",
+                 font=("Arial", 8), foreground="#666").pack(side=tk.LEFT, padx=10)
+        
+        # Tags
+        if component.tags:
+            tags_frame = ttk.Frame(card)
+            tags_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
+            
+            ttk.Label(tags_frame, text="Tags:", font=("Arial", 8)).pack(side=tk.LEFT)
+            for tag in component.tags[:3]:  # Show max 3 tags
+                tag_label = ttk.Label(tags_frame, text=f"#{tag}", 
+                                     font=("Arial", 8), foreground="#3498db")
+                tag_label.pack(side=tk.LEFT, padx=2)
+        
+        # Add button
+        button_frame = ttk.Frame(card)
+        button_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Button(button_frame, text="➕ Add to Canvas", 
+                  command=lambda: self._add_component_to_canvas(component)).pack(fill=tk.X)
+    
+    def _add_component_to_canvas(self, component):
+        """Add component to designer canvas"""
+        try:
+            # Add component widgets to designer
+            created_indices = self.library.create_from_template(
+                self.preview_window.designer,
+                component.name,
+                offset_x=10,  # Small offset from top-left
+                offset_y=10
+            )
+            
+            # Refresh preview
+            self.preview_window.refresh()
+            
+            # Select added widgets
+            self.preview_window.selected_widgets = created_indices
+            if created_indices:
+                self.preview_window.selected_widget_idx = created_indices[0]
+            
+            # Show success message
+            messagebox.showinfo("Component Added", 
+                              f"Added {component.name} with {len(created_indices)} widgets")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to add component: {e}")
+
     return 0
 
 
