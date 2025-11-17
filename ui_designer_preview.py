@@ -6,18 +6,19 @@ Real-time graphical preview with mouse interaction and export
 
 try:
     import tkinter as tk  # type: ignore
-    from tkinter import ttk, filedialog, messagebox, colorchooser  # type: ignore
+    from tkinter import colorchooser, filedialog, messagebox, ttk  # type: ignore
     TK_AVAILABLE = True
 except Exception:
     TK_AVAILABLE = False
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+
 if TK_AVAILABLE:
     from PIL import ImageTk  # type: ignore
-import json
-from typing import Optional, Tuple, List, Dict, Any
 from dataclasses import dataclass
-from ui_designer import UIDesigner, WidgetConfig, WidgetType, BorderStyle
+from typing import Any, Dict, List, Optional, Tuple
+
 from ui_animations import AnimationDesigner
+from ui_designer import UIDesigner, WidgetConfig, WidgetType
 
 
 @dataclass
@@ -847,7 +848,6 @@ class VisualPreviewWindow:
         # Clone the template animation under a unique name if not exists
         if inst_name not in self.anim.animations:
             base = self.anim.animations[name]
-            from dataclasses import asdict
             from copy import deepcopy
             cloned = deepcopy(base)
             cloned.name = inst_name
@@ -1274,6 +1274,10 @@ class AnimationEditorWindow:
         ttk.Button(props_frame, text="Apply Changes", 
                   command=self._apply_changes).grid(row=5, column=0, columnspan=2, pady=10)
         
+        # Export button
+        ttk.Button(props_frame, text="📤 Export to C", 
+                  command=self._export_to_c).grid(row=6, column=0, columnspan=2, pady=5)
+        
         # Timeline canvas (right)
         timeline_frame = ttk.LabelFrame(content, text="Timeline", padding=5)
         timeline_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
@@ -1656,6 +1660,47 @@ class AnimationEditorWindow:
     def _stop_preview(self):
         """Stop animation"""
         self.preview._on_anim_stop()
+    
+    def _export_to_c(self):
+        """Export selected animation to C code"""
+        from pathlib import Path
+        from tkinter import filedialog
+
+        from animation_export_c import AnimationExporter
+        
+        anim_name = self.anim_var.get()
+        if not anim_name or anim_name not in self.anim_designer.animations:
+            messagebox.showwarning("No Animation", "Select an animation first",
+                                  parent=self.window)
+            return
+        
+        # Ask for output directory
+        output_dir = filedialog.askdirectory(
+            title="Select Export Directory",
+            parent=self.window
+        )
+        
+        if not output_dir:
+            return
+        
+        try:
+            # Export selected animation
+            exporter = AnimationExporter()
+            anim = self.anim_designer.animations[anim_name]
+            exporter.add_animation(anim)
+            
+            # Generate files
+            output_path = Path(output_dir)
+            header_file, impl_file = exporter.export_to_files(output_path)
+            
+            self.status.configure(text=f"Exported: {anim_name}")
+            messagebox.showinfo("Export Complete", 
+                              f"Animation exported to:\n{header_file}\n{impl_file}",
+                              parent=self.window)
+        
+        except Exception as e:
+            messagebox.showerror("Export Failed", f"Error: {str(e)}",
+                               parent=self.window)
 
 
 def main():
