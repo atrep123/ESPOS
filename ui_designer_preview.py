@@ -4,6 +4,13 @@ Visual Preview Window for UI Designer
 Real-time graphical preview with mouse interaction and export
 """
 
+import os
+import time
+import atexit
+import statistics
+
+HEADLESS = os.environ.get("ESP32OS_HEADLESS", "0") == "1"
+
 try:
     import tkinter as tk  # type: ignore
     from tkinter import colorchooser, filedialog, messagebox, ttk  # type: ignore
@@ -12,14 +19,97 @@ except Exception:
     TK_AVAILABLE = False
 from PIL import Image, ImageDraw
 
-if TK_AVAILABLE:
+if HEADLESS:
+    TK_AVAILABLE = False
+
+if not TK_AVAILABLE:
+    # Minimal dummies to allow import in headless mode (GUI classes are not instantiated in tests).
+    class _DummyTk:
+        Toplevel = object
+        Canvas = object
+        Text = object
+        StringVar = staticmethod(lambda *_, **__: None)
+        BooleanVar = staticmethod(lambda *_, **__: None)
+        NW = "nw"
+    tk = _DummyTk()
+
+    class _DummyTTK:
+        Frame = object
+        Label = object
+        Button = object
+        Combobox = object
+        Scrollbar = object
+        Separator = object
+        Treeview = object
+    ttk = _DummyTTK()
+
+    class _DummyMsg:
+        def __getattr__(self, _name):
+            return lambda *_, **__: None
+    colorchooser = filedialog = messagebox = _DummyMsg()
+
+if TK_AVAILABLE and not HEADLESS:
     from PIL import ImageTk  # type: ignore
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from ui_animations import AnimationDesigner
-from ui_components_library import ComponentLibrary, create_default_library
+from ui_components_library_ascii import (
+    create_alert_dialog_ascii,
+    create_breadcrumb_ascii,
+    create_button_group_ascii,
+    create_chart_ascii,
+    create_checkbox_ascii,
+    create_confirm_dialog_ascii,
+    create_grid_layout_ascii,
+    create_header_footer_layout_ascii,
+    create_input_dialog_ascii,
+    create_notification_ascii,
+    create_progress_card_ascii,
+    create_radio_group_ascii,
+    create_sidebar_layout_ascii,
+    create_slider_ascii,
+    create_stat_card_ascii,
+    create_status_indicator_ascii,
+    create_tab_bar_ascii,
+    create_toggle_switch_ascii,
+    create_vertical_menu_ascii,
+)
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
+from ui_icons import MATERIAL_ICONS, ICON_PALETTE, get_all_categories
+
+_PROFILE_ENABLED = os.environ.get("ESP32OS_PREVIEW_PROFILE", "0") == "1"
+_PROFILE_EVERY = max(1, int(os.environ.get("ESP32OS_PREVIEW_PROFILE_EVERY", "50")))
+
+
+class _RenderProfile:
+    def __init__(self):
+        self.samples: List[float] = []
+        self.count = 0
+
+    def add(self, ms: float):
+        self.samples.append(ms)
+        self.count += 1
+        if self.count % _PROFILE_EVERY == 0:
+            self.report()
+
+    def report(self):
+        if not self.samples:
+            return
+        avg = sum(self.samples) / len(self.samples)
+        if len(self.samples) >= 20:
+            p95 = statistics.quantiles(self.samples, n=20, method="inclusive")[18]
+        else:
+            p95 = max(self.samples)
+        print(f"[preview-prof] renders={len(self.samples)} avg={avg:.3f}ms p95={p95:.3f}ms")
+
+    def report_final(self):
+        self.report()
+
+
+_render_profiler = _RenderProfile() if _PROFILE_ENABLED else None
+if _render_profiler:
+    atexit.register(_render_profiler.report_final)
 
 
 @dataclass
@@ -36,6 +126,15 @@ class PreviewSettings:
     pixel_perfect: bool = True
 
 
+class _DummyUI:
+    def after(self, *_, **__): return None
+    def bind(self, *_, **__): return None
+    def mainloop(self, *_, **__): return None
+    def configure(self, *_, **__): return None
+    def delete(self, *_, **__): return None
+    def create_image(self, *_, **__): return None
+
+
 class VisualPreviewWindow:
     """Graphical preview window with mouse interaction"""
     
@@ -43,7 +142,28 @@ class VisualPreviewWindow:
         self.designer = designer
         self.settings = PreviewSettings()
         self.anim = AnimationDesigner()
-        self.component_library: ComponentLibrary = create_default_library()
+        # ASCII component palette definitions
+        self.ascii_components = [
+            {"name": "AlertDialog", "category": "Dialogs", "description": "Alert dialog with OK button", "factory": lambda: create_alert_dialog_ascii()},
+            {"name": "ConfirmDialog", "category": "Dialogs", "description": "Confirmation dialog with Yes/No buttons", "factory": lambda: create_confirm_dialog_ascii()},
+            {"name": "InputDialog", "category": "Dialogs", "description": "Input dialog with text field", "factory": lambda: create_input_dialog_ascii()},
+            {"name": "TabBar", "category": "Navigation", "description": "Tab bar with 3 tabs", "factory": lambda: create_tab_bar_ascii()},
+            {"name": "VerticalMenu", "category": "Navigation", "description": "Vertical menu list", "factory": lambda: create_vertical_menu_ascii()},
+            {"name": "Breadcrumb", "category": "Navigation", "description": "Breadcrumb navigation", "factory": lambda: create_breadcrumb_ascii()},
+            {"name": "StatCard", "category": "Data Display", "description": "Statistics card with value and label", "factory": lambda: create_stat_card_ascii()},
+            {"name": "ProgressCard", "category": "Data Display", "description": "Progress card with percentage", "factory": lambda: create_progress_card_ascii()},
+            {"name": "StatusIndicator", "category": "Data Display", "description": "Status indicator with colored dot", "factory": lambda: create_status_indicator_ascii()},
+            {"name": "ButtonGroup", "category": "Controls", "description": "Button group with 3 buttons", "factory": lambda: create_button_group_ascii()},
+            {"name": "ToggleSwitch", "category": "Controls", "description": "Toggle switch control", "factory": lambda: create_toggle_switch_ascii()},
+            {"name": "RadioGroup", "category": "Controls", "description": "Radio button group", "factory": lambda: create_radio_group_ascii()},
+            {"name": "HeaderFooterLayout", "category": "Layouts", "description": "Layout with header, content, and footer", "factory": lambda: create_header_footer_layout_ascii()},
+            {"name": "SidebarLayout", "category": "Layouts", "description": "Layout with sidebar and main content", "factory": lambda: create_sidebar_layout_ascii()},
+            {"name": "GridLayout", "category": "Layouts", "description": "Grid layout", "factory": lambda: create_grid_layout_ascii()},
+            {"name": "Slider", "category": "Controls", "description": "Value slider with visual bar", "factory": lambda: create_slider_ascii()},
+            {"name": "Checkbox", "category": "Controls", "description": "Checkbox with label", "factory": lambda: create_checkbox_ascii()},
+            {"name": "Notification", "category": "Data Display", "description": "Notification banner (info/success/error/warning)", "factory": lambda: create_notification_ascii()},
+            {"name": "Chart", "category": "Data Display", "description": "Simple bar chart", "factory": lambda: create_chart_ascii()},
+        ]
         self.playing = False
         self.selected_anim: Optional[str] = None
         # Per-animation current values and per-widget overlay transform cache
@@ -62,8 +182,20 @@ class VisualPreviewWindow:
         # Clipboard for copy/paste
         self.clipboard: List[WidgetConfig] = []
         
-        if not TK_AVAILABLE:
-            raise RuntimeError("Tkinter is not available; use --headless mode")
+        # Performance optimization: caching
+        self._render_cache: Optional[Image.Image] = None
+        self._cache_valid = False
+        self._ascii_cache: Optional[List[str]] = None
+        self._ascii_cache_valid = False
+        self._last_widget_count = 0
+
+        if HEADLESS or not TK_AVAILABLE:
+            # Headless mode: stub minimal UI surfaces for logic-only tests.
+            self.root = _DummyUI()
+            self.canvas = _DummyUI()
+            self.status_bar = _DummyUI()
+            return
+
         # Create main window
         self.root = tk.Tk()
         self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
@@ -136,9 +268,12 @@ class VisualPreviewWindow:
         
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         
-        # Export button
-        ttk.Button(toolbar, text="📷 Export PNG", 
-                  command=self._export_png).pack(side=tk.LEFT, padx=5)
+        # Export buttons
+        ttk.Button(toolbar, text="📷 Export PNG", command=self._export_png).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="💾 Export JSON", command=self._export_json).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="📝 Export C", command=self._export_c).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="📄 Export WidgetConfig", command=self._export_widgetconfig).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="👁️ Live ASCII Preview", command=self._open_ascii_preview).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(toolbar, text="🔄 Refresh", 
                   command=self.refresh).pack(side=tk.LEFT, padx=5)
@@ -184,6 +319,10 @@ class VisualPreviewWindow:
         ttk.Separator(palette, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=8)
         ttk.Button(palette, text="📦 Components", 
                   command=self._open_component_palette).pack(fill=tk.X, pady=2)
+        ttk.Button(palette, text="📑 Templates", 
+                  command=self._open_template_manager).pack(fill=tk.X, pady=2)
+        ttk.Button(palette, text="🎨 Icons", 
+                  command=self._open_icon_palette).pack(fill=tk.X, pady=2)
 
         # Canvas frame with scrollbars (to the right of palette)
         canvas_frame = ttk.Frame(main_frame)
@@ -266,7 +405,13 @@ class VisualPreviewWindow:
         self.selected_widget_idx = len(scene.widgets) - 1
         # Save state and refresh
         self.designer._save_state()
+        self._invalidate_cache()
         self.refresh()
+    
+    def _invalidate_cache(self):
+        """Invalidate render caches"""
+        self._cache_valid = False
+        self._ascii_cache_valid = False
     
     def _setup_properties_panel(self):
         """Setup widget properties panel"""
@@ -306,9 +451,16 @@ class VisualPreviewWindow:
         self.root.bind("<Right>", lambda e: self._on_nudge(e, 1, 0))
         self.root.bind("<Up>", lambda e: self._on_nudge(e, 0, -1))
         self.root.bind("<Down>", lambda e: self._on_nudge(e, 0, 1))
+        
+        # Keyboard shortcuts for quick component insertion (Ctrl+1-9)
+        for i in range(1, 10):
+            self.root.bind(f"<Control-Key-{i}>", lambda e, idx=i-1: self._on_quick_insert(idx))
+            self.root.bind(f"<Control-KP_{i}>", lambda e, idx=i-1: self._on_quick_insert(idx))  # Numpad support
     
-    def refresh(self):
-        """Refresh the preview"""
+    def refresh(self, force=False):
+        """Refresh the preview with caching"""
+        if HEADLESS or not TK_AVAILABLE or isinstance(self.canvas, _DummyUI):
+            return
         self.canvas.delete("all")
         
         if not self.designer.current_scene:
@@ -319,27 +471,26 @@ class VisualPreviewWindow:
         if not scene:
             return
         
-        # Create image for pixel-perfect rendering
-        img_width = self.designer.width
-        img_height = self.designer.height
-        
-        # Create PIL image
-        bg_color = self._hex_to_rgb(self.settings.background_color)
-        img = Image.new("RGB", (img_width, img_height), bg_color)
-        draw = ImageDraw.Draw(img)
-        
-        # Draw grid if enabled
-        if self.settings.grid_enabled:
-            self._draw_grid(draw, img_width, img_height)
-        
-        # Draw widgets
-        for idx, widget in enumerate(scene.widgets):
-            if not widget.visible:
-                continue
-            overlay = self._widget_overlays.get(idx, {})
-            self._draw_widget(draw, widget, idx == self.selected_widget_idx, overlay)
+        # Check if cache is valid
+        widget_count = len(scene.widgets)
+        if not force and self._cache_valid and self._render_cache is not None and widget_count == self._last_widget_count:
+            # Use cached image
+            img = self._render_cache
+        else:
+            img = self._render_scene_image(
+                scene,
+                include_grid=self.settings.grid_enabled,
+                use_overlays=True,
+                highlight_selection=True,
+            )
+            # Cache the rendered image
+            self._render_cache = img.copy()
+            self._cache_valid = True
+            self._last_widget_count = widget_count
         
         # Scale image
+        img_width = self.designer.width
+        img_height = self.designer.height
         scaled_width = int(img_width * self.settings.zoom)
         scaled_height = int(img_height * self.settings.zoom)
         img_scaled = img.resize((scaled_width, scaled_height), Image.NEAREST)
@@ -362,6 +513,32 @@ class VisualPreviewWindow:
             w = scene.widgets[self.selected_widget_idx]
             selected_info = f" | Selected: {w.type} at ({w.x},{w.y}) {w.width}×{w.height}"
         self.status_bar.configure(text=f"Widgets: {widget_count} | Zoom: {self.settings.zoom:.1f}x{selected_info}")
+
+    def _render_scene_image(self, scene, include_grid=True, use_overlays=True, highlight_selection=True):
+        """Render scene into a PIL image (no Tk required)."""
+        img_width = self.designer.width
+        img_height = self.designer.height
+
+        bg_color = self._hex_to_rgb(self.settings.background_color)
+        img = Image.new("RGB", (img_width, img_height), bg_color)
+        draw = ImageDraw.Draw(img)
+
+        if include_grid:
+            self._draw_grid(draw, img_width, img_height)
+
+        t0 = time.perf_counter() if _render_profiler else 0.0
+
+        for idx, widget in enumerate(scene.widgets):
+            if not widget.visible:
+                continue
+            overlay = self._widget_overlays.get(idx, {}) if use_overlays else {}
+            self._draw_widget(draw, widget, highlight_selection and idx == self.selected_widget_idx, overlay)
+
+        if _render_profiler:
+            dt_ms = (time.perf_counter() - t0) * 1000.0
+            _render_profiler.add(dt_ms)
+
+        return img
     
     def _draw_grid(self, draw: ImageDraw.ImageDraw, width: int, height: int):
         """Draw grid on canvas"""
@@ -886,6 +1063,27 @@ class VisualPreviewWindow:
         else:
             self.component_palette_window.lift()
     
+    def _open_template_manager(self):
+        """Open template manager window"""
+        if not hasattr(self, 'template_manager_window') or not self.template_manager_window.winfo_exists():
+            self.template_manager_window = TemplateManagerWindow(self.root, self)
+        else:
+            self.template_manager_window.lift()
+    
+    def _open_icon_palette(self):
+        """Open icon palette window"""
+        if not hasattr(self, 'icon_palette_window') or not self.icon_palette_window.winfo_exists():
+            self.icon_palette_window = IconPaletteWindow(self.root, self)
+        else:
+            self.icon_palette_window.lift()
+    
+    def _open_icon_palette(self):
+        """Open icon palette window"""
+        if not hasattr(self, 'icon_palette_window') or not self.icon_palette_window.winfo_exists():
+            self.icon_palette_window = IconPaletteWindow(self.root, self)
+        else:
+            self.icon_palette_window.lift()
+    
     def _edit_widget_properties(self, widget_idx: int):
         """Open widget properties editor"""
         scene = self.designer.scenes.get(self.designer.current_scene)
@@ -911,11 +1109,39 @@ class VisualPreviewWindow:
             entry = ttk.Entry(frame, textvariable=text_var)
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
             entry.bind("<Return>", lambda e: self._update_widget_text(widget_idx, text_var.get()))
-        
+
+        # Label property
+        if hasattr(widget, 'label'):
+            frame = ttk.Frame(self.props_frame)
+            frame.pack(fill=tk.X, pady=2)
+            ttk.Label(frame, text="Label:", width=10).pack(side=tk.LEFT)
+            label_var = tk.StringVar(value=widget.label)
+            entry = ttk.Entry(frame, textvariable=label_var)
+            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            entry.bind("<Return>", lambda e: self._update_widget_prop(widget_idx, 'label', label_var.get()))
+
+        # Value property
+        if hasattr(widget, 'value'):
+            frame = ttk.Frame(self.props_frame)
+            frame.pack(fill=tk.X, pady=2)
+            ttk.Label(frame, text="Value:", width=10).pack(side=tk.LEFT)
+            value_var = tk.StringVar(value=str(widget.value))
+            entry = ttk.Entry(frame, textvariable=value_var)
+            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            entry.bind("<Return>", lambda e: self._update_widget_prop(widget_idx, 'value', value_var.get()))
+
+        # Color property
+        if hasattr(widget, 'color'):
+            frame = ttk.Frame(self.props_frame)
+            frame.pack(fill=tk.X, pady=2)
+            ttk.Label(frame, text="Color:", width=10).pack(side=tk.LEFT)
+            color_var = tk.StringVar(value=widget.color)
+            entry = ttk.Entry(frame, textvariable=color_var)
+            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            entry.bind("<Return>", lambda e: self._update_widget_prop(widget_idx, 'color', color_var.get()))
+
         # Position and size
-        ttk.Label(self.props_frame, text="Position & Size:", 
-                 font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(10, 5))
-        
+        ttk.Label(self.props_frame, text="Position & Size:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(10, 5))
         for prop in ['x', 'y', 'width', 'height']:
             frame = ttk.Frame(self.props_frame)
             frame.pack(fill=tk.X, pady=2)
@@ -923,8 +1149,7 @@ class VisualPreviewWindow:
             var = tk.IntVar(value=getattr(widget, prop))
             spinbox = ttk.Spinbox(frame, from_=0, to=200, textvariable=var, width=10)
             spinbox.pack(side=tk.LEFT)
-            spinbox.bind("<Return>", 
-                        lambda e, p=prop, v=var: self._update_widget_prop(widget_idx, p, v.get()))
+            spinbox.bind("<Return>", lambda e, p=prop, v=var: self._update_widget_prop(widget_idx, p, v.get()))
     
     def _update_widget_text(self, widget_idx: int, text: str):
         """Update widget text"""
@@ -1006,6 +1231,225 @@ class VisualPreviewWindow:
         # Save
         img.save(filename)
         messagebox.showinfo("Export Complete", f"Saved to: {filename}")
+    
+    def _export_json(self):
+        """Export design as JSON"""
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile=f"{self.designer.current_scene}.json"
+        )
+        if filename:
+            self.designer.save_to_json(filename)
+            messagebox.showinfo("Export Complete", f"Saved JSON to: {filename}")
+
+    def _export_c(self):
+        """Export design as C code"""
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".c",
+            filetypes=[("C files", "*.c"), ("All files", "*.*")],
+            initialfile=f"{self.designer.current_scene}.c"
+        )
+        if filename:
+            # Use designer.export_code if available, else fallback
+            if hasattr(self.designer, "export_code"):
+                self.designer.export_code(filename, self.designer.current_scene)
+                messagebox.showinfo("Export Complete", f"Saved C code to: {filename}")
+            else:
+                messagebox.showerror("Export Error", "C code export not implemented.")
+
+    def _export_widgetconfig(self):
+        """Export design as WidgetConfig text"""
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            initialfile=f"{self.designer.current_scene}_widgetconfig.txt"
+        )
+        if not filename:
+            return
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            messagebox.showerror("Export Error", "No active scene.")
+            return
+        try:
+            lines = []
+            for w in scene.widgets:
+                # Simple WidgetConfig ASCII export
+                props = [f"{k}={getattr(w, k)}" for k in w.__dataclass_fields__]
+                lines.append(f"[{w.type}] " + ", ".join(props))
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines))
+            messagebox.showinfo("Export Complete", f"Saved WidgetConfig to: {filename}")
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed: {e}")
+
+    def _open_ascii_preview(self):
+        """Open live ASCII preview window with enhanced styling"""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            messagebox.showerror("Preview Error", "No active scene.")
+            return
+        
+        win = tk.Toplevel(self.root)
+        win.title(f"Live ASCII Preview - {self.designer.current_scene}")
+        win.geometry("800x600")
+        win.configure(bg="#1e1e1e")
+        
+        # Create toolbar
+        toolbar = ttk.Frame(win)
+        toolbar.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="ASCII Renderer v2.0", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="🔄 Refresh", command=lambda: self._refresh_ascii_preview(text_widget, scene)).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="💾 Copy to Clipboard", command=lambda: self._copy_ascii_to_clipboard(text_widget)).pack(side=tk.LEFT, padx=5)
+        
+        # Create text widget with scrollbar
+        frame = ttk.Frame(win)
+        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        scrollbar = ttk.Scrollbar(frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        text_widget = tk.Text(frame, font=("Consolas", 9), bg="#1a1a1a", fg="#d4d4d4",
+                             insertbackground="#ffffff", yscrollcommand=scrollbar.set,
+                             wrap=tk.NONE, relief=tk.FLAT, borderwidth=0)
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=text_widget.yview)
+        
+        # Configure text tags for syntax highlighting
+        text_widget.tag_config("border", foreground="#569cd6")  # Blue for borders
+        text_widget.tag_config("fill_button", foreground="#4ec9b0")  # Teal for buttons
+        text_widget.tag_config("fill_box", foreground="#808080")  # Gray for boxes
+        text_widget.tag_config("fill_icon", foreground="#dcdcaa")  # Yellow for icons
+        text_widget.tag_config("text_label", foreground="#ce9178")  # Orange for text
+        
+        # Render ASCII UI
+        self._refresh_ascii_preview(text_widget, scene)
+        
+    def _refresh_ascii_preview(self, text_widget, scene):
+        """Refresh ASCII preview with syntax highlighting"""
+        text_widget.config(state=tk.NORMAL)
+        text_widget.delete("1.0", tk.END)
+        
+        # Render ASCII lines
+        ascii_lines = self._render_ascii_scene(scene)
+        
+        # Insert with highlighting
+        for line_num, line in enumerate(ascii_lines, 1):
+            for char_num, char in enumerate(line):
+                # Determine tag based on character
+                tag = None
+                if char in "┌┐└┘─│":
+                    tag = "border"
+                elif char == "▓":
+                    tag = "fill_button"
+                elif char == "░":
+                    tag = "fill_box"
+                elif char == "◆":
+                    tag = "fill_icon"
+                elif char.isalnum():
+                    tag = "text_label"
+                
+                if tag:
+                    text_widget.insert(tk.END, char, tag)
+                else:
+                    text_widget.insert(tk.END, char)
+            
+            text_widget.insert(tk.END, "\n")
+        
+        text_widget.config(state=tk.DISABLED)
+    
+    def _copy_ascii_to_clipboard(self, text_widget):
+        """Copy ASCII preview to clipboard"""
+        content = text_widget.get("1.0", tk.END)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(content)
+        messagebox.showinfo("Copied", "ASCII preview copied to clipboard!")
+
+    def _render_ascii_scene(self, scene, use_cache=True):
+        """Render the scene as ASCII art with enhanced visuals and caching"""
+        # Use cache if valid
+        if use_cache and self._ascii_cache_valid and self._ascii_cache is not None:
+            widget_count = len(scene.widgets)
+            if widget_count == self._last_widget_count:
+                return self._ascii_cache
+        
+        # Create a 2D buffer
+        buf = [[" " for _ in range(scene.width)] for _ in range(scene.height)]
+        
+        # Draw each widget with borders and enhanced styling
+        for w in scene.widgets:
+            if not w.visible:
+                continue
+            
+            # Determine widget character/style based on type
+            fill_char = self._get_widget_fill_char(w)
+            
+            # Draw widget area with clamping to buffer bounds
+            start_y = max(0, w.y)
+            end_y = min(w.y + w.height, scene.height)
+            start_x = max(0, w.x)
+            end_x = min(w.x + w.width, scene.width)
+            if start_x >= end_x or start_y >= end_y:
+                continue
+
+            for y in range(start_y, end_y):
+                for x in range(start_x, end_x):
+                    # Draw borders for widgets >= 3x3
+                    if w.width >= 3 and w.height >= 3:
+                        is_top = (y == w.y)
+                        is_bottom = (y == w.y + w.height - 1)
+                        is_left = (x == w.x)
+                        is_right = (x == w.x + w.width - 1)
+                        
+                        if is_top and is_left:
+                            buf[y][x] = "┌"
+                        elif is_top and is_right:
+                            buf[y][x] = "┐"
+                        elif is_bottom and is_left:
+                            buf[y][x] = "└"
+                        elif is_bottom and is_right:
+                            buf[y][x] = "┘"
+                        elif is_top or is_bottom:
+                            buf[y][x] = "─"
+                        elif is_left or is_right:
+                            buf[y][x] = "│"
+                        else:
+                            buf[y][x] = fill_char
+                    else:
+                        # Small widgets: just fill
+                        buf[y][x] = fill_char
+            
+            # Draw text label if widget has text and is large enough
+            if hasattr(w, "text") and w.text and w.width >= len(w.text) + 2 and w.height >= 3:
+                text_x = w.x + 1
+                text_y = w.y + w.height // 2
+                if text_y < scene.height:
+                    for i, char in enumerate(w.text[:w.width - 2]):
+                        if text_x + i < scene.width:
+                            buf[text_y][text_x + i] = char
+        
+        # Convert buffer to lines
+        lines = ["".join(row) for row in buf]
+        
+        # Cache the result
+        self._ascii_cache = lines
+        self._ascii_cache_valid = True
+        
+        return lines
+    
+    def _get_widget_fill_char(self, widget):
+        """Get fill character based on widget type"""
+        type_chars = {
+            "button": "▓",
+            "label": " ",
+            "box": "░",
+            "icon": "◆",
+            "checkbox": "☐",
+            "slider": "═",
+            "progress": "▬",
+        }
+        return type_chars.get(widget.type, "█")
     
     def _on_save(self, event):
         """Save design"""
@@ -1156,12 +1600,53 @@ class VisualPreviewWindow:
         self.refresh()
         self.status_bar.configure(text=f"Selected {len(self.selected_widgets)} widget(s)")
     
+    def _on_quick_insert(self, component_index: int):
+        """Quick insert component from palette using keyboard shortcut (Ctrl+1-9)"""
+        if component_index >= len(self.ascii_components):
+            # No component at this index
+            return
+        
+        component = self.ascii_components[component_index]
+        try:
+            widgets = component["factory"]()
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if not scene:
+                return
+            
+            # Add widgets at center of view or last mouse position
+            start_idx = len(scene.widgets)
+            offset_x = 10 + (component_index * 5)  # Slight offset to avoid overlap
+            offset_y = 10 + (component_index * 5)
+            
+            for w in widgets:
+                w.x += offset_x
+                w.y += offset_y
+                scene.widgets.append(w)
+            
+            self.refresh()
+            
+            # Select newly added widgets
+            new_indices = list(range(start_idx, start_idx + len(widgets)))
+            self.selected_widgets = new_indices
+            if new_indices:
+                self.selected_widget_idx = new_indices[0]
+            
+            self.status_bar.configure(
+                text=f"Quick inserted: {component['name']} ({len(widgets)} widgets) - Use Ctrl+{component_index+1} again"
+            )
+        except Exception as e:
+            self.status_bar.configure(text=f"Failed to insert {component['name']}: {e}")
+    
     def run(self):
         """Run the preview window"""
+        if HEADLESS or not TK_AVAILABLE:
+            return
         self.root.mainloop()
 
     def _schedule_tick(self):
         # ~60 FPS
+        if HEADLESS or not TK_AVAILABLE:
+            return
         self.root.after(16, self._tick)
 
     def _tick(self):
@@ -1780,6 +2265,262 @@ def main():
     preview.run()
 
 
+# ========== TEMPLATE MANAGER WINDOW ==========
+
+class TemplateManagerWindow(tk.Toplevel):
+    """Template manager for saving and loading custom widget combinations"""
+    
+    def __init__(self, parent, preview_window: VisualPreviewWindow):
+        super().__init__(parent)
+        self.preview_window = preview_window
+        self.designer = preview_window.designer
+        self.templates_dir = "templates"
+        
+        # Create templates directory if it doesn't exist
+        import os
+        os.makedirs(self.templates_dir, exist_ok=True)
+        
+        self.title("Template Manager")
+        self.geometry("500x600")
+        self.configure(bg="#2b2b2b")
+        
+        self._setup_ui()
+        self._load_templates()
+    
+    def _setup_ui(self):
+        """Setup template manager UI"""
+        # Header
+        header = ttk.Frame(self)
+        header.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(header, text="📑 Template Manager", 
+                 font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+        
+        # Toolbar
+        toolbar = ttk.Frame(self)
+        toolbar.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        ttk.Button(toolbar, text="💾 Save Selection as Template", 
+                  command=self._save_template).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="🔄 Refresh", 
+                  command=self._load_templates).pack(side=tk.LEFT, padx=5)
+        
+        # Template list (scrollable)
+        list_frame = ttk.Frame(self)
+        list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Canvas with scrollbar
+        canvas = tk.Canvas(list_frame, bg="#1e1e1e", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=canvas.yview)
+        
+        self.templates_frame = ttk.Frame(canvas)
+        self.templates_frame.bind("<Configure>", 
+                                  lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        
+        canvas.create_window((0, 0), window=self.templates_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.canvas = canvas
+    
+    def _load_templates(self):
+        """Load and display all saved templates"""
+        import json
+        import os
+        
+        # Clear existing
+        for widget in self.templates_frame.winfo_children():
+            widget.destroy()
+        
+        # Get all template files
+        template_files = []
+        if os.path.exists(self.templates_dir):
+            template_files = [f for f in os.listdir(self.templates_dir) if f.endswith('.json')]
+        
+        if not template_files:
+            ttk.Label(self.templates_frame, text="No templates found. Save a selection to create one.", 
+                     font=("Arial", 10), foreground="#888").pack(padx=20, pady=20)
+            return
+        
+        # Display templates
+        for template_file in sorted(template_files):
+            template_path = os.path.join(self.templates_dir, template_file)
+            try:
+                with open(template_path, 'r') as f:
+                    template_data = json.load(f)
+                self._create_template_card(template_file, template_data)
+            except Exception as e:
+                print(f"Failed to load template {template_file}: {e}")
+    
+    def _create_template_card(self, filename: str, template_data: dict):
+        """Create a template card in the list"""
+        card = ttk.Frame(self.templates_frame, relief=tk.RAISED, borderwidth=1)
+        card.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Header with name
+        header = ttk.Frame(card)
+        header.pack(fill=tk.X, padx=10, pady=5)
+        
+        name = template_data.get("name", filename.replace(".json", ""))
+        ttk.Label(header, text=name, font=("Arial", 11, "bold")).pack(side=tk.LEFT)
+        
+        # Info
+        widget_count = len(template_data.get("widgets", []))
+        ttk.Label(header, text=f"{widget_count} widgets", 
+                 font=("Arial", 9), foreground="#888").pack(side=tk.RIGHT)
+        
+        # Description
+        desc = template_data.get("description", "No description")
+        ttk.Label(card, text=desc, font=("Arial", 9), foreground="#aaa").pack(anchor=tk.W, padx=10)
+        
+        # Buttons
+        button_frame = ttk.Frame(card)
+        button_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Button(button_frame, text="➕ Add to Canvas", 
+                  command=lambda: self._load_template(filename)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(button_frame, text="👁️ Preview", 
+                  command=lambda: self._preview_template(template_data)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(button_frame, text="🗑️ Delete", 
+                  command=lambda: self._delete_template(filename)).pack(side=tk.LEFT, padx=2)
+    
+    def _save_template(self):
+        """Save currently selected widgets as a template"""
+        import json
+        from tkinter import simpledialog
+        
+        if not self.preview_window.selected_widgets:
+            messagebox.showwarning("No Selection", "Select widgets to save as template")
+            return
+        
+        # Ask for template name and description
+        name = simpledialog.askstring("Template Name", "Enter template name:")
+        if not name:
+            return
+        
+        description = simpledialog.askstring("Template Description", 
+                                            "Enter template description (optional):", 
+                                            initialvalue="Custom component template")
+        
+        # Get selected widgets
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        
+        selected_widgets = [scene.widgets[i] for i in self.preview_window.selected_widgets 
+                          if i < len(scene.widgets)]
+        
+        # Create template data
+        template_data = {
+            "name": name,
+            "description": description or "Custom component template",
+            "widgets": [self._widget_to_dict(w) for w in selected_widgets]
+        }
+        
+        # Save to file
+        import os
+        filename = f"{name.lower().replace(' ', '_')}.json"
+        filepath = os.path.join(self.templates_dir, filename)
+        
+        try:
+            with open(filepath, 'w') as f:
+                json.dump(template_data, f, indent=2)
+            messagebox.showinfo("Template Saved", f"Template '{name}' saved successfully!")
+            self._load_templates()
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Failed to save template: {e}")
+    
+    def _widget_to_dict(self, widget) -> dict:
+        """Convert widget to dictionary"""
+        return {
+            "type": widget.type,
+            "x": widget.x,
+            "y": widget.y,
+            "width": widget.width,
+            "height": widget.height,
+            "text": getattr(widget, "text", ""),
+            "visible": widget.visible,
+            "border": getattr(widget, "border", False),
+            "checked": getattr(widget, "checked", False),
+            "value": getattr(widget, "value", 0),
+        }
+    
+    def _load_template(self, filename: str):
+        """Load template and add widgets to canvas"""
+        import json
+        import os
+        
+        filepath = os.path.join(self.templates_dir, filename)
+        try:
+            with open(filepath, 'r') as f:
+                template_data = json.load(f)
+            
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if not scene:
+                messagebox.showerror("Error", "No active scene")
+                return
+            
+            # Add widgets from template
+            start_idx = len(scene.widgets)
+            for widget_data in template_data.get("widgets", []):
+                widget = self._dict_to_widget(widget_data)
+                scene.widgets.append(widget)
+            
+            # Select newly added widgets
+            new_indices = list(range(start_idx, len(scene.widgets)))
+            self.preview_window.selected_widgets = new_indices
+            if new_indices:
+                self.preview_window.selected_widget_idx = new_indices[0]
+            
+            self.preview_window.refresh()
+            messagebox.showinfo("Template Loaded", 
+                              f"Added {len(template_data.get('widgets', []))} widgets from template")
+        except Exception as e:
+            messagebox.showerror("Load Error", f"Failed to load template: {e}")
+    
+    def _dict_to_widget(self, data: dict):
+        """Convert dictionary to widget"""
+        from ui_designer import WidgetConfig
+        return WidgetConfig(
+            type=data.get("type", "label"),
+            x=data.get("x", 0),
+            y=data.get("y", 0),
+            width=data.get("width", 10),
+            height=data.get("height", 10),
+            text=data.get("text", ""),
+            visible=data.get("visible", True),
+            border=data.get("border", False),
+            checked=data.get("checked", False),
+            value=data.get("value", 0),
+        )
+    
+    def _preview_template(self, template_data: dict):
+        """Show template preview"""
+        preview_text = f"Template: {template_data.get('name', 'Unknown')}\n\n"
+        preview_text += f"Description: {template_data.get('description', 'None')}\n\n"
+        preview_text += f"Widgets ({len(template_data.get('widgets', []))}):\n"
+        
+        for i, widget in enumerate(template_data.get("widgets", []), 1):
+            preview_text += f"  {i}. {widget.get('type', 'unknown')} at ({widget.get('x')},{widget.get('y')})\n"
+        
+        messagebox.showinfo("Template Preview", preview_text)
+    
+    def _delete_template(self, filename: str):
+        """Delete a template"""
+        import os
+        
+        if messagebox.askyesno("Delete Template", f"Delete template '{filename}'?"):
+            filepath = os.path.join(self.templates_dir, filename)
+            try:
+                os.remove(filepath)
+                messagebox.showinfo("Deleted", "Template deleted successfully")
+                self._load_templates()
+            except Exception as e:
+                messagebox.showerror("Delete Error", f"Failed to delete template: {e}")
+
+
 # ========== COMPONENT PALETTE WINDOW ==========
 
 class ComponentPaletteWindow(tk.Toplevel):
@@ -1813,10 +2554,10 @@ class ComponentPaletteWindow(tk.Toplevel):
         
         ttk.Label(filter_frame, text="Category:").pack(side=tk.LEFT, padx=5)
         
-        categories = ["All"] + self.library.get_categories()
+        categories = ["All"] + sorted(set(c["category"] for c in self.preview_window.ascii_components))
         self.category_var = tk.StringVar(value="All")
         category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var,
-                                      values=categories, width=20, state="readonly")
+                          values=categories, width=20, state="readonly")
         category_combo.pack(side=tk.LEFT, padx=5)
         category_combo.bind("<<ComboboxSelected>>", lambda e: self._load_components())
         
@@ -1859,95 +2600,251 @@ class ComponentPaletteWindow(tk.Toplevel):
         # Get filtered components
         category = self.category_var.get()
         search = self.search_var.get().lower()
-        
-        components = self.library.list_components(
-            category if category != "All" else None
-        )
-        
+        components = self.preview_window.ascii_components
+        if category != "All":
+            components = [c for c in components if c["category"] == category]
         if search:
-            components = [c for c in components 
-                         if search in c.name.lower() or 
-                            search in c.description.lower() or
-                            any(search in tag for tag in c.tags)]
-        
+            components = [c for c in components if search in c["name"].lower() or search in c["description"].lower()]
         # Display components
         for i, component in enumerate(components):
             self._create_component_card(component, i)
     
     def _create_component_card(self, component, index):
         """Create a component card in the palette"""
-        # Card frame
         card = ttk.Frame(self.components_frame, relief=tk.RAISED, borderwidth=1)
         card.pack(fill=tk.X, padx=5, pady=5)
-        
         # Header with name and category
         header = ttk.Frame(card)
         header.pack(fill=tk.X, padx=10, pady=5)
+        ttk.Label(header, text=component["name"], font=("Arial", 11, "bold")).pack(side=tk.LEFT)
         
-        ttk.Label(header, text=component.name, 
-                 font=("Arial", 11, "bold")).pack(side=tk.LEFT)
-        ttk.Label(header, text=f"[{component.category}]", 
-                 font=("Arial", 9), foreground="#888").pack(side=tk.RIGHT)
+        # Show keyboard shortcut if available (Ctrl+1-9)
+        component_idx = self.preview_window.ascii_components.index(component)
+        if component_idx < 9:
+            ttk.Label(header, text=f"Ctrl+{component_idx+1}", 
+                     font=("Courier", 9), foreground="#4CAF50", 
+                     background="#263238", relief=tk.RAISED, padding=2).pack(side=tk.RIGHT, padx=5)
         
+        ttk.Label(header, text=f"[{component["category"]}]", font=("Arial", 9), foreground="#888").pack(side=tk.RIGHT)
         # Description
-        ttk.Label(card, text=component.description, 
-                 font=("Arial", 9), foreground="#aaa").pack(anchor=tk.W, padx=10)
-        
-        # Preview thumbnail (simplified - just show size)
-        info_frame = ttk.Frame(card)
-        info_frame.pack(fill=tk.X, padx=10, pady=5)
-        
-        ttk.Label(info_frame, text=f"Size: {component.width}×{component.height}",
-                 font=("Arial", 8), foreground="#666").pack(side=tk.LEFT)
-        ttk.Label(info_frame, text=f"Widgets: {len(component.widgets)}",
-                 font=("Arial", 8), foreground="#666").pack(side=tk.LEFT, padx=10)
-        
-        # Tags
-        if component.tags:
-            tags_frame = ttk.Frame(card)
-            tags_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
-            
-            ttk.Label(tags_frame, text="Tags:", font=("Arial", 8)).pack(side=tk.LEFT)
-            for tag in component.tags[:3]:  # Show max 3 tags
-                tag_label = ttk.Label(tags_frame, text=f"#{tag}", 
-                                     font=("Arial", 8), foreground="#3498db")
-                tag_label.pack(side=tk.LEFT, padx=2)
-        
+        ttk.Label(card, text=component["description"], font=("Arial", 9), foreground="#aaa").pack(anchor=tk.W, padx=10)
         # Add button
         button_frame = ttk.Frame(card)
         button_frame.pack(fill=tk.X, padx=10, pady=5)
-        
-        ttk.Button(button_frame, text="➕ Add to Canvas", 
-                  command=lambda: self._add_component_to_canvas(component)).pack(fill=tk.X)
+        ttk.Button(button_frame, text="➕ Add to Canvas", command=lambda: self._add_component_to_canvas(component)).pack(fill=tk.X)
     
     def _add_component_to_canvas(self, component):
-        """Add component to designer canvas"""
+        """Add ASCII component widgets to designer canvas"""
         try:
-            # Add component widgets to designer
-            created_indices = self.library.create_from_template(
-                self.preview_window.designer,
-                component.name,
-                offset_x=10,  # Small offset from top-left
-                offset_y=10
-            )
-            
-            # Refresh preview
+            widgets = component["factory"]()
+            scene = self.preview_window.designer.scenes.get(self.preview_window.designer.current_scene)
+            if not scene:
+                raise RuntimeError("No active scene")
+            start_idx = len(scene.widgets)
+            for w in widgets:
+                scene.widgets.append(w)
             self.preview_window.refresh()
-            
             # Select added widgets
-            self.preview_window.selected_widgets = created_indices
-            if created_indices:
-                self.preview_window.selected_widget_idx = created_indices[0]
-            
-            # Show success message
-            messagebox.showinfo("Component Added", 
-                              f"Added {component.name} with {len(created_indices)} widgets")
-            
+            new_indices = list(range(start_idx, start_idx + len(widgets)))
+            self.preview_window.selected_widgets = new_indices
+            if new_indices:
+                self.preview_window.selected_widget_idx = new_indices[0]
+            messagebox.showinfo("Component Added", f"Added {component['name']} with {len(widgets)} widgets")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add component: {e}")
 
-    return 0
-
 
 if __name__ == "__main__":
-    main()
+    import sys
+    sys.exit(0)
+# Icon Palette Window Implementation
+# This file extends ui_designer_preview.py with the IconPaletteWindow class
+# Append this to the end of ui_designer_preview.py
+
+class IconPaletteWindow(tk.Toplevel):
+    """Icon palette window for browsing and selecting Material Icons"""
+    
+    def __init__(self, parent, preview_window: VisualPreviewWindow):
+        super().__init__(parent)
+        self.preview_window = preview_window
+        
+        self.title("Icon Palette - Material Icons")
+        self.geometry("500x700")
+        self.configure(bg="#2b2b2b")
+        
+        # Setup UI
+        self._setup_ui()
+        self._load_icons()
+    
+    def _setup_ui(self):
+        """Setup palette UI"""
+        # Header
+        header = ttk.Frame(self)
+        header.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(header, text="đźŽ¨ Material Icons (53)", 
+                 font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+        
+        # Size selector
+        size_frame = ttk.Frame(self)
+        size_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(size_frame, text="Size:").pack(side=tk.LEFT, padx=5)
+        self.size_var = tk.StringVar(value="16px")
+        ttk.Radiobutton(size_frame, text="16Ă—16", variable=self.size_var, value="16px").pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(size_frame, text="24Ă—24", variable=self.size_var, value="24px").pack(side=tk.LEFT, padx=5)
+        
+        # Category filter
+        filter_frame = ttk.Frame(self)
+        filter_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(filter_frame, text="Category:").pack(side=tk.LEFT, padx=5)
+        
+        categories = ["All"] + get_all_categories()
+        self.category_var = tk.StringVar(value="All")
+        category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var,
+                          values=categories, width=20, state="readonly")
+        category_combo.pack(side=tk.LEFT, padx=5)
+        category_combo.bind("<<ComboboxSelected>>", lambda e: self._load_icons())
+        
+        # Search box
+        search_frame = ttk.Frame(self)
+        search_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
+        self.search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        search_entry.bind("<KeyRelease>", lambda e: self._load_icons())
+        
+        # Icon list (scrollable)
+        list_frame = ttk.Frame(self)
+        list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Canvas with scrollbar
+        canvas = tk.Canvas(list_frame, bg="#1e1e1e", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=canvas.yview)
+        
+        self.icons_frame = ttk.Frame(canvas)
+        self.icons_frame.bind("<Configure>", 
+                             lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        
+        canvas.create_window((0, 0), window=self.icons_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.canvas = canvas
+        
+        # Info footer
+        info = ttk.Label(self, text="Click icon to copy symbol name â€˘ Drag to add to canvas (future)", 
+                        font=("Arial", 9), foreground="#8b949e", background="#2b2b2b")
+        info.pack(side=tk.BOTTOM, pady=10)
+    
+    def _load_icons(self):
+        """Load and display icons based on filters"""
+        # Clear existing
+        for widget in self.icons_frame.winfo_children():
+            widget.destroy()
+        
+        # Get filtered icons
+        category = self.category_var.get()
+        search = self.search_var.get().lower()
+        icons = MATERIAL_ICONS
+        
+        if category != "All":
+            icons = [i for i in icons if i["category"] == category]
+        if search:
+            icons = [i for i in icons if search in i["name"].lower() or 
+                    search in i["usage"].lower() or 
+                    search in i["symbol"].lower()]
+        
+        # Display icons
+        for i, icon in enumerate(icons):
+            self._create_icon_card(icon, i)
+    
+    def _create_icon_card(self, icon, index):
+        """Create an icon card in the palette"""
+        card = ttk.Frame(self.icons_frame, relief=tk.RAISED, borderwidth=1)
+        card.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Header with icon symbol and name
+        header = ttk.Frame(card)
+        header.pack(fill=tk.X, padx=10, pady=8)
+        
+        # ASCII preview
+        ascii_label = ttk.Label(header, text=icon["ascii"], font=("Segoe UI Emoji", 20))
+        ascii_label.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Name and category
+        info_frame = ttk.Frame(header)
+        info_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        ttk.Label(info_frame, text=icon["name"], font=("Arial", 11, "bold")).pack(anchor=tk.W)
+        ttk.Label(info_frame, text=f"{icon['category'].title()} â€˘ {icon['symbol']}", 
+                 font=("Courier", 9), foreground="#58a6ff").pack(anchor=tk.W)
+        
+        # Usage description
+        ttk.Label(card, text=icon["usage"], font=("Arial", 9), 
+                 foreground="#8b949e", wraplength=450).pack(anchor=tk.W, padx=10, pady=(0, 8))
+        
+        # Action buttons
+        button_frame = ttk.Frame(card)
+        button_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Button(button_frame, text="đź“‹ Copy Symbol", 
+                  command=lambda: self._copy_symbol(icon["symbol"])).pack(side=tk.LEFT, padx=2)
+        ttk.Button(button_frame, text="â„ą Info", 
+                  command=lambda: self._show_icon_info(icon)).pack(side=tk.LEFT, padx=2)
+    
+    def _copy_symbol(self, symbol: str):
+        """Copy icon symbol to clipboard"""
+        self.clipboard_clear()
+        self.clipboard_append(symbol)
+        # Show toast notification
+        messagebox.showinfo("Copied", f"Symbol '{symbol}' copied to clipboard!")
+    
+    def _show_icon_info(self, icon):
+        """Show detailed icon information"""
+        size = self.size_var.get()
+        size_field = "size_16" if size == "16px" else "size_24"
+        
+        info_text = f"""Icon: {icon['name']}
+Category: {icon['category'].title()}
+Usage: {icon['usage']}
+
+C Symbol ({size}): {icon[size_field]}
+ASCII Fallback: {icon['ascii']}
+
+Example (C):
+  #include "icons.h"
+  display_draw_icon(&{icon[size_field]}, x, y);
+
+Example (JSON/Python):
+  {{"type": "icon", "icon": "{icon['symbol']}", "x": 10, "y": 20}}
+"""
+        
+        # Create info dialog
+        dialog = tk.Toplevel(self)
+        dialog.title(f"Icon Info - {icon['name']}")
+        dialog.geometry("500x400")
+        dialog.configure(bg="#1e1e1e")
+        
+        # ASCII preview (large)
+        preview = ttk.Label(dialog, text=icon["ascii"], font=("Segoe UI Emoji", 48), 
+                           background="#1e1e1e", foreground="#58a6ff")
+        preview.pack(pady=20)
+        
+        # Info text
+        text = tk.Text(dialog, width=60, height=15, bg="#2b2b2b", fg="#c9d1d9", 
+                      font=("Courier", 10), wrap=tk.WORD)
+        text.insert("1.0", info_text)
+        text.config(state=tk.DISABLED)
+        text.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
+        
+        # Close button
+        ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=10)
+
+
+# Add this class to the end of ui_designer_preview.py

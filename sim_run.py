@@ -1,24 +1,40 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 """
 ESP32 UI Simulator - Python Version
 Runs without requiring C compiler
 """
 
-import os
-import sys
-import time
-import platform
 import argparse
-import threading
-import socket
-import json
-import queue
 import atexit
+import json
+import os
+import platform
+import queue
 import re
-from typing import Tuple, Any, List, Dict, Optional, TypedDict, Literal, Union, Callable, Set, cast, TYPE_CHECKING, Iterable, Mapping
-from datetime import datetime
+import socket
+import sys
+import threading
+import time
 from dataclasses import dataclass
+from datetime import datetime
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    TypedDict,
+    Union,
+    cast,
+)
 
 pygame: Any
 try:
@@ -126,6 +142,10 @@ class RenderContext:
     height: int
     use_unicode: bool
     use_color: bool
+    compute_ms: float = 0.0
+    sleep_ms: float = 0.0
+    util: float = 0.0
+    input_src: str = ""
 
 # --- Shared state snapshot for RPC get_state ---
 _snapshot_lock = threading.Lock()
@@ -159,10 +179,7 @@ def get_state_snapshot() -> Dict[str, Any]:
     """Return a shallow copy of the latest state snapshot for RPC/inspector."""
     with _snapshot_lock:
         return dict(_current_state_snapshot)
-    compute_ms: float = 0.0
-    sleep_ms: float = 0.0
-    util: float = 0.0
-    input_src: str = ""
+    
 
 class Widget:
     def render(self, ctx: RenderContext) -> List[str]:
@@ -557,7 +574,7 @@ def _com_bridge_loop(port_name: str, baud: int, evq: queue.Queue[Event]) -> None
 
 def start_com_bridge(port_name: str, baud: int, evq: queue.Queue[Event]) -> Optional[threading.Thread]:
     try:
-        import serial  # type: ignore
+        pass  # type: ignore
     except Exception:
         print("pyserial not installed. Install with: pip install pyserial", file=sys.stderr)
         return None
@@ -571,6 +588,7 @@ def start_websocket_server(port: int, frame_callback: Callable[[], Dict[str, Any
     """Start WebSocket server for remote UI streaming (requires websockets library)"""
     try:
         import asyncio
+
         import websockets  # type: ignore
     except Exception:
         print("websockets not installed. Install with: pip install websockets", file=sys.stderr)
@@ -832,6 +850,7 @@ def main() -> None:
     parser.add_argument('--auto-size', action='store_true', help='Auto-detect terminal size and adjust UI')
     parser.add_argument('--gamepad', action='store_true', help='Enable pygame-based gamepad input (maps buttons to A/B/C)')
     parser.add_argument('--input-overlay', action='store_true', help='Show small pygame window with clickable A/B/C buttons')
+    parser.add_argument('--max-frames', type=int, default=0, help='Exit after rendering N frames (0=run indefinitely)')
     args = parser.parse_args()
 
     # Detect optional pygame for input hints (no hard import)
@@ -1335,6 +1354,10 @@ def main() -> None:
             else:
                 full_redraw = False
             frame += 1
+
+            # Exit after N frames if requested (useful for CI/headless checks)
+            if args.max_frames and frame >= args.max_frames:
+                running = False
 
             # Timing for this frame
             frame_time = time.time() - frame_start

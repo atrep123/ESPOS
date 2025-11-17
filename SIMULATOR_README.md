@@ -48,8 +48,10 @@ Ve VS Code jsou k dispozici předpřipravené úlohy pro rychlé workflow (Ctrl+
 - `Simulator: Start (AutoPorts, SameWindow)` – běh v aktuálním okně (snadné čtení logu).
 - `Simulator: UART set_bg ff0000 (auto)` – odešle příkaz na UART‑like port z `sim_ports.json`.
 - `Simulator: simctl set_bg red (auto)` – RPC volání přes `simctl.py` na aktivní `rpc_port`.
+- `Simulator: simctl icon_demo/icon_mode/icon_size/icon_bench` – rychlé ověření ikonových režimů.
 - `Tests: Run All` – kompletní sada Python testů.
 - `Preview: Small Heights` – headless export extrémně malých widgetů (PNG artefakt).
+- Pozn.: Preview/PNG export používá stejný renderer a cache je content-aware.
 - `CI: Smoke` – rychlá verifikace (designer + preview) a uložení artefaktů do `reports/`.
 
 Manuální spuštění smoke skriptu:
@@ -130,6 +132,13 @@ Další pokročilé parametry:
 - `--playback <path>`: přehrát zaznamenaný session
 - `--gamepad`: zapnout podporu gamepadu/joysticku přes pygame (mapuje tlačítka 0/1/2 → A/B/C)
 - `--input-overlay`: otevře malé klikací okno s tlačítky A/B/C (pygame)
+- `--max-frames <N>`: ukončí simulátor po vykreslení N snímků (0 = bez limitu)
+
+Ikonové RPC příklady (přes `simctl.py <rpc_port> <cmd>`):
+- `icon_demo` – zobrazí grid ikon s aktuální velikostí/módem.
+- `icon_size 16|24` – přepne velikost ikon (výchozí 16).
+- `icon_mode normal|invert|xor` – přepne blit mód.
+- `icon_bench 200 size=24 mode=invert` – změří vykreslování, vrátí JSON s klíči `count`, `size`, `mode`, `us_per_draw`, `fps`.
 
 Poznámka k závislostem pro vstupy: pro `--gamepad` a `--input-overlay` je potřeba `pygame`. Nainstalujte např.:
 
