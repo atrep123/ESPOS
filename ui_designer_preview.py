@@ -130,6 +130,9 @@ class VisualPreviewWindow:
         self.drag_origin: Optional[Tuple[int, int]] = None
         self.resize_handle: Optional[str] = None  # ne, nw, se, sw, n, s, e, w
         
+        # Handle hover state for visual feedback
+        self.hovered_handle: Optional[str] = None
+        
         # Clipboard for copy/paste
         self.clipboard: List[WidgetConfig] = []
         
@@ -856,8 +859,10 @@ class VisualPreviewWindow:
         w = int(widget.width * self.settings.zoom)
         h = int(widget.height * self.settings.zoom)
         
-        handle_size = 6
+        # Larger handles for better UX (8px visual, 12px hitbox)
+        handle_visual_size = 8
         handle_color = "#00AAFF"
+        handle_hover_color = "#00DDFF"  # Brighter on hover
         
         # Corner handles
         handles = [
@@ -872,10 +877,13 @@ class VisualPreviewWindow:
         ]
         
         for hx, hy, handle_type in handles:
+            # Use hover color if mouse is over this handle
+            color = handle_hover_color if handle_type == self.hovered_handle else handle_color
+            # Draw larger, more visible handles with border
             self.canvas.create_rectangle(
-                hx - handle_size // 2, hy - handle_size // 2,
-                hx + handle_size // 2, hy + handle_size // 2,
-                fill=handle_color, outline="white", width=1,
+                hx - handle_visual_size // 2, hy - handle_visual_size // 2,
+                hx + handle_visual_size // 2, hy + handle_visual_size // 2,
+                fill=color, outline="white", width=2,
                 tags=f"handle_{handle_type}"
             )
     
@@ -957,8 +965,8 @@ class VisualPreviewWindow:
         # Convert to widget coordinates
         wx, wy = self._canvas_to_widget_coords(x, y)
         
-        # Check handle positions (with some tolerance)
-        tolerance = 3
+        # Larger hitbox tolerance for easier handle grabbing (12px total area)
+        tolerance = 6
         
         handles = [
             (widget.x, widget.y, "nw"),
@@ -1200,6 +1208,11 @@ class VisualPreviewWindow:
         # Check for resize handle hover
         handle = self._find_resize_handle(event.x, event.y)
         if handle:
+            # Update hovered handle state for visual feedback
+            if self.hovered_handle != handle:
+                self.hovered_handle = handle
+                self.refresh()  # Redraw with hover highlight
+            
             cursors = {
                 "nw": "top_left_corner",
                 "ne": "top_right_corner",
@@ -1212,6 +1225,10 @@ class VisualPreviewWindow:
             }
             self.canvas.configure(cursor=cursors.get(handle, "arrow"))
         else:
+            # Clear hover state when not over handle
+            if self.hovered_handle is not None:
+                self.hovered_handle = None
+                self.refresh()  # Redraw without hover
             self.canvas.configure(cursor="arrow")
 
     def _on_nudge(self, event, dx: int, dy: int):
