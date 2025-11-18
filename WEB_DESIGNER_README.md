@@ -424,5 +424,5 @@ Contributions welcome! Please ensure:
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/atrep123/ESPOS/issues
+- GitHub Issues: [https://github.com/atrep123/ESPOS/issues](https://github.com/atrep123/ESPOS/issues)
 - Label as `web` and `collaboration`
