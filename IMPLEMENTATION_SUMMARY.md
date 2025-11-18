@@ -230,6 +230,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ## 🚀 Jak používat
 
 ### Quick start
+
 ```powershell
 # Základní
 python sim_run.py
@@ -249,6 +250,7 @@ python sim_run.py --playback session.json
 ```
 
 ### Python control
+
 ```python
 from esp32_sim_client import ESP32SimulatorClient
 
@@ -259,6 +261,7 @@ with ESP32SimulatorClient(port=8765) as client:
 ```
 
 ### C/C++ control
+
 ```c
 #include "esp32_sim_client.h"
 
