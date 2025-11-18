@@ -24,6 +24,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Shared undo/redo import (pure-Python, no extra dependency requirements)
+try:
+    from shared_undo_redo import OperationBuilder, OperationType, UndoRedoManager
+except Exception:  # pragma: no cover - defensive if file missing
+    UndoRedoManager = None  # type: ignore
+    OperationBuilder = None  # type: ignore
+    OperationType = None  # type: ignore
+
 from ui_designer import UIDesigner
 
 try:
@@ -76,17 +84,47 @@ class User:
 
 @dataclass
 class ProjectSession:
-    """In-memory session state for a project."""
+    """In-memory session state for a project.
+
+    Added fields:
+    - history: per-session undo/redo manager (operation-based)
+    - history_version: monotonic counter for history broadcasts
+    """
     project_id: str
     users: Dict[str, User]  # user_id -> User
     websockets: Dict[str, WebSocket]  # user_id -> WebSocket
-    version: int = 0  # Design version counter for OT
-    
+    version: int = 0  # Design version counter for OT (widget structural changes)
+    history: Optional[UndoRedoManager] = None
+    history_version: int = 0
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "project_id": self.project_id,
             "users": [u.to_dict() for u in self.users.values()],
             "version": self.version,
+            "history": self._history_state_summary(),
+        }
+
+    def _history_state_summary(self) -> Dict[str, Any]:
+        if not self.history:
+            return {"enabled": False}
+        undo_label = ""
+        redo_label = ""
+        if self.history.can_undo():
+            op = self.history.operations[self.history.current_index]
+            undo_label = self.history.get_operation_description(op)
+        if self.history.can_redo():
+            op = self.history.operations[self.history.current_index + 1]
+            redo_label = self.history.get_operation_description(op)
+        return {
+            "enabled": True,
+            "can_undo": self.history.can_undo(),
+            "can_redo": self.history.can_redo(),
+            "undo_label": undo_label,
+            "redo_label": redo_label,
+            "count": len(self.history.operations),
+            "index": self.history.current_index,
+            "history_version": self.history_version,
         }
 
 
@@ -159,13 +197,29 @@ _USER_COLORS = [
 def _get_or_create_session(project_id: str) -> ProjectSession:
     """Get or create a project session."""
     if project_id not in _sessions:
+        history_mgr = UndoRedoManager(user_id="server") if UndoRedoManager else None
         _sessions[project_id] = ProjectSession(
             project_id=project_id,
             users={},
             websockets={},
             version=0,
+            history=history_mgr,
         )
+        # Attempt to load persisted history if available
+        if history_mgr:
+            history_path = _history_file_path(project_id)
+            if history_path.is_file():
+                try:
+                    history_mgr.load_state(str(history_path))
+                except Exception:
+                    # Corrupt or unreadable history should not block session creation
+                    pass
     return _sessions[project_id]
+
+
+def _history_file_path(project_id: str) -> Path:
+    """Return path to persisted history file for a project."""
+    return PROJECTS_DIR / project_id / "history.json"
 
 
 def _assign_user_color(session: ProjectSession) -> str:
@@ -281,6 +335,18 @@ def create_app() -> "FastAPI":  # type: ignore[name-defined]
         except Exception as exc:  # pragma: no cover - I/O edge cases
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return {"status": "ok"}
+
+    @app.get("/api/projects/{project_id}/history")
+    def get_project_history(project_id: str, include_operations: bool = False) -> Dict[str, Any]:
+        """Return undo/redo history summary (and optionally full operations)."""
+        projects = _list_projects()
+        if project_id not in projects:
+            raise HTTPException(status_code=404, detail="Project not found")
+        session = _get_or_create_session(project_id)
+        hist = session._history_state_summary()
+        if include_operations and session.history:
+            hist["operations"] = [op.to_dict() for op in session.history.get_history()]
+        return hist
     
     @app.get("/api/projects/{project_id}/session")
     def get_project_session(project_id: str) -> Dict:
@@ -458,6 +524,84 @@ def create_app() -> "FastAPI":  # type: ignore[name-defined]
                         broadcast_msg.update(msg)
                         
                         await _broadcast(session, user_id, broadcast_msg)
+
+                        # Record operation into undo history
+                        if session.history and OperationBuilder:
+                            try:
+                                widget_id = ""
+                                if op == "widget_add":
+                                    widget = msg.get("widget", {})
+                                    widget_id = widget.get("id", str(uuid.uuid4()))
+                                    add_op = OperationBuilder.add_widget(
+                                        widget_id,
+                                        widget.get("type", "widget"),
+                                        int(widget.get("x", 0)),
+                                        int(widget.get("y", 0)),
+                                        int(widget.get("width", widget.get("w", 0) or 0)),
+                                        int(widget.get("height", widget.get("h", 0) or 0)),
+                                        **{k: v for k, v in widget.items() if k not in {"id","x","y","width","height","w","h","type"}}
+                                    )
+                                    add_op.user_id = user_id
+                                    session.history.execute(add_op)
+                                elif op == "widget_update":
+                                    widget_id = msg.get("widget_id", "")
+                                    changes = msg.get("changes", {})
+                                    # Bulk modify operation
+                                    mod_op = OperationBuilder.modify_property(
+                                        widget_id,
+                                        "bulk",
+                                        None,
+                                        changes,
+                                    )
+                                    mod_op.user_id = user_id
+                                    session.history.execute(mod_op)
+                                elif op == "widget_delete":
+                                    widget_id = msg.get("widget_id", "")
+                                    del_op = OperationBuilder.delete_widget(widget_id, {})
+                                    del_op.user_id = user_id
+                                    session.history.execute(del_op)
+                                session.history_version += 1
+                                # Persist history after every recorded operation (best-effort)
+                                try:
+                                    session.history.save_state(str(_history_file_path(project_id)))
+                                except Exception:
+                                    pass
+                                # Broadcast updated history state
+                                await _broadcast(session, None, {
+                                    "op": "history_state",
+                                    "session": session._history_state_summary(),
+                                })
+                            except Exception:
+                                # History recording must not break collaboration
+                                pass
+
+                elif op in ("undo", "redo"):
+                    if session.history:
+                        applied = None
+                        if op == "undo" and session.history.can_undo():
+                            applied = session.history.undo()
+                        elif op == "redo" and session.history.can_redo():
+                            applied = session.history.redo()
+                        if applied:
+                            session.history_version += 1
+                            # Persist after undo/redo as well
+                            try:
+                                session.history.save_state(str(_history_file_path(project_id)))
+                            except Exception:
+                                pass
+                            # Broadcast undo/redo applied (clients decide how to update UI)
+                            await _broadcast(session, None, {
+                                "op": f"{op}_applied",
+                                "operation": applied.to_dict(),
+                                "session": session._history_state_summary(),
+                            })
+                            # Also echo back to requester
+                            await websocket.send_text(json.dumps({
+                                "op": f"{op}_applied",
+                                "operation": applied.to_dict(),
+                                "session": session._history_state_summary(),
+                            }))
+                    # Ignore if no history manager
                 
                 elif op == "heartbeat":
                     # Keep-alive ping

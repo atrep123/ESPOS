@@ -42,44 +42,59 @@ def _make_app_with_project(tmp_path, monkeypatch) -> tuple[TestClient, str]:
 
 
 def test_ws_broadcast_simple_text(tmp_path, monkeypatch):
-    """Messages sent by one WebSocket client should reach the others."""
+    """Test basic WebSocket connection with structured join message."""
     client, project_id = _make_app_with_project(tmp_path, monkeypatch)
 
-    with client.websocket_connect(f"/ws/projects/{project_id}") as ws1, client.websocket_connect(
-        f"/ws/projects/{project_id}"
-    ) as ws2:
-        payload = "ping-collab"
-        ws1.send_text(payload)
-        received = ws2.receive_text()
-        assert received == payload
+    with client.websocket_connect(f"/ws/projects/{project_id}") as ws1:
+        # Join with structured message
+        ws1.send_text(json.dumps({"op": "join", "user_name": "TestUser"}))
+        msg = json.loads(ws1.receive_text())
+        
+        # Should receive session_state
+        assert msg["op"] == "session_state"
+        assert "user_id" in msg
+        assert msg["session"]["users"][0]["name"] == "TestUser"
 
 
 def test_ws_design_update_roundtrip(tmp_path, monkeypatch):
-    """design_update messages should round-trip unchanged through the broadcast hub."""
+    """Widget operations should broadcast to other connected users."""
     client, project_id = _make_app_with_project(tmp_path, monkeypatch)
 
     with client.websocket_connect(f"/ws/projects/{project_id}") as ws1, client.websocket_connect(
         f"/ws/projects/{project_id}"
     ) as ws2:
+        # Both join first
+        ws1.send_text(json.dumps({"op": "join", "user_name": "User1"}))
+        ws1.receive_text()  # session_state
+        
+        ws2.send_text(json.dumps({"op": "join", "user_name": "User2"}))
+        ws2.receive_text()  # session_state
+        ws1.receive_text()  # user_joined
+        
+        # User1 updates a widget
         update = {
-            "type": "design_update",
-            "project_id": project_id,
-            "user": "client-test",
-            "design": {
-                "width": 128,
-                "height": 64,
-                "scenes": {"main": {"name": "main", "width": 128, "height": 64, "widgets": []}},
-            },
+            "op": "widget_update",
+            "widget_id": "widget_123",
+            "changes": {
+                "x": 50,
+                "y": 60,
+            }
         }
         ws1.send_text(json.dumps(update))
+        
+        # User2 should receive the broadcast
         received_raw = ws2.receive_text()
         received = json.loads(received_raw)
 
-        assert received["type"] == "design_update"
-        assert received["project_id"] == project_id
-        assert received["user"] == "client-test"
-        assert "design" in received
-        assert received["design"]["width"] == 128
+        assert received["op"] == "widget_update"
+        assert received["widget_id"] == "widget_123"
+        assert received["changes"]["x"] == 50
+        assert received["changes"]["y"] == 60
+        assert "version" in received
+        
+        # Consume history_state
+        history = json.loads(ws2.receive_text())
+        assert history["op"] == "history_state"
 
 
 def test_ws_user_join_and_session_state(tmp_path, monkeypatch):
@@ -132,6 +147,10 @@ def test_ws_cursor_tracking(tmp_path, monkeypatch):
         msg1 = json.loads(ws1.receive_text())
         user_id_1 = msg1["user_id"]
         
+        ws2.send_text(json.dumps({"op": "join", "user_name": "Bob"}))
+        ws2.receive_text()  # session_state
+        ws1.receive_text()  # user_joined
+        
         # Alice sends cursor update
         ws1.send_text(json.dumps({"op": "cursor", "x": 100, "y": 200}))
         
@@ -177,6 +196,10 @@ def test_ws_widget_operations_broadcast(tmp_path, monkeypatch):
         assert "user_id" in msg
         assert "version" in msg
         assert msg["widget"]["text"] == "New Widget"
+        
+        # Consume history_state broadcast that backend now sends
+        history_msg = json.loads(ws2.receive_text())
+        assert history_msg["op"] == "history_state"
 
 
 def test_ws_user_disconnect(tmp_path, monkeypatch):
