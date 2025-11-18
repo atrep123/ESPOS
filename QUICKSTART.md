@@ -215,6 +215,7 @@ Vytvoř vlastní `.sim_config.json`:
 ```
 
 Použití:
+
 ```powershell
 python sim_run.py --config .sim_config.json
 ```
@@ -222,24 +223,28 @@ python sim_run.py --config .sim_config.json
 ## 🐛 Troubleshooting
 
 ### Port obsazen
+
 ```powershell
 # Použij auto-port selection
 .\run_sim.ps1 -AutoPorts
 ```
 
 ### Flickering
+
 ```powershell
 # Zkus bez diff renderingu
 python sim_run.py --no-diff
 ```
 
 ### Špatná velikost
+
 ```powershell
 # Auto-detect
 python sim_run.py --auto-size
 ```
 
 ### Performance issues
+
 ```powershell
 # Export metrik a analyzuj
 python sim_run.py --export-metrics perf.csv
@@ -253,10 +258,11 @@ python sim_run.py --export-metrics perf.csv
 4. **Remote**: Používej `--websocket-port` pro monitoring
 5. **Debug**: Používej `--no-diff` při problémech s renderingem
 
-## 🎉 Hotovo!
+## 🎉 Hotovo
 
 Simulátor je plně funkční a připravený k použití. Všechny funkce byly implementovány a otestovány.
 
 Pro více informací viz:
+
 - `SIMULATOR_README.md` - Detailní dokumentace
 - `SIMULATOR_EXAMPLES.md` - Pokročilé příklady
