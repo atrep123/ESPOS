@@ -5,3 +5,6 @@ black>=24.3
 ruff>=0.4.5
 mypy>=1.7
 pre-commit>=3.7
+
+# Build and distribution
+pyinstaller>=6.0.0
