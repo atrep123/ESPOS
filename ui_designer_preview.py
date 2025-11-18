@@ -2859,6 +2859,11 @@ class VisualPreviewWindow:
         Guides indicate near alignment between the selected widget edges/centers
         and other visible widgets, as well as grid lines when grid is enabled.
         Does not change positions; purely visual.
+        
+        Returns:
+            List of (orientation, position) tuples where orientation is 'v' or 'h'.
+            Uses nearest-per-category logic to avoid clutter: one guide per 
+            left/center/right and top/middle/bottom at most.
         """
         if self.selected_widget_idx is None or not self.designer.current_scene:
             return []
