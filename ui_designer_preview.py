@@ -88,7 +88,8 @@ class VisualPreviewWindow:
         self.anim = AnimationDesigner()
         # UX helpers
         self._show_hints: bool = True
-        self._show_guides: bool = True
+        # Initialize guides default: ON if grid/snap enabled, otherwise OFF
+        self.settings.show_alignment_guides = self.settings.grid_enabled or self.settings.snap_enabled
         # Perf metrics
         self._last_render_ms: float = 0.0
         # Animation playback speed multiplier (1.0 = normal)
@@ -249,7 +250,7 @@ class VisualPreviewWindow:
                    command=self._on_hints_toggle).pack(side=tk.LEFT, padx=5)
 
         # Guides toggle
-        self.guides_var = tk.BooleanVar(value=self._show_guides)
+        self.guides_var = tk.BooleanVar(value=self.settings.show_alignment_guides)
         ttk.Checkbutton(toolbar, text="Guides", variable=self.guides_var,
                command=self._on_guides_toggle).pack(side=tk.LEFT, padx=5)
         
@@ -2369,7 +2370,7 @@ class VisualPreviewWindow:
 
     def _on_guides_toggle(self):
         """Toggle magnetic guides overlay"""
-        self._show_guides = bool(self.guides_var.get())
+        self.settings.show_alignment_guides = bool(self.guides_var.get())
         self.refresh()
     
     def _choose_bg_color(self):
@@ -2856,7 +2857,8 @@ class VisualPreviewWindow:
         """Compute alignment guide lines ('v', x) and ('h', y) for the selected widget.
 
         Guides indicate near alignment between the selected widget edges/centers
-        and other visible widgets. Does not change positions; purely visual.
+        and other visible widgets, as well as grid lines when grid is enabled.
+        Does not change positions; purely visual.
         """
         if self.selected_widget_idx is None or not self.designer.current_scene:
             return []
@@ -2877,6 +2879,7 @@ class VisualPreviewWindow:
         nearest_v = {"left": (10**9, None), "center": (10**9, None), "right": (10**9, None)}
         nearest_h = {"top": (10**9, None), "middle": (10**9, None), "bottom": (10**9, None)}
 
+        # Check alignment with other widgets
         for idx, w, _, _ in self._iter_visible_widgets(scene):
             if idx == self.selected_widget_idx:
                 continue
@@ -2898,6 +2901,25 @@ class VisualPreviewWindow:
                     d = abs(target_y - other_y)
                     if d < nearest_h[key][0]:
                         nearest_h[key] = (d, other_y)
+
+        # Check alignment with grid lines (if grid is enabled)
+        if self.settings.grid_enabled and self.settings.grid_size > 0:
+            grid_size = self.settings.grid_size
+            # Check vertical grid lines (x positions)
+            for key, target_x in (("left", lx), ("center", cx), ("right", rx)):
+                # Find nearest grid line
+                nearest_grid = round(target_x / grid_size) * grid_size
+                d = abs(target_x - nearest_grid)
+                if d < nearest_v[key][0]:
+                    nearest_v[key] = (d, nearest_grid)
+            
+            # Check horizontal grid lines (y positions)
+            for key, target_y in (("top", ty), ("middle", cy), ("bottom", by)):
+                # Find nearest grid line
+                nearest_grid = round(target_y / grid_size) * grid_size
+                d = abs(target_y - nearest_grid)
+                if d < nearest_h[key][0]:
+                    nearest_h[key] = (d, nearest_grid)
 
         guides: List[Tuple[str, int]] = []
         # Use nearest within tolerance per category to avoid clutter
