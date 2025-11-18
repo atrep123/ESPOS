@@ -18,13 +18,16 @@ import json
 import os
 import subprocess
 import sys
+import time
+import uuid
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ui_designer import UIDesigner
 
 try:
-    from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
+    from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
     from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
 
@@ -45,6 +48,46 @@ except Exception:  # pragma: no cover - FastAPI is optional for now
 
 ROOT = Path(__file__).resolve().parent
 PROJECTS_DIR = ROOT / "ui_projects"
+
+
+# --- Collaborative editing data models ---
+
+
+@dataclass
+class User:
+    """Connected user for collaborative editing."""
+    id: str
+    name: str
+    color: str  # Hex color for cursor/selection
+    cursor_x: float = 0.0
+    cursor_y: float = 0.0
+    last_activity: float = 0.0
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "color": self.color,
+            "cursor_x": self.cursor_x,
+            "cursor_y": self.cursor_y,
+            "last_activity": self.last_activity,
+        }
+
+
+@dataclass
+class ProjectSession:
+    """In-memory session state for a project."""
+    project_id: str
+    users: Dict[str, User]  # user_id -> User
+    websockets: Dict[str, WebSocket]  # user_id -> WebSocket
+    version: int = 0  # Design version counter for OT
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "project_id": self.project_id,
+            "users": [u.to_dict() for u in self.users.values()],
+            "version": self.version,
+        }
 
 
 class ProjectInfo(BaseModel):  # type: ignore[misc]
@@ -99,6 +142,54 @@ def _summarize_design(project_id: str, design_path: Path) -> DesignSummary:
             )
         )
     return DesignSummary(project_id=project_id, scenes=scenes)
+
+
+# --- Collaborative editing session management ---
+
+# Global session store: project_id -> ProjectSession
+_sessions: Dict[str, ProjectSession] = {}
+
+# User color palette for auto-assignment
+_USER_COLORS = [
+    "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8",
+    "#F7DC6F", "#BB8FCE", "#85C1E2", "#F8B739", "#52B788",
+]
+
+
+def _get_or_create_session(project_id: str) -> ProjectSession:
+    """Get or create a project session."""
+    if project_id not in _sessions:
+        _sessions[project_id] = ProjectSession(
+            project_id=project_id,
+            users={},
+            websockets={},
+            version=0,
+        )
+    return _sessions[project_id]
+
+
+def _assign_user_color(session: ProjectSession) -> str:
+    """Assign a unique color to a new user."""
+    used_colors = {u.color for u in session.users.values()}
+    for color in _USER_COLORS:
+        if color not in used_colors:
+            return color
+    # If all colors used, generate a random one
+    import random
+    return f"#{random.randint(0, 0xFFFFFF):06X}"
+
+
+def _cleanup_stale_users(session: ProjectSession, timeout: float = 30.0) -> None:
+    """Remove users who haven't sent activity in timeout seconds."""
+    import time
+    now = time.time()
+    stale_ids = [
+        uid for uid, user in session.users.items()
+        if now - user.last_activity > timeout
+    ]
+    for uid in stale_ids:
+        session.users.pop(uid, None)
+        session.websockets.pop(uid, None)
 
 
 def create_app() -> "FastAPI":  # type: ignore[name-defined]
@@ -173,7 +264,7 @@ def create_app() -> "FastAPI":  # type: ignore[name-defined]
         try:
             return json.loads(design_path.read_text(encoding="utf-8"))
         except Exception as exc:  # pragma: no cover - I/O edge cases
-            raise HTTPException(status_code=500, detail=str(exc))
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.put("/api/projects/{project_id}/design")
     def put_project_design(project_id: str, payload: Dict) -> Dict[str, str]:
@@ -188,8 +279,19 @@ def create_app() -> "FastAPI":  # type: ignore[name-defined]
                 encoding="utf-8",
             )
         except Exception as exc:  # pragma: no cover - I/O edge cases
-            raise HTTPException(status_code=500, detail=str(exc))
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
         return {"status": "ok"}
+    
+    @app.get("/api/projects/{project_id}/session")
+    def get_project_session(project_id: str) -> Dict:
+        """Get current collaborative session state for a project."""
+        projects = _list_projects()
+        if project_id not in projects:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        session = _get_or_create_session(project_id)
+        _cleanup_stale_users(session)
+        return session.to_dict()
 
     @app.post("/api/projects/{project_id}/build")
     def build_project(
@@ -243,52 +345,146 @@ def create_app() -> "FastAPI":  # type: ignore[name-defined]
         proc = subprocess.run(cmd, cwd=str(ROOT))
         return {"returncode": int(proc.returncode)}
 
-    # --- Collaborative editing (minimal broadcast hub) ---
+    # --- Collaborative editing with user tracking and structured messages ---
 
-    # project_id -> list of WebSocket connections
-    ws_clients: Dict[str, List[WebSocket]] = {}
-
-    async def _register_ws(project_id: str, ws: WebSocket) -> None:
-        await ws.accept()
-        ws_clients.setdefault(project_id, []).append(ws)
-
-    async def _unregister_ws(project_id: str, ws: WebSocket) -> None:
-        clients = ws_clients.get(project_id, [])
-        if ws in clients:
-            clients.remove(ws)
-        if not clients and project_id in ws_clients:
-            ws_clients.pop(project_id, None)
-
-    async def _broadcast(project_id: str, sender: WebSocket, message: str) -> None:
-        """Broadcast message to all clients for a project except sender."""
-        for client in ws_clients.get(project_id, []):
-            if client is sender:
+    async def _broadcast(session: ProjectSession, sender_id: Optional[str], message: Dict) -> None:
+        """Broadcast structured message to all clients in a session except sender."""
+        msg_str = json.dumps(message)
+        for user_id, ws in session.websockets.items():
+            if user_id == sender_id:
                 continue
             try:
-                await client.send_text(message)
+                await ws.send_text(msg_str)
             except Exception:
-                # Ignore send errors; cleanup happens on disconnect.
+                # Ignore send errors; cleanup happens on disconnect
                 continue
 
     @app.websocket("/ws/projects/{project_id}")
     async def project_ws(project_id: str, websocket: WebSocket) -> None:
         """
-        Minimal collaborative channel for a project.
-
-        - Accepts any text message (typically JSON with `op` / `payload`).
-        - Broadcasts received messages to other connected clients for the same project.
-        - Does not persist the state; clients are responsible for syncing design JSON
-          via the REST endpoints.
+        Collaborative WebSocket endpoint for real-time editing.
+        
+        Protocol (JSON messages):
+        - Client -> Server:
+          - {"op": "join", "user_name": "Alice"}
+          - {"op": "cursor", "x": 100, "y": 200}
+          - {"op": "widget_add", "widget": {...}}
+          - {"op": "widget_update", "widget_id": "...", "changes": {...}}
+          - {"op": "widget_delete", "widget_id": "..."}
+          
+        - Server -> Client:
+          - {"op": "user_joined", "user": {...}}
+          - {"op": "user_left", "user_id": "..."}
+          - {"op": "cursor", "user_id": "...", "x": 100, "y": 200}
+          - {"op": "widget_add", "user_id": "...", "widget": {...}}
+          - {"op": "widget_update", "user_id": "...", "widget_id": "...", "changes": {...}}
+          - {"op": "widget_delete", "user_id": "...", "widget_id": "..."}
+          - {"op": "session_state", "session": {...}}
         """
-        await _register_ws(project_id, websocket)
+        # Check if project exists
+        projects = _list_projects()
+        if project_id not in projects:
+            await websocket.close(code=1008, reason="Project not found")
+            return
+        
+        session = _get_or_create_session(project_id)
+        user_id = str(uuid.uuid4())
+        user_name = "Anonymous"
+        
+        await websocket.accept()
+        
         try:
             while True:
-                msg = await websocket.receive_text()
-                await _broadcast(project_id, websocket, msg)
+                msg_str = await websocket.receive_text()
+                try:
+                    msg = json.loads(msg_str)
+                except json.JSONDecodeError:
+                    continue
+                
+                op = msg.get("op")
+                
+                if op == "join":
+                    # User joins session
+                    user_name = msg.get("user_name", "Anonymous")
+                    user_color = _assign_user_color(session)
+                    user = User(
+                        id=user_id,
+                        name=user_name,
+                        color=user_color,
+                        last_activity=time.time(),
+                    )
+                    session.users[user_id] = user
+                    session.websockets[user_id] = websocket
+                    
+                    # Send current session state to new user
+                    await websocket.send_text(json.dumps({
+                        "op": "session_state",
+                        "user_id": user_id,
+                        "session": session.to_dict(),
+                    }))
+                    
+                    # Broadcast user joined to others
+                    await _broadcast(session, user_id, {
+                        "op": "user_joined",
+                        "user": user.to_dict(),
+                    })
+                
+                elif op == "cursor":
+                    # Update cursor position
+                    if user_id in session.users:
+                        session.users[user_id].cursor_x = msg.get("x", 0)
+                        session.users[user_id].cursor_y = msg.get("y", 0)
+                        session.users[user_id].last_activity = time.time()
+                        
+                        # Broadcast cursor update
+                        await _broadcast(session, user_id, {
+                            "op": "cursor",
+                            "user_id": user_id,
+                            "x": msg.get("x", 0),
+                            "y": msg.get("y", 0),
+                        })
+                
+                elif op in ("widget_add", "widget_update", "widget_delete"):
+                    # Widget modifications - broadcast to all
+                    if user_id in session.users:
+                        session.users[user_id].last_activity = time.time()
+                        session.version += 1
+                        
+                        broadcast_msg = {
+                            "op": op,
+                            "user_id": user_id,
+                            "version": session.version,
+                        }
+                        broadcast_msg.update(msg)
+                        
+                        await _broadcast(session, user_id, broadcast_msg)
+                
+                elif op == "heartbeat":
+                    # Keep-alive ping
+                    if user_id in session.users:
+                        session.users[user_id].last_activity = time.time()
+                
+                # Cleanup stale users periodically
+                _cleanup_stale_users(session)
+                
         except WebSocketDisconnect:
-            await _unregister_ws(project_id, websocket)
+            pass
         except Exception:
-            await _unregister_ws(project_id, websocket)
+            pass
+        finally:
+            # User left - cleanup and broadcast
+            if user_id in session.users:
+                session.users.pop(user_id, None)
+                session.websockets.pop(user_id, None)
+                
+                await _broadcast(session, None, {
+                    "op": "user_left",
+                    "user_id": user_id,
+                })
+            
+            # Clean up empty sessions
+            if not session.users and project_id in _sessions:
+                _sessions.pop(project_id, None)
 
     return app
 
