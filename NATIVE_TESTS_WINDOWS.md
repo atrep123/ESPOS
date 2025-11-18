@@ -6,7 +6,7 @@ Tento dokument popisuje, jak spustit nativní testy PlatformIO (`[env:native]`) 
 
 PlatformIO nativní testy vyžadují GCC kompilátor, který není standardně dostupný na Windows. Při spuštění `pio test -e native` bez GCC se objeví chyba:
 
-```
+```text
 Error: Command ['gcc.exe', ...] not found
 ```
 
@@ -18,7 +18,7 @@ MSYS2 poskytuje kompletní GNU toolchain včetně GCC pro Windows.
 
 **Instalace:**
 
-1. Stáhněte MSYS2 installer z https://www.msys2.org/
+1. Stáhněte MSYS2 installer z <https://www.msys2.org/>
 2. Nainstalujte MSYS2 (výchozí cesta: `C:\msys64`)
 3. Otevřete MSYS2 MINGW64 terminál
 4. Nainstalujte GCC toolchain:
@@ -93,7 +93,7 @@ MinGW je lehčí distribuce GCC pro Windows.
 
 **Instalace:**
 
-1. Stáhněte MinGW-w64 z https://sourceforge.net/projects/mingw-w64/
+1. Stáhněte MinGW-w64 z <https://sourceforge.net/projects/mingw-w64/>
 2. Vyberte architecture: `x86_64`, threads: `posix`, exception: `seh`
 3. Rozbalte do `C:\mingw64`
 4. Přidejte do PATH: `C:\mingw64\bin`

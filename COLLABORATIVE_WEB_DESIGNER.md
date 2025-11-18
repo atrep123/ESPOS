@@ -24,7 +24,7 @@ The Collaborative Web Designer is a real-time, multi-user UI design tool that al
 
 ## Architecture
 
-```
+```text
 ┌─────────────────┐     WebSocket      ┌─────────────────┐
 │                 │◄──────────────────►│                 │
 │   Web Client    │     JSON msgs      │  Flask Server   │
@@ -359,5 +359,6 @@ Part of ESP32OS project. See main LICENSE file for details.
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/atrep123/ESPOS/issues
+
+- GitHub Issues: <https://github.com/atrep123/ESPOS/issues>
 - Documentation: See SIMULATOR_README.md and IMPLEMENTATION_SUMMARY.md
