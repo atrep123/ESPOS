@@ -5,12 +5,14 @@ Děkujeme za zájem přispívat do ESP32OS! Tato příručka ti pomůže začít
 ## 🚀 Quick Start
 
 1. **Fork & Clone**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/ESPOS.git
    cd ESPOS
    ```
 
 2. **Nastav prostředí**
+
    ```powershell
    python -m venv .venv
    .venv\Scripts\Activate.ps1
@@ -18,7 +20,8 @@ Děkujeme za zájem přispívat do ESP32OS! Tato příručka ti pomůže začít
    pip install -r requirements-dev.txt
    ```
 
-3. **Spusť testy**
+3. **Spušť testy**
+
    ```powershell
    pytest -q
    ```
@@ -28,17 +31,20 @@ Děkujeme za zájem přispívat do ESP32OS! Tato příručka ti pomůže začít
 Při každém push/PR se automaticky spouští:
 
 ### Python Tests
+
 - **OS**: Ubuntu + Windows
 - **Python verze**: 3.11, 3.12
 - **Testování**: `pytest` s headless režimem
 - **Coverage**: Generováno na Ubuntu + Python 3.12
 
 ### Linting
+
 - **Nástroj**: `flake8`
 - **Kritické chyby**: E9, F63, F7, F82 (syntax errors, undefined names)
 - **Warnings**: Maximální složitost 10, délka řádku 127
 
 ### ESP32 Firmware Build
+
 - **Board**: esp32-s3-devkitm-1 (můžeš rozšířit matrix)
 - **Nástroj**: PlatformIO
 - **Artifacts**: Firmware binárky se ukládají 30 dní
@@ -46,6 +52,7 @@ Při každém push/PR se automaticky spouští:
 ## 🛠️ Development Workflow
 
 1. **Vytvoř branch**
+
    ```bash
    git checkout -b feature/my-awesome-feature
    ```
@@ -55,7 +62,8 @@ Při každém push/PR se automaticky spouští:
    - Přidej testy pro novou funkcionalitu
    - Aktualizuj dokumentaci
 
-3. **Spusť lokální testy**
+3. **Spušť lokální testy**
+
    ```powershell
    # Všechny testy
    pytest -q
@@ -69,11 +77,13 @@ Při každém push/PR se automaticky spouští:
    ```
 
 4. **Zkontroluj lint**
+
    ```powershell
    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
    ```
 
 5. **Commit & Push**
+
    ```bash
    git add .
    git commit -m "feat: add awesome feature"
@@ -88,18 +98,23 @@ Při každém push/PR se automaticky spouští:
 ## 🧪 Testing Guidelines
 
 ### Headless Mode
+
 Všechny UI testy musí fungovat v headless režimu (pro CI):
+
 ```python
 os.environ["ESP32OS_HEADLESS"] = "1"
 ```
 
 ### Test Coverage
+
 - Minimální coverage: 70% (doporučeno 80%+)
 - Zahrň edge cases a error handling
 - Testuj cross-platform (Windows/Linux)
 
 ### Performance Tests
+
 Pro performance kritický kód používej `performance_profiler.py`:
+
 ```python
 from performance_profiler import PerformanceProfiler
 
@@ -111,6 +126,7 @@ profiler.export_to_html("report.html")
 ## 📦 Build & Artifacts
 
 ### ESP32 Firmware
+
 ```powershell
 # Build
 pio run -e esp32-s3-devkitm-1
@@ -123,6 +139,7 @@ pio device monitor
 ```
 
 ### Python Packages
+
 ```powershell
 # Export UI
 python ui_export_c.py
@@ -149,6 +166,7 @@ python sim_run.py --rpc-port 8765
 ## 📖 Documentation
 
 Při přidávání funkcí aktualizuj:
+
 - `README.md` - hlavní dokumentace
 - `QUICKSTART.md` - rychlý start
 - `IMPLEMENTATION_SUMMARY.md` - technický přehled
