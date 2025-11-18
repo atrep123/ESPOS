@@ -739,25 +739,25 @@ python ui_designer.py
 Po vytvoření UI v designeru:
 
 1. **Export Python kódu**
-   
-  ```text
-   > export my_ui.py
-   ```
+
+    ```text
+    > export my_ui.py
+    ```
 
 1. **Integrace do simulátoru**
-   
-  ```python
-   from my_ui import create_dashboard_scene
-   
-   widgets = create_dashboard_scene()
-   # Použij ve scéně
-   ```
+
+    ```python
+    from my_ui import create_dashboard_scene
+    
+    widgets = create_dashboard_scene()
+    # Použij ve scéně
+    ```
 
 1. **Testování**
-   
-  ```powershell
-   python sim_run.py --scene my_ui
-   ```
+
+    ```powershell
+    python sim_run.py --scene my_ui
+    ```
 
 1. **Deploy na ESP32**
    - Convert widgets → C structs
