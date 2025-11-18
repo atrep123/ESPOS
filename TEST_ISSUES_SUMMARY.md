@@ -71,7 +71,7 @@ assert scaled_rect['x'] == 100, f"Scaled x not correct: expected 100, got {scale
 ### 3. PlatformIO ESP32: Undefined reference to `app_main`
 
 **Chyba:**
-```
+```text
 undefined reference to `app_main'
 collect2.exe: error: ld returned 1 exit status
 ```
@@ -116,7 +116,7 @@ void app_main(void) {
 ### 4. PlatformIO ESP32: Missing `esp_err_t` and `ESP_OK`
 
 **Chyba:**
-```
+```text
 error: unknown type name 'esp_err_t'
 error: 'ESP_OK' undeclared
 ```
@@ -142,7 +142,7 @@ Přidán include na začátek souboru:
 ### 5. PlatformIO: `unittest_transport.h` not found
 
 **Chyba:**
-```
+```text
 fatal error: unittest_transport.h: No such file or directory
 ```
 
@@ -216,7 +216,7 @@ if __name__ == "__main__":
 ### 7. PlatformIO Native: GCC not found on Windows
 
 **Chyba:**
-```
+```text
 Error: Command ['gcc.exe', ...] not found
 ```
 

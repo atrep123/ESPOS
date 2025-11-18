@@ -177,7 +177,7 @@ hdiutil create -volname "ESP32OS UI Designer" \
 
 Create `DEBIAN/control`:
 
-```
+```text
 Package: esp32os-ui-designer
 Version: 1.0.0
 Architecture: amd64

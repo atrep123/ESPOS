@@ -6,7 +6,7 @@ Tento dokument popisuje, jak spustit nativní testy PlatformIO (`[env:native]`) 
 
 PlatformIO nativní testy vyžadují GCC kompilátor, který není standardně dostupný na Windows. Při spuštění `pio test -e native` bez GCC se objeví chyba:
 
-```
+```text
 Error: Command ['gcc.exe', ...] not found
 ```
 
