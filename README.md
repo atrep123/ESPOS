@@ -1,5 +1,7 @@
 # ESP32OS UI Designer + Firmware Demo
 
+[![CI/CD Pipeline](https://github.com/atrep123/ESPOS/actions/workflows/ci.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/ci.yml)
+
 This workspace contains:
 - Python UI Designer, Themes, Animations, Responsive Layout
 - Exporter to JSON/HTML/PNG and C headers/sources
