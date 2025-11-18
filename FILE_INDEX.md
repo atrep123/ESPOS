@@ -384,22 +384,28 @@ remote_viewer.html
 
 ## 🆘 Troubleshooting Guide
 
-### File not found?
+### File not found
+
 → Check `FILE_INDEX.md` (this file) for correct path
 
-### Module import error?
+### Module import error
+
 → Check `Installation Dependencies` section above
 
-### Port already in use?
+### Port already in use
+
 → See `By Port Usage` table for port assignments
 
-### Can't connect to simulator?
+### Can't connect to simulator
+
 → Ensure `sim_run.py` is running with correct RPC port
 
-### Performance issues?
+### Performance issues
+
 → Use `performance_profiler.py` to diagnose
 
-### UI not rendering correctly?
+### UI not rendering correctly
+
 → Use `state_inspector.py` to debug state
 
 ---
