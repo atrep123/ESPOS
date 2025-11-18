@@ -52,7 +52,7 @@
 
 ## File Structure
 
-```
+```text
 svg_export_enhanced.py          # Enhanced exporter class (467 lines)
 test_enhanced_svg_export.py     # Comprehensive tests (26 tests, 360 lines)
 ui_designer_preview.py          # Integration (_export_svg + dialog, ~150 lines)

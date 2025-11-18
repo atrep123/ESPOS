@@ -36,7 +36,7 @@ Templates are pre-configured widget groups that you can save and load across dif
 
 ### Example Template
 
-```
+```text
 Name: Login Form
 Description: Standard login form with username, password, and submit button
 Widgets: 
@@ -138,47 +138,51 @@ Templates are portable JSON files:
 ### 1. Navigation Bar Template
 
 Create once, reuse everywhere:
-```
+
+```text
 Widgets: Logo, 4 menu buttons, search box
 ```
 
 ### 2. Dialog Box Template
 
 Standard dialog layout:
-```
+
+```text
 Widgets: Title label, message label, OK/Cancel buttons
 ```
 
 ### 3. Dashboard Card Template
 
 Reusable metric display:
-```
+
+```text
 Widgets: Stat card, progress bar, status indicator
 ```
 
 ### 4. Form Template
 
 Complete input form:
-```
+
+```text
 Widgets: Multiple labels, input fields, submit button
 ```
 
 ## Tips & Tricks
 
-### Organizing Templates:
+### Organizing Templates
 
 - Use descriptive names: "NavBar_Dark_Theme" instead of "Template1"
 - Add detailed descriptions for complex templates
 - Group related templates with prefixes: "Form_Login", "Form_Register"
 
-### Template Design:
+### Template Design
 
 - **Keep it modular**: Small, focused templates are easier to reuse
 - **Relative positioning**: Position widgets relative to each other
 - **Standard sizes**: Use common dimensions for consistency
 - **Test first**: Verify layout before saving as template
 
-### Workflow Integration:
+### Workflow Integration
 
 1. **Design → Template → Reuse**:
    - Design component once
@@ -198,6 +202,7 @@ Widgets: Multiple labels, input fields, submit button
 ## Keyboard Shortcuts
 
 While using Template Manager:
+
 - `Esc`: Close Template Manager window
 - `Ctrl+S`: Quick save selection (when Template Manager is open)
 

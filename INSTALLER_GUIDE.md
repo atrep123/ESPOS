@@ -121,7 +121,7 @@ Creates:
 
 ### Windows - NSIS Installer
 
-Install NSIS: https://nsis.sourceforge.io/
+Install NSIS: <https://nsis.sourceforge.io/>
 
 Create `installer.nsi`:
 
@@ -177,7 +177,7 @@ hdiutil create -volname "ESP32OS UI Designer" \
 
 Create `DEBIAN/control`:
 
-```
+```text
 Package: esp32os-ui-designer
 Version: 1.0.0
 Architecture: amd64
@@ -228,7 +228,7 @@ excludes=[
 
 ### UPX Compression
 
-Install UPX: https://upx.github.io/
+Install UPX: <https://upx.github.io/>
 
 PyInstaller will use it automatically if available. Reduces size by ~40%.
 
@@ -384,4 +384,4 @@ python build_installer.py  # No --onefile flag
 For build issues, check:
 - PyInstaller logs in `build/`
 - Console output with `--debug` flag
-- GitHub Issues: https://github.com/atrep123/ESPOS/issues
+- GitHub Issues: <https://github.com/atrep123/ESPOS/issues>

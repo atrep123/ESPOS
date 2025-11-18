@@ -71,12 +71,14 @@ assert scaled_rect['x'] == 100, f"Scaled x not correct: expected 100, got {scale
 ### 3. PlatformIO ESP32: Undefined reference to `app_main`
 
 **Chyba:**
-```
+
+```text
 undefined reference to `app_main'
 collect2.exe: error: ld returned 1 exit status
 ```
 
 **Soubory dotčené:**
+
 - `test/test_ui_core/` (linker error)
 - `test/test_ui_render_swbuf/` (linker error)
 
@@ -87,6 +89,7 @@ ESP-IDF vyžaduje `app_main()` entry point. Testy obsahovaly pouze Unity test fu
 Přidány minimální `app_main.c` soubory do každého test adresáře:
 
 **`test/test_ui_core/app_main.c`:**
+
 ```c
 #include "unity.h"
 
@@ -98,6 +101,7 @@ void app_main(void) {
 ```
 
 **`test/test_ui_render_swbuf/app_main.c`:**
+
 ```c
 #include "unity.h"
 
@@ -109,6 +113,7 @@ void app_main(void) {
 ```
 
 **Výsledek:**
+
 - ✅ Build successful for `esp32-s3-devkitm-1-nohw`
 
 ---
@@ -116,12 +121,14 @@ void app_main(void) {
 ### 4. PlatformIO ESP32: Missing `esp_err_t` and `ESP_OK`
 
 **Chyba:**
-```
+
+```text
 error: unknown type name 'esp_err_t'
 error: 'ESP_OK' undeclared
 ```
 
 **Soubory dotčené:**
+
 - `test/test_ui_render_swbuf/test_ui_render_swbuf.c`
 
 **Root cause:**
@@ -135,6 +142,7 @@ Přidán include na začátek souboru:
 ```
 
 **Výsledek:**
+
 - ✅ Compile successful
 
 ---
@@ -142,11 +150,13 @@ Přidán include na začátek souboru:
 ### 5. PlatformIO: `unittest_transport.h` not found
 
 **Chyba:**
-```
+
+```text
 fatal error: unittest_transport.h: No such file or directory
 ```
 
 **Soubory dotčené:**
+
 - `platformio.ini` (`[env:esp32-s3-devkitm-1-nohw]`)
 
 **Root cause:**
@@ -156,6 +166,7 @@ Directive `test_transport = custom` v PlatformIO.ini triggernula auto-generován
 Odstraněna direktiva `test_transport = custom` z `platformio.ini`. Smart-skip env používá pouze `upload_protocol = custom` s vlastním upload command scriptem.
 
 **Výsledek:**
+
 - ✅ Build bez chyb
 - ✅ Smart-skip funguje: detekuje přítomnost/nepřítomnost ESP32-S3 boardu
 
@@ -164,7 +175,8 @@ Odstraněna direktiva `test_transport = custom` z `platformio.ini`. Smart-skip e
 ### 6. PlatformIO: COM port timeout při upload bez HW
 
 **Chyba:**
-```
+
+```text
 Error: Please specify `upload_port` for environment or use global `--upload-port` option.
 ```
 
@@ -175,6 +187,7 @@ Standardní PlatformIO test prostředí se pokusí nahrát firmware na desku, i 
 Vytvořeno nové prostředí `[env:esp32-s3-devkitm-1-nohw]` s inteligentním board detekcí:
 
 **`platformio.ini`:**
+
 ```ini
 [env:esp32-s3-devkitm-1-nohw]
 extends = env:esp32-s3-devkitm-1
@@ -183,6 +196,7 @@ upload_command = python scripts/skip_hw_tests.py upload
 ```
 
 **`scripts/skip_hw_tests.py`:**
+
 ```python
 import serial.tools.list_ports
 import sys
@@ -205,18 +219,20 @@ if __name__ == "__main__":
 ```
 
 **Výsledek:**
+
 - ✅ Build firmware úspěšně
 - ✅ Přeskočí upload s informační zprávou
 - ✅ CI/developer workflow bez blokování
 
----
+
 
 ## ⚠️ Neřešené / Známé limitace
 
 ### 7. PlatformIO Native: GCC not found on Windows
 
 **Chyba:**
-```
+
+```text
 Error: Command ['gcc.exe', ...] not found
 ```
 
@@ -233,6 +249,7 @@ Vytvořena dokumentace `NATIVE_TESTS_WINDOWS.md` s třemi možnostmi:
 Nebo přeskočit native testy a používat pouze `esp32-s3-devkitm-1-nohw`.
 
 **Akce:**
+
 - 📄 Dokumentace: `NATIVE_TESTS_WINDOWS.md`
 - ⏸️ Žádná změna kódu (environmental issue)
 
