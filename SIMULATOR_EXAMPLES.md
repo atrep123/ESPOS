@@ -97,7 +97,7 @@ int main() {
 
 ## Example 7: Scripted Testing
 
-```json
+```jsonc
 // test_script.json
 [
   {"at_ms": 0, "method": "set_bg", "rgb": [255, 0, 0]},
