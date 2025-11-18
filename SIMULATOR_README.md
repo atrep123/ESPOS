@@ -5,6 +5,7 @@ Vylepšený UI simulátor pro vývoj a testování uživatelského rozhraní ESP
 ## 🎯 Funkce
 
 ### ✨ Vizuální vylepšení
+
 - **ANSI barvy** - barevný výstup v terminálu s optimalizací escape sekvencí
 - **Unicode rámečky** - profesionální vzhled
 - **Velký displej** - až 100×24 znaků (konfigurovatelné)
@@ -14,6 +15,7 @@ Vylepšený UI simulátor pro vývoj a testování uživatelského rozhraní ESP
 - **Efektivní rendering** - substring diff s ANSI-aware algoritmy
 
 ### ⚡ Výkonnostní optimalizace
+
 - **Substring diff rendering** - překresluje jen změněné části řádků
 - **ANSI optimalizace** - automatické odstraňování redundantních reset sekvencí
 - **Adaptivní pacing** - přesné dodržení cílového FPS
@@ -21,6 +23,7 @@ Vylepšený UI simulátor pro vývoj a testování uživatelského rozhraní ESP
 - **TypedDict events** - type-safe event handling s lepší diagnostikou
 
 ### 🎮 Interaktivní ovládání
+
 - **A/B/C** - Simulace tlačítek (A přepíná scénu)
 - **R** - Červená barva pozadí
 - **G** - Zelená barva pozadí  
@@ -31,6 +34,7 @@ Vylepšený UI simulátor pro vývoj a testování uživatelského rozhraní ESP
 - **Q** - Ukončení simulátoru
 
 ### 📊 Zobrazované informace
+
 - Aktuální scéna (HOME/SETTINGS/CUSTOM)
 - Tick counter
 - FPS (snímky za sekundu)
@@ -135,6 +139,7 @@ Další pokročilé parametry:
 - `--max-frames <N>`: ukončí simulátor po vykreslení N snímků (0 = bez limitu)
 
 Ikonové RPC příklady (přes `simctl.py <rpc_port> <cmd>`):
+
 - `icon_demo` – zobrazí grid ikon s aktuální velikostí/módem.
 - `icon_size 16|24` – přepne velikost ikon (výchozí 16).
 - `icon_mode normal|invert|xor` – přepne blit mód.
@@ -187,6 +192,21 @@ pio run -e ui-sim
 - **`.sim_config.json`** - ukázkový konfigurační soubor
 - **`web/remote_viewer.html`** - WebSocket remote viewer (web UI)
 - **`SIMULATOR_EXAMPLES.md`** - příklady použití a integrace
+
+## 🖼️ Headless preview (PNG export bez JSON)
+
+Pro rychlý náhled bez GUI a bez vstupního JSONu využijte `ui_designer_preview.py` s přepínačem `--headless`. Vytvoří výchozí scénu (320×240) s několika widgety a uloží PNG.
+
+```powershell
+# v aktivovaném venv
+python .\ui_designer_preview.py --headless --out-png .\preview.png
+```
+
+Poznámky:
+
+- Volba `--headless` nevyžaduje `--in-json`; renderer vygeneruje smysluplnou výchozí scénu.
+- Výstupní PNG je záměrně „bohatší“ (větší než ~1 KB), aby obstál v CI smoke testech.
+- Stávající režim `--headless-preview` s `--in-json` zůstává beze změny a je vhodný pro přesné exporty scén.
 
 ## 🎨 Příklad výstupu
 
