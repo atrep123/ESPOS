@@ -84,7 +84,34 @@ python ui_designer_preview.py
 ```
 
 - Select an animation and press Play to preview on the selected widget.
-- Use Refresh to redraw; Export PNG to snapshot.
+- Use Refresh to redraw; **Export SVG** for professional-quality vector graphics.
+
+### 🎨 Enhanced SVG Export (Issue #10)
+
+Export your UI designs as professional-quality SVG files with advanced features:
+
+**Features:**
+
+- **Gradients**: Linear/radial gradients for smooth color transitions
+- **Shadows**: Drop shadows and inner shadows for depth
+- **Patterns**: Dot, line, and grid textures for backgrounds
+- **Font Embedding**: Embed TTF/OTF fonts for perfect typography
+- **Quality Presets**: Web Optimized, Print Quality, High Fidelity
+
+**Usage:**
+
+1. Click "🖼️ Export SVG" in the toolbar
+2. Choose a preset or customize advanced options
+3. Select scale (0.5x - 4.0x) for different resolutions
+4. Export to `.svg` file
+
+**Presets:**
+
+- **Web Optimized**: Small file size, gradients enabled (perfect for web)
+- **Print Quality**: Full features with shadows and patterns (professional printing)
+- **High Fidelity**: Maximum quality with font embedding (archival quality)
+
+See `ISSUE_10_IMPLEMENTATION.md` for technical details and examples.
 
 ## CI
 

@@ -20,7 +20,8 @@ if TK_AVAILABLE:
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from svg_export import export_scene_to_svg
+from performance_profiler import PerformanceProfiler
+from svg_export_enhanced import EnhancedSVGExporter, ExportOptions, ExportPreset
 from ui_animations import AnimationDesigner
 from ui_components_library_ascii import (
     create_alert_dialog_ascii,
@@ -98,6 +99,10 @@ class VisualPreviewWindow:
         # Perf budget state
         self._perf_over_budget: bool = False
         self._perf_soft_warn: bool = False
+        # Performance profiler
+        self._profiler: Optional[PerformanceProfiler] = None
+        self._profiler_enabled: bool = False
+        self._last_fps: float = 0.0
         # Pan/zoom runtime state
         self._pan_enabled: bool = False  # Space held
         self._pan_dragging: bool = False
@@ -284,6 +289,7 @@ class VisualPreviewWindow:
         ttk.Button(toolbar, text="📄 Export WidgetConfig", command=self._export_widgetconfig).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="👁️ Live ASCII Preview", command=self._show_ascii_tab).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="❓ Help", command=self._show_quick_help).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="⚡ Profiler", command=self._toggle_profiler).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(toolbar, text="🔄 Refresh", 
                   command=self.refresh).pack(side=tk.LEFT, padx=5)
@@ -531,6 +537,194 @@ class VisualPreviewWindow:
                     settings = json.load(f)
             except Exception:
                 pass
+            def _toggle_profiler(self):
+                """Toggle performance profiler on/off"""
+                try:
+                    if not self._profiler_enabled:
+                        # Enable profiler
+                        self._profiler = PerformanceProfiler(history_size=1000)
+                        self._profiler_enabled = True
+                        self._show_profiler_panel()
+                        print("⚡ Performance profiler enabled")
+                    else:
+                        # Disable profiler
+                        self._profiler_enabled = False
+                        if hasattr(self, '_profiler_window') and self._profiler_window:
+                            self._profiler_window.destroy()
+                            self._profiler_window = None
+                        print("⚡ Performance profiler disabled")
+                except Exception as e:
+                    print(f"⚠ Profiler toggle error: {e}")
+    
+            def _show_profiler_panel(self):
+                """Show profiler panel with live metrics and controls"""
+                if not TK_AVAILABLE or HEADLESS:
+                    return
+        
+                try:
+                    # Create or raise existing window
+                    if hasattr(self, '_profiler_window') and self._profiler_window:
+                        self._profiler_window.lift()
+                        return
+            
+                    window = tk.Toplevel(self.root)
+                    window.title("⚡ Performance Profiler")
+                    window.geometry("500x600")
+                    window.configure(bg="#2b2b2b")
+                    self._profiler_window = window
+            
+                    # Header
+                    header = ttk.Frame(window)
+                    header.pack(fill=tk.X, padx=10, pady=10)
+                    ttk.Label(header, text="⚡ Performance Profiler", 
+                             font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+            
+                    # Control buttons
+                    btn_frame = ttk.Frame(header)
+                    btn_frame.pack(side=tk.RIGHT)
+                    ttk.Button(btn_frame, text="📊 Export HTML", 
+                              command=self._export_profiler_html).pack(side=tk.LEFT, padx=2)
+                    ttk.Button(btn_frame, text="💾 Export CSV", 
+                              command=self._export_profiler_csv).pack(side=tk.LEFT, padx=2)
+                    ttk.Button(btn_frame, text="📄 Export JSON", 
+                              command=self._export_profiler_json).pack(side=tk.LEFT, padx=2)
+            
+                    # Stats display
+                    stats_frame = ttk.LabelFrame(window, text="Live Metrics", padding=10)
+                    stats_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+            
+                    # Create labels for live metrics
+                    self._profiler_labels = {}
+                    metrics = [
+                        ("fps", "FPS:"),
+                        ("render_ms", "Render Time:"),
+                        ("frame_ms", "Frame Time:"),
+                        ("memory_mb", "Memory:"),
+                        ("cpu_percent", "CPU:"),
+                        ("samples", "Samples:"),
+                    ]
+            
+                    for i, (key, label_text) in enumerate(metrics):
+                        row = ttk.Frame(stats_frame)
+                        row.pack(fill=tk.X, pady=2)
+                        ttk.Label(row, text=label_text, width=15).pack(side=tk.LEFT)
+                        value_label = ttk.Label(row, text="--", font=("Courier", 10))
+                        value_label.pack(side=tk.LEFT)
+                        self._profiler_labels[key] = value_label
+            
+                    # Recommendations section
+                    rec_frame = ttk.LabelFrame(window, text="Recommendations", padding=10)
+                    rec_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+            
+                    rec_scroll = ttk.Scrollbar(rec_frame)
+                    rec_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            
+                    self._profiler_rec_text = tk.Text(rec_frame, height=10, wrap=tk.WORD,
+                                                      yscrollcommand=rec_scroll.set,
+                                                      font=("Arial", 9))
+                    self._profiler_rec_text.pack(fill=tk.BOTH, expand=True)
+                    rec_scroll.config(command=self._profiler_rec_text.yview)
+            
+                    # Start live update loop
+                    self._update_profiler_panel()
+            
+                except Exception as e:
+                    print(f"⚠ Profiler panel error: {e}")
+    
+            def _update_profiler_panel(self):
+                """Update profiler panel with latest metrics"""
+                if not self._profiler_enabled or not self._profiler:
+                    return
+        
+                try:
+                    if not hasattr(self, '_profiler_window') or not self._profiler_window:
+                        return
+            
+                    # Calculate current stats
+                    stats = self._profiler.calculate_stats()
+            
+                    # Update metric labels
+                    if hasattr(self, '_profiler_labels'):
+                        self._profiler_labels['fps'].config(text=f"{stats.fps_avg:.1f} (min: {stats.fps_min:.1f}, max: {stats.fps_max:.1f})")
+                        self._profiler_labels['render_ms'].config(text=f"{stats.render_avg_ms:.2f} ms (min: {stats.render_min_ms:.2f}, max: {stats.render_max_ms:.2f})")
+                        self._profiler_labels['frame_ms'].config(text=f"{stats.frame_avg_ms:.2f} ms")
+                        self._profiler_labels['memory_mb'].config(text=f"{stats.memory_avg_mb:.1f} MB (peak: {stats.memory_peak_mb:.1f})")
+                        self._profiler_labels['cpu_percent'].config(text=f"{stats.cpu_avg_percent:.1f}% (peak: {stats.cpu_peak_percent:.1f}%)")
+                        self._profiler_labels['samples'].config(text=f"{stats.samples}")
+            
+                    # Update recommendations (every 2 seconds to reduce CPU)
+                    if not hasattr(self, '_last_rec_update') or time.time() - self._last_rec_update > 2.0:
+                        self._last_rec_update = time.time()
+                        recommendations = self._profiler.analyze_performance()
+                
+                        if hasattr(self, '_profiler_rec_text'):
+                            self._profiler_rec_text.config(state=tk.NORMAL)
+                            self._profiler_rec_text.delete("1.0", tk.END)
+                            for rec in recommendations:
+                                self._profiler_rec_text.insert(tk.END, f"• {rec}\n")
+                            self._profiler_rec_text.config(state=tk.DISABLED)
+            
+                    # Schedule next update (100ms)
+                    if self._profiler_window:
+                        self._profiler_window.after(100, self._update_profiler_panel)
+                
+                except Exception as e:
+                    print(f"⚠ Profiler update error: {e}")
+    
+            def _export_profiler_html(self):
+                """Export profiler report to HTML"""
+                if not self._profiler:
+                    messagebox.showwarning("Profiler", "Profiler not enabled")
+                    return
+        
+                try:
+                    filename = filedialog.asksaveasfilename(
+                        defaultextension=".html",
+                        filetypes=[("HTML", "*.html"), ("All Files", "*.*")],
+                        initialfile="profiler_report.html"
+                    )
+                    if filename:
+                        self._profiler.export_to_html(filename)
+                        messagebox.showinfo("Profiler", f"Report exported to:\n{filename}")
+                except Exception as e:
+                    messagebox.showerror("Export Error", str(e))
+    
+            def _export_profiler_csv(self):
+                """Export profiler metrics to CSV"""
+                if not self._profiler:
+                    messagebox.showwarning("Profiler", "Profiler not enabled")
+                    return
+        
+                try:
+                    filename = filedialog.asksaveasfilename(
+                        defaultextension=".csv",
+                        filetypes=[("CSV", "*.csv"), ("All Files", "*.*")],
+                        initialfile="profiler_metrics.csv"
+                    )
+                    if filename:
+                        self._profiler.export_to_csv(filename)
+                        messagebox.showinfo("Profiler", f"Metrics exported to:\n{filename}")
+                except Exception as e:
+                    messagebox.showerror("Export Error", str(e))
+    
+            def _export_profiler_json(self):
+                """Export profiler data to JSON"""
+                if not self._profiler:
+                    messagebox.showwarning("Profiler", "Profiler not enabled")
+                    return
+        
+                try:
+                    filename = filedialog.asksaveasfilename(
+                        defaultextension=".json",
+                        filetypes=[("JSON", "*.json"), ("All Files", "*.*")],
+                        initialfile="profiler_data.json"
+                    )
+                    if filename:
+                        self._profiler.export_to_json(filename)
+                        messagebox.showinfo("Profiler", f"Data exported to:\n{filename}")
+                except Exception as e:
+                    messagebox.showerror("Export Error", str(e))
+    
         
         # Check if tips should be shown
         if settings.get("hide_quick_tips", False):
@@ -685,8 +879,37 @@ class VisualPreviewWindow:
     
     def refresh(self, force=False):
         """Refresh the preview with caching"""
-        # Headless fast-exit
+        # Headless path: still render to PIL for timing/profiler
         if getattr(self, '_headless', False):
+            # Scene present?
+            if not self.designer.current_scene:
+                return
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if not scene:
+                return
+            # Measure render to PIL image only (no Tk usage)
+            t0 = time.perf_counter()
+            try:
+                _ = self._render_scene_image(
+                    scene,
+                    background_color=self.settings.background_color,
+                    include_grid=self.settings.grid_enabled,
+                    use_overlays=False,
+                    highlight_selection=False,
+                )
+            except Exception:
+                # If rendering fails in tests, still record a minimal frame time
+                pass
+            self._last_render_ms = (time.perf_counter() - t0) * 1000.0
+            # FPS estimate
+            self._last_fps = 1000.0 / self._last_render_ms if self._last_render_ms > 0 else 60.0
+            # Performance budget flags
+            if self.settings.performance_budget_enabled:
+                self._perf_over_budget = self._last_render_ms > self.settings.performance_budget_ms
+                self._perf_soft_warn = self._last_render_ms > self.settings.performance_warn_ms
+            # Record profiler metrics if enabled
+            if self._profiler_enabled and self._profiler:
+                self._profiler.record_frame(self._last_fps, self._last_render_ms, 0.0)
             return
 
         # Scene present?
@@ -756,6 +979,16 @@ class VisualPreviewWindow:
 
         # Perf end
         self._last_render_ms = (time.perf_counter() - t0) * 1000.0
+        # Calculate FPS from last render time
+        if self._last_render_ms > 0:
+            self._last_fps = 1000.0 / self._last_render_ms
+        else:
+            self._last_fps = 60.0  # Default
+        
+        # Record profiler metrics if enabled
+        if self._profiler_enabled and self._profiler:
+            self._profiler.record_frame(self._last_fps, self._last_render_ms, 0.0)
+        
         if self.settings.performance_budget_enabled:
             self._perf_over_budget = self._last_render_ms > self.settings.performance_budget_ms
             self._perf_soft_warn = self._last_render_ms > self.settings.performance_warn_ms
@@ -822,6 +1055,10 @@ class VisualPreviewWindow:
                 parts.append(f"Perf WARN {self._last_render_ms:.1f}ms")
             elif getattr(self, '_perf_over_budget', False):
                 parts.append(f"Perf {self._last_render_ms:.1f}>{self.settings.performance_budget_ms:.1f}ms")
+
+        # Profiler live snippet
+        if getattr(self, '_profiler_enabled', False):
+            parts.append(f"⚡ {self._last_fps:.1f} FPS {self._last_render_ms:.1f}ms")
         self.status_bar.configure(text=" | ".join(parts))
 
     # ---------------- JSON Hot-Reload Watcher -----------------
@@ -2287,23 +2524,178 @@ class VisualPreviewWindow:
             messagebox.showerror("Export Error", f"Failed: {e}")
 
     def _export_svg(self):
-        """Export current scene as SVG vector file."""
+        """Export current scene as enhanced SVG vector file with dialog."""
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
             messagebox.showerror("Export Error", "No scene to export")
             return
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".svg",
-            filetypes=[("SVG files", "*.svg"), ("All files", "*.*")],
-            initialfile=f"{self.designer.current_scene}.svg"
-        )
-        if not filename:
-            return
-        try:
-            export_scene_to_svg(scene, filename, scale=1.0)
-            messagebox.showinfo("Export Complete", f"Saved SVG to: {filename}")
-        except Exception as e:
-            messagebox.showerror("Export Error", f"Failed: {e}")
+        
+        # Show enhanced export dialog
+        self._show_svg_export_dialog(scene)
+    
+    def _show_svg_export_dialog(self, scene):
+        """Show enhanced SVG export dialog with presets and options"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Enhanced SVG Export")
+        dialog.geometry("500x600")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.configure(bg="#2b2b2b")
+        
+        # Header
+        header = ttk.Frame(dialog)
+        header.pack(fill=tk.X, padx=20, pady=10)
+        ttk.Label(header, text="🖼️ Enhanced SVG Export", 
+                 font=("Arial", 14, "bold")).pack()
+        ttk.Label(header, text="Professional-quality vector export with advanced features",
+                 foreground="#888").pack()
+        
+        # Main content
+        content = ttk.Frame(dialog)
+        content.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # Preset selection
+        preset_frame = ttk.LabelFrame(content, text="Quality Preset", padding=10)
+        preset_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        preset_var = tk.StringVar(value="web")
+        
+        presets = [
+            ("web", "🌐 Web Optimized", "Smaller file size, gradients enabled"),
+            ("print", "🖨️ Print Quality", "Full features for printing"),
+            ("hifi", "💎 High Fidelity", "Maximum quality, all features"),
+        ]
+        
+        for value, label, desc in presets:
+            frame = ttk.Frame(preset_frame)
+            frame.pack(fill=tk.X, pady=2)
+            ttk.Radiobutton(frame, text=label, variable=preset_var, 
+                           value=value).pack(side=tk.LEFT)
+            ttk.Label(frame, text=desc, foreground="#888", 
+                     font=("Arial", 8)).pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Advanced options
+        options_frame = ttk.LabelFrame(content, text="Advanced Options", padding=10)
+        options_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        gradients_var = tk.BooleanVar(value=True)
+        shadows_var = tk.BooleanVar(value=False)
+        patterns_var = tk.BooleanVar(value=False)
+        fonts_var = tk.BooleanVar(value=False)
+        metadata_var = tk.BooleanVar(value=True)
+        
+        ttk.Checkbutton(options_frame, text="Include Gradients (smoother colors)", 
+                       variable=gradients_var).pack(anchor=tk.W, pady=2)
+        ttk.Checkbutton(options_frame, text="Include Shadows (depth effects)", 
+                       variable=shadows_var).pack(anchor=tk.W, pady=2)
+        ttk.Checkbutton(options_frame, text="Include Patterns (textures)", 
+                       variable=patterns_var).pack(anchor=tk.W, pady=2)
+        ttk.Checkbutton(options_frame, text="Embed Fonts (requires font file)", 
+                       variable=fonts_var).pack(anchor=tk.W, pady=2)
+        ttk.Checkbutton(options_frame, text="Include Metadata", 
+                       variable=metadata_var).pack(anchor=tk.W, pady=2)
+        
+        # Scale
+        scale_frame = ttk.LabelFrame(content, text="Export Scale", padding=10)
+        scale_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        scale_var = tk.DoubleVar(value=1.0)
+        scale_slider = ttk.Scale(scale_frame, from_=0.5, to=4.0, 
+                                variable=scale_var, orient=tk.HORIZONTAL)
+        scale_slider.pack(fill=tk.X, pady=2)
+        
+        scale_label = ttk.Label(scale_frame, text="1.0x")
+        scale_label.pack()
+        
+        def update_scale_label(*args):
+            scale_label.config(text=f"{scale_var.get():.1f}x")
+        scale_var.trace_add("write", update_scale_label)
+        
+        # Font path (conditional)
+        font_frame = ttk.LabelFrame(content, text="Font Embedding (Optional)", padding=10)
+        font_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        font_path_var = tk.StringVar(value="")
+        font_entry = ttk.Entry(font_frame, textvariable=font_path_var, state="readonly")
+        font_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        def browse_font():
+            path = filedialog.askopenfilename(
+                title="Select Font File",
+                filetypes=[
+                    ("Font files", "*.ttf *.otf *.woff *.woff2"),
+                    ("All files", "*.*")
+                ]
+            )
+            if path:
+                font_path_var.set(path)
+        
+        ttk.Button(font_frame, text="Browse...", command=browse_font).pack(side=tk.LEFT)
+        
+        # Update options based on preset
+        def update_from_preset(*args):
+            preset = preset_var.get()
+            if preset == "web":
+                gradients_var.set(True)
+                shadows_var.set(False)
+                patterns_var.set(False)
+                fonts_var.set(False)
+            elif preset == "print":
+                gradients_var.set(True)
+                shadows_var.set(True)
+                patterns_var.set(True)
+                fonts_var.set(False)
+            elif preset == "hifi":
+                gradients_var.set(True)
+                shadows_var.set(True)
+                patterns_var.set(True)
+                fonts_var.set(True)
+        
+        preset_var.trace_add("write", update_from_preset)
+        
+        # Buttons
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        def do_export():
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".svg",
+                filetypes=[("SVG files", "*.svg"), ("All files", "*.*")],
+                initialfile=f"{self.designer.current_scene}_enhanced.svg"
+            )
+            if not filename:
+                return
+            
+            try:
+                # Build options
+                options = ExportOptions(
+                    preset=ExportPreset(preset_var.get()),
+                    scale=scale_var.get(),
+                    include_gradients=gradients_var.get(),
+                    include_shadows=shadows_var.get(),
+                    include_patterns=patterns_var.get(),
+                    embed_fonts=fonts_var.get(),
+                    font_path=font_path_var.get() or None,
+                    include_metadata=metadata_var.get(),
+                )
+                
+                exporter = EnhancedSVGExporter(options)
+                exporter.export_scene(scene, filename)
+                
+                dialog.destroy()
+                messagebox.showinfo("Export Complete", 
+                                  f"Enhanced SVG exported to:\n{filename}\n\n"
+                                  f"Preset: {preset_var.get().upper()}\n"
+                                  f"Features: Gradients={gradients_var.get()}, "
+                                  f"Shadows={shadows_var.get()}, "
+                                  f"Patterns={patterns_var.get()}")
+            except Exception as e:
+                messagebox.showerror("Export Error", f"Failed to export:\n{e}")
+        
+        ttk.Button(button_frame, text="Cancel", 
+                  command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="Export SVG", 
+                  command=do_export).pack(side=tk.RIGHT, padx=5)
 
     def _open_ascii_preview(self):
         """Open live ASCII preview window with enhanced styling"""
@@ -3728,9 +4120,148 @@ class ComponentPaletteWindow(tk.Toplevel):
         self._refresh_list()
 
 class IconPaletteWindow(tk.Toplevel):
+    """Icon palette with search, category filter and insertion.
+
+    Keeps implementation lightweight: textual list + metadata preview
+    (no raster glyph rendering). Designed to work within existing
+    project style and without introducing new dependencies.
+    """
     def __init__(self, root, preview: 'VisualPreviewWindow'):
         super().__init__(root)
+        from ui_icons import (  # local import to avoid startup cost headless
+            filter_icons,
+            get_all_categories,
+        )
         self.title("Icon Palette")
-        self.geometry("400x300")
-        ttk.Label(self, text="(Stub) Icon palette UI pending.").pack(pady=20)
+        self.configure(bg="#2b2b2b")
+        self.preview = preview
+        self.geometry("640x420")
+        self.resizable(True, True)
+        self._filter_fn = filter_icons
+        self._all_categories = ["All"] + get_all_categories()
+        self._icons: List[dict] = []
+        self._build_ui()
+        self._refresh_list()
+
+    # ---------------- UI construction -----------------
+    def _build_ui(self):
+        top = ttk.Frame(self)
+        top.pack(fill=tk.X, padx=8, pady=6)
+        ttk.Label(top, text="Search:").pack(side=tk.LEFT)
+        self.search_var = tk.StringVar()
+        ent = ttk.Entry(top, textvariable=self.search_var, width=28)
+        ent.pack(side=tk.LEFT, padx=6)
+        ent.bind("<KeyRelease>", lambda e: self._refresh_list())
+
+        ttk.Label(top, text="Category:").pack(side=tk.LEFT)
+        self.cat_var = tk.StringVar(value="All")
+        cat_combo = ttk.Combobox(top, textvariable=self.cat_var, values=self._all_categories, width=16, state="readonly")
+        cat_combo.pack(side=tk.LEFT, padx=6)
+        cat_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
+
+        ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+
+        body = ttk.Frame(self)
+        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+
+        # Icon list
+        self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#1976d2")
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
+        self.listbox.bind("<Return>", lambda e: self._insert_selected())
+
+        # Right panel
+        right = ttk.Frame(body)
+        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
+        ttk.Label(right, text="Preview:").pack(anchor=tk.W)
+        self.preview_text = tk.Text(right, height=14, bg="#111", fg="#ddd", state=tk.DISABLED, wrap=tk.WORD)
+        self.preview_text.pack(fill=tk.BOTH, expand=True)
+
+        btn_row = ttk.Frame(right)
+        btn_row.pack(fill=tk.X, pady=4)
+        ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
+        ttk.Button(btn_row, text="Insert 16px", command=lambda: self._insert_selected(size_variant="size_16")).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_row, text="Insert 24px", command=lambda: self._insert_selected(size_variant="size_24")).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_row, text="Export C", command=self._export_c_header).pack(side=tk.LEFT, padx=4)
+
+    # ---------------- Data / filtering -----------------
+    def _refresh_list(self):
+        from ui_icons import filter_icons  # reimport (hot-reload safe)
+        term = self.search_var.get()
+        cat = self.cat_var.get()
+        category = None if cat == "All" else cat
+        self._icons = filter_icons(term, category)
+        self.listbox.delete(0, tk.END)
+        for icon in self._icons:
+            self.listbox.insert(tk.END, f"{icon['ascii']}  {icon['name']}  ({icon['symbol']})")
+        self._show_preview()  # update preview if selection persists
+
+    def _get_selected_icon(self):
+        sel = self.listbox.curselection()
+        if not sel or sel[0] >= len(self._icons):
+            return None
+        return self._icons[sel[0]]
+
+    # ---------------- Preview / insertion -----------------
+    def _show_preview(self):
+        icon = self._get_selected_icon()
+        self.preview_text.config(state=tk.NORMAL)
+        self.preview_text.delete("1.0", tk.END)
+        if not icon:
+            self.preview_text.insert(tk.END, "No icon selected")
+        else:
+            self.preview_text.insert(tk.END, f"Name: {icon['name']}\n")
+            self.preview_text.insert(tk.END, f"Category: {icon['category']}\n")
+            self.preview_text.insert(tk.END, f"Symbol: {icon['symbol']}\n")
+            self.preview_text.insert(tk.END, f"ASCII: {icon['ascii']}\n")
+            self.preview_text.insert(tk.END, f"Usage: {icon['usage']}\n")
+        self.preview_text.config(state=tk.DISABLED)
+
+    def _insert_selected(self, size_variant: str | None = None):
+        icon = self._get_selected_icon()
+        if not icon:
+            return
+        scene = self.preview.designer.scenes.get(self.preview.designer.current_scene)
+        if not scene:
+            return
+        ascii_char = icon['ascii']
+        # Basic sizing based on variant
+        w = 16 if size_variant == 'size_16' else 24 if size_variant == 'size_24' else 16
+        h = w
+        x = max(0, (self.preview.designer.width - w) // 2)
+        y = max(0, (self.preview.designer.height - h) // 2)
+        from ui_designer import WidgetType
+        self.preview.designer.add_widget(
+            WidgetType.ICON,
+            x=x,
+            y=y,
+            width=w,
+            height=h,
+            icon_char=ascii_char
+        )
+        self.preview.selected_widget_idx = len(scene.widgets) - 1
+        self.preview.designer._save_state()
+        self.preview._invalidate_cache()
+        self.preview.refresh(force=True)
+
+    # ---------------- Export helper -----------------
+    def _export_c_header(self):
+        """Export selected icon as a tiny C header snippet (ASCII fallback)."""
+        icon = self._get_selected_icon()
+        if not icon:
+            return
+        from tkinter import filedialog, messagebox
+        path = filedialog.asksaveasfilename(defaultextension=".h", filetypes=[("Header", "*.h"), ("All", "*.*")], initialfile=f"icon_{icon['symbol']}.h")
+        if not path:
+            return
+        guard = f"ICON_{icon['symbol'].upper()}_H".replace('-', '_')
+        content = (
+            f"#ifndef {guard}\n#define {guard}\n\n/* Auto-generated single-character icon fallback */\n#define ICON_{icon['symbol'].upper()} \"{icon['ascii']}\" /* {icon['name']} */\n\n#endif /* {guard} */\n"
+        )
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            messagebox.showinfo("Export", f"C header saved: {path}")
+        except Exception as e:
+            messagebox.showerror("Export Failed", f"{e}")
 
