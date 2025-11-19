@@ -1,10 +1,11 @@
 """Tests for Icon Palette Tool"""
 
-import pytest
-from PIL import Image
-import json
 import os
 import tempfile
+
+import pytest
+from PIL import Image
+
 from icon_palette_tool import Icon, IconLibrary
 
 

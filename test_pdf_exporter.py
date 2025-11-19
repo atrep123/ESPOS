@@ -1,10 +1,11 @@
 """Tests for PDF Exporter"""
 
-import pytest
+import json
 import os
 import tempfile
-import json
 from pathlib import Path
+
+import pytest
 
 # Skip tests if reportlab not available
 pytest.importorskip("reportlab")

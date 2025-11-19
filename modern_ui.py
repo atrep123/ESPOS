@@ -8,11 +8,9 @@
 # - Welcome wizard
 
 import tkinter as tk
+from dataclasses import dataclass
 from tkinter import ttk
-from typing import Dict, Tuple, Optional
-import json
-from pathlib import Path
-from dataclasses import dataclass, asdict
+from typing import Dict, Optional
 
 
 @dataclass

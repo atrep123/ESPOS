@@ -6,13 +6,12 @@ UI Exporter: Produce demo JSON/HTML/PNG and C headers/sources for firmware
 - Writes src/ui_design.h and src/ui_design.c for firmware integration
 """
 
-import os
-import json
-from dataclasses import asdict
 import argparse
+import json
+import os
 from typing import Tuple
 
-from ui_designer import UIDesigner, WidgetType, WidgetConfig
+from ui_designer import UIDesigner, WidgetType
 
 # Optional PNG export using PIL (headless, no Tk)
 try:

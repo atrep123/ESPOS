@@ -124,3 +124,31 @@ ICON_PALETTE = {
     "media": [icon for icon in MATERIAL_ICONS if icon["category"] == "media"],
     "security": [icon for icon in MATERIAL_ICONS if icon["category"] == "security"],
 }
+
+
+def filter_icons(term: str = "", category: str | None = None) -> List[IconInfo]:
+    """Filter icons by search term (name or symbol or ascii) and optional category.
+
+    Args:
+        term: Case-insensitive substring to match against name, symbol, ascii.
+        category: Optional category to restrict results (must match exact category name).
+
+    Returns:
+        List of matching icon metadata dictionaries ordered by name.
+    """
+    term_low = term.strip().lower()
+    results: List[IconInfo] = []
+    for icon in MATERIAL_ICONS:
+        if category and icon["category"] != category:
+            continue
+        if not term_low:
+            results.append(icon)
+            continue
+        if (
+            term_low in icon["name"].lower()
+            or term_low in icon["symbol"].lower()
+            or term_low in icon["ascii"].lower()
+        ):
+            results.append(icon)
+    return sorted(results, key=lambda ic: ic["name"].lower())
+

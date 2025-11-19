@@ -144,8 +144,8 @@ class WidgetConfig:
     type: str  # label, box, button, gauge, progressbar, checkbox, etc.
     x: int
     y: int
-    width: int
-    height: int
+    width: Optional[int] = None
+    height: Optional[int] = None
     text: str = ""
     style: str = "default"  # default, bold, inverse, highlight
     color_fg: str = "white"
@@ -183,6 +183,121 @@ class WidgetConfig:
     # State variants
     state: str = "default"
     state_overrides: Dict[str, Dict[str, Any]] = field(default_factory=_empty_state_overrides)
+
+    # Compatibility alias fields (optional; normalized in __post_init__)
+    # These allow external component libraries to pass richer args without breaking.
+    bg_color: Any = None
+    text_color: Any = None
+    color: Any = None
+    font_size: Optional[int] = None
+    bold: bool = False
+    corner_radius: Optional[int] = None
+    border_width: Optional[int] = None
+    border_color: Any = None
+    _widget_id: Optional[str] = None
+
+    def __post_init__(self):
+        # Normalize `type` if provided as Enum
+        try:
+            from enum import Enum as _Enum
+            if isinstance(getattr(self, 'type', None), _Enum):
+                self.type = getattr(self.type, 'value', str(self.type))  # type: ignore[assignment]
+        except Exception:
+            try:
+                # Fallback: simple attr access
+                if hasattr(self.type, 'value'):
+                    self.type = self.type.value  # type: ignore[assignment]
+            except Exception:
+                pass
+
+        def _to_color_str(v: Any) -> Optional[str]:
+            if v is None:
+                return None
+            try:
+                # Accept ints (e.g., 0x3498DB) → #RRGGBB
+                if isinstance(v, int):
+                    return f"#{v & 0xFFFFFF:06x}"
+                s = str(v)
+                return s
+            except Exception:
+                return None
+
+        # Map aliases → core fields
+        try:
+            if self.bg_color is not None:
+                c = _to_color_str(self.bg_color)
+                if c:
+                    self.color_bg = c
+        except Exception:
+            pass
+        try:
+            if self.text_color is not None:
+                c = _to_color_str(self.text_color)
+                if c:
+                    self.color_fg = c
+        except Exception:
+            pass
+        try:
+            if self.color is not None:
+                c = _to_color_str(self.color)
+                if c:
+                    self.color_fg = c
+        except Exception:
+            pass
+        try:
+            if self.border_color is not None:
+                c = _to_color_str(self.border_color)
+                if c:
+                    self.color_fg = c
+        except Exception:
+            pass
+        try:
+            if self.border_width is not None:
+                self.border = bool(self.border_width and int(self.border_width) > 0)
+        except Exception:
+            pass
+        try:
+            if bool(self.bold):
+                self.style = 'bold'
+        except Exception:
+            pass
+
+        # Provide sensible defaults for missing width/height to support
+        # external component libraries that omit explicit sizes for some types.
+        try:
+            t = (getattr(self, 'type', '') or '').lower()
+            # Default width only if not provided
+            if self.width is None:
+                if t == 'label':
+                    # Text width + minimal padding/border allowance
+                    pad = int(getattr(self, 'padding_x', 1) or 0)
+                    border_pad = 2 if bool(getattr(self, 'border', True)) else 0
+                    self.width = max(1, min(120, len(getattr(self, 'text', '') or '') + 2 + pad * 2 + border_pad))
+                elif t == 'button':
+                    self.width = max(4, len(getattr(self, 'text', '') or '') + 4)
+                elif t in ('panel', 'box', 'textbox'):
+                    self.width = 10
+                else:
+                    self.width = 8
+            # Default height only if not provided
+            if self.height is None:
+                if t in ('label',):
+                    self.height = 3 if bool(getattr(self, 'border', True)) else 1
+                elif t in ('button', 'checkbox', 'radiobutton'):
+                    self.height = 3
+                elif t in ('panel', 'box', 'textbox'):
+                    self.height = 6
+                else:
+                    self.height = 3
+        except Exception:
+            # As a last resort ensure positive dimensions
+            try:
+                if self.width is None:
+                    self.width = 8
+                if self.height is None:
+                    self.height = 3
+            except Exception:
+                pass
 
 
 @dataclass

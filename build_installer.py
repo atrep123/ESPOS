@@ -11,12 +11,12 @@
 #     --windowed      Hide console window (GUI only)
 #     --debug         Keep console for debugging
 
+import argparse
 import os
-import sys
 import shutil
 import subprocess
+import sys
 from pathlib import Path
-import argparse
 
 
 class InstallerBuilder:

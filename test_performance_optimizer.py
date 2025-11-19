@@ -1,12 +1,20 @@
 """Tests for Performance Optimizer Module"""
 
 import time
+
 import pytest
+
 from performance_optimizer import (
-    LRUCache, RenderPool, LazyLoader,
-    debounce, throttle, memoize_with_key,
-    hash_object, PerformanceMonitor,
-    get_render_cache, get_perf_monitor
+    LazyLoader,
+    LRUCache,
+    PerformanceMonitor,
+    RenderPool,
+    debounce,
+    get_perf_monitor,
+    get_render_cache,
+    hash_object,
+    memoize_with_key,
+    throttle,
 )
 
 

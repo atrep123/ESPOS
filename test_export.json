@@ -42,7 +42,16 @@
           "theme_fg_role": "",
           "theme_bg_role": "",
           "state": "default",
-          "state_overrides": {}
+          "state_overrides": {},
+          "bg_color": null,
+          "text_color": null,
+          "color": null,
+          "font_size": null,
+          "bold": false,
+          "corner_radius": null,
+          "border_width": null,
+          "border_color": null,
+          "_widget_id": null
         },
         {
           "type": "button",
@@ -78,7 +87,16 @@
           "theme_fg_role": "",
           "theme_bg_role": "",
           "state": "default",
-          "state_overrides": {}
+          "state_overrides": {},
+          "bg_color": null,
+          "text_color": null,
+          "color": null,
+          "font_size": null,
+          "bold": false,
+          "corner_radius": null,
+          "border_width": null,
+          "border_color": null,
+          "_widget_id": null
         },
         {
           "type": "button",
@@ -114,7 +132,16 @@
           "theme_fg_role": "",
           "theme_bg_role": "",
           "state": "default",
-          "state_overrides": {}
+          "state_overrides": {},
+          "bg_color": null,
+          "text_color": null,
+          "color": null,
+          "font_size": null,
+          "bold": false,
+          "corner_radius": null,
+          "border_width": null,
+          "border_color": null,
+          "_widget_id": null
         },
         {
           "type": "panel",
@@ -150,7 +177,16 @@
           "theme_fg_role": "",
           "theme_bg_role": "",
           "state": "default",
-          "state_overrides": {}
+          "state_overrides": {},
+          "bg_color": null,
+          "text_color": null,
+          "color": null,
+          "font_size": null,
+          "bold": false,
+          "corner_radius": null,
+          "border_width": null,
+          "border_color": null,
+          "_widget_id": null
         },
         {
           "type": "progressbar",
@@ -186,7 +222,16 @@
           "theme_fg_role": "",
           "theme_bg_role": "",
           "state": "default",
-          "state_overrides": {}
+          "state_overrides": {},
+          "bg_color": null,
+          "text_color": null,
+          "color": null,
+          "font_size": null,
+          "bold": false,
+          "corner_radius": null,
+          "border_width": null,
+          "border_color": null,
+          "_widget_id": null
         },
         {
           "type": "label",
@@ -222,7 +267,16 @@
           "theme_fg_role": "",
           "theme_bg_role": "",
           "state": "default",
-          "state_overrides": {}
+          "state_overrides": {},
+          "bg_color": null,
+          "text_color": null,
+          "color": null,
+          "font_size": null,
+          "bold": false,
+          "corner_radius": null,
+          "border_width": null,
+          "border_color": null,
+          "_widget_id": null
         }
       ]
     }

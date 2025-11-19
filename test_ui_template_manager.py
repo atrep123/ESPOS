@@ -4,13 +4,14 @@ Tests for UI Template Manager module
 """
 
 import os
-import json
 import tempfile
+
 import pytest
+
 from ui_template_manager import (
-    TemplateMetadata,
     Template,
     TemplateLibrary,
+    TemplateMetadata,
 )
 
 

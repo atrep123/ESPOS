@@ -895,6 +895,7 @@ def main() -> None:
     parser.add_argument('--max-frames', type=int, default=0, help='Exit after rendering N frames (0=run indefinitely)')
     parser.add_argument('--help-overlay', action='store_true', help='Show help overlay with key bindings (toggle with H)')
     parser.add_argument('--hud', action='store_true', help='Show HUD with FPS and timing metrics (toggle with F10)')
+    parser.add_argument('--bridge-url', type=str, default='', help='Connect to WebSim bridge (e.g. ws://localhost:8765) for live design updates')
     args = parser.parse_args()
 
     # Detect optional pygame for input hints (no hard import)
@@ -994,6 +995,70 @@ def main() -> None:
     
     ws_server = None
     current_frame_data: Dict[str, Any] = {}
+    latest_design_holder: Dict[str, Any] = {'scene': None}
+    bridge_out_queue: 'queue.Queue[Dict[str, Any]]' = queue.Queue()
+    bridge_thread = None
+
+    def start_bridge_client(url: str) -> Optional[threading.Thread]:
+        """Start background thread that maintains WebSocket connection to bridge."""
+        try:
+            import websockets  # type: ignore
+        except Exception:
+            print(f"{Color.DIM}Bridge disabled – websockets not installed (pip install websockets){Color.RESET}")
+            return None
+
+        def _thread():
+            import asyncio
+            async def _run():
+                reconnect_delay = 2.0
+                while True:
+                    try:
+                        async with websockets.connect(url) as ws:  # type: ignore
+                            await ws.send(json.dumps({'op': 'register', 'type': 'simulator'}))
+                            print(f"{Color.DIM}Bridge: connected {url}{Color.RESET}")
+                            # Inner loop: process incoming + outgoing
+                            while True:
+                                # Drain outgoing events first
+                                try:
+                                    while True:
+                                        evt = bridge_out_queue.get_nowait()
+                                        await ws.send(json.dumps(evt))
+                                except queue.Empty:
+                                    pass
+                                # Wait for next incoming with timeout to allow periodic queue drain
+                                try:
+                                    msg = await asyncio.wait_for(ws.recv(), timeout=0.25)  # type: ignore
+                                except asyncio.TimeoutError:
+                                    continue
+                                data = json.loads(msg)
+                                op = data.get('op')
+                                if op == 'design_update':
+                                    scene = data.get('design', {}).get('scene', {})
+                                    latest_design_holder['scene'] = scene
+                                    widgets = scene.get('widgets', []) if isinstance(scene, dict) else []
+                                    print(f"{Color.DIM}Bridge: design update → {len(widgets)} widgets{Color.RESET}")
+                                elif op == 'widget_add':
+                                    # Incremental add (already reflected in full updates) – just log
+                                    print(f"{Color.DIM}Bridge: widget added{Color.RESET}")
+                                elif op == 'widget_update':
+                                    print(f"{Color.DIM}Bridge: widget updated id={data.get('widget_id')}\n{Color.RESET}")
+                                elif op == 'widget_delete':
+                                    print(f"{Color.DIM}Bridge: widget deleted id={data.get('widget_id')}{Color.RESET}")
+                                # Other ops ignored for now
+                    except Exception as e:
+                        print(f"{Color.DIM}Bridge: connection error {e}; retry in {reconnect_delay}s{Color.RESET}")
+                        await asyncio.sleep(reconnect_delay)
+            try:
+                asyncio.run(_run())
+            except Exception as e:
+                print(f"{Color.DIM}Bridge thread terminated: {e}{Color.RESET}")
+
+        th = threading.Thread(target=_thread, name='bridge-client', daemon=True)
+        th.start()
+        return th
+
+    if args.bridge_url:
+        bridge_thread = start_bridge_client(args.bridge_url)
     
     def get_frame_data():
         return current_frame_data.copy()
@@ -1013,6 +1078,11 @@ def main() -> None:
     help_overlay_enabled = args.help_overlay
     paused = False
     step_one_frame = False
+    prev_btnA = state.btnA
+    prev_btnB = state.btnB
+    prev_btnC = state.btnC
+    prev_bg = state.bg
+    prev_scene = state.scene
     
     start_time = time.time()
     last_frame_time = start_time
@@ -1346,6 +1416,20 @@ def main() -> None:
                     state.btnB = bool(input_state['B'])
                     state.btnC = bool(input_state['C'])
                     current_input_src = input_source.get('src', 'kbd')
+            # Emit button events to bridge if changed
+            if args.bridge_url:
+                if state.btnA != prev_btnA:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'A', 'pressed': state.btnA}})
+                if state.btnB != prev_btnB:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'B', 'pressed': state.btnB}})
+                if state.btnC != prev_btnC:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'C', 'pressed': state.btnC}})
+                if state.bg != prev_bg:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'bg', 'data': {'bg': state.bg}})
+                if state.scene != prev_scene:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'scene', 'data': {'scene': state.scene}})
+            prev_btnA, prev_btnB, prev_btnC = state.btnA, state.btnB, state.btnC
+            prev_bg, prev_scene = state.bg, state.scene
 
             # Skip frame updates if paused (unless stepping)
             should_update = not paused or step_one_frame

@@ -3,6 +3,7 @@
 ## 🎯 Overview
 
 Kompletní sada pokročilých nástrojů pro ESP32 simulátor zahrnující:
+
 - **Hardware integrace** - připojení reálného ESP32
 - **Multi-window management** - správa více instancí
 - **Screenshot/Video capture** - zachycení výstupu

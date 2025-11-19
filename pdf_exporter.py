@@ -7,17 +7,17 @@
 # - Scalable vector output
 # - Batch export functionality
 
-from typing import List, Optional, Tuple, Dict, Any
-from pathlib import Path
 import json
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 try:
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter, A4, A3
     from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A3, A4, letter
     from reportlab.lib.units import mm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfgen import canvas
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False

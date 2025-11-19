@@ -272,6 +272,7 @@ Předdefinované šablony pro rychlý start:
 ```powershell
 > template title_label 0 0
 ```
+
 Centrovaný nadpis (128x10, cyan, bold)
 
 ### button_primary
@@ -279,6 +280,7 @@ Centrovaný nadpis (128x10, cyan, bold)
 ```powershell
 > template button_primary 20 30
 ```
+
 Zelené tlačítko OK (40x12, rounded border)
 
 ### button_secondary
@@ -286,6 +288,7 @@ Zelené tlačítko OK (40x12, rounded border)
 ```powershell
 > template button_secondary 70 30
 ```
+
 Červené tlačítko Cancel (40x12, rounded border)
 
 ### info_panel
@@ -293,6 +296,7 @@ Zelené tlačítko OK (40x12, rounded border)
 ```powershell
 > template info_panel 4 10
 ```
+
 Modrý informační panel (120x50, double border)
 
 ### progress_bar
@@ -300,6 +304,7 @@ Modrý informační panel (120x50, double border)
 ```powershell
 > template progress_bar 10 30
 ```
+
 Zelený progress bar (100x8, 50% hodnota)
 
 ### gauge_half
@@ -307,6 +312,7 @@ Zelený progress bar (100x8, 50% hodnota)
 ```powershell
 > template gauge_half 50 20
 ```
+
 Žlutý gauge (40x20, 75% hodnota)
 
 ---

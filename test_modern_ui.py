@@ -1,10 +1,10 @@
 """Tests for modern_ui.py - modern theme system, splash screen, welcome wizard"""
 
-import pytest
 import tkinter as tk
-from modern_ui import (
-    ThemeColors, ModernTheme, ThemeManager, SplashScreen, WelcomeWizard
-)
+
+import pytest
+
+from modern_ui import ModernTheme, SplashScreen, ThemeColors, ThemeManager, WelcomeWizard
 
 
 class TestThemeColors:

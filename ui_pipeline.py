@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Callable, Optional
@@ -59,7 +58,7 @@ def _find_pio_command() -> list[str]:
     The chosen form is cached via a simple global attribute on the function.
     """
     if hasattr(_find_pio_command, "_cached"):
-        return getattr(_find_pio_command, "_cached")  # type: ignore[no-any-return]
+        return _find_pio_command._cached  # type: ignore[no-any-return]
 
     candidates = ["pio", "platformio"]
     for name in candidates:
@@ -71,7 +70,7 @@ def _find_pio_command() -> list[str]:
                 stderr=subprocess.DEVNULL,
             )
             if result.returncode == 0:
-                setattr(_find_pio_command, "_cached", [name])
+                _find_pio_command._cached = [name]
                 return [name]
         except FileNotFoundError:
             continue
@@ -81,7 +80,7 @@ def _find_pio_command() -> list[str]:
         "[ui-pipeline] Warning: PlatformIO command not found. "
         "Install PlatformIO CLI or adjust PATH."
     )
-    setattr(_find_pio_command, "_cached", ["pio"])
+    _find_pio_command._cached = ["pio"]
     return ["pio"]
 
 
@@ -108,9 +107,8 @@ def cmd_export_c(args: argparse.Namespace) -> int:
         print("[ui-pipeline] No active scene to export.")
         return 1
 
-    icon_px = getattr(args, "icon_size", 16)
     try:
-        export_c(designer, base_name=args.base_name, icon_size=icon_px)
+        export_c(designer, base_name=args.base_name)
     except Exception as exc:
         print(f"[ui-pipeline] C export failed: {exc}")
         return 1

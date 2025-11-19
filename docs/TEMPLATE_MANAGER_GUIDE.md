@@ -5,6 +5,7 @@ The Template Manager allows you to save and reuse custom widget combinations in 
 ## Overview
 
 Templates are pre-configured widget groups that you can save and load across different projects. This feature is perfect for:
+
 - Reusing common UI patterns (e.g., navigation bars, forms, dialogs)
 - Sharing component configurations between projects
 - Building a library of custom UI elements
@@ -17,7 +18,7 @@ Templates are pre-configured widget groups that you can save and load across dif
 
 ## Creating Templates
 
-### Step-by-Step:
+### Step-by-Step
 
 1. **Select widgets** in the canvas:
    - Click individual widgets
@@ -47,7 +48,7 @@ Widgets:
 
 ## Using Templates
 
-### Loading a Template:
+### Loading a Template
 
 1. Open Template Manager (**📑 Templates**)
 2. Browse available templates
@@ -55,7 +56,7 @@ Widgets:
 4. Widgets appear on canvas (selected automatically)
 5. Move/edit widgets as needed
 
-### Template Actions:
+### Template Actions
 
 | Button | Action |
 |--------|--------|
@@ -89,7 +90,7 @@ Templates are stored as JSON files in the `templates/` directory:
 }
 ```
 
-### Supported Widget Properties:
+### Supported Widget Properties
 
 - `type`: Widget type (button, label, box, etc.)
 - `x`, `y`: Position coordinates
@@ -102,20 +103,21 @@ Templates are stored as JSON files in the `templates/` directory:
 
 ## Managing Templates
 
-### Template Directory:
+### Template Directory
 
 All templates are saved in: `templates/`
 
-### Filename Convention:
+### Filename Convention
 
 Template names are automatically sanitized:
+
 - Spaces → underscores
 - Lowercase
 - `.json` extension
 
 Example: "My Cool Template" → `my_cool_template.json`
 
-### Manual Editing:
+### Manual Editing
 
 You can manually edit template JSON files with any text editor:
 
@@ -125,9 +127,10 @@ You can manually edit template JSON files with any text editor:
 4. Save file
 5. Click **🔄 Refresh** in Template Manager
 
-### Sharing Templates:
+### Sharing Templates
 
 Templates are portable JSON files:
+
 - Copy `.json` files between projects
 - Share via email/chat
 - Version control with Git

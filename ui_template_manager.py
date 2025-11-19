@@ -7,14 +7,15 @@ Manages scene templates with categories, preview, and import/export
 import json
 import os
 import tempfile
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from dataclasses import asdict, dataclass
+from tkinter import filedialog, messagebox, ttk
+from typing import Any, Dict, List, Optional
+
 from PIL import Image, ImageDraw, ImageTk
 
 try:
-    from ui_designer import UIDesigner, Scene, WidgetConfig, WidgetType
+    from ui_designer import Scene, UIDesigner, WidgetConfig, WidgetType
 except ImportError:
     # Fallback for when module is imported standalone
     from typing import Any as Scene

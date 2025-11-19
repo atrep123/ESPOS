@@ -7,15 +7,15 @@
 # - Icon library management
 # - Batch operations (resize, format conversion)
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageTk, ImageDraw
+import base64
 import json
 import os
+import tkinter as tk
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-import io
-import base64
+from tkinter import filedialog, messagebox, ttk
+from typing import Any, Dict, List, Optional
+
+from PIL import Image, ImageDraw, ImageTk
 
 
 class Icon:

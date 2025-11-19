@@ -4,6 +4,7 @@ Visual Preview Window for UI Designer
 Real-time graphical preview with mouse interaction and export
 """
 
+import argparse
 import os
 import time
 
@@ -4264,4 +4265,79 @@ class IconPaletteWindow(tk.Toplevel):
             messagebox.showinfo("Export", f"C header saved: {path}")
         except Exception as e:
             messagebox.showerror("Export Failed", f"{e}")
+
+if __name__ == "__main__":
+    # Headless CLI for automated preview/export
+    parser = argparse.ArgumentParser(description="UI Designer Preview (GUI/Headless)")
+    parser.add_argument("--headless-preview", action="store_true", help="Run a headless PNG export without Tk (JSON-driven)")
+    parser.add_argument("--headless", action="store_true", help="Run headless PNG export with a default scene if no JSON provided")
+    parser.add_argument("--in-json", dest="in_json", help="Path to a UI Designer JSON file")
+    parser.add_argument("--out-png", dest="out_png", help="Output PNG file path")
+    parser.add_argument("--out-html", dest="out_html", help="Optional output HTML path (export from designer)")
+    parser.add_argument("--scene", dest="scene", help="Optional scene name to render")
+    parser.add_argument("--bg", dest="bg", default="#000000", help="Background color for PNG (default: #000000)")
+    args, _unknown = parser.parse_known_args()
+
+    run_headless = args.headless_preview or args.headless
+    if run_headless and args.out_png:
+        try:
+            # Force headless
+            os.environ["ESP32OS_HEADLESS"] = "1"
+            from ui_designer import UIDesigner, WidgetConfig, WidgetType
+            # Use a larger default canvas for meaningful PNG size when no JSON is provided
+            designer = UIDesigner(320, 240) if not args.in_json else UIDesigner()
+            if args.in_json:
+                designer.load_from_json(args.in_json)
+                if args.scene and args.scene in designer.scenes:
+                    designer.current_scene = args.scene
+                if not designer.current_scene:
+                    raise SystemExit(1)
+            else:
+                # Create a minimal default scene for simple headless preview
+                designer.create_scene("Preview")
+                # Add a centered label and a panel background to ensure non-empty image
+                sc = designer.scenes.get(designer.current_scene)
+                if sc:
+                    # Simple background panel
+                    designer.add_widget(WidgetType.PANEL, x=4, y=4, width=max(8, sc.width-8), height=max(6, sc.height-8), text="", color_bg="#101010")
+                    # Centered label
+                    label_text = "ESP32OS Preview"
+                    lw = max(40, len(label_text) + 12)
+                    lh = 16
+                    designer.add_widget(WidgetType.LABEL, x=(sc.width - lw)//2, y=(sc.height - lh)//2, width=lw, height=lh, text=label_text, border=False)
+                    # Progress bar and gauge to add content
+                    designer.add_widget(WidgetType.PROGRESSBAR, x=40, y=sc.height - 40, width=sc.width - 80, height=12, value=65, min_value=0, max_value=100)
+                    designer.add_widget(WidgetType.GAUGE, x=sc.width - 60, y=20, width=40, height=40, value=75)
+
+            vp = VisualPreviewWindow(designer)
+            scene = designer.scenes.get(designer.current_scene)
+            if scene is None:
+                raise SystemExit(1)
+            img = vp._render_scene_image(scene, background_color=args.bg, include_grid=False, use_overlays=False, highlight_selection=False)
+            # Ensure output directory exists
+            try:
+                odir = os.path.dirname(os.path.abspath(args.out_png))
+                if odir:
+                    os.makedirs(odir, exist_ok=True)
+            except Exception:
+                pass
+            img.save(args.out_png)
+            # Optional HTML export
+            if args.out_html:
+                try:
+                    designer.export_to_html(args.out_html)
+                except Exception:
+                    pass
+            raise SystemExit(0)
+        except SystemExit as se:
+            raise se
+        except Exception as e:
+            try:
+                print(f"[headless-preview] Failed: {e}")
+            except Exception:
+                pass
+            raise SystemExit(1)
+    else:
+        # No CLI headless args; do nothing (GUI usage via import)
+        raise SystemExit(0)
 

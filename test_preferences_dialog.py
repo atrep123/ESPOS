@@ -1,13 +1,12 @@
 """Tests for preferences_dialog.py"""
 
-import pytest
-import tkinter as tk
-import tempfile
 import os
-from pathlib import Path
-from preferences_dialog import (
-    Preferences, PreferencesDialog, save_preferences, load_preferences
-)
+import tempfile
+import tkinter as tk
+
+import pytest
+
+from preferences_dialog import Preferences, PreferencesDialog, load_preferences, save_preferences
 
 
 class TestPreferences:

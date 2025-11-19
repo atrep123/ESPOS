@@ -6,6 +6,7 @@ Quick demo of Template Manager integration
 from ui_designer import UIDesigner
 from ui_designer_preview import VisualPreviewWindow
 
+
 def main():
     # Create designer with default scene
     designer = UIDesigner(width=240, height=320)
