@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+  - package-ecosystem: "npm"
+    directory: "/web_designer_frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
