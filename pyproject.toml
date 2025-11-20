@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "esp32os"
-version = "0.1.0"
+version = "1.0.0"
 description = "ESP32 OS simulator, UI designer, and tooling"
 authors = [{ name = "ESP32OS" }]
 requires-python = ">=3.9"
