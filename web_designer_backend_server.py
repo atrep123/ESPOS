@@ -13,12 +13,9 @@ project_designs = {}  # project_id -> design data
 shutdown_event = None
 
 
-async def handler(websocket):
+async def handler(websocket, path):
     """Handle WebSocket connection for a project session"""
     try:
-        # Compatibility: websockets 13+ does not pass path argument
-        path = websocket.request.path
-
         # Parse project from path: /ws/projects/<project>
         if not path.startswith('/ws/projects/'):
             await websocket.send(json.dumps({'error': 'Invalid path'}))

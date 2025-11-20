@@ -54,5 +54,5 @@ Write-Host "🎮 Simulator:     ws://localhost:8765" -ForegroundColor Yellow
 Write-Host "`n=== Commands ===" -ForegroundColor Cyan
 Write-Host "View job status:  Get-Job" -ForegroundColor Gray
 Write-Host "View job output:  Receive-Job -Name JobName" -ForegroundColor Gray
-Write-Host "Stop all servers: Get-Job | Stop-Job" -ForegroundColor Gray
+Write-Host "Stop all servers: Get-Job | Remove-Job -Force" -ForegroundColor Gray
 Write-Host ""
