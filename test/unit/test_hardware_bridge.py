@@ -5,6 +5,9 @@ import threading
 import time
 from typing import Any, Callable, List, Protocol, cast
 
+from esp32_hardware_bridge import BridgeConfig, ESP32HardwareBridge
+
+
 class _PytestMark(Protocol):
     def timeout(self, seconds: float | int) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         ...
@@ -32,8 +35,6 @@ except Exception:
     class MonkeyPatch(_MonkeyPatchProto):  # type: ignore
         def setattr(self, target: Any, name: str | None = None, value: Any | None = None, raising: bool = True) -> None:
             return None
-
-from esp32_hardware_bridge import ESP32HardwareBridge, BridgeConfig
 
 
 class FakeSerial:

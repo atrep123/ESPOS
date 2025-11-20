@@ -1,7 +1,13 @@
-import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
+
+try:
+    import tkinter as tk  # type: ignore
+except Exception:  # pragma: no cover - skip in headless environments
+    pytest.skip("tkinter not available", allow_module_level=True)
 
 
 def test_headless_preview_png(tmp_path):

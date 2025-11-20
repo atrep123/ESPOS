@@ -7,17 +7,20 @@ The Collaborative Web Designer is a real-time, multi-user UI design tool that al
 ## Features
 
 ### Real-Time Collaboration
+
 - **Multi-user editing**: Multiple users can edit the same design simultaneously
 - **Live synchronization**: Changes are broadcast to all connected clients in real-time
 - **Presence awareness**: See who else is currently working on the design
 - **Cursor tracking**: View other users' cursor positions and selections
 
 ### Conflict Resolution
+
 - **Last-write-wins**: Simple conflict resolution strategy
 - **Version tracking**: Each change includes a version number for tracking
 - **Optimistic updates**: Local changes are applied immediately, then synchronized
 
 ### Session Management
+
 - **Persistent sessions**: Design state is maintained on the server
 - **Auto-save**: Changes are automatically saved to the server
 - **Session recovery**: Reconnect to existing sessions after disconnection
@@ -48,7 +51,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 
 #### Client → Server
 
-**1. Join Session**
+##### 1. Join Session
+
 ```json
 {
   "type": "join",
@@ -58,7 +62,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**2. Widget Update**
+##### 2. Widget Update
+
 ```json
 {
   "type": "widget_update",
@@ -72,7 +77,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**3. Widget Create**
+##### 3. Widget Create
+
 ```json
 {
   "type": "widget_create",
@@ -88,7 +94,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**4. Widget Delete**
+##### 4. Widget Delete
+
 ```json
 {
   "type": "widget_delete",
@@ -96,7 +103,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**5. Cursor Move**
+##### 5. Cursor Move
+
 ```json
 {
   "type": "cursor_move",
@@ -105,7 +113,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**6. Selection Change**
+##### 6. Selection Change
+
 ```json
 {
   "type": "selection",
@@ -115,7 +124,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 
 #### Server → Client
 
-**1. Session State**
+##### 1. Session State
+
 ```json
 {
   "type": "session_state",
@@ -133,7 +143,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**2. Widget Update Broadcast**
+##### 2. Widget Update Broadcast
+
 ```json
 {
   "type": "widget_updated",
@@ -144,7 +155,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**3. User Joined/Left**
+##### 3. User Joined/Left
+
 ```json
 {
   "type": "user_joined",
@@ -160,7 +172,8 @@ All messages are JSON objects with a `type` field indicating the message type.
 }
 ```
 
-**4. Error**
+##### 4. Error
+
 ```json
 {
   "type": "error",
@@ -173,11 +186,13 @@ All messages are JSON objects with a `type` field indicating the message type.
 
 ### HTTP REST API
 
-**GET /api/sessions/:session_id**
+#### GET /api/sessions/:session_id
+
 - Get current session state
 - Returns: `{ "session_id": "...", "widgets": [...], "users": [...], "version": 42 }`
 
-**POST /api/sessions**
+#### POST /api/sessions
+
 - Create a new design session
 - Body: `{ "session_id": "design-123" }` (optional, auto-generated if not provided)
 - Returns: `{ "session_id": "...", "created": true }`
@@ -319,6 +334,7 @@ Environment variables:
 ### WebSocket Connection Issues
 
 If clients can't connect:
+
 1. Check firewall settings
 2. Verify server is running: `curl http://localhost:5000/health`
 3. Check browser console for errors
@@ -327,6 +343,7 @@ If clients can't connect:
 ### Synchronization Issues
 
 If changes don't sync:
+
 1. Check browser console for WebSocket errors
 2. Verify message format matches protocol
 3. Check server logs for errors
@@ -335,6 +352,7 @@ If changes don't sync:
 ### Performance Issues
 
 For large designs:
+
 1. Implement widget pagination
 2. Use incremental updates (delta sync)
 3. Throttle cursor/selection updates

@@ -17,6 +17,7 @@ Real-time collaborative UI designer for ESP32OS with WebSocket-based multi-user 
 ### Backend (FastAPI + WebSockets)
 
 The backend provides:
+
 - REST API for project management (`/api/projects/*`)
 - WebSocket endpoint for real-time collaboration (`/ws/projects/{project_id}`)
 - In-memory session management with user tracking
@@ -25,6 +26,7 @@ The backend provides:
 ### Frontend (HTML5 + JavaScript)
 
 The web client provides:
+
 - HTML5 Canvas rendering of UI designs
 - Real-time cursor visualization
 - User list with color coding
@@ -47,28 +49,30 @@ pip install -r requirements.txt
 
 1. **Start the backend server:**
 
-```bash
-python web_designer_backend.py
-```
+   ```bash
+   python web_designer_backend.py
+   ```
 
-Server will start on `http://localhost:8000`
+   Server will start on `http://localhost:8000`
 
 2. **Open the web client:**
 
-Open `web_designer_client.html` in your browser, or navigate to:
-```text
-file:///path/to/ESP32OS/web_designer_client.html
-```
+   Open `web_designer_client.html` in your browser, or navigate to:
+
+   ```text
+   file:///path/to/ESP32OS/web_designer_client.html
+   ```
 
 3. **Create a demo project (optional):**
 
-```bash
-curl -X POST http://localhost:8000/api/projects \
-  -H "Content-Type: application/json" \
-  -d '{"id": "demo_project", "width": 128, "height": 64}'
-```
+   ```bash
+   curl -X POST http://localhost:8000/api/projects \
+     -H "Content-Type: application/json" \
+     -d '{"id": "demo_project", "width": 128, "height": 64}'
+   ```
 
 4. **Connect and collaborate:**
+
    - Enter project ID (e.g., `demo_project`)
    - Enter your name
    - Click "Connect"
@@ -79,11 +83,13 @@ curl -X POST http://localhost:8000/api/projects \
 ### REST Endpoints
 
 #### List Projects
+
 ```http
 GET /api/projects
 ```
 
 Response:
+
 ```json
 [
   {
@@ -94,11 +100,13 @@ Response:
 ```
 
 #### Get Project Summary
+
 ```http
 GET /api/projects/{project_id}
 ```
 
 Response:
+
 ```json
 {
   "project_id": "demo_project",
@@ -114,6 +122,7 @@ Response:
 ```
 
 #### Create Project
+
 ```http
 POST /api/projects
 Content-Type: application/json
@@ -126,11 +135,13 @@ Content-Type: application/json
 ```
 
 #### Get Design JSON
+
 ```http
 GET /api/projects/{project_id}/design
 ```
 
 #### Update Design JSON
+
 ```http
 PUT /api/projects/{project_id}/design
 Content-Type: application/json
@@ -143,11 +154,13 @@ Content-Type: application/json
 ```
 
 #### Get Session State
+
 ```http
 GET /api/projects/{project_id}/session
 ```
 
 Response:
+
 ```json
 {
   "project_id": "demo_project",
@@ -172,6 +185,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 #### Client → Server Messages
 
 **Join Session:**
+
 ```json
 {
   "op": "join",
@@ -180,6 +194,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Update Cursor:**
+
 ```json
 {
   "op": "cursor",
@@ -189,6 +204,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Add Widget:**
+
 ```json
 {
   "op": "widget_add",
@@ -204,6 +220,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Update Widget:**
+
 ```json
 {
   "op": "widget_update",
@@ -216,6 +233,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Delete Widget:**
+
 ```json
 {
   "op": "widget_delete",
@@ -224,6 +242,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Heartbeat (keep-alive):**
+
 ```json
 {
   "op": "heartbeat"
@@ -233,6 +252,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 #### Server → Client Messages
 
 **Session State (on join):**
+
 ```json
 {
   "op": "session_state",
@@ -246,6 +266,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **User Joined:**
+
 ```json
 {
   "op": "user_joined",
@@ -259,6 +280,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **User Left:**
+
 ```json
 {
   "op": "user_left",
@@ -267,6 +289,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Cursor Update:**
+
 ```json
 {
   "op": "cursor",
@@ -277,6 +300,7 @@ Connect to: `ws://localhost:8000/ws/projects/{project_id}`
 ```
 
 **Widget Operations (add/update/delete):**
+
 ```json
 {
   "op": "widget_add",
@@ -321,6 +345,7 @@ To add new operations:
 3. **Tests**: Add test case in `test_web_designer_collab.py`
 
 Example:
+
 ```python
 # Backend
 elif op == "my_custom_op":
@@ -395,16 +420,19 @@ docker run -p 8000:8000 esp32os-web-designer
 ## Troubleshooting
 
 **WebSocket connection fails:**
+
 - Check that backend is running on port 8000
 - Verify firewall allows WebSocket connections
 - Check browser console for CORS errors
 
 **Users not seeing each other:**
+
 - Ensure both users join the same project ID
 - Check session endpoint: `GET /api/projects/{id}/session`
 - Verify WebSocket is in OPEN state
 
 **Cursor not updating:**
+
 - Check that mouse is over the canvas element
 - Verify WebSocket messages are being sent (browser DevTools → Network → WS)
 - Check for JavaScript errors in console
@@ -416,6 +444,7 @@ Part of ESP32OS project. See main README.md for license information.
 ## Contributing
 
 Contributions welcome! Please ensure:
+
 - All tests pass: `pytest test_web_designer*.py`
 - Code follows existing style
 - New features include tests and documentation

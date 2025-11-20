@@ -7,10 +7,17 @@
 # - Splash screen
 # - Welcome wizard
 
-import tkinter as tk
+import pytest
 from dataclasses import dataclass
-from tkinter import ttk
 from typing import Dict, Optional
+
+try:
+    import tkinter as tk
+    from tkinter import ttk
+    TK_AVAILABLE = True
+except Exception:  # pragma: no cover - headless environments
+    TK_AVAILABLE = False
+    pytest.skip("tkinter not available", allow_module_level=True)
 
 
 @dataclass

@@ -4,7 +4,7 @@ Test alignment guides and snap-to-widget functionality
 import pytest
 
 from ui_designer import WidgetConfig, WidgetType
-from ui_designer_preview import PreviewSettings
+from ui_designer_preview import PreviewSettings, VisualPreviewWindow
 
 
 def test_preview_settings_snap_to_widgets():
@@ -20,9 +20,9 @@ def test_preview_settings_snap_to_widgets():
     assert settings.show_alignment_guides is True
 
 
-def test_find_alignment_guides_empty_scene(headless_preview):
+def test_find_alignment_guides_empty_scene(headless_preview: VisualPreviewWindow):
     """Test alignment guide detection with empty scene"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -34,9 +34,9 @@ def test_find_alignment_guides_empty_scene(headless_preview):
     assert guides == []  # No other widgets to align to
 
 
-def test_find_alignment_guides_vertical_left(headless_preview):
+def test_find_alignment_guides_vertical_left(headless_preview: VisualPreviewWindow):
     """Test vertical alignment guide detection (left edges)"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -53,9 +53,9 @@ def test_find_alignment_guides_vertical_left(headless_preview):
     assert any(g[0] == 'v' and g[1] == 10 and 'left' in g[2] for g in guides)
 
 
-def test_find_alignment_guides_horizontal_top(headless_preview):
+def test_find_alignment_guides_horizontal_top(headless_preview: VisualPreviewWindow):
     """Test horizontal alignment guide detection (top edges)"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -72,9 +72,9 @@ def test_find_alignment_guides_horizontal_top(headless_preview):
     assert any(g[0] == 'h' and g[1] == 10 and 'top' in g[2] for g in guides)
 
 
-def test_find_alignment_guides_center(headless_preview):
+def test_find_alignment_guides_center(headless_preview: VisualPreviewWindow):
     """Test center alignment guide detection"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -91,9 +91,9 @@ def test_find_alignment_guides_center(headless_preview):
     assert any(g[0] == 'v' and 'center' in g[2] for g in guides)
 
 
-def test_find_alignment_guides_threshold(headless_preview):
+def test_find_alignment_guides_threshold(headless_preview: VisualPreviewWindow):
     """Test that guides are only detected within threshold"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.settings.snap_distance = 5
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
@@ -118,9 +118,9 @@ def test_find_alignment_guides_threshold(headless_preview):
     assert any(g[0] == 'v' and 'left' in g[2] for g in guides)
 
 
-def test_apply_widget_snapping_left_edge(headless_preview):
+def test_apply_widget_snapping_left_edge(headless_preview: VisualPreviewWindow):
     """Test snapping to left edge of another widget"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.settings.snap_to_widgets = True
     preview.settings.snap_distance = 5
     preview.designer.create_scene("test")
@@ -141,9 +141,9 @@ def test_apply_widget_snapping_left_edge(headless_preview):
     assert snapped_y == 10  # Y unchanged
 
 
-def test_apply_widget_snapping_disabled(headless_preview):
+def test_apply_widget_snapping_disabled(headless_preview: VisualPreviewWindow):
     """Test that snapping can be disabled"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.settings.snap_to_widgets = False  # Disable
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
@@ -163,9 +163,9 @@ def test_apply_widget_snapping_disabled(headless_preview):
     assert snapped_y == 10
 
 
-def test_apply_widget_snapping_center_y(headless_preview):
+def test_apply_widget_snapping_center_y(headless_preview: VisualPreviewWindow):
     """Test snapping to vertical center alignment"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.settings.snap_to_widgets = True
     preview.settings.snap_distance = 5
     preview.designer.create_scene("test")
@@ -186,9 +186,9 @@ def test_apply_widget_snapping_center_y(headless_preview):
     assert snapped_y == 30
 
 
-def test_alignment_guides_update_during_drag(headless_preview):
+def test_alignment_guides_update_during_drag(headless_preview: VisualPreviewWindow):
     """Test that alignment_guides list updates during drag"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.settings.snap_to_widgets = True
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
@@ -210,9 +210,9 @@ def test_alignment_guides_update_during_drag(headless_preview):
     assert any(g[0] == 'v' and g[1] == 100 for g in preview.alignment_guides)
 
 
-def test_draw_alignment_guides_empty(headless_preview):
+def test_draw_alignment_guides_empty(headless_preview: VisualPreviewWindow):
     """Test drawing alignment guides with empty list"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -222,9 +222,9 @@ def test_draw_alignment_guides_empty(headless_preview):
     preview._draw_alignment_guides()
 
 
-def test_draw_alignment_guides_vertical(headless_preview):
+def test_draw_alignment_guides_vertical(headless_preview: VisualPreviewWindow):
     """Test drawing vertical alignment guide"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -238,9 +238,9 @@ def test_draw_alignment_guides_vertical(headless_preview):
         pass
 
 
-def test_draw_alignment_guides_horizontal(headless_preview):
+def test_draw_alignment_guides_horizontal(headless_preview: VisualPreviewWindow):
     """Test drawing horizontal alignment guide"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     preview.designer.create_scene("test")
     preview.designer.current_scene = "test"
     
@@ -254,9 +254,9 @@ def test_draw_alignment_guides_horizontal(headless_preview):
         pass
 
 
-def test_show_alignment_guides_setting(headless_preview):
+def test_show_alignment_guides_setting(headless_preview: VisualPreviewWindow):
     """Test that show_alignment_guides setting controls rendering"""
-    preview = headless_preview
+    preview: VisualPreviewWindow = headless_preview
     settings = preview.settings
     
     assert settings.show_alignment_guides is True

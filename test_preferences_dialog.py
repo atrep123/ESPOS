@@ -2,9 +2,13 @@
 
 import os
 import tempfile
-import tkinter as tk
 
 import pytest
+
+try:
+    import tkinter as tk  # type: ignore
+except Exception:  # pragma: no cover - skip if Tk not available
+    pytest.skip("tkinter not available", allow_module_level=True)
 
 from preferences_dialog import Preferences, PreferencesDialog, load_preferences, save_preferences
 

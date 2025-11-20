@@ -8,14 +8,17 @@ import asyncio
 import json
 import logging
 import sys
-from typing import Any, Dict, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
 try:
     import websockets
-    from websockets.server import WebSocketServerProtocol
 except ImportError:
     print("Error: websockets package not found. Install with: pip install websockets")
     sys.exit(1)
+
+# Type-only import to avoid runtime deprecation warnings while keeping static typing
+if TYPE_CHECKING:  # pragma: no cover
+    from websockets.server import WebSocketServerProtocol  # type: ignore[attr-defined]
 
 from ui_designer import UIDesigner
 
@@ -29,19 +32,20 @@ class WebSimBridge:
     def __init__(self, host: str = "localhost", port: int = 8765):
         self.host = host
         self.port = port
-        self.designer_clients: Set[WebSocketServerProtocol] = set()
-        self.simulator_clients: Set[WebSocketServerProtocol] = set()
+        # Use protocol type only for static checking; runtime keeps flexibility
+        self.designer_clients: Set['WebSocketServerProtocol'] = set()  # type: ignore[name-defined]
+        self.simulator_clients: Set['WebSocketServerProtocol'] = set()  # type: ignore[name-defined]
         self.current_design: Optional[Dict[str, Any]] = None
         self.ui_designer = UIDesigner(128, 64)  # Default ESP32 screen size
         
-    async def handle_client(self, websocket: WebSocketServerProtocol, path: str):
+    async def handle_client(self, websocket: 'WebSocketServerProtocol') -> None:  # type: ignore[name-defined]
         """Handle WebSocket connections from both designer and simulator"""
-        client_type = None
+        client_type: Optional[str] = None
         
         try:
             async for message in websocket:
-                data = json.loads(message)
-                op = data.get('op')
+                data: Dict[str, Any] = json.loads(message)
+                op: Optional[str] = data.get('op')
                 
                 # Client identification
                 if op == 'register':
@@ -91,7 +95,7 @@ class WebSimBridge:
                 
                 # Widget operations
                 elif op == 'widget_add':
-                    widget = data.get('widget')
+                    widget: Dict[str, Any] = data.get('widget', {})
                     if self.current_design is None:
                         self.current_design = {'widgets': []}
                     self.current_design['widgets'].append(widget)
@@ -102,8 +106,8 @@ class WebSimBridge:
                     })
                 
                 elif op == 'widget_update':
-                    widget_id = data.get('widget_id')
-                    changes = data.get('changes')
+                    widget_id: Any = data.get('widget_id')
+                    changes: Dict[str, Any] = data.get('changes', {})
                     
                     if self.current_design:
                         for w in self.current_design['widgets']:
@@ -118,7 +122,7 @@ class WebSimBridge:
                     })
                 
                 elif op == 'widget_delete':
-                    widget_id = data.get('widget_id')
+                    widget_id: Any = data.get('widget_id')
                     
                     if self.current_design:
                         self.current_design['widgets'] = [
@@ -133,8 +137,8 @@ class WebSimBridge:
                 
                 # Simulator feedback (future: interaction events)
                 elif op == 'sim_event':
-                    event_type = data.get('event_type')
-                    event_data = data.get('data')
+                    event_type: Any = data.get('event_type')
+                    event_data: Any = data.get('data')
                     
                     await self.broadcast_to_designers({
                         'op': 'sim_event',
@@ -144,7 +148,7 @@ class WebSimBridge:
 
                 # Full design update originating from simulator side
                 elif op == 'sim_design_update':
-                    scene = data.get('scene', {})
+                    scene: Dict[str, Any] = data.get('scene', {})
                     logger.info("Received design update from simulator")
                     web_design = self.convert_from_simulator_format(scene)
                     self.current_design = web_design
@@ -170,7 +174,7 @@ class WebSimBridge:
                 self.simulator_clients.remove(websocket)
                 logger.info("Simulator client removed")
     
-    def convert_to_simulator_format(self, design: Dict[str, Any]) -> Dict[str, Any]:
+    def convert_to_simulator_format(self, design: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Convert web designer format to simulator format"""
         if not design:
             return {'widgets': []}
@@ -285,8 +289,8 @@ class WebSimBridge:
                     w[key] = sim_widget[key]
         return w
     
-    async def broadcast_to_designers(self, message: Dict[str, Any], exclude: Optional[WebSocketServerProtocol] = None):
-        """Broadcast message to all designer clients"""
+    async def broadcast_to_designers(self, message: Dict[str, Any], exclude: Optional['WebSocketServerProtocol'] = None) -> None:  # type: ignore[name-defined]
+        """Broadcast message to all designer clients, optionally excluding one"""
         if not self.designer_clients:
             return
         
@@ -294,13 +298,13 @@ class WebSimBridge:
         tasks = [
             client.send(msg_json)
             for client in self.designer_clients
-            if client != exclude
+            if exclude is None or client != exclude
         ]
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
     
-    async def broadcast_to_simulators(self, message: Dict[str, Any]):
-        """Broadcast message to all simulator clients"""
+    async def broadcast_to_simulators(self, message: Dict[str, Any]) -> None:
+        """Broadcast message to all connected simulator clients"""
         if not self.simulator_clients:
             return
         
@@ -312,9 +316,24 @@ class WebSimBridge:
     async def start(self):
         """Start the bridge server"""
         logger.info(f"Starting WebSocket bridge on ws://{self.host}:{self.port}")
-        async with websockets.serve(self.handle_client, self.host, self.port):
-            logger.info("Bridge server ready - waiting for connections...")
-            await asyncio.Future()  # Run forever
+        
+        # Retry logic for binding port
+        max_retries = 5
+        for i in range(max_retries):
+            try:
+                # Explicitly set reuse_address=True to handle TIME_WAIT
+                async with websockets.serve(self.handle_client, self.host, self.port, reuse_address=True):
+                    logger.info("Bridge server ready - waiting for connections...")
+                    await asyncio.Future()  # Run forever
+            except OSError as e:
+                if e.errno == 10048:  # Address already in use
+                    logger.warning(f"Port {self.port} is busy (attempt {i+1}/{max_retries}). Waiting 1s...")
+                    await asyncio.sleep(1)
+                else:
+                    raise e
+        
+        logger.error(f"Could not bind to port {self.port} after {max_retries} attempts.")
+        sys.exit(1)
 
 
 async def main():

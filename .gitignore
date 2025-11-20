@@ -26,3 +26,23 @@ test_metrics.csv
 # OS files
 Thumbs.db
 Desktop.ini
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Rust/Tauri build artifacts
+src-tauri/target/
+**/src-tauri/target/
+
+# Logs
+simulator.log
+
+# Generated test outputs
+test_export.html
+test_export.png
+test_integration.html
+test_integration.png
+test_scene.html
+test_scene.png
+*.live.html

@@ -10,12 +10,23 @@
 import base64
 import json
 import os
-import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, cast
+
+import pytest
+
+tk_available: bool = False
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+    tk_available = True
+except Exception:  # pragma: no cover - headless environments
+    pytest.skip("tkinter not available", allow_module_level=True)
+TK_AVAILABLE: bool = tk_available
 
 from PIL import Image, ImageDraw, ImageTk
+
+ALL_FILES = ("All files", "*.*")
 
 
 class Icon:
@@ -66,11 +77,11 @@ class Icon:
         
         # Convert to RGB565 format (common for ESP32 displays)
         img = self.to_pil()
-        rgb565_data = []
+        rgb565_data: List[int] = []
         
         for y in range(self.height):
             for x in range(self.width):
-                r, g, b, a = img.getpixel((x, y))
+                r, g, b, a = cast(Tuple[int, int, int, int], img.getpixel((x, y)))
                 # RGB565 conversion
                 r5 = (r >> 3) & 0x1F
                 g6 = (g >> 2) & 0x3F
@@ -83,7 +94,7 @@ class Icon:
         c_code += f"const uint16_t {var_name}[] = {{\n"
         
         for i in range(0, len(rgb565_data), 16):
-            chunk = rgb565_data[i:i+16]
+            chunk: List[int] = rgb565_data[i:i+16]
             hex_vals = [f"0x{val:04X}" for val in chunk]
             c_code += "    " + ", ".join(hex_vals)
             if i + 16 < len(rgb565_data):
@@ -140,11 +151,9 @@ class IconLibrary:
     def search(self, query: str) -> List[Icon]:
         """Search icons by name or tags"""
         query_lower = query.lower()
-        results = []
+        results: List[Icon] = []
         for icon in self.icons.values():
-            if query_lower in icon.name.lower():
-                results.append(icon)
-            elif any(query_lower in tag.lower() for tag in icon.tags):
+            if query_lower in icon.name.lower() or any(query_lower in tag.lower() for tag in icon.tags):
                 results.append(icon)
         return results
     
@@ -237,7 +246,7 @@ class IconPaletteTool:
         
         ttk.Label(toolbar, text="Search:").pack(side=tk.LEFT, padx=5)
         self.search_var = tk.StringVar()
-        self.search_var.trace("w", lambda *args: self._on_search())
+        self.search_var.trace_add("write", lambda *_: self._on_search())
         search_entry = ttk.Entry(toolbar, textvariable=self.search_var, width=30)
         search_entry.pack(side=tk.LEFT, padx=5)
         
@@ -255,8 +264,8 @@ class IconPaletteTool:
         
         # Scrollable canvas for icons
         self.canvas = tk.Canvas(grid_frame, bg="white")
-        scrollbar_y = ttk.Scrollbar(grid_frame, orient=tk.VERTICAL, command=self.canvas.yview)
-        scrollbar_x = ttk.Scrollbar(grid_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        scrollbar_y = ttk.Scrollbar(grid_frame, orient=tk.VERTICAL, command=self.canvas.yview)  # type: ignore[arg-type]
+        scrollbar_x = ttk.Scrollbar(grid_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)  # type: ignore[arg-type]
         
         self.canvas.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
         
@@ -294,13 +303,13 @@ class IconPaletteTool:
         # This is a simplified version
         pass
     
-    def _on_frame_configure(self, event):
+    def _on_frame_configure(self, event: tk.Event):
         """Update scroll region when frame changes"""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
     
-    def _on_canvas_configure(self, event):
+    def _on_canvas_configure(self, event: tk.Event):
         """Adjust canvas window width to canvas width"""
-        self.canvas.itemconfig(self.canvas_window, width=event.width)
+        self.canvas.itemconfig(self.canvas_window, width=int(event.width))
     
     def _refresh_grid(self, icons: Optional[List[Icon]] = None):
         """Refresh icon grid display"""
@@ -401,7 +410,7 @@ class IconPaletteTool:
             # Update preview (larger)
             preview = self._create_thumbnail(icon, 200)
             self.preview_label.configure(image=preview, text="")
-            self.preview_label.image = preview  # Keep reference
+            self.preview_label.image = preview  # type: ignore[attr-defined]
             
             self.status_var.set(f"Selected: {name}")
     
@@ -411,8 +420,8 @@ class IconPaletteTool:
             title="Import Icons",
             filetypes=[
                 ("Image files", "*.png *.jpg *.jpeg *.bmp *.gif"),
-                ("All files", "*.*")
-            ]
+                ALL_FILES,
+            ],
         )
         
         if not filepaths:
@@ -433,12 +442,13 @@ class IconPaletteTool:
     
     def _delete_selected(self):
         """Delete selected icon"""
-        if not self.selected_icon:
+        selected = self.selected_icon
+        if not selected:
             messagebox.showwarning("No Selection", "Please select an icon to delete")
             return
         
-        if messagebox.askyesno("Confirm Delete", f"Delete icon '{self.selected_icon}'?"):
-            self.library.remove(self.selected_icon)
+        if messagebox.askyesno("Confirm Delete", f"Delete icon '{selected}'?"):
+            self.library.remove(selected)
             self.selected_icon = None
             self._refresh_grid()
             self.details_text.delete("1.0", tk.END)
@@ -446,7 +456,8 @@ class IconPaletteTool:
     
     def _resize_selected(self):
         """Resize selected icon"""
-        if not self.selected_icon:
+        selected = self.selected_icon
+        if not selected:
             messagebox.showwarning("No Selection", "Please select an icon to resize")
             return
         
@@ -464,7 +475,7 @@ class IconPaletteTool:
         ttk.Entry(dialog, textvariable=height_var).grid(row=1, column=1, padx=10, pady=10)
         
         def do_resize():
-            icon = self.library.get(self.selected_icon)
+            icon = self.library.get(selected)
             if icon:
                 resized = icon.resize(width_var.get(), height_var.get())
                 self.library.add(resized)  # Replace or add as new?
@@ -478,7 +489,7 @@ class IconPaletteTool:
         filepath = filedialog.asksaveasfilename(
             title="Save Icon Library",
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            filetypes=[("JSON files", "*.json"), ALL_FILES],
         )
         
         if filepath:
@@ -492,7 +503,7 @@ class IconPaletteTool:
         """Load library from file"""
         filepath = filedialog.askopenfilename(
             title="Load Icon Library",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            filetypes=[("JSON files", "*.json"), ALL_FILES],
         )
         
         if filepath:

@@ -6,20 +6,25 @@
 # - Embedded fonts and colors
 # - Scalable vector output
 # - Batch export functionality
+# type: ignore
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+# Runtime imports - type checking disabled for reportlab
 try:
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A3, A4, letter
-    from reportlab.lib.units import mm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors  # type: ignore
+    from reportlab.lib.colors import Color  # type: ignore
+    from reportlab.lib.pagesizes import A3, A4, letter  # type: ignore
+    from reportlab.pdfgen import canvas  # type: ignore
+    
     REPORTLAB_AVAILABLE = True
 except ImportError:
+    colors = None  # type: ignore
+    canvas = None  # type: ignore
+    Color = None  # type: ignore
+    A3 = A4 = letter = None  # type: ignore
     REPORTLAB_AVAILABLE = False
     print("Warning: reportlab not available. Install with: pip install reportlab")
 
@@ -28,12 +33,29 @@ class PDFExporter:
     """Export UI designs to PDF format"""
     
     def __init__(self):
-        self.page_sizes = {
-            "letter": letter,
-            "a4": A4,
-            "a3": A3,
-            "custom": None
+        self.page_sizes: Dict[str, Optional[Tuple[float, float]]] = {
+            "letter": letter if REPORTLAB_AVAILABLE else None,
+            "a4": A4 if REPORTLAB_AVAILABLE else None,
+            "a3": A3 if REPORTLAB_AVAILABLE else None,
+            "custom": None,
         }
+
+    def _require_reportlab(self) -> None:
+        if not REPORTLAB_AVAILABLE or canvas is None or colors is None:
+            raise ImportError("reportlab required for PDF export")
+
+    def _resolve_page_dims(
+        self, page_size: str, scene_data: Dict[str, Any], scale: float
+    ) -> Tuple[float, float]:
+        if page_size == "custom":
+            width = float(scene_data.get("width", 320) * scale)
+            height = float(scene_data.get("height", 240) * scale)
+            return (width, height)
+
+        page_dims: Optional[Tuple[float, float]] = self.page_sizes.get(page_size) or A4
+        if page_dims is None:
+            raise ValueError("Invalid page size; install reportlab for standard sizes")
+        return page_dims
     
     def export_scene(self, 
                     scene_data: Dict[str, Any],
@@ -56,19 +78,13 @@ class PDFExporter:
         Returns:
             True if successful
         """
-        if not REPORTLAB_AVAILABLE:
-            raise ImportError("reportlab required for PDF export")
-        
-        # Get page size
-        if page_size == "custom":
-            width = scene_data.get("width", 320) * scale
-            height = scene_data.get("height", 240) * scale
-            page_dims = (width, height)
-        else:
-            page_dims = self.page_sizes.get(page_size, A4)
-        
+        self._require_reportlab()
+        assert canvas is not None
+
+        page_dims = self._resolve_page_dims(page_size, scene_data, scale)
+
         # Create PDF canvas
-        c = canvas.Canvas(output_path, pagesize=page_dims)
+        c = canvas.Canvas(output_path, pagesize=page_dims)  # type: ignore
         page_width, page_height = page_dims
         
         # Calculate centering offset
@@ -122,11 +138,11 @@ class PDFExporter:
         Returns:
             True if successful
         """
-        if not REPORTLAB_AVAILABLE:
-            raise ImportError("reportlab required for PDF export")
-        
-        page_dims = self.page_sizes.get(page_size, A4)
-        c = canvas.Canvas(output_path, pagesize=page_dims)
+        self._require_reportlab()
+        assert canvas is not None
+
+        page_dims = self._resolve_page_dims(page_size, scenes[0] if scenes else {}, scale)
+        c: Any = canvas.Canvas(output_path, pagesize=page_dims)
         
         for idx, scene in enumerate(scenes):
             if idx > 0:
@@ -138,9 +154,10 @@ class PDFExporter:
         c.save()
         return True
     
-    def _render_scene_page(self, c: canvas.Canvas, scene: Dict[str, Any], 
+    def _render_scene_page(self, c: Any, scene: Dict[str, Any], 
                           page_dims: Tuple[float, float], scale: float):
         """Render a single scene on current page"""
+        assert colors is not None
         page_width, page_height = page_dims
         
         scene_width = scene.get("width", 320) * scale
@@ -164,7 +181,7 @@ class PDFExporter:
         scene_name = scene.get("name", f"Scene {id(scene)}")
         c.drawCentredString(page_width / 2, 20, scene_name)
     
-    def _draw_widget_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
+    def _draw_widget_pdf(self, c: Any, widget: Dict[str, Any],
                         offset_x: float, offset_y: float, scale: float):
         """Draw a widget in PDF using vector graphics"""
         x = widget.get("x", 0) * scale + offset_x
@@ -205,8 +222,8 @@ class PDFExporter:
         elif widget_type == "gauge":
             self._draw_gauge_pdf(c, widget, x, y_pdf, w, h, fg_color)
     
-    def _draw_label_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
-                       x: float, y: float, w: float, h: float, color):
+    def _draw_label_pdf(self, c: Any, widget: Dict[str, Any],
+                       x: float, y: float, w: float, h: float, color: Any):
         """Draw label widget"""
         text = widget.get("text", "Label")
         c.setFillColor(color)
@@ -219,9 +236,10 @@ class PDFExporter:
         
         c.drawString(text_x, text_y, text)
     
-    def _draw_button_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
-                        x: float, y: float, w: float, h: float, color):
+    def _draw_button_pdf(self, c: Any, widget: Dict[str, Any],
+                        x: float, y: float, w: float, h: float, color: Any):
         """Draw button widget"""
+        assert colors is not None
         text = widget.get("text", "Button")
         
         # Button background (slightly lighter)
@@ -236,8 +254,8 @@ class PDFExporter:
         text_y = y + h / 2 - 3
         c.drawString(text_x, text_y, text)
     
-    def _draw_progressbar_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
-                             x: float, y: float, w: float, h: float, color):
+    def _draw_progressbar_pdf(self, c: Any, widget: Dict[str, Any],
+                             x: float, y: float, w: float, h: float, color: Any):
         """Draw progress bar widget"""
         value = widget.get("value", 50)
         
@@ -252,8 +270,8 @@ class PDFExporter:
         text_width = c.stringWidth(text, "Helvetica", 6)
         c.drawString(x + (w - text_width) / 2, y + h / 2 - 2, text)
     
-    def _draw_checkbox_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
-                          x: float, y: float, w: float, h: float, color):
+    def _draw_checkbox_pdf(self, c: Any, widget: Dict[str, Any],
+                          x: float, y: float, _w: float, h: float, color: Any):
         """Draw checkbox widget"""
         box_size = min(h - 4, 10)
         box_x = x + 2
@@ -279,8 +297,8 @@ class PDFExporter:
             c.setFont("Helvetica", 7)
             c.drawString(box_x + box_size + 4, box_y + 2, text)
     
-    def _draw_slider_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
-                        x: float, y: float, w: float, h: float, color):
+    def _draw_slider_pdf(self, c: Any, widget: Dict[str, Any],
+                        x: float, y: float, w: float, h: float, color: Any):
         """Draw slider widget"""
         value = widget.get("value", 50)
         
@@ -296,8 +314,8 @@ class PDFExporter:
         c.setFillColor(color)
         c.circle(thumb_x, track_y, thumb_size / 2, fill=1, stroke=0)
     
-    def _draw_gauge_pdf(self, c: canvas.Canvas, widget: Dict[str, Any],
-                       x: float, y: float, w: float, h: float, color):
+    def _draw_gauge_pdf(self, c: Any, widget: Dict[str, Any],
+                       x: float, y: float, w: float, h: float, color: Any):
         """Draw gauge widget (arc-based)"""
         value = widget.get("value", 75)
         
@@ -326,9 +344,10 @@ class PDFExporter:
         text_width = c.stringWidth(text, "Helvetica", 6)
         c.drawString(cx - text_width / 2, cy - 3, text)
     
-    def _draw_grid(self, c: canvas.Canvas, offset_x: float, offset_y: float,
+    def _draw_grid(self, c: Any, offset_x: float, offset_y: float,
                   width: float, height: float, grid_size: float):
         """Draw grid overlay"""
+        assert colors is not None
         c.setStrokeColor(colors.Color(0.2, 0.2, 0.2))
         c.setLineWidth(0.5)
         
@@ -344,9 +363,10 @@ class PDFExporter:
             c.line(offset_x, y, offset_x + width, y)
             y += grid_size
     
-    def _draw_guides(self, c: canvas.Canvas, offset_x: float, offset_y: float,
+    def _draw_guides(self, c: Any, offset_x: float, offset_y: float,
                     width: float, height: float):
         """Draw alignment guides"""
+        assert colors is not None
         c.setStrokeColor(colors.blue)
         c.setLineWidth(0.5)
         c.setDash(3, 3)
@@ -360,8 +380,10 @@ class PDFExporter:
         
         c.setDash()  # Reset dash
     
-    def _parse_color(self, color_str: str):
+    def _parse_color(self, color_str: str) -> Any:
         """Parse color string to reportlab color"""
+        if colors is None:
+            raise ImportError("reportlab required for color parsing")
         if color_str.startswith("#"):
             # Hex color
             hex_color = color_str.lstrip("#")
@@ -378,7 +400,7 @@ class PDFExporter:
                     input_dir: str,
                     output_dir: str,
                     file_pattern: str = "*.json",
-                    **kwargs) -> List[str]:
+                    **kwargs: Any) -> List[str]:
         """
         Batch export multiple JSON files to PDF
         
@@ -395,7 +417,7 @@ class PDFExporter:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        exported = []
+        exported: List[str] = []
         for json_file in input_path.glob(file_pattern):
             try:
                 # Load JSON
@@ -475,3 +497,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

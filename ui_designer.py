@@ -15,6 +15,13 @@ from html import escape
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict, Union, cast
 
+# CLI message constants
+MSG_INVALID_INDEX = "Invalid index"
+MSG_NO_SCENE = "No scene loaded"
+MSG_INDEX_INTEGER = "Index must be integer"
+MSG_FAILED = "❌ Failed"
+MSG_UNKNOWN_ANIM = "Unknown animation name"
+
 PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), 'ui_designer_preview.py')
 
 
@@ -1446,9 +1453,9 @@ class UIDesigner:
     
     # --- ASCII Preview Helpers ---
     # Lightweight type aliases to improve clarity
-    BorderChars = Dict[str, str]
-    SceneState = Dict[str, Any]
-    GuideSpec = Dict[str, Any]
+    border_chars_t = Dict[str, str]
+    scene_state_t = Dict[str, Any]
+    guide_spec_t = Dict[str, Any]
 
     def _render_widget_to_canvas(self, canvas: List[List[str]], widget: WidgetConfig, 
                                  idx: int, width: int, height: int):
@@ -1568,7 +1575,7 @@ class UIDesigner:
         except Exception:
             pass
     
-    def _get_border_chars(self, style: str) -> BorderChars:
+    def _get_border_chars(self, style: str) -> Dict[str, str]:
         """Get border characters for style"""
         styles = {
             'single': {'h': '─', 'v': '│', 'tl': '┌', 'tr': '┐', 'bl': '└', 'br': '┘'},
@@ -1633,7 +1640,7 @@ class UIDesigner:
     def _draw_gauge(self, canvas: List[List[str]], widget: WidgetConfig,
                     width: int, height: int):
         """Draw gauge (simple bar)"""
-        _x0, y0, _inner_w, inner_h = self._inner_box(widget)
+        _x0, _y0, _inner_w, inner_h = self._inner_box(widget)
         progress = self._calc_progress_value(widget.value, widget.max_value, inner_h)
         gauge_x = widget.x + widget.width // 2
         gauge_y_start = widget.y + widget.height - (1 if widget.border else 0) - 1
@@ -1769,7 +1776,7 @@ def _auto_preflight_and_export(designer: 'UIDesigner', json_path: str) -> None:
     except Exception as e:
         print(f"⚠️ Auto-export failed: {e}")
 
-def create_cli_interface(commands: Optional[List[str]] = None):
+def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - CLI handler intentionally complex
     """Advanced CLI interface for UI designer.
     If 'commands' is provided, runs non-interactively executing each command in order.
     """
@@ -2022,7 +2029,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         designer.selected_widget = _idx
                         print(f"✓ Selected widget [{_idx}] {scene.widgets[_idx].type}")
                     else:
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
             
             elif action == 'edit':
                 if len(parts) < 4:
@@ -2133,7 +2140,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         if w.text:
                             print(f"       text='{w.text}'")
                 else:
-                    print("No scene loaded")
+                    print(MSG_NO_SCENE)
             
             elif action == 'preview':
                 show_grid = len(parts) > 1 and parts[1].lower() == 'grid'
@@ -2183,7 +2190,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     _which = parts[3].lower()
                     _role = parts[4]
@@ -2249,6 +2256,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         for gname, members in designer.list_groups():
                             mem_str = ', '.join(str(i) for i in members)
                             print(f"  - {gname}: [{mem_str}]")
+                        print()
                     else:
                         print("(no groups)")
                     print("\nWidgets:")
@@ -2263,7 +2271,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         print(f"  [{i}] {w.type} at ({w.x},{w.y}) {w.width}x{w.height}{tag_str}{lock_info}{vis_info}")
                     print()
                 else:
-                    print("No scene loaded")
+                    print(MSG_NO_SCENE)
             
             # File Operations
             elif action == 'save':
@@ -2373,12 +2381,12 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         _ok = designer.add_to_group(_name, _idxs)
                     else:
                         _ok = designer.remove_from_group(_name, _idxs)
-                    print("✓ Done" if _ok else "❌ Failed")
+                    print("✓ Done" if _ok else MSG_FAILED)
                 elif sub == 'delete':
                     if len(parts) < 3:
                         print("Usage: group delete <name>")
                         continue
-                    print("✓ Deleted" if designer.delete_group(parts[2]) else "❌ Failed")
+                    print("✓ Deleted" if designer.delete_group(parts[2]) else MSG_FAILED)
                 elif sub in ['lock','visible']:
                     if len(parts) < 4:
                         print(f"Usage: group {sub} <name> <on|off|toggle>")
@@ -2389,7 +2397,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         _ok = designer.group_set_lock(_name, _mode)
                     else:
                         _ok = designer.group_set_visible(_name, _mode)
-                    print("✓ Done" if _ok else "❌ Failed")
+                    print("✓ Done" if _ok else MSG_FAILED)
                 else:
                     print("Unknown group subcommand")
 
@@ -2408,7 +2416,8 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                             _w, _h = _spec.get('size', (0,0))
                             print(f"  - {_name:20s} size={_w}x{_h} items={len(_spec.get('items', []))}")
                         print()
-                elif _sub == 'save':
+                    continue
+                if _sub == 'save':
                     if len(parts) < 4:
                         print("Usage: symbol save <name> <idx1> [idx2...]")
                         continue
@@ -2426,7 +2435,8 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         continue
                     _name = parts[2]
                     try:
-                        _x = int(parts[3]); _y = int(parts[4])
+                        _x = int(parts[3])
+                        _y = int(parts[4])
                     except Exception:
                         print("x/y must be integers")
                         continue
@@ -2546,10 +2556,12 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     continue
                 try:
                     _wh = parts[1].lower().split('x')
-                    _w = int(_wh[0]); _h = int(_wh[1])
+                    _w = int(_wh[0])
+                    _h = int(_wh[1])
                     if designer.current_scene and designer.current_scene in designer.scenes:
                         _sc = designer.scenes[designer.current_scene]
-                        _sc.width = _w; _sc.height = _h
+                        _sc.width = _w
+                        _sc.height = _h
                         print(f"✓ Breakpoint applied: {_w}x{_h}")
                 except Exception:
                     print("Usage: bp <WxH>")
@@ -2573,7 +2585,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     print("Usage: state <define|set|list|clear> ...")
                     continue
                 if not (designer.current_scene and designer.current_scene in designer.scenes):
-                    print("No scene loaded")
+                    print(MSG_NO_SCENE)
                     continue
                 _sub = parts[1].lower()
                 _scene = designer.scenes[designer.current_scene]
@@ -2584,11 +2596,11 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3]
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_idx]
                     _w.state_overrides = _w.state_overrides or {}
@@ -2606,11 +2618,11 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3]
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _scene.widgets[_idx].state = _name
                     print(f"✓ Widget {_idx} state set to '{_name}'")
@@ -2621,10 +2633,10 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_idx]
                     _keys = sorted((_w.state_overrides or {}).keys())
@@ -2640,11 +2652,11 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3]
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_idx]
                     if _name in (_w.state_overrides or {}):
@@ -2668,7 +2680,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     print()
                     continue
                 if not (designer.current_scene and designer.current_scene in designer.scenes):
-                    print("No scene loaded")
+                    print(MSG_NO_SCENE)
                     continue
                 _scene = designer.scenes[designer.current_scene]
                 if _sub == 'add':
@@ -2678,14 +2690,14 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3].lower()
                     if _name not in _builtins:
-                        print("Unknown animation name")
+                        print(MSG_UNKNOWN_ANIM)
                         continue
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_idx]
                     if _name not in (_w.animations or []):
@@ -2698,11 +2710,11 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                     try:
                         _idx = int(parts[2])
                     except Exception:
-                        print("Index must be integer")
+                        print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3].lower()
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_idx]
                     if _name in (_w.animations or []):
@@ -2723,10 +2735,10 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         continue
                     _name = parts[3].lower()
                     if _name not in _builtins:
-                        print("Unknown animation name")
+                        print(MSG_UNKNOWN_ANIM)
                         continue
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     # Set context, render once, then clear
                     designer.anim_context = {'idx': _idx, 'name': _name, 'steps': _steps, 't': _t}
@@ -2746,10 +2758,10 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         continue
                     _name = parts[3].lower()
                     if _name not in _builtins:
-                        print("Unknown animation name")
+                        print(MSG_UNKNOWN_ANIM)
                         continue
                     if not (0 <= _idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     import time
                     try:
@@ -2782,7 +2794,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         print("Select a widget first with 'select <idx>' or pass an index: context <idx>")
                         continue
                     if not (0 <= _target_idx < len(_scene.widgets)):
-                        print("Invalid index")
+                        print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_target_idx]
                     _info = get_widget_help(_w)
@@ -2809,7 +2821,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):
                         print(f"   > {_a}")
                     print()
                 else:
-                    print("No scene loaded")
+                    print(MSG_NO_SCENE)
             
             elif action == 'help':
                 if len(parts) > 1:
@@ -3047,7 +3059,7 @@ if __name__ == '__main__':
         d.create_scene(scene_name)
         # Apply preset templates
         if preset == 'dashboard':
-            d.add_widget(WidgetType.LABEL, x=0, y=0, width=w, height=10, text=scene_name, border=False, align='center', style='bold', color_fg='cyan')
+            d.add_widget(WidgetType.LABEL, x=0, y=0, width=128, height=10, text=scene_name, border=False, align='center', style='bold', color_fg='cyan')
             d.add_widget(WidgetType.GAUGE, x=4, y=14, width=w//3, height=h//2, value=72)
             d.add_widget(WidgetType.GAUGE, x=w//3 + 8, y=14, width=w//3, height=h//2, value=42)
             d.add_widget(WidgetType.PROGRESSBAR, x=4, y=h-14, width=w-8, height=8, value=60)

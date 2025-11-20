@@ -149,8 +149,10 @@ class App {
     async init() {
         console.log('[App] Initializing...');
         
-        // Show join modal
-        this.showJoinModal();
+        // Auto-connect with default credentials (skip modal)
+        const defaultUsername = 'User-' + Math.random().toString(36).substr(2, 5);
+        const defaultProject = 'demo_project';
+        this.connect(defaultUsername, defaultProject);
     }
 
     /**
@@ -219,6 +221,14 @@ class App {
         this.ws.on('connected', () => {
             this.ws.join(projectId, username);
             this.updateStatus(true);
+            
+            // Auto-start preview after 1 second
+            setTimeout(() => {
+                if (!this.previewConnected) {
+                    console.log('[App] Auto-starting preview...');
+                    this.togglePreview();
+                }
+            }, 1000);
         });
         
         this.ws.on('disconnected', () => {
@@ -608,7 +618,10 @@ class App {
             
             const widget = this.createWidget(type, Math.round(x), Math.round(y));
             console.log('[App] Drop widget:', widget);
-            
+            // Apply locally for immediate feedback (server does not echo sender)
+            this.renderer.addWidget(widget.id, widget);
+            this.renderer.selectWidget(widget.id);
+            this.propertiesEditor.showWidget(widget.id, widget);
             this.ws.addWidget(widget);
             
                     // Send to preview if connected
@@ -772,17 +785,21 @@ class App {
             ds.groupIds.forEach(id => {
                 const w = this.renderer.widgets.get(id);
                 if (w) this.ws.updateWidget(id, { x: w.x, y: w.y, width: w.width, height: w.height });
-                            if (this.previewConnected) {
-                                this.sendDesignToPreview();
-                            }
-                        if (this.previewConnected) {
-                            this.sendDesignToPreview();
-                        }
             });
+            // Send to preview after group operations
+            if (this.previewConnected) {
+                this.sendDesignToPreview();
+            }
         } else {
             const id = ds.widgetId;
             const w = this.renderer.widgets.get(id);
-            if (w) this.ws.updateWidget(id, { x: w.x, y: w.y, width: w.width, height: w.height });
+            if (w) {
+                this.ws.updateWidget(id, { x: w.x, y: w.y, width: w.width, height: w.height });
+                // Send to preview after single widget update
+                if (this.previewConnected) {
+                    this.sendDesignToPreview();
+                }
+            }
         }
         this.dragState = null;
         this.renderer.canvas.style.cursor = 'default';

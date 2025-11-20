@@ -3,17 +3,18 @@
 Live Preview Server for UI Designer
 Auto-refreshes browser when design JSON changes
 """
-import os
+import asyncio
+import json
 import sys
 import time
-import json
-import asyncio
 import webbrowser
 from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+
 import websockets
-from websockets.server import serve
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+# from websockets.server import serve # Deprecated in v13+
 
 # Simple in-memory client registry
 clients = set()
@@ -90,7 +91,7 @@ async def websocket_handler(websocket):
 
 async def start_websocket_server(port: int):
     """Start WebSocket server for browser notifications."""
-    async with serve(websocket_handler, "localhost", port):
+    async with websockets.serve(websocket_handler, "localhost", port, reuse_address=True):
         print(f"WebSocket server running on ws://localhost:{port}")
         await asyncio.Future()  # run forever
 

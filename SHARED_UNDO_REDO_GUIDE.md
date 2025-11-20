@@ -7,6 +7,7 @@ Collaborative undo/redo system for multi-user editing with conflict resolution.
 ### 📝 Operation-Based History
 
 Track all edits as discrete operations:
+
 - **Add Widget** - Create new UI elements
 - **Delete Widget** - Remove widgets (with state preservation)
 - **Move Widget** - Reposition widgets
@@ -18,6 +19,7 @@ Track all edits as discrete operations:
 ### ⏮️ ⏭️ Undo/Redo
 
 Full undo/redo support:
+
 - Unlimited undo (configurable max history)
 - Branching history (new operations after undo create new branch)
 - Operation descriptions for UI display
@@ -26,6 +28,7 @@ Full undo/redo support:
 ### 👥 Collaborative Editing
 
 Multi-user support with conflict resolution:
+
 - Local and remote operation tracking
 - Operational Transformation (OT) inspired conflict resolution
 - Last-writer-wins for concurrent edits
@@ -34,6 +37,7 @@ Multi-user support with conflict resolution:
 ### 💾 Persistence
 
 Save and restore history:
+
 - JSON serialization
 - Session tracking
 - Version management
@@ -437,6 +441,7 @@ pytest test_shared_undo_redo.py -v
 ```
 
 All 27 tests passing covering:
+
 - Operation creation and serialization
 - Undo/redo functionality
 - History management and branching
@@ -454,6 +459,7 @@ python shared_undo_redo.py
 ```
 
 Shows:
+
 - Basic undo/redo operations
 - Operation descriptions
 - State persistence
@@ -474,6 +480,7 @@ Shows:
 ## Future Enhancements
 
 Consider adding:
+
 - Compressed history for long sessions
 - Periodic snapshots for faster replay
 - Fine-grained property diffing

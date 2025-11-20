@@ -1,8 +1,11 @@
 """Tests for modern_ui.py - modern theme system, splash screen, welcome wizard"""
 
-import tkinter as tk
-
 import pytest
+
+try:
+    import tkinter as tk  # type: ignore
+except Exception:  # pragma: no cover - skip in headless environments
+    pytest.skip("tkinter not available", allow_module_level=True)
 
 from modern_ui import ModernTheme, SplashScreen, ThemeColors, ThemeManager, WelcomeWizard
 

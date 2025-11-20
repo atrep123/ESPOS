@@ -11,9 +11,11 @@ import time
 try:
     import tkinter as tk  # type: ignore
     from tkinter import colorchooser, filedialog, messagebox, ttk  # type: ignore
-    TK_AVAILABLE = True
 except Exception:
-    TK_AVAILABLE = False
+    tk = None  # type: ignore
+    colorchooser = filedialog = messagebox = ttk = None  # type: ignore
+
+TK_AVAILABLE = tk is not None
 from PIL import Image, ImageDraw
 
 if TK_AVAILABLE:
@@ -46,7 +48,11 @@ from ui_components_library_ascii import (
     create_vertical_menu_ascii,
 )
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
-from ui_template_manager import TemplateManagerWindow
+
+if TK_AVAILABLE:
+    from ui_template_manager import TemplateManagerWindow
+else:
+    TemplateManagerWindow = None  # type: ignore
 
 # Public headless indicator for tests
 HEADLESS: bool = (os.environ.get("ESP32OS_HEADLESS") == "1" or os.environ.get("PYTEST_CURRENT_TEST") is not None or not TK_AVAILABLE)
@@ -3922,349 +3928,356 @@ class AnimationEditorWindow:
             messagebox.showerror("Export Failed", f"Error: {str(e)}",
                                parent=self.window)
 
-# ---------------- Component / Template / Icon Palette Windows -----------------
-class ComponentPaletteWindow(tk.Toplevel):
-    """Component library manager with search, preview, and insert."""
-    def __init__(self, root, preview: 'VisualPreviewWindow'):
-        super().__init__(root)
-        self.title("Component Library")
-        self.configure(bg="#2b2b2b")
-        self.preview = preview
-        self.geometry("640x520")
-        self.recent = getattr(preview, 'recent_components', [])
-        preview.recent_components = self.recent  # ensure attribute
-        self._build_ui()
+if TK_AVAILABLE:
+    # ---------------- Component / Template / Icon Palette Windows -----------------
+    class ComponentPaletteWindow(tk.Toplevel):
+        """Component library manager with search, preview, and insert."""
 
-    def _build_ui(self):
-        top = ttk.Frame(self)
-        top.pack(fill=tk.X, padx=8, pady=6)
-        ttk.Label(top, text="Search:").pack(side=tk.LEFT)
-        self.search_var = tk.StringVar()
-        entry = ttk.Entry(top, textvariable=self.search_var, width=32)
-        entry.pack(side=tk.LEFT, padx=6)
-        entry.bind("<KeyRelease>", lambda e: self._refresh_list())
-        # Category dropdown
-        ttk.Label(top, text="Category:").pack(side=tk.LEFT)
-        self.category_var = tk.StringVar(value="All")
-        self.category_combo = ttk.Combobox(top, textvariable=self.category_var, width=14, state="readonly")
-        self.category_combo.pack(side=tk.LEFT, padx=6)
-        self.category_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
-        # Tags entry
-        ttk.Label(top, text="Tags:").pack(side=tk.LEFT)
-        self.tags_var = tk.StringVar()
-        tags_entry = ttk.Entry(top, textvariable=self.tags_var, width=18)
-        tags_entry.pack(side=tk.LEFT, padx=6)
-        tags_entry.bind("<KeyRelease>", lambda e: self._refresh_list())
-        ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+        def __init__(self, root, preview: 'VisualPreviewWindow'):
+            super().__init__(root)
+            self.title("Component Library")
+            self.configure(bg="#2b2b2b")
+            self.preview = preview
+            self.geometry("640x520")
+            self.recent = getattr(preview, 'recent_components', [])
+            preview.recent_components = self.recent  # ensure attribute
+            self._build_ui()
 
-        body = ttk.Frame(self)
-        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+        def _build_ui(self):
+            top = ttk.Frame(self)
+            top.pack(fill=tk.X, padx=8, pady=6)
+            ttk.Label(top, text="Search:").pack(side=tk.LEFT)
+            self.search_var = tk.StringVar()
+            entry = ttk.Entry(top, textvariable=self.search_var, width=32)
+            entry.pack(side=tk.LEFT, padx=6)
+            entry.bind("<KeyRelease>", lambda e: self._refresh_list())
+            # Category dropdown
+            ttk.Label(top, text="Category:").pack(side=tk.LEFT)
+            self.category_var = tk.StringVar(value="All")
+            self.category_combo = ttk.Combobox(top, textvariable=self.category_var, width=14, state="readonly")
+            self.category_combo.pack(side=tk.LEFT, padx=6)
+            self.category_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
+            # Tags entry
+            ttk.Label(top, text="Tags:").pack(side=tk.LEFT)
+            self.tags_var = tk.StringVar()
+            tags_entry = ttk.Entry(top, textvariable=self.tags_var, width=18)
+            tags_entry.pack(side=tk.LEFT, padx=6)
+            tags_entry.bind("<KeyRelease>", lambda e: self._refresh_list())
+            ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
 
-        self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#4CAF50")
-        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
-        self.listbox.bind("<Return>", lambda e: self._insert_selected())
+            body = ttk.Frame(self)
+            body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
-        right = ttk.Frame(body)
-        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
-        ttk.Label(right, text="Preview:").pack(anchor=tk.W)
-        self.preview_text = tk.Text(right, height=20, bg="#111", fg="#ddd", state=tk.DISABLED)
-        self.preview_text.pack(fill=tk.BOTH, expand=True)
-        btn_row = ttk.Frame(right)
-        btn_row.pack(fill=tk.X, pady=4)
-        ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
-        ttk.Button(btn_row, text="Add ButtonGroup", command=lambda: self._insert_component("ButtonGroup")).pack(side=tk.LEFT, padx=4)
+            self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#4CAF50")
+            self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
+            self.listbox.bind("<Return>", lambda e: self._insert_selected())
 
-        self._build_library()
-        self._refresh_list()
+            right = ttk.Frame(body)
+            right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
+            ttk.Label(right, text="Preview:").pack(anchor=tk.W)
+            self.preview_text = tk.Text(right, height=20, bg="#111", fg="#ddd", state=tk.DISABLED)
+            self.preview_text.pack(fill=tk.BOTH, expand=True)
+            btn_row = ttk.Frame(right)
+            btn_row.pack(fill=tk.X, pady=4)
+            ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
+            ttk.Button(btn_row, text="Add ButtonGroup", command=lambda: self._insert_component("ButtonGroup")).pack(side=tk.LEFT, padx=4)
 
-    def _build_library(self):
-        self._entries = []
-        seen = set()
-        def make_tags(text: str):
-            base = (text or '').lower().replace(',', ' ').split()
-            return [t for t in base if len(t) > 2][:10]
-        for comp in self.preview.ascii_components:
-            name = comp.get("name")
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            cat = comp.get("category", "Misc")
-            desc = comp.get("description", "")
-            self._entries.append({
-                'name': name,
-                'category': cat,
-                'desc': desc,
-                'factory': comp.get("factory"),
-                'tags': make_tags(name + ' ' + desc)
-            })
-        for qi in self.preview.quick_insert_components:
-            name = qi.get("name")
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            cat = 'Quick'
-            desc = f"Quick insert {qi.get('type')}"
-            self._entries.append({
-                'name': name,
-                'category': cat,
-                'desc': desc,
-                'defaults': qi.get('defaults'),
-                'type': qi.get('type'),
-                'tags': make_tags(name + ' ' + desc)
-            })
-        # Add recent pseudo entries
-        for r in self.recent:
-            if r not in seen:
+            self._build_library()
+            self._refresh_list()
+
+        def _build_library(self):
+            self._entries = []
+            seen = set()
+
+            def make_tags(text: str):
+                base = (text or '').lower().replace(',', ' ').split()
+                return [t for t in base if len(t) > 2][:10]
+
+            for comp in self.preview.ascii_components:
+                name = comp.get("name")
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                cat = comp.get("category", "Misc")
+                desc = comp.get("description", "")
                 self._entries.append({
-                    'name': r,
-                    'category': 'Recent',
-                    'desc': 'Recently used component',
-                    'tags': make_tags(r)
+                    'name': name,
+                    'category': cat,
+                    'desc': desc,
+                    'factory': comp.get("factory"),
+                    'tags': make_tags(name + ' ' + desc)
                 })
-        self._entries.sort(key=lambda e: (e['category'], e['name']))
-        cats = sorted({e['category'] for e in self._entries})
-        if 'Recent' in cats:
-            cats.remove('Recent')
-            cats.insert(0, 'Recent')
-        self.category_combo['values'] = ['All'] + cats
+            for qi in self.preview.quick_insert_components:
+                name = qi.get("name")
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                cat = 'Quick'
+                desc = f"Quick insert {qi.get('type')}"
+                self._entries.append({
+                    'name': name,
+                    'category': cat,
+                    'desc': desc,
+                    'defaults': qi.get('defaults'),
+                    'type': qi.get('type'),
+                    'tags': make_tags(name + ' ' + desc)
+                })
+            # Add recent pseudo entries
+            for r in self.recent:
+                if r not in seen:
+                    self._entries.append({
+                        'name': r,
+                        'category': 'Recent',
+                        'desc': 'Recently used component',
+                        'tags': make_tags(r)
+                    })
+            self._entries.sort(key=lambda e: (e['category'], e['name']))
+            cats = sorted({e['category'] for e in self._entries})
+            if 'Recent' in cats:
+                cats.remove('Recent')
+                cats.insert(0, 'Recent')
+            self.category_combo['values'] = ['All'] + cats
 
-    def _refresh_list(self):
-        term = self.search_var.get().lower().strip()
-        cat = self.category_var.get()
-        tags_filter = [t for t in self.tags_var.get().lower().split() if t]
-        self.listbox.delete(0, tk.END)
-        for e in self._entries:
-            if cat != 'All' and e['category'] != cat:
-                continue
-            if term and term not in e['name'].lower() and term not in e.get('desc','').lower():
-                continue
-            if tags_filter and not all(any(tf in tag for tag in e.get('tags', [])) for tf in tags_filter):
-                continue
-            self.listbox.insert(tk.END, f"{e['name']}  [{e['category']}]")
+        def _refresh_list(self):
+            term = self.search_var.get().lower().strip()
+            cat = self.category_var.get()
+            tags_filter = [t for t in self.tags_var.get().lower().split() if t]
+            self.listbox.delete(0, tk.END)
+            for e in self._entries:
+                if cat != 'All' and e['category'] != cat:
+                    continue
+                if term and term not in e['name'].lower() and term not in e.get('desc', '').lower():
+                    continue
+                if tags_filter and not all(any(tf in tag for tag in e.get('tags', [])) for tf in tags_filter):
+                    continue
+                self.listbox.insert(tk.END, f"{e['name']}  [{e['category']}]")
 
-    def _get_selected_entry(self):
-        sel = self.listbox.curselection()
-        if not sel:
+        def _get_selected_entry(self):
+            sel = self.listbox.curselection()
+            if not sel:
+                return None
+            label = self.listbox.get(sel[0])
+            name = label.split('  [', 1)[0]
+            for e in self._entries:
+                if e['name'] == name:
+                    return e
             return None
-        label = self.listbox.get(sel[0])
-        name = label.split('  [',1)[0]
-        for e in self._entries:
-            if e['name'] == name:
-                return e
-        return None
 
-    def _show_preview(self):
-        e = self._get_selected_entry()
-        self.preview_text.config(state=tk.NORMAL)
-        self.preview_text.delete('1.0', tk.END)
-        if not e:
-            self.preview_text.insert(tk.END, 'No selection')
-        else:
-            self.preview_text.insert(tk.END, f"{e['name']}\n{e.get('desc','')}\n\n")
-            if e.get('factory'):
-                try:
-                    ascii_art = e['factory']()
-                    ascii_lines = ascii_art if isinstance(ascii_art, (list, tuple)) else str(ascii_art).splitlines()
-                    for ln in ascii_lines:
-                        self.preview_text.insert(tk.END, ln + '\n')
-                except Exception as ex:
-                    self.preview_text.insert(tk.END, f"[preview error: {ex}]")
-            elif e.get('defaults'):
-                self.preview_text.insert(tk.END, f"Widget defaults: {e['defaults']}")
-        self.preview_text.config(state=tk.DISABLED)
+        def _show_preview(self):
+            e = self._get_selected_entry()
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete('1.0', tk.END)
+            if not e:
+                self.preview_text.insert(tk.END, 'No selection')
+            else:
+                self.preview_text.insert(tk.END, f"{e['name']}\n{e.get('desc', '')}\n\n")
+                if e.get('factory'):
+                    try:
+                        ascii_art = e['factory']()
+                        ascii_lines = ascii_art if isinstance(ascii_art, (list, tuple)) else str(ascii_art).splitlines()
+                        for ln in ascii_lines:
+                            self.preview_text.insert(tk.END, ln + '\n')
+                    except Exception as ex:
+                        self.preview_text.insert(tk.END, f"[preview error: {ex}]")
+                elif e.get('defaults'):
+                    self.preview_text.insert(tk.END, f"Widget defaults: {e['defaults']}")
+            self.preview_text.config(state=tk.DISABLED)
 
-    def _insert_selected(self):
-        e = self._get_selected_entry()
-        if e:
-            self._insert_component(e['name'])
+        def _insert_selected(self):
+            e = self._get_selected_entry()
+            if e:
+                self._insert_component(e['name'])
 
-    def _insert_component(self, name: str):
-        scene = self.preview.designer.scenes.get(self.preview.designer.current_scene) if self.preview.designer.current_scene else None
-        if not scene:
-            return
-        cx = max(0, scene.width // 2 - 30)
-        cy = max(0, scene.height // 2 - 10)
-        entry = next((e for e in self._entries if e['name'] == name), None)
-        if not entry:
-            return
-        wtype = entry.get('type') or 'label'
-        defaults = entry.get('defaults', {})
-        if wtype == 'label':
-            widget_enum = WidgetType.LABEL
-        elif wtype == 'button':
-            widget_enum = WidgetType.BUTTON
-        else:
-            widget_enum = WidgetType.PANEL
-        self.preview.designer.add_widget(
-            widget_enum,
-            x=cx,
-            y=cy,
-            width=defaults.get('width', 40),
-            height=defaults.get('height', 12),
-            text=defaults.get('text', name),
-            value=defaults.get('value', 0),
-            checked=defaults.get('checked', False)
-        )
-        self.preview.selected_widget_idx = len(scene.widgets) - 1
-        self.preview._invalidate_cache()
-        self.preview.refresh(force=True)
-        # Track recent usage (MRU up to 12)
-        if name not in self.recent:
-            self.recent.insert(0, name)
-        else:
-            self.recent.remove(name)
-            self.recent.insert(0, name)
-        if len(self.recent) > 12:
-            self.recent = self.recent[:12]
-        self._build_library()
-        self._refresh_list()
+        def _insert_component(self, name: str):
+            scene = self.preview.designer.scenes.get(self.preview.designer.current_scene) if self.preview.designer.current_scene else None
+            if not scene:
+                return
+            cx = max(0, scene.width // 2 - 30)
+            cy = max(0, scene.height // 2 - 10)
+            entry = next((e for e in self._entries if e['name'] == name), None)
+            if not entry:
+                return
+            wtype = entry.get('type') or 'label'
+            defaults = entry.get('defaults', {})
+            if wtype == 'label':
+                widget_enum = WidgetType.LABEL
+            elif wtype == 'button':
+                widget_enum = WidgetType.BUTTON
+            else:
+                widget_enum = WidgetType.PANEL
+            self.preview.designer.add_widget(
+                widget_enum,
+                x=cx,
+                y=cy,
+                width=defaults.get('width', 40),
+                height=defaults.get('height', 12),
+                text=defaults.get('text', name),
+                value=defaults.get('value', 0),
+                checked=defaults.get('checked', False)
+            )
+            self.preview.selected_widget_idx = len(scene.widgets) - 1
+            self.preview._invalidate_cache()
+            self.preview.refresh(force=True)
+            # Track recent usage (MRU up to 12)
+            if name not in self.recent:
+                self.recent.insert(0, name)
+            else:
+                self.recent.remove(name)
+                self.recent.insert(0, name)
+            if len(self.recent) > 12:
+                self.recent = self.recent[:12]
+            self._build_library()
+            self._refresh_list()
 
-class IconPaletteWindow(tk.Toplevel):
-    """Icon palette with search, category filter and insertion.
+    class IconPaletteWindow(tk.Toplevel):
+        """Icon palette with search, category filter and insertion.
 
-    Keeps implementation lightweight: textual list + metadata preview
-    (no raster glyph rendering). Designed to work within existing
-    project style and without introducing new dependencies.
-    """
-    def __init__(self, root, preview: 'VisualPreviewWindow'):
-        super().__init__(root)
-        from ui_icons import (  # local import to avoid startup cost headless
-            filter_icons,
-            get_all_categories,
-        )
-        self.title("Icon Palette")
-        self.configure(bg="#2b2b2b")
-        self.preview = preview
-        self.geometry("640x420")
-        self.resizable(True, True)
-        self._filter_fn = filter_icons
-        self._all_categories = ["All"] + get_all_categories()
-        self._icons: List[dict] = []
-        self._build_ui()
-        self._refresh_list()
+        Keeps implementation lightweight: textual list + metadata preview
+        (no raster glyph rendering). Designed to work within existing
+        project style and without introducing new dependencies.
+        """
+        def __init__(self, root, preview: 'VisualPreviewWindow'):
+            super().__init__(root)
+            from ui_icons import (  # local import to avoid startup cost headless
+                filter_icons,
+                get_all_categories,
+            )
+            self.title("Icon Palette")
+            self.configure(bg="#2b2b2b")
+            self.preview = preview
+            self.geometry("640x420")
+            self.resizable(True, True)
+            self._filter_fn = filter_icons
+            self._all_categories = ["All"] + get_all_categories()
+            self._icons: List[dict] = []
+            self._build_ui()
+            self._refresh_list()
 
-    # ---------------- UI construction -----------------
-    def _build_ui(self):
-        top = ttk.Frame(self)
-        top.pack(fill=tk.X, padx=8, pady=6)
-        ttk.Label(top, text="Search:").pack(side=tk.LEFT)
-        self.search_var = tk.StringVar()
-        ent = ttk.Entry(top, textvariable=self.search_var, width=28)
-        ent.pack(side=tk.LEFT, padx=6)
-        ent.bind("<KeyRelease>", lambda e: self._refresh_list())
+        # ---------------- UI construction -----------------
+        def _build_ui(self):
+            top = ttk.Frame(self)
+            top.pack(fill=tk.X, padx=8, pady=6)
+            ttk.Label(top, text="Search:").pack(side=tk.LEFT)
+            self.search_var = tk.StringVar()
+            ent = ttk.Entry(top, textvariable=self.search_var, width=28)
+            ent.pack(side=tk.LEFT, padx=6)
+            ent.bind("<KeyRelease>", lambda e: self._refresh_list())
 
-        ttk.Label(top, text="Category:").pack(side=tk.LEFT)
-        self.cat_var = tk.StringVar(value="All")
-        cat_combo = ttk.Combobox(top, textvariable=self.cat_var, values=self._all_categories, width=16, state="readonly")
-        cat_combo.pack(side=tk.LEFT, padx=6)
-        cat_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
+            ttk.Label(top, text="Category:").pack(side=tk.LEFT)
+            self.cat_var = tk.StringVar(value="All")
+            cat_combo = ttk.Combobox(top, textvariable=self.cat_var, values=self._all_categories, width=16, state="readonly")
+            cat_combo.pack(side=tk.LEFT, padx=6)
+            cat_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
 
-        ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+            ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
 
-        body = ttk.Frame(self)
-        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+            body = ttk.Frame(self)
+            body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
-        # Icon list
-        self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#1976d2")
-        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
-        self.listbox.bind("<Return>", lambda e: self._insert_selected())
+            # Icon list
+            self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#1976d2")
+            self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
+            self.listbox.bind("<Return>", lambda e: self._insert_selected())
 
-        # Right panel
-        right = ttk.Frame(body)
-        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
-        ttk.Label(right, text="Preview:").pack(anchor=tk.W)
-        self.preview_text = tk.Text(right, height=14, bg="#111", fg="#ddd", state=tk.DISABLED, wrap=tk.WORD)
-        self.preview_text.pack(fill=tk.BOTH, expand=True)
+            # Right panel
+            right = ttk.Frame(body)
+            right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
+            ttk.Label(right, text="Preview:").pack(anchor=tk.W)
+            self.preview_text = tk.Text(right, height=14, bg="#111", fg="#ddd", state=tk.DISABLED, wrap=tk.WORD)
+            self.preview_text.pack(fill=tk.BOTH, expand=True)
 
-        btn_row = ttk.Frame(right)
-        btn_row.pack(fill=tk.X, pady=4)
-        ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
-        ttk.Button(btn_row, text="Insert 16px", command=lambda: self._insert_selected(size_variant="size_16")).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_row, text="Insert 24px", command=lambda: self._insert_selected(size_variant="size_24")).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_row, text="Export C", command=self._export_c_header).pack(side=tk.LEFT, padx=4)
+            btn_row = ttk.Frame(right)
+            btn_row.pack(fill=tk.X, pady=4)
+            ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
+            ttk.Button(btn_row, text="Insert 16px", command=lambda: self._insert_selected(size_variant="size_16")).pack(side=tk.LEFT, padx=4)
+            ttk.Button(btn_row, text="Insert 24px", command=lambda: self._insert_selected(size_variant="size_24")).pack(side=tk.LEFT, padx=4)
+            ttk.Button(btn_row, text="Export C", command=self._export_c_header).pack(side=tk.LEFT, padx=4)
 
-    # ---------------- Data / filtering -----------------
-    def _refresh_list(self):
-        from ui_icons import filter_icons  # reimport (hot-reload safe)
-        term = self.search_var.get()
-        cat = self.cat_var.get()
-        category = None if cat == "All" else cat
-        self._icons = filter_icons(term, category)
-        self.listbox.delete(0, tk.END)
-        for icon in self._icons:
-            self.listbox.insert(tk.END, f"{icon['ascii']}  {icon['name']}  ({icon['symbol']})")
-        self._show_preview()  # update preview if selection persists
+        # ---------------- Data / filtering -----------------
+        def _refresh_list(self):
+            from ui_icons import filter_icons  # reimport (hot-reload safe)
+            term = self.search_var.get()
+            cat = self.cat_var.get()
+            category = None if cat == "All" else cat
+            self._icons = filter_icons(term, category)
+            self.listbox.delete(0, tk.END)
+            for icon in self._icons:
+                self.listbox.insert(tk.END, f"{icon['ascii']}  {icon['name']}  ({icon['symbol']})")
+            self._show_preview()  # update preview if selection persists
 
-    def _get_selected_icon(self):
-        sel = self.listbox.curselection()
-        if not sel or sel[0] >= len(self._icons):
-            return None
-        return self._icons[sel[0]]
+        def _get_selected_icon(self):
+            sel = self.listbox.curselection()
+            if not sel or sel[0] >= len(self._icons):
+                return None
+            return self._icons[sel[0]]
 
-    # ---------------- Preview / insertion -----------------
-    def _show_preview(self):
-        icon = self._get_selected_icon()
-        self.preview_text.config(state=tk.NORMAL)
-        self.preview_text.delete("1.0", tk.END)
-        if not icon:
-            self.preview_text.insert(tk.END, "No icon selected")
-        else:
-            self.preview_text.insert(tk.END, f"Name: {icon['name']}\n")
-            self.preview_text.insert(tk.END, f"Category: {icon['category']}\n")
-            self.preview_text.insert(tk.END, f"Symbol: {icon['symbol']}\n")
-            self.preview_text.insert(tk.END, f"ASCII: {icon['ascii']}\n")
-            self.preview_text.insert(tk.END, f"Usage: {icon['usage']}\n")
-        self.preview_text.config(state=tk.DISABLED)
+        # ---------------- Preview / insertion -----------------
+        def _show_preview(self):
+            icon = self._get_selected_icon()
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete("1.0", tk.END)
+            if not icon:
+                self.preview_text.insert(tk.END, "No icon selected")
+            else:
+                self.preview_text.insert(tk.END, f"Name: {icon['name']}\n")
+                self.preview_text.insert(tk.END, f"Category: {icon['category']}\n")
+                self.preview_text.insert(tk.END, f"Symbol: {icon['symbol']}\n")
+                self.preview_text.insert(tk.END, f"ASCII: {icon['ascii']}\n")
+                self.preview_text.insert(tk.END, f"Usage: {icon['usage']}\n")
+            self.preview_text.config(state=tk.DISABLED)
 
-    def _insert_selected(self, size_variant: str | None = None):
-        icon = self._get_selected_icon()
-        if not icon:
-            return
-        scene = self.preview.designer.scenes.get(self.preview.designer.current_scene)
-        if not scene:
-            return
-        ascii_char = icon['ascii']
-        # Basic sizing based on variant
-        w = 16 if size_variant == 'size_16' else 24 if size_variant == 'size_24' else 16
-        h = w
-        x = max(0, (self.preview.designer.width - w) // 2)
-        y = max(0, (self.preview.designer.height - h) // 2)
-        from ui_designer import WidgetType
-        self.preview.designer.add_widget(
-            WidgetType.ICON,
-            x=x,
-            y=y,
-            width=w,
-            height=h,
-            icon_char=ascii_char
-        )
-        self.preview.selected_widget_idx = len(scene.widgets) - 1
-        self.preview.designer._save_state()
-        self.preview._invalidate_cache()
-        self.preview.refresh(force=True)
+        def _insert_selected(self, size_variant: str | None = None):
+            icon = self._get_selected_icon()
+            if not icon:
+                return
+            scene = self.preview.designer.scenes.get(self.preview.designer.current_scene)
+            if not scene:
+                return
+            ascii_char = icon['ascii']
+            # Basic sizing based on variant
+            w = 16 if size_variant == 'size_16' else 24 if size_variant == 'size_24' else 16
+            h = w
+            x = max(0, (self.preview.designer.width - w) // 2)
+            y = max(0, (self.preview.designer.height - h) // 2)
+            from ui_designer import WidgetType
+            self.preview.designer.add_widget(
+                WidgetType.ICON,
+                x=x,
+                y=y,
+                width=w,
+                height=h,
+                icon_char=ascii_char
+            )
+            self.preview.selected_widget_idx = len(scene.widgets) - 1
+            self.preview.designer._save_state()
+            self.preview._invalidate_cache()
+            self.preview.refresh(force=True)
 
-    # ---------------- Export helper -----------------
-    def _export_c_header(self):
-        """Export selected icon as a tiny C header snippet (ASCII fallback)."""
-        icon = self._get_selected_icon()
-        if not icon:
-            return
-        from tkinter import filedialog, messagebox
-        path = filedialog.asksaveasfilename(defaultextension=".h", filetypes=[("Header", "*.h"), ("All", "*.*")], initialfile=f"icon_{icon['symbol']}.h")
-        if not path:
-            return
-        guard = f"ICON_{icon['symbol'].upper()}_H".replace('-', '_')
-        content = (
-            f"#ifndef {guard}\n#define {guard}\n\n/* Auto-generated single-character icon fallback */\n#define ICON_{icon['symbol'].upper()} \"{icon['ascii']}\" /* {icon['name']} */\n\n#endif /* {guard} */\n"
-        )
-        try:
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            messagebox.showinfo("Export", f"C header saved: {path}")
-        except Exception as e:
-            messagebox.showerror("Export Failed", f"{e}")
+        # ---------------- Export helper -----------------
+        def _export_c_header(self):
+            """Export selected icon as a tiny C header snippet (ASCII fallback)."""
+            icon = self._get_selected_icon()
+            if not icon:
+                return
+            from tkinter import filedialog, messagebox
+            path = filedialog.asksaveasfilename(defaultextension=".h", filetypes=[("Header", "*.h"), ("All", "*.*")], initialfile=f"icon_{icon['symbol']}.h")
+            if not path:
+                return
+            guard = f"ICON_{icon['symbol'].upper()}_H".replace('-', '_')
+            content = (
+                f"#ifndef {guard}\n#define {guard}\n\n/* Auto-generated single-character icon fallback */\n#define ICON_{icon['symbol'].upper()} \"{icon['ascii']}\" /* {icon['name']} */\n\n#endif /* {guard} */\n"
+            )
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                messagebox.showinfo("Export", f"C header saved: {path}")
+            except Exception as e:
+                messagebox.showerror("Export Failed", f"{e}")
+else:
+    ComponentPaletteWindow = None  # type: ignore
+    IconPaletteWindow = None  # type: ignore
 
 if __name__ == "__main__":
     # Headless CLI for automated preview/export

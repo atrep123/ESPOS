@@ -106,14 +106,15 @@ export class WebSocketClient {
      * Handle incoming message
      */
     handleMessage(message) {
-        const { op } = message;
-        if (!op) {
-            console.warn('[WS] Message missing "op" field:', message);
+        const { type, op } = message;
+        const eventType = type || op;
+        if (!eventType) {
+            console.warn('[WS] Message missing "type" or "op" field:', message);
             return;
         }
 
         // Emit to registered handlers
-        this.emit(op, message);
+        this.emit(eventType, message);
         this.emit('message', message);
     }
 
@@ -164,7 +165,7 @@ export class WebSocketClient {
         this.username = username;
         // Backend expects 'user_name' and infers project from WS path
         return this.send({
-            op: 'join',
+            type: 'join',
             user_name: username
         });
     }
@@ -174,7 +175,7 @@ export class WebSocketClient {
      */
     sendCursor(x, y) {
         return this.send({
-            op: 'cursor',
+            type: 'cursor',
             x: x,
             y: y
         });
@@ -185,7 +186,7 @@ export class WebSocketClient {
      */
     addWidget(widget) {
         return this.send({
-            op: 'widget_add',
+            type: 'widget_add',
             widget: widget
         });
     }
@@ -195,7 +196,7 @@ export class WebSocketClient {
      */
     updateWidget(widgetId, updates) {
         return this.send({
-            op: 'widget_update',
+            type: 'widget_update',
             widget_id: widgetId,
             changes: updates
         });
@@ -206,7 +207,7 @@ export class WebSocketClient {
      */
     deleteWidget(widgetId) {
         return this.send({
-            op: 'widget_delete',
+            type: 'widget_delete',
             widget_id: widgetId
         });
     }
@@ -216,7 +217,7 @@ export class WebSocketClient {
      */
     undo() {
         return this.send({
-            op: 'undo'
+            type: 'undo'
         });
     }
 
@@ -225,7 +226,7 @@ export class WebSocketClient {
      */
     redo() {
         return this.send({
-            op: 'redo'
+            type: 'redo'
         });
     }
 }

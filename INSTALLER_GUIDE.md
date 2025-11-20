@@ -38,11 +38,13 @@ python build_installer.py
 ```
 
 **Pros:**
+
 - Fast startup (~1-2 seconds)
 - Easier debugging
 - Smaller update downloads
 
 **Cons:**
+
 - Multiple files to distribute
 - Larger archive size
 
@@ -55,10 +57,12 @@ python build_installer.py --onefile
 ```
 
 **Pros:**
+
 - Single file distribution
 - Simpler for end users
 
 **Cons:**
+
 - Slower startup (~5-10 seconds)
 - Larger file size
 - Temp extraction on each run
@@ -72,10 +76,12 @@ python build_installer.py --windowed
 ```
 
 Creates:
+
 - `dist/ESP32OS_UI_Designer/ESP32OS_UI_Designer.exe`
 - `dist/ESP32OS_UI_Designer_Windows.zip`
 
 **Distribution:**
+
 1. Upload ZIP to GitHub Releases
 2. Users extract and run `.exe`
 3. Optional: Create NSIS installer (see below)
@@ -87,15 +93,18 @@ python build_installer.py --windowed
 ```
 
 Creates:
+
 - `dist/ESP32OS_UI_Designer/ESP32OS_UI_Designer`
 - `dist/ESP32OS_UI_Designer_macOS.zip`
 
 **Distribution:**
+
 1. Upload ZIP to GitHub Releases
 2. Users extract and run
 3. May need to bypass Gatekeeper: Right-click → Open
 
 **Code Signing (Optional):**
+
 ```bash
 codesign --force --deep --sign "Developer ID Application: Your Name" \
     dist/ESP32OS_UI_Designer/ESP32OS_UI_Designer
@@ -108,10 +117,12 @@ python build_installer.py
 ```
 
 Creates:
+
 - `dist/ESP32OS_UI_Designer/ESP32OS_UI_Designer`
 - `dist/ESP32OS_UI_Designer_Linux.tar.gz`
 
 **Distribution:**
+
 1. Upload TAR.GZ to GitHub Releases
 2. Users extract: `tar -xzf ESP32OS_UI_Designer_Linux.tar.gz`
 3. Make executable: `chmod +x ESP32OS_UI_Designer/ESP32OS_UI_Designer`
@@ -160,6 +171,7 @@ SectionEnd
 ```
 
 Build:
+
 ```bash
 makensis installer.nsi
 ```
@@ -187,6 +199,7 @@ Description: ESP32 UI Designer
 ```
 
 Create package:
+
 ```bash
 mkdir -p esp32os-ui-designer/usr/bin
 mkdir -p esp32os-ui-designer/usr/share/applications
@@ -235,6 +248,7 @@ PyInstaller will use it automatically if available. Reduces size by ~40%.
 ### Remove Debug Symbols
 
 In spec file, set:
+
 ```python
 strip=True
 ```
@@ -318,7 +332,7 @@ jobs:
 
 ## Testing Builds
 
-### Windows
+### Testing on Windows
 
 ```bash
 # Test executable
@@ -363,6 +377,7 @@ If runtime error "No module named X":
 ### Slow Startup (--onefile)
 
 Switch to directory mode for faster startup:
+
 ```bash
 python build_installer.py  # No --onefile flag
 ```
@@ -382,6 +397,7 @@ python build_installer.py  # No --onefile flag
 ## Support
 
 For build issues, check:
+
 - PyInstaller logs in `build/`
 - Console output with `--debug` flag
 - GitHub Issues: <https://github.com/atrep123/ESPOS/issues>

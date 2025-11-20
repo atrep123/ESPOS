@@ -269,14 +269,17 @@ def update_preview(widget_data):
 ## Troubleshooting
 
 ### Cache se nenaplňuje
+
 - Zkontroluj, že cache key je stabilní (použij hash_object)
 - Zkontroluj TTL - možná expiruje moc rychle
 
 ### Lazy loader nefunguje
+
 - Zkontroluj, že správně počítáš visible range
 - Debug pomocí `loader.get_stats()`
 
 ### Performance monitor ukazuje pomalé operace
+
 - Identifikuj bottleneck pomocí `get_all_stats()`
 - Přidej caching nebo pooling
 - Zvětši chunk size pro lazy loading

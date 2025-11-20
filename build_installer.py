@@ -12,11 +12,13 @@
 #     --debug         Keep console for debugging
 
 import argparse
+import importlib.util
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 
 class InstallerBuilder:
@@ -30,16 +32,34 @@ class InstallerBuilder:
         
     def check_pyinstaller(self) -> bool:
         """Check if PyInstaller is installed"""
-        try:
-            import PyInstaller
-            return True
-        except ImportError:
+        if importlib.util.find_spec("PyInstaller") is None:
             print("❌ PyInstaller not installed")
             print("Install with: pip install pyinstaller")
             return False
+        return True
     
     def create_spec_file(self, onefile: bool = False, windowed: bool = True) -> str:
         """Create PyInstaller spec file"""
+        exe_binaries = "a.binaries" if onefile else "[]"
+        exe_zipfiles = "a.zipfiles" if onefile else "[]"
+        exe_datas = "a.datas" if onefile else "[]"
+        exclude_binaries = "False" if onefile else "True"
+        collect_section = ""
+        if not onefile:
+            collect_section = """
+# Collect mode (multiple files)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name="ESP32OS_UI_Designer",
+)
+"""
+
         spec_content = f"""# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
@@ -84,11 +104,11 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    {'a.binaries,' if onefile else '[],'} 
-    {'a.zipfiles,' if onefile else '[],'} 
-    {'a.datas,' if onefile else '[],'} 
-    {'[],' if not onefile else ''}
-    exclude_binaries={'False' if onefile else 'True'},
+    {exe_binaries},
+    {exe_zipfiles},
+    {exe_datas},
+    [],
+    exclude_binaries={exclude_binaries},
     name='ESP32OS_UI_Designer',
     debug=False,
     bootloader_ignore_signals=False,
@@ -105,17 +125,7 @@ exe = EXE(
     icon='assets/icon.ico' if os.path.exists('assets/icon.ico') else None,
 )
 
-{'# Collect mode (multiple files)' if not onefile else ''}
-{'coll = COLLECT(' if not onefile else ''}
-{'    exe,' if not onefile else ''}
-{'    a.binaries,' if not onefile else ''}
-{'    a.zipfiles,' if not onefile else ''}
-{'    a.datas,' if not onefile else ''}
-{'    strip=False,' if not onefile else ''}
-{'    upx=True,' if not onefile else ''}
-{'    upx_exclude=[],' if not onefile else ''}
-{'    name="ESP32OS_UI_Designer",' if not onefile else ''}
-{')' if not onefile else ''}
+{collect_section}
 """
         
         with open(self.spec_file, 'w') as f:
@@ -238,7 +248,7 @@ fi
             os.chmod(launcher_path, 0o755)
             print(f"✅ Created launcher: {launcher_path}")
     
-    def create_archive(self, archive_name: str = None) -> str:
+    def create_archive(self, archive_name: Optional[str] = None) -> Optional[str]:
         """Create distribution archive (ZIP/TAR.GZ)"""
         if archive_name is None:
             if sys.platform == "win32":
@@ -247,6 +257,7 @@ fi
                 archive_name = "ESP32OS_UI_Designer_macOS.zip"
             else:
                 archive_name = "ESP32OS_UI_Designer_Linux.tar.gz"
+        assert archive_name is not None
         
         print(f"📦 Creating archive: {archive_name}")
         

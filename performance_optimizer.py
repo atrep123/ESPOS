@@ -26,6 +26,7 @@ class LRUCache(Generic[T]):
         self.cache: OrderedDict[str, Tuple[T, float]] = OrderedDict()
         self.hits = 0
         self.misses = 0
+        self._clock = time.monotonic
     
     def get(self, key: str) -> Optional[T]:
         """Get value from cache, returns None if not found or expired"""
@@ -36,7 +37,7 @@ class LRUCache(Generic[T]):
         value, timestamp = self.cache[key]
         
         # Check TTL
-        if self.ttl and (time.time() - timestamp) > self.ttl:
+        if self.ttl is not None and (self._clock() - timestamp) >= self.ttl:
             del self.cache[key]
             self.misses += 1
             return None
@@ -53,7 +54,7 @@ class LRUCache(Generic[T]):
             del self.cache[key]
         
         # Add new item
-        self.cache[key] = (value, time.time())
+        self.cache[key] = (value, self._clock())
         
         # Evict oldest if over capacity
         if len(self.cache) > self.max_size:

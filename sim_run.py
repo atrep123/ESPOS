@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-
 """
 ESP32 UI Simulator - Python Version
 Runs without requiring C compiler
 """
+from __future__ import annotations
 
 import argparse
 import atexit
@@ -182,7 +181,7 @@ def get_state_snapshot() -> Dict[str, Any]:
     
 
 class Widget:
-    def render(self, ctx: RenderContext) -> List[str]:
+    def render(self, _ctx: RenderContext) -> List[str]:
         return []
 
 class TitleBarWidget(Widget):
@@ -211,12 +210,12 @@ class DividerWidget(Widget):
         use_color = ctx.use_color
         width = ctx.width
         if use_unicode:
-            crossL,crossR,hv = '╠','╣','═'
+            cross_l, cross_r, hv = '╠', '╣', '═'
         else:
-            crossL,crossR,hv = '+','+','-'
+            cross_l, cross_r, hv = '+', '+', '-'
         cyan = Color.CYAN if use_color else ''
         reset = Color.RESET if use_color else ''
-        return [f"{cyan}{crossL}{hv * width}{crossR}{reset}"]
+        return [f"{cyan}{cross_l}{hv * width}{cross_r}{reset}"]
 
 class SceneStatusWidget(Widget):
     def render(self, ctx: RenderContext) -> List[str]:
@@ -427,7 +426,7 @@ def log_error(message: str) -> None:
 
 # --- RPC server (TCP, line-delimited JSON) ---
 
-def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: queue.Queue[Event]) -> None:
+def _rpc_client_loop(conn: socket.socket, addr: Tuple[str, int], evq: queue.Queue[Event]) -> None:  # noqa: C901
     try:
         with conn:
             buf = b""
@@ -635,7 +634,7 @@ def start_websocket_server(port: int, frame_callback: Callable[[], Dict[str, Any
     
     clients: Set[Any] = set()
     
-    async def handler(websocket: Any, path: str) -> None:
+    async def handler(websocket: Any) -> None:
         clients.add(websocket)
         try:
             await websocket.wait_closed()
@@ -867,7 +866,7 @@ def optimize_ansi(line: str) -> str:
     line = _REDUNDANT_RE.sub(r'\1', line)
     return line
 
-def main() -> None:
+def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     """Main simulator loop"""
     enable_ansi_colors()
     
@@ -934,7 +933,7 @@ def main() -> None:
                 STD_OUTPUT_HANDLE = -11
                 handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
 
-                class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
+                class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):  # noqa: N801 - Windows API struct name
                     _fields_ = [
                         ("dwSize", COORD),
                         ("dwCursorPosition", COORD),
@@ -1038,12 +1037,32 @@ def main() -> None:
                                     widgets = scene.get('widgets', []) if isinstance(scene, dict) else []
                                     print(f"{Color.DIM}Bridge: design update → {len(widgets)} widgets{Color.RESET}")
                                 elif op == 'widget_add':
-                                    # Incremental add (already reflected in full updates) – just log
-                                    print(f"{Color.DIM}Bridge: widget added{Color.RESET}")
+                                    widget = data.get('widget', {})
+                                    # Add widget to the current scene
+                                    if not latest_design_holder.get('scene'):
+                                        latest_design_holder['scene'] = {'widgets': []}
+                                    latest_design_holder['scene'].setdefault('widgets', []).append(widget)
+                                    print(f"{Color.DIM}Bridge: widget added id={widget.get('id')}{Color.RESET}")
                                 elif op == 'widget_update':
-                                    print(f"{Color.DIM}Bridge: widget updated id={data.get('widget_id')}\n{Color.RESET}")
+                                    widget_id = data.get('widget_id')
+                                    changes = data.get('changes', {})
+                                    # Apply changes to the current scene
+                                    if latest_design_holder.get('scene'):
+                                        widgets = latest_design_holder['scene'].get('widgets', [])
+                                        for w in widgets:
+                                            if w.get('id') == widget_id:
+                                                w.update(changes)
+                                                print(f"{Color.DIM}Bridge: widget updated id={widget_id} changes={changes}{Color.RESET}")
+                                                break
                                 elif op == 'widget_delete':
-                                    print(f"{Color.DIM}Bridge: widget deleted id={data.get('widget_id')}{Color.RESET}")
+                                    widget_id = data.get('widget_id')
+                                    # Remove widget from the current scene
+                                    if latest_design_holder.get('scene'):
+                                        widgets = latest_design_holder['scene'].get('widgets', [])
+                                        latest_design_holder['scene']['widgets'] = [
+                                            w for w in widgets if w.get('id') != widget_id
+                                        ]
+                                        print(f"{Color.DIM}Bridge: widget deleted id={widget_id}{Color.RESET}")
                                 # Other ops ignored for now
                     except Exception as e:
                         print(f"{Color.DIM}Bridge: connection error {e}; retry in {reconnect_delay}s{Color.RESET}")
@@ -1071,16 +1090,16 @@ def main() -> None:
             print(f"{Color.DIM}WebSocket disabled (install: pip install websockets){Color.RESET}")
 
     state = UIState()
-    frame = 0
+    frame = 0  # loop frame counter
     running = True
     auto_demo = False
     hud_enabled = args.hud
     help_overlay_enabled = args.help_overlay
     paused = False
-    step_one_frame = False
-    prev_btnA = state.btnA
-    prev_btnB = state.btnB
-    prev_btnC = state.btnC
+    step_one_frame = False  # single-step trigger
+    prev_btn_a = state.btnA
+    prev_btn_b = state.btnB
+    prev_btn_c = state.btnC
     prev_bg = state.bg
     prev_scene = state.scene
     
@@ -1147,10 +1166,12 @@ def main() -> None:
                     screen = pygame.display.set_mode((260, 110))
                     pygame.display.set_caption('ESP32OS Input Overlay')
                     font = pygame.font.SysFont(None, 24)
-                    def _layout(w: int, h: int) -> Dict[str, Any]:
+                    def _layout(_w: int, h: int) -> Dict[str, Any]:
                         m, pad = 10, 10
                         bw, bh = 70, 60
-                        ax = m; bx = m + bw + pad; cx = m + 2*(bw + pad)
+                        ax = m
+                        bx = m + bw + pad
+                        cx = m + 2*(bw + pad)
                         y = (h - bh)//2
                         return {
                             'A': pygame.Rect(ax, y, bw, bh),
@@ -1315,10 +1336,7 @@ def main() -> None:
                 elif key == 'b':
                     state.btnB = not state.btnB
                     current_input_src = 'kbd'
-                elif key == 'c' and not paused:
-                    state.btnC = not state.btnC
-                    current_input_src = 'kbd'
-                elif key == 'C':  # Shift+C for button C when paused
+                elif key == 'c' or key == 'C':  # C or Shift+C toggles button C
                     state.btnC = not state.btnC
                     current_input_src = 'kbd'
                 elif key == ' ':  # Space = pause/unpause
@@ -1418,17 +1436,17 @@ def main() -> None:
                     current_input_src = input_source.get('src', 'kbd')
             # Emit button events to bridge if changed
             if args.bridge_url:
-                if state.btnA != prev_btnA:
+                if state.btnA != prev_btn_a:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'A', 'pressed': state.btnA}})
-                if state.btnB != prev_btnB:
+                if state.btnB != prev_btn_b:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'B', 'pressed': state.btnB}})
-                if state.btnC != prev_btnC:
+                if state.btnC != prev_btn_c:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'C', 'pressed': state.btnC}})
                 if state.bg != prev_bg:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'bg', 'data': {'bg': state.bg}})
                 if state.scene != prev_scene:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'scene', 'data': {'scene': state.scene}})
-            prev_btnA, prev_btnB, prev_btnC = state.btnA, state.btnB, state.btnC
+            prev_btn_a, prev_btn_b, prev_btn_c = state.btnA, state.btnB, state.btnC
             prev_bg, prev_scene = state.bg, state.scene
 
             # Skip frame updates if paused (unless stepping)

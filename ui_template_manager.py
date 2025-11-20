@@ -7,10 +7,18 @@ Manages scene templates with categories, preview, and import/export
 import json
 import os
 import tempfile
-import tkinter as tk
 from dataclasses import asdict, dataclass
-from tkinter import filedialog, messagebox, ttk
 from typing import Any, Dict, List, Optional
+
+import pytest
+
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+    TK_AVAILABLE = True
+except Exception:  # pragma: no cover - headless environments
+    TK_AVAILABLE = False
+    pytest.skip("tkinter not available", allow_module_level=True)
 
 from PIL import Image, ImageDraw, ImageTk
 

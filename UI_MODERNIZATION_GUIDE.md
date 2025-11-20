@@ -14,6 +14,7 @@ Four built-in professional themes:
 - **Nord** - Arctic nord color palette
 
 Each theme includes:
+
 - Carefully chosen color palettes
 - Consistent widget styling
 - Canvas-specific colors (grid, guides, widgets)
@@ -22,6 +23,7 @@ Each theme includes:
 ### 🚀 Splash Screen
 
 Professional startup splash screen with:
+
 - Animated progress bar
 - Version display
 - Customizable loading messages
@@ -30,6 +32,7 @@ Professional startup splash screen with:
 ### 🧙 Welcome Wizard
 
 First-run wizard guiding users through:
+
 1. Welcome & overview
 2. Theme & grid preferences  
 3. Keyboard shortcuts
@@ -40,31 +43,37 @@ First-run wizard guiding users through:
 Comprehensive settings organized in tabs:
 
 #### Appearance
+
 - Theme selection with live preview
 - Visual theme demonstration
 
 #### Canvas
+
 - Canvas size (width/height)
 - Grid settings (size, enabled/disabled)
 - Snap to grid controls
 - Visual aids (rulers, guides)
 
 #### Export
+
 - Default export format (JSON/HTML/PNG/SVG/PDF/C Code)
 - Export directory
 - Auto-backup settings
 
 #### Performance
+
 - Render caching with TTL
 - Lazy loading toggle
 - Render object pooling
 - Performance tips
 
 #### Editor
+
 - Auto-save interval
 - Display options (widget IDs, highlighting)
 
 #### Advanced
+
 - Undo/redo levels
 - Performance profiler toggle
 - Debug mode
@@ -315,6 +324,7 @@ python preferences_dialog.py
 ## Next Steps
 
 Consider adding:
+
 - Icon theme packs
 - Custom keyboard shortcuts editor
 - Recent files list in wizard
