@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "ui_design.h"
 
 static const char TXT_0[] = "UI Demo";
