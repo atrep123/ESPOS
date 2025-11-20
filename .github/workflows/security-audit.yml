@@ -1,0 +1,90 @@
+name: Security Audit
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Weekly Monday 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  python-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install audit tooling
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install pip-audit safety cyclonedx-bom bandit
+      - name: pip-audit
+        run: pip-audit --progress-spinner off --output json > python_vulns.json || true
+      - name: safety scan
+        run: safety check --full-report > safety_report.txt || true
+      - name: Bandit (security static analysis)
+        run: bandit -q -r . -f json -o bandit_report.json || true
+      - name: SBOM (Python)
+        run: cyclonedx-bom -o sbom-python.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-security
+          path: |
+            python_vulns.json
+            safety_report.txt
+            bandit_report.json
+            sbom-python.json
+
+  node-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web_designer_frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install dependencies
+        run: npm ci || npm install
+      - name: npm audit
+        run: npm audit --json > ../npm_vulns.json || true
+      - name: SBOM (Node)
+        run: npx @cyclonedx/cyclonedx-npm --output-file ../sbom-node.json --include-dev || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node-security
+          path: |
+            ../npm_vulns.json
+            ../sbom-node.json
+
+  summarize:
+    runs-on: ubuntu-latest
+    needs: [python-audit, node-audit]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-security
+          path: python
+      - uses: actions/download-artifact@v4
+        with:
+          name: node-security
+          path: node
+      - name: Quick summary
+        run: |
+          echo 'Python vulnerabilities:'
+          grep -i '"severity":' python/python_vulns.json || true
+          echo 'Node vulnerabilities:'
+          grep -i '"severity":' node/npm_vulns.json || true
+      - name: Fail on critical (simple policy)
+        run: |
+          crit_py=$(grep -i '"severity": "CRITICAL"' python/python_vulns.json | wc -l || true)
+          crit_js=$(grep -i 'critical' node/npm_vulns.json | wc -l || true)
+          if [ "$crit_py" -gt 0 ] || [ "$crit_js" -gt 0 ]; then
+            echo 'Critical vulnerability detected.'
+            exit 1
+          fi
