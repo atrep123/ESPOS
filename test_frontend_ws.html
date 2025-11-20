@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        function addLog(msg, color = 'black') {
+            const p = document.createElement('p');
+            p.style.color = color;
+            p.textContent = new Date().toISOString().substr(11, 12) + ' - ' + msg;
+            log.appendChild(p);
+            console.log(msg);
+        }
+        
+        addLog('Connecting to ws://localhost:8000/ws/projects/demo_project...', 'blue');
+        
+        const ws = new WebSocket('ws://localhost:8000/ws/projects/demo_project');
+        
+        ws.onopen = () => {
+            addLog('✓ WebSocket CONNECTED', 'green');
+        };
+        
+        ws.onmessage = (event) => {
+            addLog('✓ Received message: ' + event.data.substring(0, 200), 'green');
+            try {
+                const data = JSON.parse(event.data);
+                addLog('  Type: ' + data.type, 'green');
+                addLog('  User ID: ' + data.user_id, 'green');
+            } catch (e) {
+                addLog('  Parse error: ' + e, 'red');
+            }
+        };
+        
+        ws.onerror = (error) => {
+            addLog('✗ WebSocket ERROR: ' + error, 'red');
+        };
+        
+        ws.onclose = (event) => {
+            addLog('✗ WebSocket CLOSED - Code: ' + event.code + ', Reason: ' + event.reason, 'red');
+        };
+    </script>
+</body>
+</html>

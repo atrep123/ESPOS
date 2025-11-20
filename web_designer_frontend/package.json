@@ -1,0 +1,20 @@
+{
+  "name": "web_designer_frontend",
+  "version": "1.0.0",
+  "description": "This folder contains the HTML/CSS/JS frontend for the collaborative UI designer.",
+  "main": "app.js",
+  "scripts": {
+    "dev": "powershell -File serve_frontend.ps1",
+    "build": "echo 'No build needed'",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.4"
+  }
+}

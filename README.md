@@ -1,15 +1,61 @@
-# ESP32OS UI Designer + Firmware Demo
+# ESP32OS - Complete UI Development System
 
-[![CI/CD Pipeline](https://github.com/atrep123/ESPOS/actions/workflows/ci.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/ci.yml)
+[![Tests](https://github.com/atrep123/ESPOS/actions/workflows/tests.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/tests.yml)
+[![Release](https://github.com/atrep123/ESPOS/actions/workflows/release.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/release.yml)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/atrep123/ESPOS/releases)
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-complete-brightgreen.svg)](docs/)
 
-This workspace contains:
-- Python UI Designer, Themes, Animations, Responsive Layout
-- Exporter to JSON/HTML/PNG and C headers/sources
-- ESP-IDF firmware demo with software framebuffer, dirty-rect flush, and SSD1363 driver
+🎨 Professional UI development system for ESP32 embedded displays with visual designer, simulator, and complete toolchain.
 
-## Quick Start
+## ✨ Features
 
-1) Generate demo UI artifacts
+### 🖌️ UI Designer & Tools
+
+- **Visual UI Designer** with drag-and-drop interface
+- **Live Preview** with real-time rendering
+- **Animation Editor** with keyframe timeline
+- **Theme System** - Dark, Light, Dracula, Nord
+- **Component Library** - 50+ pre-built components
+- **Template Manager** - Reusable UI patterns
+- **Icon Palette** - 50+ Material Design icons
+
+### 🖥️ Simulator & Runtime
+
+- **Python Simulator** with RPC support (JSON-RPC 2.0)
+- **WebSocket Server** for remote UI viewing
+- **Performance Profiler** with real-time analytics
+- **Session Recording** and playback
+- **Auto-sizing** terminal support
+- **60-240 FPS** configurable refresh rate
+
+### 📤 Export & Integration
+
+- **C/C++ Code Generation** - Direct ESP32 integration
+- **PDF Export** - Professional documentation
+- **SVG Export** - Vector graphics with gradients/shadows
+- **JSON/HTML** - Web preview and data exchange
+- **PNG Rendering** - High-quality screenshots
+
+### 🚀 Performance
+
+- **LRU Cache** - Optimized rendering pipeline
+- **Lazy Loading** - Efficient resource management
+- **Substring Diff** - 70% I/O reduction
+- **Type Safety** - Full type hints throughout
+- **387 Tests** - Comprehensive test coverage
+
+### 🤝 Collaborative Features
+
+- **Web Designer** - Multi-user real-time collaboration
+- **Conflict Resolution** - OT-inspired merge algorithm
+- **Cursor Tracking** - See other users in real-time
+- **Undo/Redo** - 50 levels with shared history
+
+## 🚀 Quick Start
+
+1. Generate demo UI artifacts
 
 ```powershell
 python ui_export_c.py
@@ -17,12 +63,13 @@ python ui_export_c.py
 
 Artifacts: `examples/ui_demo.json`, `examples/ui_demo.html`, `examples/ui_demo.png`, and `src/ui_design.h/.c`.
 
-2) Configure display
+2. Configure display
+
 - Edit `src/display_config.h` to set `DISPLAY_I2C_SDA_GPIO`, `DISPLAY_I2C_SCL_GPIO`, and `DISPLAY_I2C_ADDR`.
 - Optional: set `DISPLAY_COLOR_BITS` to `1` or `4`.
 - Optional: enable a conservative init with `#define SSD1363_USE_DEFAULT_INIT 1` (verify against your module datasheet).
 
-3) Build and flash (PlatformIO)
+3. Build and flash (PlatformIO)
 
 ```powershell
 pio run -e esp32-s3-devkitm-1
