@@ -3,6 +3,7 @@
 Visual Preview Window for UI Designer
 Real-time graphical preview with mouse interaction and export
 """
+from __future__ import annotations
 
 import argparse
 import os
@@ -48,6 +49,16 @@ from ui_components_library_ascii import (
     create_vertical_menu_ascii,
 )
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
+
+DATA_DISPLAY = "Data Display"
+COMBO_SELECTED = "<<ComboboxSelected>>"
+REFRESH_LABEL = "🔄 Refresh"
+PROFILER_DISABLED_MSG = "Profiler not enabled"
+FILETYPE_ALL = "All files"
+FILETYPE_ALL_PAIR = (FILETYPE_ALL, "*.*")
+EXPORT_ERROR_TITLE = "Export Error"
+JSON_EXT = ".json"
+JSON_PATTERN = "*.json"
 
 if TK_AVAILABLE:
     from ui_template_manager import TemplateManagerWindow
@@ -141,9 +152,9 @@ class VisualPreviewWindow:
             {"name": "TabBar", "category": "Navigation", "description": "Tab bar with 3 tabs", "factory": lambda: create_tab_bar_ascii()},
             {"name": "VerticalMenu", "category": "Navigation", "description": "Vertical menu list", "factory": lambda: create_vertical_menu_ascii()},
             {"name": "Breadcrumb", "category": "Navigation", "description": "Breadcrumb navigation", "factory": lambda: create_breadcrumb_ascii()},
-            {"name": "StatCard", "category": "Data Display", "description": "Statistics card with value and label", "factory": lambda: create_stat_card_ascii()},
-            {"name": "ProgressCard", "category": "Data Display", "description": "Progress card with percentage", "factory": lambda: create_progress_card_ascii()},
-            {"name": "StatusIndicator", "category": "Data Display", "description": "Status indicator with colored dot", "factory": lambda: create_status_indicator_ascii()},
+            {"name": "StatCard", "category": DATA_DISPLAY, "description": "Statistics card with value and label", "factory": lambda: create_stat_card_ascii()},
+            {"name": "ProgressCard", "category": DATA_DISPLAY, "description": "Progress card with percentage", "factory": lambda: create_progress_card_ascii()},
+            {"name": "StatusIndicator", "category": DATA_DISPLAY, "description": "Status indicator with colored dot", "factory": lambda: create_status_indicator_ascii()},
             {"name": "ButtonGroup", "category": "Controls", "description": "Button group with 3 buttons", "factory": lambda: create_button_group_ascii()},
             {"name": "ToggleSwitch", "category": "Controls", "description": "Toggle switch control", "factory": lambda: create_toggle_switch_ascii()},
             {"name": "RadioGroup", "category": "Controls", "description": "Radio button group", "factory": lambda: create_radio_group_ascii()},
@@ -152,8 +163,8 @@ class VisualPreviewWindow:
             {"name": "GridLayout", "category": "Layouts", "description": "Grid layout", "factory": lambda: create_grid_layout_ascii()},
             {"name": "Slider", "category": "Controls", "description": "Value slider with visual bar", "factory": lambda: create_slider_ascii()},
             {"name": "Checkbox", "category": "Controls", "description": "Checkbox with label", "factory": lambda: create_checkbox_ascii()},
-            {"name": "Notification", "category": "Data Display", "description": "Notification banner (info/success/error/warning)", "factory": lambda: create_notification_ascii()},
-            {"name": "Chart", "category": "Data Display", "description": "Simple bar chart", "factory": lambda: create_chart_ascii()},
+            {"name": "Notification", "category": DATA_DISPLAY, "description": "Notification banner (info/success/error/warning)", "factory": lambda: create_notification_ascii()},
+            {"name": "Chart", "category": DATA_DISPLAY, "description": "Simple bar chart", "factory": lambda: create_chart_ascii()},
         ]
         self.playing = False
         self.selected_anim: Optional[str] = None
@@ -236,7 +247,7 @@ class VisualPreviewWindow:
         self._zoom_combo = ttk.Combobox(toolbar, textvariable=self._zoom_var, width=6,
                       values=["0.5x", "1.0x", "2.0x", "4.0x", "6.0x", "8.0x", "10.0x"])
         self._zoom_combo.pack(side=tk.LEFT, padx=5)
-        self._zoom_combo.bind("<<ComboboxSelected>>", self._on_zoom_change)
+        self._zoom_combo.bind(COMBO_SELECTED, self._on_zoom_change)
         
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         
@@ -298,7 +309,7 @@ class VisualPreviewWindow:
         ttk.Button(toolbar, text="❓ Help", command=self._show_quick_help).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="⚡ Profiler", command=self._toggle_profiler).pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(toolbar, text="🔄 Refresh", 
+        ttk.Button(toolbar, text=REFRESH_LABEL, 
                   command=self.refresh).pack(side=tk.LEFT, padx=5)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
@@ -310,7 +321,7 @@ class VisualPreviewWindow:
             self.anim_combo.set(self.anim.list_animations()[0])
             self.selected_anim = self.anim.list_animations()[0]
         self.anim_combo.pack(side=tk.LEFT)
-        self.anim_combo.bind("<<ComboboxSelected>>", self._on_anim_change)
+        self.anim_combo.bind(COMBO_SELECTED, self._on_anim_change)
         ttk.Button(toolbar, text="▶", width=3, command=self._on_anim_play).pack(side=tk.LEFT, padx=1)
         ttk.Button(toolbar, text="⏸", width=3, command=self._on_anim_pause).pack(side=tk.LEFT, padx=1)
         ttk.Button(toolbar, text="⏹", width=3, command=self._on_anim_stop).pack(side=tk.LEFT, padx=1)
@@ -433,7 +444,7 @@ class VisualPreviewWindow:
         ascii_toolbar.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
         ttk.Label(ascii_toolbar, text="ASCII Renderer v2.0", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
         # Placeholders; actual actions wired in _show_ascii_tab
-        self._ascii_refresh_btn = ttk.Button(ascii_toolbar, text="🔄 Refresh")
+        self._ascii_refresh_btn = ttk.Button(ascii_toolbar, text=REFRESH_LABEL)
         self._ascii_refresh_btn.pack(side=tk.LEFT, padx=5)
         self._ascii_copy_btn = ttk.Button(ascii_toolbar, text="💾 Copy to Clipboard")
         self._ascii_copy_btn.pack(side=tk.LEFT, padx=5)
@@ -544,193 +555,6 @@ class VisualPreviewWindow:
                     settings = json.load(f)
             except Exception:
                 pass
-            def _toggle_profiler(self):
-                """Toggle performance profiler on/off"""
-                try:
-                    if not self._profiler_enabled:
-                        # Enable profiler
-                        self._profiler = PerformanceProfiler(history_size=1000)
-                        self._profiler_enabled = True
-                        self._show_profiler_panel()
-                        print("⚡ Performance profiler enabled")
-                    else:
-                        # Disable profiler
-                        self._profiler_enabled = False
-                        if hasattr(self, '_profiler_window') and self._profiler_window:
-                            self._profiler_window.destroy()
-                            self._profiler_window = None
-                        print("⚡ Performance profiler disabled")
-                except Exception as e:
-                    print(f"⚠ Profiler toggle error: {e}")
-    
-            def _show_profiler_panel(self):
-                """Show profiler panel with live metrics and controls"""
-                if not TK_AVAILABLE or HEADLESS:
-                    return
-        
-                try:
-                    # Create or raise existing window
-                    if hasattr(self, '_profiler_window') and self._profiler_window:
-                        self._profiler_window.lift()
-                        return
-            
-                    window = tk.Toplevel(self.root)
-                    window.title("⚡ Performance Profiler")
-                    window.geometry("500x600")
-                    window.configure(bg="#2b2b2b")
-                    self._profiler_window = window
-            
-                    # Header
-                    header = ttk.Frame(window)
-                    header.pack(fill=tk.X, padx=10, pady=10)
-                    ttk.Label(header, text="⚡ Performance Profiler", 
-                             font=("Arial", 14, "bold")).pack(side=tk.LEFT)
-            
-                    # Control buttons
-                    btn_frame = ttk.Frame(header)
-                    btn_frame.pack(side=tk.RIGHT)
-                    ttk.Button(btn_frame, text="📊 Export HTML", 
-                              command=self._export_profiler_html).pack(side=tk.LEFT, padx=2)
-                    ttk.Button(btn_frame, text="💾 Export CSV", 
-                              command=self._export_profiler_csv).pack(side=tk.LEFT, padx=2)
-                    ttk.Button(btn_frame, text="📄 Export JSON", 
-                              command=self._export_profiler_json).pack(side=tk.LEFT, padx=2)
-            
-                    # Stats display
-                    stats_frame = ttk.LabelFrame(window, text="Live Metrics", padding=10)
-                    stats_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-            
-                    # Create labels for live metrics
-                    self._profiler_labels = {}
-                    metrics = [
-                        ("fps", "FPS:"),
-                        ("render_ms", "Render Time:"),
-                        ("frame_ms", "Frame Time:"),
-                        ("memory_mb", "Memory:"),
-                        ("cpu_percent", "CPU:"),
-                        ("samples", "Samples:"),
-                    ]
-            
-                    for i, (key, label_text) in enumerate(metrics):
-                        row = ttk.Frame(stats_frame)
-                        row.pack(fill=tk.X, pady=2)
-                        ttk.Label(row, text=label_text, width=15).pack(side=tk.LEFT)
-                        value_label = ttk.Label(row, text="--", font=("Courier", 10))
-                        value_label.pack(side=tk.LEFT)
-                        self._profiler_labels[key] = value_label
-            
-                    # Recommendations section
-                    rec_frame = ttk.LabelFrame(window, text="Recommendations", padding=10)
-                    rec_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-            
-                    rec_scroll = ttk.Scrollbar(rec_frame)
-                    rec_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-            
-                    self._profiler_rec_text = tk.Text(rec_frame, height=10, wrap=tk.WORD,
-                                                      yscrollcommand=rec_scroll.set,
-                                                      font=("Arial", 9))
-                    self._profiler_rec_text.pack(fill=tk.BOTH, expand=True)
-                    rec_scroll.config(command=self._profiler_rec_text.yview)
-            
-                    # Start live update loop
-                    self._update_profiler_panel()
-            
-                except Exception as e:
-                    print(f"⚠ Profiler panel error: {e}")
-    
-            def _update_profiler_panel(self):
-                """Update profiler panel with latest metrics"""
-                if not self._profiler_enabled or not self._profiler:
-                    return
-        
-                try:
-                    if not hasattr(self, '_profiler_window') or not self._profiler_window:
-                        return
-            
-                    # Calculate current stats
-                    stats = self._profiler.calculate_stats()
-            
-                    # Update metric labels
-                    if hasattr(self, '_profiler_labels'):
-                        self._profiler_labels['fps'].config(text=f"{stats.fps_avg:.1f} (min: {stats.fps_min:.1f}, max: {stats.fps_max:.1f})")
-                        self._profiler_labels['render_ms'].config(text=f"{stats.render_avg_ms:.2f} ms (min: {stats.render_min_ms:.2f}, max: {stats.render_max_ms:.2f})")
-                        self._profiler_labels['frame_ms'].config(text=f"{stats.frame_avg_ms:.2f} ms")
-                        self._profiler_labels['memory_mb'].config(text=f"{stats.memory_avg_mb:.1f} MB (peak: {stats.memory_peak_mb:.1f})")
-                        self._profiler_labels['cpu_percent'].config(text=f"{stats.cpu_avg_percent:.1f}% (peak: {stats.cpu_peak_percent:.1f}%)")
-                        self._profiler_labels['samples'].config(text=f"{stats.samples}")
-            
-                    # Update recommendations (every 2 seconds to reduce CPU)
-                    if not hasattr(self, '_last_rec_update') or time.time() - self._last_rec_update > 2.0:
-                        self._last_rec_update = time.time()
-                        recommendations = self._profiler.analyze_performance()
-                
-                        if hasattr(self, '_profiler_rec_text'):
-                            self._profiler_rec_text.config(state=tk.NORMAL)
-                            self._profiler_rec_text.delete("1.0", tk.END)
-                            for rec in recommendations:
-                                self._profiler_rec_text.insert(tk.END, f"• {rec}\n")
-                            self._profiler_rec_text.config(state=tk.DISABLED)
-            
-                    # Schedule next update (100ms)
-                    if self._profiler_window:
-                        self._profiler_window.after(100, self._update_profiler_panel)
-                
-                except Exception as e:
-                    print(f"⚠ Profiler update error: {e}")
-    
-            def _export_profiler_html(self):
-                """Export profiler report to HTML"""
-                if not self._profiler:
-                    messagebox.showwarning("Profiler", "Profiler not enabled")
-                    return
-        
-                try:
-                    filename = filedialog.asksaveasfilename(
-                        defaultextension=".html",
-                        filetypes=[("HTML", "*.html"), ("All Files", "*.*")],
-                        initialfile="profiler_report.html"
-                    )
-                    if filename:
-                        self._profiler.export_to_html(filename)
-                        messagebox.showinfo("Profiler", f"Report exported to:\n{filename}")
-                except Exception as e:
-                    messagebox.showerror("Export Error", str(e))
-    
-            def _export_profiler_csv(self):
-                """Export profiler metrics to CSV"""
-                if not self._profiler:
-                    messagebox.showwarning("Profiler", "Profiler not enabled")
-                    return
-        
-                try:
-                    filename = filedialog.asksaveasfilename(
-                        defaultextension=".csv",
-                        filetypes=[("CSV", "*.csv"), ("All Files", "*.*")],
-                        initialfile="profiler_metrics.csv"
-                    )
-                    if filename:
-                        self._profiler.export_to_csv(filename)
-                        messagebox.showinfo("Profiler", f"Metrics exported to:\n{filename}")
-                except Exception as e:
-                    messagebox.showerror("Export Error", str(e))
-    
-            def _export_profiler_json(self):
-                """Export profiler data to JSON"""
-                if not self._profiler:
-                    messagebox.showwarning("Profiler", "Profiler not enabled")
-                    return
-        
-                try:
-                    filename = filedialog.asksaveasfilename(
-                        defaultextension=".json",
-                        filetypes=[("JSON", "*.json"), ("All Files", "*.*")],
-                        initialfile="profiler_data.json"
-                    )
-                    if filename:
-                        self._profiler.export_to_json(filename)
-                        messagebox.showinfo("Profiler", f"Data exported to:\n{filename}")
-                except Exception as e:
-                    messagebox.showerror("Export Error", str(e))
     
         
         # Check if tips should be shown
@@ -739,6 +563,181 @@ class VisualPreviewWindow:
         
         # Show Quick Tips dialog
         self._show_quick_tips_dialog(settings_file)
+    
+    def _toggle_profiler(self):
+        """Toggle performance profiler on/off."""
+        try:
+            if not self._profiler_enabled:
+                self._profiler = PerformanceProfiler(history_size=1000)
+                self._profiler_enabled = True
+                self._show_profiler_panel()
+                print("⚡ Performance profiler enabled")
+            else:
+                self._profiler_enabled = False
+                if hasattr(self, '_profiler_window') and self._profiler_window:
+                    self._profiler_window.destroy()
+                    self._profiler_window = None
+                print("⚡ Performance profiler disabled")
+        except Exception as e:
+            print(f"⚠ Profiler toggle error: {e}")
+
+    def _show_profiler_panel(self):
+        """Show profiler panel with live metrics and controls."""
+        if not TK_AVAILABLE or HEADLESS:
+            return
+
+        try:
+            if hasattr(self, '_profiler_window') and self._profiler_window:
+                self._profiler_window.lift()
+                return
+
+            window = tk.Toplevel(self.root)
+            window.title("⚡ Performance Profiler")
+            window.geometry("500x600")
+            window.configure(bg="#2b2b2b")
+            self._profiler_window = window
+
+            header = ttk.Frame(window)
+            header.pack(fill=tk.X, padx=10, pady=10)
+            ttk.Label(header, text="⚡ Performance Profiler", font=("Arial", 14, "bold")).pack(side=tk.LEFT)
+
+            btn_frame = ttk.Frame(header)
+            btn_frame.pack(side=tk.RIGHT)
+            ttk.Button(btn_frame, text="📊 Export HTML", command=self._export_profiler_html).pack(side=tk.LEFT, padx=2)
+            ttk.Button(btn_frame, text="💾 Export CSV", command=self._export_profiler_csv).pack(side=tk.LEFT, padx=2)
+            ttk.Button(btn_frame, text="📄 Export JSON", command=self._export_profiler_json).pack(side=tk.LEFT, padx=2)
+
+            stats_frame = ttk.LabelFrame(window, text="Live Metrics", padding=10)
+            stats_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+            self._profiler_labels = {}
+            metrics = [
+                ("fps", "FPS:"),
+                ("render_ms", "Render Time:"),
+                ("frame_ms", "Frame Time:"),
+                ("memory_mb", "Memory:"),
+                ("cpu_percent", "CPU:"),
+                ("samples", "Samples:"),
+            ]
+
+            for key, label_text in metrics:
+                row = ttk.Frame(stats_frame)
+                row.pack(fill=tk.X, pady=2)
+                ttk.Label(row, text=label_text, width=15).pack(side=tk.LEFT)
+                value_label = ttk.Label(row, text="--", font=("Courier", 10))
+                value_label.pack(side=tk.LEFT)
+                self._profiler_labels[key] = value_label
+
+            rec_frame = ttk.LabelFrame(window, text="Recommendations", padding=10)
+            rec_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+            rec_scroll = ttk.Scrollbar(rec_frame)
+            rec_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+            self._profiler_rec_text = tk.Text(
+                rec_frame,
+                height=10,
+                wrap=tk.WORD,
+                yscrollcommand=rec_scroll.set,
+                font=("Arial", 9),
+            )
+            self._profiler_rec_text.pack(fill=tk.BOTH, expand=True)
+            rec_scroll.config(command=self._profiler_rec_text.yview)
+
+            self._update_profiler_panel()
+
+        except Exception as e:
+            print(f"⚠ Profiler panel error: {e}")
+
+    def _update_profiler_panel(self):
+        """Update profiler panel with latest metrics."""
+        if not self._profiler_enabled or not self._profiler:
+            return
+
+        try:
+            if not hasattr(self, '_profiler_window') or not self._profiler_window:
+                return
+
+            stats = self._profiler.calculate_stats()
+
+            if hasattr(self, '_profiler_labels'):
+                self._profiler_labels['fps'].config(text=f"{stats.fps_avg:.1f} (min: {stats.fps_min:.1f}, max: {stats.fps_max:.1f})")
+                self._profiler_labels['render_ms'].config(text=f"{stats.render_avg_ms:.2f} ms (min: {stats.render_min_ms:.2f}, max: {stats.render_max_ms:.2f})")
+                self._profiler_labels['frame_ms'].config(text=f"{stats.frame_avg_ms:.2f} ms")
+                self._profiler_labels['memory_mb'].config(text=f"{stats.memory_avg_mb:.1f} MB (peak: {stats.memory_peak_mb:.1f})")
+                self._profiler_labels['cpu_percent'].config(text=f"{stats.cpu_avg_percent:.1f}% (peak: {stats.cpu_peak_percent:.1f}%)")
+                self._profiler_labels['samples'].config(text=f"{stats.samples}")
+
+            if not hasattr(self, '_last_rec_update') or time.time() - self._last_rec_update > 2.0:
+                self._last_rec_update = time.time()
+                recommendations = self._profiler.analyze_performance()
+
+                if hasattr(self, '_profiler_rec_text'):
+                    self._profiler_rec_text.config(state=tk.NORMAL)
+                    self._profiler_rec_text.delete("1.0", tk.END)
+                    for rec in recommendations:
+                        self._profiler_rec_text.insert(tk.END, f"• {rec}\n")
+                    self._profiler_rec_text.config(state=tk.DISABLED)
+
+            if self._profiler_window:
+                self._profiler_window.after(100, self._update_profiler_panel)
+
+        except Exception as e:
+            print(f"⚠ Profiler update error: {e}")
+
+    def _export_profiler_html(self):
+        """Export profiler report to HTML."""
+        if not self._profiler:
+            messagebox.showwarning("Profiler", PROFILER_DISABLED_MSG)
+            return
+
+        try:
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".html",
+                filetypes=[("HTML", "*.html"), FILETYPE_ALL_PAIR],
+                initialfile="profiler_report.html",
+            )
+            if filename:
+                self._profiler.export_to_html(filename)
+                messagebox.showinfo("Profiler", f"Report exported to:\n{filename}")
+        except Exception as e:
+            messagebox.showerror(EXPORT_ERROR_TITLE, str(e))
+
+    def _export_profiler_csv(self):
+        """Export profiler metrics to CSV."""
+        if not self._profiler:
+            messagebox.showwarning("Profiler", PROFILER_DISABLED_MSG)
+            return
+
+        try:
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV", "*.csv"), FILETYPE_ALL_PAIR],
+                initialfile="profiler_metrics.csv",
+            )
+            if filename:
+                self._profiler.export_to_csv(filename)
+                messagebox.showinfo("Profiler", f"Metrics exported to:\n{filename}")
+        except Exception as e:
+            messagebox.showerror(EXPORT_ERROR_TITLE, str(e))
+
+    def _export_profiler_json(self):
+        """Export profiler data to JSON."""
+        if not self._profiler:
+            messagebox.showwarning("Profiler", PROFILER_DISABLED_MSG)
+            return
+
+        try:
+            filename = filedialog.asksaveasfilename(
+                defaultextension=JSON_EXT,
+                filetypes=[("JSON", JSON_PATTERN), FILETYPE_ALL_PAIR],
+                initialfile="profiler_data.json",
+            )
+            if filename:
+                self._profiler.export_to_json(filename)
+                messagebox.showinfo("Profiler", f"Data exported to:\n{filename}")
+        except Exception as e:
+            messagebox.showerror(EXPORT_ERROR_TITLE, str(e))
     
     def _show_quick_tips_dialog(self, settings_file):
         """Display Quick Tips dialog for first-time users"""
@@ -2448,7 +2447,7 @@ class VisualPreviewWindow:
         # Ask for filename
         filename = filedialog.asksaveasfilename(
             defaultextension=".png",
-            filetypes=[("PNG files", "*.png"), ("All files", "*.*")],
+            filetypes=[("PNG files", "*.png"), FILETYPE_ALL_PAIR],
             initialfile=f"ui_preview_{scale}x.png"
         )
         
@@ -2477,14 +2476,14 @@ class VisualPreviewWindow:
             img.save(filename)
             messagebox.showinfo("Export Complete", f"Saved @{scale}x PNG to:\n{filename}")
         else:
-            messagebox.showerror("Export Error", "No scene to export")
+            messagebox.showerror(EXPORT_ERROR_TITLE, "No scene to export")
     
     def _export_json(self):
         """Export design as JSON"""
         filename = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            initialfile=f"{self.designer.current_scene}.json"
+            defaultextension=JSON_EXT,
+            filetypes=[("JSON files", JSON_PATTERN), FILETYPE_ALL_PAIR],
+            initialfile=f"{self.designer.current_scene}{JSON_EXT}",
         )
         if filename:
             self.designer.save_to_json(filename)
@@ -2494,7 +2493,7 @@ class VisualPreviewWindow:
         """Export design as C code"""
         filename = filedialog.asksaveasfilename(
             defaultextension=".c",
-            filetypes=[("C files", "*.c"), ("All files", "*.*")],
+            filetypes=[("C files", "*.c"), FILETYPE_ALL_PAIR],
             initialfile=f"{self.designer.current_scene}.c"
         )
         if filename:
@@ -2503,20 +2502,20 @@ class VisualPreviewWindow:
                 self.designer.export_code(filename, self.designer.current_scene)
                 messagebox.showinfo("Export Complete", f"Saved C code to: {filename}")
             else:
-                messagebox.showerror("Export Error", "C code export not implemented.")
+                messagebox.showerror(EXPORT_ERROR_TITLE, "C code export not implemented.")
 
     def _export_widgetconfig(self):
         """Export design as WidgetConfig text"""
         filename = filedialog.asksaveasfilename(
             defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            filetypes=[("Text files", "*.txt"), FILETYPE_ALL_PAIR],
             initialfile=f"{self.designer.current_scene}_widgetconfig.txt"
         )
         if not filename:
             return
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
-            messagebox.showerror("Export Error", "No active scene.")
+            messagebox.showerror(EXPORT_ERROR_TITLE, "No active scene.")
             return
         try:
             lines = []
@@ -2528,13 +2527,13 @@ class VisualPreviewWindow:
                 f.write("\n".join(lines))
             messagebox.showinfo("Export Complete", f"Saved WidgetConfig to: {filename}")
         except Exception as e:
-            messagebox.showerror("Export Error", f"Failed: {e}")
+            messagebox.showerror(EXPORT_ERROR_TITLE, f"Failed: {e}")
 
     def _export_svg(self):
         """Export current scene as enhanced SVG vector file with dialog."""
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
-            messagebox.showerror("Export Error", "No scene to export")
+            messagebox.showerror(EXPORT_ERROR_TITLE, "No scene to export")
             return
         
         # Show enhanced export dialog
@@ -2631,7 +2630,7 @@ class VisualPreviewWindow:
                 title="Select Font File",
                 filetypes=[
                     ("Font files", "*.ttf *.otf *.woff *.woff2"),
-                    ("All files", "*.*")
+                    FILETYPE_ALL_PAIR
                 ]
             )
             if path:
@@ -2667,7 +2666,7 @@ class VisualPreviewWindow:
         def do_export():
             filename = filedialog.asksaveasfilename(
                 defaultextension=".svg",
-                filetypes=[("SVG files", "*.svg"), ("All files", "*.*")],
+                filetypes=[("SVG files", "*.svg"), FILETYPE_ALL_PAIR],
                 initialfile=f"{self.designer.current_scene}_enhanced.svg"
             )
             if not filename:
@@ -2697,7 +2696,7 @@ class VisualPreviewWindow:
                                   f"Shadows={shadows_var.get()}, "
                                   f"Patterns={patterns_var.get()}")
             except Exception as e:
-                messagebox.showerror("Export Error", f"Failed to export:\n{e}")
+                messagebox.showerror(EXPORT_ERROR_TITLE, f"Failed to export:\n{e}")
         
         ttk.Button(button_frame, text="Cancel", 
                   command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
@@ -2721,7 +2720,7 @@ class VisualPreviewWindow:
         toolbar.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
         
         ttk.Label(toolbar, text="ASCII Renderer v2.0", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="🔄 Refresh", command=lambda: self._refresh_ascii_preview(text_widget, scene)).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text=REFRESH_LABEL, command=lambda: self._refresh_ascii_preview(text_widget, scene)).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="💾 Copy to Clipboard", command=lambda: self._copy_ascii_to_clipboard(text_widget)).pack(side=tk.LEFT, padx=5)
         
         # Create text widget with scrollbar
@@ -3049,9 +3048,9 @@ class VisualPreviewWindow:
     def _on_save(self, event):
         """Save design"""
         filename = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            initialfile=f"{self.designer.current_scene}.json"
+            defaultextension=JSON_EXT,
+            filetypes=[("JSON files", JSON_PATTERN), FILETYPE_ALL_PAIR],
+            initialfile=f"{self.designer.current_scene}{JSON_EXT}",
         )
         
         if filename:
@@ -3443,7 +3442,7 @@ class AnimationEditorWindow:
         anim_combo = ttk.Combobox(toolbar, textvariable=self.anim_var, 
                                   values=animations, width=20)
         anim_combo.pack(side=tk.LEFT, padx=5)
-        anim_combo.bind("<<ComboboxSelected>>", self._on_anim_selected)
+        anim_combo.bind(COMBO_SELECTED, self._on_anim_selected)
         
         ttk.Button(toolbar, text="➕ New", command=self._create_new_animation).pack(side=tk.LEFT, padx=2)
         ttk.Button(toolbar, text="🗑️ Delete", command=self._delete_animation).pack(side=tk.LEFT, padx=2)
@@ -3484,7 +3483,7 @@ class AnimationEditorWindow:
                                     values=["linear", "ease_in", "ease_out", "ease_in_out",
                                            "ease_in_quad", "ease_out_quad"])
         easing_combo.grid(row=2, column=1, pady=2)
-        easing_combo.bind("<<ComboboxSelected>>", self._on_easing_changed)
+        easing_combo.bind(COMBO_SELECTED, self._on_easing_changed)
         
         # Easing curve preview
         self.easing_canvas = tk.Canvas(props_frame, width=120, height=80, bg="#1e1e1e")
@@ -3956,7 +3955,7 @@ if TK_AVAILABLE:
             self.category_var = tk.StringVar(value="All")
             self.category_combo = ttk.Combobox(top, textvariable=self.category_var, width=14, state="readonly")
             self.category_combo.pack(side=tk.LEFT, padx=6)
-            self.category_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
+            self.category_combo.bind(COMBO_SELECTED, lambda e: self._refresh_list())
             # Tags entry
             ttk.Label(top, text="Tags:").pack(side=tk.LEFT)
             self.tags_var = tk.StringVar()
@@ -4168,7 +4167,7 @@ if TK_AVAILABLE:
             self.cat_var = tk.StringVar(value="All")
             cat_combo = ttk.Combobox(top, textvariable=self.cat_var, values=self._all_categories, width=16, state="readonly")
             cat_combo.pack(side=tk.LEFT, padx=6)
-            cat_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_list())
+            cat_combo.bind(COMBO_SELECTED, lambda e: self._refresh_list())
 
             ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
 
@@ -4228,7 +4227,7 @@ if TK_AVAILABLE:
                 self.preview_text.insert(tk.END, f"Usage: {icon['usage']}\n")
             self.preview_text.config(state=tk.DISABLED)
 
-        def _insert_selected(self, size_variant: str | None = None):
+        def _insert_selected(self, size_variant: Optional[str] = None):
             icon = self._get_selected_icon()
             if not icon:
                 return

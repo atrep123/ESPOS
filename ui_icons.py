@@ -2,7 +2,9 @@
 Material Icons mapping for ESP32OS UI Designer
 Icon reference with categories and usage metadata
 """
-from typing import List, TypedDict
+from __future__ import annotations
+
+from typing import List, Optional, TypedDict
 
 
 class IconInfo(TypedDict):
@@ -88,7 +90,7 @@ MATERIAL_ICONS: List[IconInfo] = [
 
 
 # Lookup helpers
-def get_icon_by_name(name: str) -> IconInfo | None:
+def get_icon_by_name(name: str) -> Optional[IconInfo]:
     """Get icon info by display name"""
     for icon in MATERIAL_ICONS:
         if icon["name"].lower() == name.lower():
@@ -96,7 +98,7 @@ def get_icon_by_name(name: str) -> IconInfo | None:
     return None
 
 
-def get_icon_by_symbol(symbol: str) -> IconInfo | None:
+def get_icon_by_symbol(symbol: str) -> Optional[IconInfo]:
     """Get icon info by C symbol name"""
     for icon in MATERIAL_ICONS:
         if icon["symbol"] == symbol or icon["size_16"] == symbol or icon["size_24"] == symbol:
@@ -126,7 +128,7 @@ ICON_PALETTE = {
 }
 
 
-def filter_icons(term: str = "", category: str | None = None) -> List[IconInfo]:
+def filter_icons(term: str = "", category: Optional[str] = None) -> List[IconInfo]:
     """Filter icons by search term (name or symbol or ascii) and optional category.
 
     Args:

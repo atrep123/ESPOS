@@ -24,18 +24,102 @@ import argparse
 import subprocess
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, TYPE_CHECKING, cast, Protocol
 
 from ui_designer import UIDesigner
 from ui_export_c import export_c
 
-try:
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
 
-    WATCHDOG_AVAILABLE = True
-except Exception:
-    WATCHDOG_AVAILABLE = False
+_watchdog_available: bool = False
+
+if TYPE_CHECKING:
+    try:
+        from watchdog.events import FileSystemEvent, FileSystemEventHandler  # type: ignore[missing-import]
+        from watchdog.observers import Observer  # type: ignore[missing-import]
+    except ImportError:
+        class FileSystemEvent(Protocol):
+            src_path: str
+
+        class FileSystemEventHandler(Protocol):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                ...
+
+            def on_modified(self, event: "FileSystemEvent") -> None:
+                ...
+
+            def on_created(self, event: "FileSystemEvent") -> None:
+                ...
+
+            def on_moved(self, event: "FileSystemEvent") -> None:
+                ...
+
+        class Observer(Protocol):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                ...
+
+            def schedule(self, handler: FileSystemEventHandler, path: str, recursive: bool = False) -> None:
+                ...
+
+            def start(self) -> None:
+                ...
+
+            def stop(self) -> None:
+                ...
+
+            def join(self, *args: Any, **kwargs: Any) -> None:
+                ...
+else:
+    try:
+        from watchdog.events import FileSystemEvent, FileSystemEventHandler
+        from watchdog.observers import Observer
+
+        _watchdog_available = True
+    except Exception:
+        class _StubFileSystemEvent:
+            """Stub event used when watchdog is unavailable."""
+
+            src_path: str = ""
+
+        FileSystemEvent = _StubFileSystemEvent  # type: ignore[misc,assignment]
+
+        class FileSystemEventHandler:  # type: ignore[too-many-function-args]
+            """Stub handler used when watchdog is unavailable."""
+
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                # Watchdog not installed; subclass overrides callbacks.
+                return
+
+        class Observer:  # type: ignore[too-many-function-args]
+            """Stub observer used when watchdog is unavailable."""
+
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                # Watchdog not installed; methods are no-ops.
+                return
+
+            def schedule(self, *args: Any, **kwargs: Any) -> None:
+                # No-op stub.
+                return
+
+            def start(self) -> None:
+                # No-op stub.
+                return
+
+            def stop(self) -> None:
+                # No-op stub.
+                return
+
+            def join(self, *args: Any, **kwargs: Any) -> None:
+                # No-op stub.
+                return
+
+
+_pio_cmd_cache: list[str] | None = None
+
+SCENE_HELP = "Scene name to export (default: current/first scene in design)"
+BASE_NAME_HELP = "Base name for generated C files in src/ (default: ui_design)"
+ICON_SIZE_HELP = "Icon size in px for C export (default: 16)"
+ENV_HELP = "PlatformIO environment name (default: esp32-s3-devkitm-1)"
+CommandFunc = Callable[[argparse.Namespace], int]
 
 
 ROOT = Path(__file__).resolve().parent
@@ -55,10 +139,11 @@ def _find_pio_command() -> list[str]:
     Return the base command used to invoke PlatformIO.
 
     We try 'pio' first (common alias), then 'platformio'.
-    The chosen form is cached via a simple global attribute on the function.
+    The chosen form is cached in a module-level variable for reuse.
     """
-    if hasattr(_find_pio_command, "_cached"):
-        return _find_pio_command._cached  # type: ignore[no-any-return]
+    global _pio_cmd_cache
+    if _pio_cmd_cache is not None:
+        return _pio_cmd_cache
 
     candidates = ["pio", "platformio"]
     for name in candidates:
@@ -70,8 +155,8 @@ def _find_pio_command() -> list[str]:
                 stderr=subprocess.DEVNULL,
             )
             if result.returncode == 0:
-                _find_pio_command._cached = [name]
-                return [name]
+                _pio_cmd_cache = [name]
+                return _pio_cmd_cache
         except FileNotFoundError:
             continue
 
@@ -80,8 +165,8 @@ def _find_pio_command() -> list[str]:
         "[ui-pipeline] Warning: PlatformIO command not found. "
         "Install PlatformIO CLI or adjust PATH."
     )
-    _find_pio_command._cached = ["pio"]
-    return ["pio"]
+    _pio_cmd_cache = ["pio"]
+    return _pio_cmd_cache
 
 
 def cmd_export_c(args: argparse.Namespace) -> int:
@@ -122,22 +207,22 @@ def cmd_export_c(args: argparse.Namespace) -> int:
 
 def cmd_build(args: argparse.Namespace) -> int:
     """Build firmware for the selected PlatformIO environment."""
-    env = args.env
-    base_cmd = _find_pio_command()
-    cmd = [*base_cmd, "run", "-e", env]
+    env: str = str(args.env)
+    base_cmd: list[str] = _find_pio_command()
+    cmd: list[str] = [*base_cmd, "run", "-e", env]
     return _run_subprocess(cmd, cwd=ROOT)
 
 
 def cmd_flash(args: argparse.Namespace) -> int:
     """Flash firmware to ESP32 using PlatformIO."""
-    env = args.env
+    env: str = str(args.env)
     port = args.port
     if not port:
         print("[ui-pipeline] Flashing requires --port (e.g. COM3 or /dev/ttyUSB0).")
         return 1
 
     base_cmd = _find_pio_command()
-    cmd = [*base_cmd, "run", "-e", env, "-t", "upload", "--upload-port", port]
+    cmd: list[str] = [*base_cmd, "run", "-e", env, "-t", "upload", "--upload-port", str(port)]
     return _run_subprocess(cmd, cwd=ROOT)
 
 
@@ -162,7 +247,6 @@ class _DesignChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
     """Watchdog handler that triggers pipeline runs on design changes."""
 
     def __init__(self, design_path: Path, on_change: Callable[[], None], debounce_s: float = 0.5) -> None:
-        super().__init__()
         self.design_path = design_path
         self.on_change = on_change
         self.debounce_s = debounce_s
@@ -183,7 +267,7 @@ class _DesignChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
         finally:
             self._running = False
 
-    def on_modified(self, event):  # type: ignore[override]
+    def on_modified(self, event: FileSystemEvent) -> None:  # type: ignore[override]
         try:
             path = Path(getattr(event, "src_path", ""))
         except Exception:
@@ -192,16 +276,16 @@ class _DesignChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
             print(f"[ui-pipeline] Change detected in {self.design_path.name}")
             self._maybe_trigger()
 
-    def on_created(self, event):  # type: ignore[override]
+    def on_created(self, event: FileSystemEvent) -> None:  # type: ignore[override]
         self.on_modified(event)
 
-    def on_moved(self, event):  # type: ignore[override]
+    def on_moved(self, event: FileSystemEvent) -> None:  # type: ignore[override]
         self.on_modified(event)
 
 
 def cmd_watch(args: argparse.Namespace) -> int:
     """Watch a design file and run export → build → (optional) flash on changes."""
-    if not WATCHDOG_AVAILABLE:
+    if not _watchdog_available:
         print(
             "[ui-pipeline] The 'watch' command requires watchdog. "
             "Install it via 'pip install watchdog' or requirements.txt."
@@ -260,18 +344,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_export.add_argument(
         "--scene",
-        help="Scene name to export (default: current/first scene in design)",
+        help=SCENE_HELP,
     )
     p_export.add_argument(
         "--base-name",
         default="ui_design",
-        help="Base name for generated C files in src/ (default: ui_design)",
+        help=BASE_NAME_HELP,
     )
     p_export.add_argument(
         "--icon-size",
         type=int,
         default=16,
-        help="Icon size in px for C export (default: 16)",
+        help=ICON_SIZE_HELP,
     )
     p_export.set_defaults(func=cmd_export_c)
 
@@ -282,7 +366,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument(
         "--env",
         default="esp32-s3-devkitm-1",
-        help="PlatformIO environment name (default: esp32-s3-devkitm-1)",
+        help=ENV_HELP,
     )
     p_build.set_defaults(func=cmd_build)
 
@@ -293,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_flash.add_argument(
         "--env",
         default="esp32-s3-devkitm-1",
-        help="PlatformIO environment name (default: esp32-s3-devkitm-1)",
+        help=ENV_HELP,
     )
     p_flash.add_argument(
         "--port",
@@ -314,23 +398,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_all.add_argument(
         "--scene",
-        help="Scene name to export (default: current/first scene in design)",
+        help=SCENE_HELP,
     )
     p_all.add_argument(
         "--base-name",
         default="ui_design",
-        help="Base name for generated C files in src/ (default: ui_design)",
+        help=BASE_NAME_HELP,
     )
     p_all.add_argument(
         "--icon-size",
         type=int,
         default=16,
-        help="Icon size in px for C export (default: 16)",
+        help=ICON_SIZE_HELP,
     )
     p_all.add_argument(
         "--env",
         default="esp32-s3-devkitm-1",
-        help="PlatformIO environment name (default: esp32-s3-devkitm-1)",
+        help=ENV_HELP,
     )
     p_all.add_argument(
         "--port",
@@ -350,23 +434,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_watch.add_argument(
         "--scene",
-        help="Scene name to export (default: current/first scene in design)",
+        help=SCENE_HELP,
     )
     p_watch.add_argument(
         "--base-name",
         default="ui_design",
-        help="Base name for generated C files in src/ (default: ui_design)",
+        help=BASE_NAME_HELP,
     )
     p_watch.add_argument(
         "--icon-size",
         type=int,
         default=16,
-        help="Icon size in px for C export (default: 16)",
+        help=ICON_SIZE_HELP,
     )
     p_watch.add_argument(
         "--env",
         default="esp32-s3-devkitm-1",
-        help="PlatformIO environment name (default: esp32-s3-devkitm-1)",
+        help=ENV_HELP,
     )
     p_watch.add_argument(
         "--port",
@@ -387,10 +471,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     func = getattr(args, "func", None)
-    if not func:
+    if not callable(func):
         parser.print_help()
         return 1
-    return int(func(args))
+    return int(cast(CommandFunc, func)(args))
 
 
 if __name__ == "__main__":

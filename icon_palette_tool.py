@@ -81,7 +81,7 @@ class Icon:
         
         for y in range(self.height):
             for x in range(self.width):
-                r, g, b, a = cast(Tuple[int, int, int, int], img.getpixel((x, y)))
+                r, g, b, _ = cast(Tuple[int, int, int, int], img.getpixel((x, y)))
                 # RGB565 conversion
                 r5 = (r >> 3) & 0x1F
                 g6 = (g >> 2) & 0x3F

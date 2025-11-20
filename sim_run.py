@@ -127,9 +127,9 @@ class Color:
 class UIState:
     bg: int = 0x0821  # rgb565(8, 8, 8)
     t: int = 0
-    btnA: bool = False
-    btnB: bool = False
-    btnC: bool = False
+    btn_a: bool = False
+    btn_b: bool = False
+    btn_c: bool = False
     scene: int = 0  # 0=HOME, 1=SETTINGS, 2=CUSTOM
 
 @dataclass
@@ -160,9 +160,9 @@ def _update_state_snapshot(state: UIState, frame: int, fps: float,
         "scene": int(state.scene),
         "bg_color": int(state.bg),
         "buttons": {
-            "A": bool(state.btnA),
-            "B": bool(state.btnB),
-            "C": bool(state.btnC),
+            "A": bool(state.btn_a),
+            "B": bool(state.btn_b),
+            "C": bool(state.btn_c),
         },
         "fps": float(fps),
         "frame_count": int(frame),
@@ -311,9 +311,9 @@ class ButtonsWidget(Widget):
         bold = Color.BOLD if use_color else ''
         dot_full = '●' if use_unicode else '*'
         dot_empty = '○' if use_unicode else '-'
-        btn_a = f"{green}[{dot_full}]{reset}" if state.btnA else f"{dim}[{dot_empty}]{reset}"
-        btn_b = f"{green}[{dot_full}]{reset}" if state.btnB else f"{dim}[{dot_empty}]{reset}"
-        btn_c = f"{green}[{dot_full}]{reset}" if state.btnC else f"{dim}[{dot_empty}]{reset}"
+        btn_a = f"{green}[{dot_full}]{reset}" if state.btn_a else f"{dim}[{dot_empty}]{reset}"
+        btn_b = f"{green}[{dot_full}]{reset}" if state.btn_b else f"{dim}[{dot_empty}]{reset}"
+        btn_c = f"{green}[{dot_full}]{reset}" if state.btn_c else f"{dim}[{dot_empty}]{reset}"
         core = f" Buttons: A:{bold}{btn_a}  B:{bold}{btn_b}  C:{bold}{btn_c}"
         vis_len = _col_of_index(core, len(core))
         padding = max(0, width - vis_len)
@@ -381,7 +381,6 @@ class HelpOverlayWidget(Widget):
         use_unicode = ctx.use_unicode
         width = ctx.width
         cyan = Color.CYAN if use_color else ''
-        yellow = Color.YELLOW if use_color else ''
         reset = Color.RESET if use_color else ''
         bold = Color.BOLD if use_color else ''
         
@@ -518,13 +517,13 @@ def apply_rpc_message(state: UIState, msg: Dict[str, Any]) -> None:
         bid = str(msg.get("id", "")).upper()
         pressed = bool(msg.get("pressed", False))
         if bid == 'A':
-            state.btnA = pressed
+            state.btn_a = pressed
             if pressed:
                 state.scene = (state.scene + 1) % 3
         elif bid == 'B':
-            state.btnB = pressed
+            state.btn_b = pressed
         elif bid == 'C':
-            state.btnC = pressed
+            state.btn_c = pressed
     elif meth == "scene":
         try:
             v = int(msg.get("value", 0))
@@ -1097,9 +1096,9 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     help_overlay_enabled = args.help_overlay
     paused = False
     step_one_frame = False  # single-step trigger
-    prev_btn_a = state.btnA
-    prev_btn_b = state.btnB
-    prev_btn_c = state.btnC
+    prev_btn_a = state.btn_a
+    prev_btn_b = state.btn_b
+    prev_btn_c = state.btn_c
     prev_bg = state.bg
     prev_scene = state.scene
     
@@ -1329,15 +1328,15 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                 if key == 'q':
                     running = False
                 elif key == 'a':
-                    state.btnA = not state.btnA
-                    if state.btnA:
+                    state.btn_a = not state.btn_a
+                    if state.btn_a:
                         state.scene = (state.scene + 1) % 3
                     current_input_src = 'kbd'
                 elif key == 'b':
-                    state.btnB = not state.btnB
+                    state.btn_b = not state.btn_b
                     current_input_src = 'kbd'
                 elif key == 'c' or key == 'C':  # C or Shift+C toggles button C
-                    state.btnC = not state.btnC
+                    state.btn_c = not state.btn_c
                     current_input_src = 'kbd'
                 elif key == ' ':  # Space = pause/unpause
                     paused = not paused
@@ -1430,23 +1429,23 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
             # Apply input state from overlay/gamepad (if enabled)
             if input_th is not None:
                 with input_lock:
-                    state.btnA = bool(input_state['A'])
-                    state.btnB = bool(input_state['B'])
-                    state.btnC = bool(input_state['C'])
+                    state.btn_a = bool(input_state['A'])
+                    state.btn_b = bool(input_state['B'])
+                    state.btn_c = bool(input_state['C'])
                     current_input_src = input_source.get('src', 'kbd')
             # Emit button events to bridge if changed
             if args.bridge_url:
-                if state.btnA != prev_btn_a:
-                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'A', 'pressed': state.btnA}})
-                if state.btnB != prev_btn_b:
-                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'B', 'pressed': state.btnB}})
-                if state.btnC != prev_btn_c:
-                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'C', 'pressed': state.btnC}})
+                if state.btn_a != prev_btn_a:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'A', 'pressed': state.btn_a}})
+                if state.btn_b != prev_btn_b:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'B', 'pressed': state.btn_b}})
+                if state.btn_c != prev_btn_c:
+                    bridge_out_queue.put({'op': 'sim_event', 'event_type': 'button', 'data': {'button': 'C', 'pressed': state.btn_c}})
                 if state.bg != prev_bg:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'bg', 'data': {'bg': state.bg}})
                 if state.scene != prev_scene:
                     bridge_out_queue.put({'op': 'sim_event', 'event_type': 'scene', 'data': {'scene': state.scene}})
-            prev_btn_a, prev_btn_b, prev_btn_c = state.btnA, state.btnB, state.btnC
+            prev_btn_a, prev_btn_b, prev_btn_c = state.btn_a, state.btn_b, state.btn_c
             prev_bg, prev_scene = state.bg, state.scene
 
             # Skip frame updates if paused (unless stepping)
@@ -1458,10 +1457,10 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                 # Auto demo
                 if auto_demo:
                     if frame == 30:
-                        state.btnA = True
+                        state.btn_a = True
                         state.scene = 1
                     if frame == 35:
-                        state.btnA = False
+                        state.btn_a = False
                     if frame == 50:
                         state.bg = rgb565(255, 0, 0)
                     if frame == 80:
@@ -1471,9 +1470,9 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                     if frame == 140:
                         state.bg = rgb565(255, 192, 0)
                     if frame == 170:
-                        state.btnB = True
+                        state.btn_b = True
                     if frame == 175:
-                        state.btnB = False
+                        state.btn_b = False
                     if frame >= 200:
                         frame = 0
                         state.scene = 0
@@ -1550,9 +1549,9 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                     'fps': fps,
                     'scene': state.scene,
                     'bg': state.bg,
-                    'btnA': state.btnA,
-                    'btnB': state.btnB,
-                    'btnC': state.btnC,
+                    'btnA': state.btn_a,
+                    'btnB': state.btn_b,
+                    'btnC': state.btn_c,
                     'tick': state.t,
                     'compute_ms': compute_ms_prev,
                     'sleep_ms': sleep_ms_prev,
