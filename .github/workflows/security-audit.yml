@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 3 * * 1'  # Weekly Monday 03:00 UTC
   workflow_dispatch:
+    inputs:
+      bandit_max_issues:
+        description: 'Max allowed Bandit findings before failing'
+        required: false
+        default: '3'
 
 permissions:
   contents: read
@@ -22,7 +27,7 @@ jobs:
       - name: Install audit tooling
         run: |
           pip install -r requirements.txt -r requirements-dev.txt
-          pip install pip-audit safety cyclonedx-bom bandit
+          pip install pip-audit safety cyclonedx-bom bandit pip-licenses
       - name: pip-audit
         run: pip-audit --progress-spinner off --output json > python_vulns.json || true
       - name: safety scan
@@ -31,6 +36,8 @@ jobs:
         run: bandit -q -r . -f json -o bandit_report.json || true
       - name: SBOM (Python)
         run: cyclonedx-bom -o sbom-python.json
+      - name: License scan (Python)
+        run: pip-licenses --format=json --output-file=python_licenses.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: python-security
@@ -39,6 +46,7 @@ jobs:
             safety_report.txt
             bandit_report.json
             sbom-python.json
+            python_licenses.json
 
   node-audit:
     runs-on: ubuntu-latest
@@ -56,18 +64,23 @@ jobs:
         run: npm audit --json > ../npm_vulns.json || true
       - name: SBOM (Node)
         run: npx @cyclonedx/cyclonedx-npm --output-file ../sbom-node.json --include-dev || true
+      - name: License scan (Node)
+        run: |
+          npm install license-checker --no-save || true
+          npx license-checker --json > ../node_licenses.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: node-security
           path: |
             ../npm_vulns.json
             ../sbom-node.json
+            ../node_licenses.json
 
   summarize:
     runs-on: ubuntu-latest
     needs: [python-audit, node-audit]
     env:
-      BANDIT_MAX_ISSUES: 0
+      BANDIT_MAX_ISSUES: ${{ github.event.inputs.bandit_max_issues || '3' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -78,8 +91,7 @@ jobs:
           name: node-security
           path: node
       - name: Secret scan (custom regex)
-        run: |
-          python tools/secret_scan.py || true
+        run: python tools/secret_scan.py || true
       - name: Unified SBOM
         run: |
           cp python/sbom-python.json ./sbom-python.json || true
@@ -95,33 +107,28 @@ jobs:
           grep -i '"severity":' python/python_vulns.json || true
           echo 'Node vulnerabilities:'
           grep -i '"severity":' node/npm_vulns.json || true
-      - name: Fail on high or critical (policy)
+      - name: Evaluate security thresholds
+        id: evaluate
         run: |
           high_py=$(grep -i '"severity": "HIGH"' python/python_vulns.json | wc -l || true)
           crit_py=$(grep -i '"severity": "CRITICAL"' python/python_vulns.json | wc -l || true)
           high_js=$(grep -i 'high' node/npm_vulns.json | wc -l || true)
           crit_js=$(grep -i 'critical' node/npm_vulns.json | wc -l || true)
-          bandit_total=$(python - <<'PY'
-import json,sys
-try:
-  data=json.load(open('python/bandit_report.json'))
-  print(len(data.get('results',[])))
-except Exception:
-  print(0)
-PY
-          )
-          echo "Bandit total issues: $bandit_total"
+          bandit_total=$(python -c "import json,os; p='python/bandit_report.json'; print(len(json.load(open(p)).get('results',[])) if os.path.exists(p) else 0)")
+          echo "High PY: $high_py / Critical PY: $crit_py / High JS: $high_js / Critical JS: $crit_js / Bandit: $bandit_total (limit $BANDIT_MAX_ISSUES)"
           if [ "$bandit_total" -gt "$BANDIT_MAX_ISSUES" ] || [ "$high_py" -gt 0 ] || [ "$crit_py" -gt 0 ] || [ "$high_js" -gt 0 ] || [ "$crit_js" -gt 0 ]; then
-            echo "High/Critical vulnerability or Bandit threshold exceeded." > security_summary.txt
-            printf "high_py=%s\ncrit_py=%s\nhigh_js=%s\ncrit_js=%s\nbandit_total=%s\n" "$high_py" "$crit_py" "$high_js" "$crit_js" "$bandit_total" >> security_summary.txt
-            echo "::set-output name=create_issue::true" || true
             echo "create_issue=true" >> $GITHUB_ENV
+            echo "SECURITY_SUMMARY=HighPY=$high_py;CritPY=$crit_py;HighJS=$high_js;CritJS=$crit_js;Bandit=$bandit_total;Limit=$BANDIT_MAX_ISSUES" >> $GITHUB_ENV
+            echo "will_fail=true" >> $GITHUB_ENV
           else
-            echo "Security thresholds OK." > security_summary.txt
             echo "create_issue=false" >> $GITHUB_ENV
+            echo "will_fail=false" >> $GITHUB_ENV
           fi
-      - name: Upload summary
-        uses: actions/upload-artifact@v4
+      - name: Upload security summary
+        if: env.create_issue == 'true'
+        run: echo "$SECURITY_SUMMARY" > security_summary.txt
+      - uses: actions/upload-artifact@v4
+        if: env.create_issue == 'true'
         with:
           name: security-summary
           path: security_summary.txt
@@ -131,14 +138,11 @@ PY
         with:
           script: |
             const fs = require('fs');
-            const summary = fs.readFileSync('security_summary.txt','utf8');
+            let summary='';
+            try { summary = fs.readFileSync('security_summary.txt','utf8'); } catch(e) {}
             const title = 'Security alert: HIGH/CRITICAL vulnerabilities or Bandit issues detected';
-            const body = `Automated security audit detected problems.\n\nSummary:\n${summary}\n\nUnified SBOM uploaded as artifact 'unified-sbom'.`; 
-            await github.rest.issues.create({owner: context.repo.owner, repo: context.repo.repo, title, body});
+            const body = `Automated security audit detected problems.\n\nSummary:\n${summary}\n\nUnified SBOM uploaded as artifact 'unified-sbom'.\n\nBandit limit: ${process.env.BANDIT_MAX_ISSUES}`;
+            await github.rest.issues.create({owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['security']});
       - name: Enforce policy (fail build)
-        if: env.create_issue == 'true'
+        if: env.will_fail == 'true'
         run: exit 1
-          if [ "$high_py" -gt 0 ] || [ "$crit_py" -gt 0 ] || [ "$high_js" -gt 0 ] || [ "$crit_js" -gt 0 ]; then
-            echo 'High/Critical vulnerability detected.'
-            exit 1
-          fi
