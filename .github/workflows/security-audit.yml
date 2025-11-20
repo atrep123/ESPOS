@@ -74,17 +74,22 @@ jobs:
         with:
           name: node-security
           path: node
+      - name: Secret scan (custom regex)
+        run: |
+          python tools/secret_scan.py || true
       - name: Quick summary
         run: |
           echo 'Python vulnerabilities:'
           grep -i '"severity":' python/python_vulns.json || true
           echo 'Node vulnerabilities:'
           grep -i '"severity":' node/npm_vulns.json || true
-      - name: Fail on critical (simple policy)
+      - name: Fail on high or critical (policy)
         run: |
+          high_py=$(grep -i '"severity": "HIGH"' python/python_vulns.json | wc -l || true)
           crit_py=$(grep -i '"severity": "CRITICAL"' python/python_vulns.json | wc -l || true)
+          high_js=$(grep -i 'high' node/npm_vulns.json | wc -l || true)
           crit_js=$(grep -i 'critical' node/npm_vulns.json | wc -l || true)
-          if [ "$crit_py" -gt 0 ] || [ "$crit_js" -gt 0 ]; then
-            echo 'Critical vulnerability detected.'
+          if [ "$high_py" -gt 0 ] || [ "$crit_py" -gt 0 ] || [ "$high_js" -gt 0 ] || [ "$crit_js" -gt 0 ]; then
+            echo 'High/Critical vulnerability detected.'
             exit 1
           fi
