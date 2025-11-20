@@ -6,6 +6,7 @@
 
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "icons.h"
 
 static const char *TAG = "ui_icon_demo";
 
@@ -39,8 +40,8 @@ typedef struct {
     const icon_t *icon_24;
 } icon_pair_t;
 
-static const icon_pair_t k_demo_icons[] = {
 #if HAVE_ICONS
+static const icon_pair_t k_demo_icons[] = {
     { &mi_network_wifi_16px,        &mi_network_wifi_24px },
     { &mi_bluetooth_16px,           &mi_bluetooth_24px },
     { &mi_battery_full_16px,        &mi_battery_full_24px },
@@ -49,14 +50,12 @@ static const icon_pair_t k_demo_icons[] = {
     { &mi_search_16px,              &mi_search_24px },
     { &mi_settings_16px,            &mi_settings_24px },
     { &mi_power_settings_new_16px,  &mi_power_settings_new_24px },
-#else
-    { NULL, NULL }
-#endif
 };
+#endif
 
+#if HAVE_ICONS
 static const icon_t *pick_icon(const icon_pair_t *p, uint8_t size_px)
 {
-#if HAVE_ICONS
     if (size_px >= 24 && p->icon_24) {
         return p->icon_24;
     }
@@ -64,12 +63,8 @@ static const icon_t *pick_icon(const icon_pair_t *p, uint8_t size_px)
         return p->icon_16;
     }
     return p->icon_24;
-#else
-    (void)p;
-    (void)size_px;
-    return NULL;
-#endif
 }
+#endif
 
 void ui_icon_set_size(uint8_t px)
 {
@@ -93,6 +88,9 @@ void ui_icon_set_mode(enum display_blit_mode mode)
 static void render_icon_grid(display_t *d, uint8_t size_px, enum display_blit_mode mode)
 {
 #if HAVE_ICONS
+    if (!d || !d->buf) {
+        return;
+    }
     const int spacing = (int)size_px + 4;
     const int start_x = 4;
     const int start_y = 4;
@@ -120,7 +118,7 @@ void ui_icon_bench(display_t *d, uint32_t count, uint8_t size_px, enum display_b
         return;
     }
 
-    ui_swbuf_clear(d, 0);
+    ui_swbuf_clear(d->buf, 0);
 
     const uint64_t t0 = (uint64_t)esp_timer_get_time();
     for (uint32_t i = 0; i < count; ++i) {
@@ -150,7 +148,7 @@ void ui_icon_bench(display_t *d, uint32_t count, uint8_t size_px, enum display_b
 
 void ui_scene_icon_demo(display_t *d)
 {
-    if (!d) {
+    if (!d || !d->buf) {
         ESP_LOGW(TAG, "display buffer not provided; icon demo skipped");
         return;
     }

@@ -7,7 +7,15 @@ import sys
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-md_files = [p for p in ROOT.rglob("*.md") if ".git" not in p.parts]
+
+# Ignore patterns for external dependencies
+IGNORE_DIRS = {".git", "node_modules", "target", ".pio", ".venv", "build"}
+
+def should_ignore(path: Path) -> bool:
+    """Check if path should be ignored based on IGNORE_DIRS."""
+    return any(ignored in path.parts for ignored in IGNORE_DIRS)
+
+md_files = [p for p in ROOT.rglob("*.md") if not should_ignore(p)]
 missing = []
 invalid_heading = []
 code_fence_re = re.compile(r"^```(.*)$")

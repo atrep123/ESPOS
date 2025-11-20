@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-ESP32 Hardware Bridge
-Bidirectional sync between simulator and real ESP32 hardware
+"""ESP32 Hardware Bridge
+Bidirectional sync between simulator and real ESP32 hardware.
 """
 
-import serial  # type: ignore
+from __future__ import annotations
+
 import socket
 import json
 import time
@@ -12,6 +12,11 @@ import threading
 import queue
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
+
+try:  # Optional dependency: only needed when talking to real hardware
+    import serial  # type: ignore
+except ImportError:  # pragma: no cover - handled in connect_serial
+    serial = None  # type: ignore
 
 
 @dataclass
@@ -39,7 +44,7 @@ class ESP32HardwareBridge:
     
     def __init__(self, config: BridgeConfig):
         self.config = config
-        self.serial_conn: Optional[serial.Serial] = None
+        self.serial_conn: Optional[Any] = None
         self.sim_socket: Optional[socket.socket] = None
         self.running = False
         self._worker_thread: Optional[threading.Thread] = None
@@ -55,6 +60,9 @@ class ESP32HardwareBridge:
     
     def connect_serial(self) -> bool:
         """Connect to ESP32 via serial"""
+        if serial is None:
+            print("❌ PySerial not installed; cannot open serial port")
+            return False
         try:
             self.serial_conn = serial.Serial(
                 port=self.config.serial_port,
