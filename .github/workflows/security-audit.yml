@@ -9,6 +9,10 @@ on:
         description: 'Max allowed Bandit findings before failing'
         required: false
         default: '3'
+      disallowed_licenses:
+        description: 'Comma-separated list of disallowed licenses (fail if detected)'
+        required: false
+        default: 'GPL-3.0,AGPL-3.0,LGPL-3.0,SSPL,BUSL-1.1'
 
 permissions:
   contents: read
@@ -29,11 +33,15 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
           pip install pip-audit safety cyclonedx-bom bandit pip-licenses
       - name: pip-audit
-        run: pip-audit --progress-spinner off --output json > python_vulns.json || true
+        run: |
+          pip-audit --progress-spinner off --output json > python_vulns.json || true
+          pip-audit --progress-spinner off --format sarif --output pip_audit.sarif || true
       - name: safety scan
         run: safety check --full-report > safety_report.txt || true
       - name: Bandit (security static analysis)
-        run: bandit -q -r . -f json -o bandit_report.json || true
+        run: |
+          bandit -q -r . -f json -o bandit_report.json || true
+          bandit -q -r . -f sarif -o bandit_report.sarif || true
       - name: SBOM (Python)
         run: cyclonedx-bom -o sbom-python.json
       - name: License scan (Python)
@@ -47,6 +55,8 @@ jobs:
             bandit_report.json
             sbom-python.json
             python_licenses.json
+            pip_audit.sarif
+            bandit_report.sarif
 
   node-audit:
     runs-on: ubuntu-latest
@@ -81,6 +91,7 @@ jobs:
     needs: [python-audit, node-audit]
     env:
       BANDIT_MAX_ISSUES: ${{ github.event.inputs.bandit_max_issues || '3' }}
+      DISALLOWED_LICENSES: ${{ github.event.inputs.disallowed_licenses || 'GPL-3.0,AGPL-3.0,LGPL-3.0,SSPL,BUSL-1.1' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -92,6 +103,8 @@ jobs:
           path: node
       - name: Secret scan (custom regex)
         run: python tools/secret_scan.py || true
+      - name: License policy evaluation
+        run: python tools/license_policy_eval.py "$DISALLOWED_LICENSES" || true
       - name: Unified SBOM
         run: |
           cp python/sbom-python.json ./sbom-python.json || true
@@ -115,8 +128,12 @@ jobs:
           high_js=$(grep -i 'high' node/npm_vulns.json | wc -l || true)
           crit_js=$(grep -i 'critical' node/npm_vulns.json | wc -l || true)
           bandit_total=$(python -c "import json,os; p='python/bandit_report.json'; print(len(json.load(open(p)).get('results',[])) if os.path.exists(p) else 0)")
+          python_bad=$(cat license_bad_python.txt 2>/dev/null)
+          node_bad=$(cat license_bad_node.txt 2>/dev/null)
+          echo "Disallowed licenses (Python): ${python_bad:-NONE}"
+          echo "Disallowed licenses (Node): ${node_bad:-NONE}"
           echo "High PY: $high_py / Critical PY: $crit_py / High JS: $high_js / Critical JS: $crit_js / Bandit: $bandit_total (limit $BANDIT_MAX_ISSUES)"
-          if [ "$bandit_total" -gt "$BANDIT_MAX_ISSUES" ] || [ "$high_py" -gt 0 ] || [ "$crit_py" -gt 0 ] || [ "$high_js" -gt 0 ] || [ "$crit_js" -gt 0 ]; then
+          if [ "$bandit_total" -gt "$BANDIT_MAX_ISSUES" ] || [ "$high_py" -gt 0 ] || [ "$crit_py" -gt 0 ] || [ "$high_js" -gt 0 ] || [ "$crit_js" -gt 0 ] || [ -n "$python_bad" ] || [ -n "$node_bad" ]; then
             echo "create_issue=true" >> $GITHUB_ENV
             echo "SECURITY_SUMMARY=HighPY=$high_py;CritPY=$crit_py;HighJS=$high_js;CritJS=$crit_js;Bandit=$bandit_total;Limit=$BANDIT_MAX_ISSUES" >> $GITHUB_ENV
             echo "will_fail=true" >> $GITHUB_ENV
