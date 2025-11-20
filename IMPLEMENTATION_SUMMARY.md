@@ -11,19 +11,22 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ### 🔧 Základní vylepšení
 
 #### 1. Stabilizace a optimalizace
+
 - ✅ **Footer stabilizace** - odstranění duplikovaných "Status:" řádků
-- ✅ **Substring diff rendering** - efektivní překreslování pouze změněných částí
+- ✅ **Substring diff rendering** - efektivní překreslovaní pouze změněných částí
 - ✅ **ANSI optimalizace** - automatické odstraňování redundantních escape sekvencí
 - ✅ **Periodic full redraw** - konfigurovatelný interval pro prevenci terminálového driftu
 - ✅ **TypedDict events** - type-safe event handling s lepší diagnostikou
 
 #### 2. Widget architektura
+
 - ✅ Modulární rendering pipeline
 - ✅ Snadné přidávání/odebírání UI komponent
 - ✅ Jednotný RenderContext pro všechny widgety
-- ✅ Větší UI (100×24 znaků, konfigurovatelné)
+- ✅ Větší UI (100×24 znaků, konfiguratelné)
 
 #### 3. Sjednocení scén
+
 - ✅ Konzistentní názvy: HOME, SETTINGS, CUSTOM
 - ✅ Odstranění legacy názvů (METRICS)
 
@@ -32,24 +35,28 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ### 🚀 Nové funkce
 
 #### 1. Adaptivní layout
+
 - ✅ **Auto-detekce velikosti terminálu** (`--auto-size`)
 - ✅ Windows: GetConsoleScreenBufferInfo API
 - ✅ Linux/Mac: shutil.get_terminal_size
 - ✅ Automatické škálování s ohledem na bordery
 
 #### 2. Config file podpora
+
 - ✅ **JSON konfigurace** (`--config`)
 - ✅ Načítání všech parametrů ze souboru
 - ✅ CLI argumenty mají přednost před config file
 - ✅ Template: `.sim_config.json`
 
 #### 3. Performance metrics export
+
 - ✅ **CSV export** (`--export-metrics`)
 - ✅ Zaznamenaná data: frame, fps, compute_ms, sleep_ms, util, timestamp
 - ✅ Kompatibilní s pandas/Excel pro analýzu
 - ✅ Třída MetricsRecorder s automatickým exportem
 
 #### 4. WebSocket remote UI
+
 - ✅ **WebSocket server** (`--websocket-port`)
 - ✅ Real-time streaming stavu simulátoru
 - ✅ Web viewer: `ui_sim/remote_viewer.html`
@@ -61,6 +68,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
   - Auto-reconnect při výpadku
 
 #### 5. Recording & Playback
+
 - ✅ **Session recording** (`--record`)
 - ✅ **Session playback** (`--playback`)
 - ✅ Záznam všech událostí (keyboard, network)
@@ -69,6 +77,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 - ✅ Třída SessionRecorder s auto-save
 
 #### 6. CLI rozšíření
+
 - ✅ `--full-redraw-interval` - perioda full redraw (default 300, 0=disable)
 - ✅ `--no-diff` - force full redraw mode (debug)
 - ✅ `--config <path>` - načíst konfiguraci
@@ -83,6 +92,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ### 📚 Client Libraries
 
 #### 1. Python Client Library (`esp32_sim_client.py`)
+
 - ✅ Kompletní třída `ESP32SimulatorClient`
 - ✅ Context manager podpora
 - ✅ Metody:
@@ -99,6 +109,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 - ✅ CLI interface pro quick testing
 
 #### 2. C/C++ Client Library (`include/esp32_sim_client.h`)
+
 - ✅ Header-only library
 - ✅ Cross-platform (Windows + Linux/Mac)
 - ✅ Funkce:
@@ -116,6 +127,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ### 📖 Dokumentace
 
 #### 1. Aktualizace SIMULATOR_README.md
+
 - ✅ Nové CLI parametry
 - ✅ Optimalizace a performance sekce
 - ✅ Widget layout dokumentace
@@ -123,6 +135,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 - ✅ Exportované soubory sekce
 
 #### 2. Nový SIMULATOR_EXAMPLES.md
+
 - ✅ 12+ praktických příkladů
 - ✅ Config file usage
 - ✅ Auto-size s metrics
@@ -139,6 +152,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 - ✅ Performance tips
 
 #### 3. QUICKSTART.md
+
 - ✅ 30-second quick start
 - ✅ Co bylo implementováno
 - ✅ Příklady použití
@@ -154,6 +168,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ### 🧪 Testing
 
 #### 1. Integration test (`test_simulator.py`)
+
 - ✅ Kompletní test všech funkcí
 - ✅ Test sekvence:
   1. Background colors (6 barev)
@@ -164,6 +179,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 - ✅ Reporting s emojis
 
 #### 2. Launcher updates (`run_sim.ps1`)
+
 - ✅ Nové parametry:
   - `-FullRedrawInterval`
   - `-NoDiff`
@@ -180,6 +196,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ### 📊 Soubory vytvořené/upravené
 
 #### Nové soubory
+
 1. `esp32_sim_client.py` - Python client library
 2. `include/esp32_sim_client.h` - C/C++ client library
 3. `ui_sim/remote_viewer.html` - Web remote viewer
@@ -189,6 +206,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 7. `QUICKSTART.md` - Quick start guide
 
 #### Upravené soubory
+
 1. `sim_run.py` - Všechny nové funkce implementovány
 2. `run_sim.ps1` - Nové CLI parametry
 3. `SIMULATOR_README.md` - Aktualizovaná dokumentace
@@ -198,7 +216,8 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 ## 🎯 Výsledky
 
 ### Performance metriky
-- **FPS**: Stabilní 60-240 FPS (konfigurovatelné)
+
+- **FPS**: Stabilní 60-240 FPS (konfiguratelné)
 - **CPU usage**: 15-40% @ 120 FPS
 - **Memory**: ~20MB
 - **Latence**: <5ms (substring diff)
@@ -206,6 +225,7 @@ Simulátor byl kompletně přepracován a rozšířen o všechny požadované fu
 - **ANSI reduction**: ~30% díky optimalizaci
 
 ### Code quality
+
 - ✅ Type hints přidány pro všechny klíčové funkce
 - ✅ TypedDict pro type-safe events
 - ✅ Lint warnings minimalizovány

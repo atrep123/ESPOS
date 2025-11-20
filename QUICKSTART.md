@@ -29,11 +29,13 @@ Rychlé VS Code Tasks (Ctrl+Shift+P → Run Task):
 
 
 Manuální spuštění smoke:
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ci_smoke.ps1
 ```
 
 Jednotlivé testy:
+
 ```powershell
 python test_ui_designer.py
 python test_preview_small.py
@@ -130,6 +132,7 @@ python sim_run.py --playback my_session.json
 ## 🧪 Testování
 
 ### Rychlý test
+
 ```powershell
 # 1. Spusť simulátor
 python sim_run.py --rpc-port 8765
@@ -139,6 +142,7 @@ python test_simulator.py 8765
 ```
 
 ### Použití Python client library
+
 ```python
 from esp32_sim_client import ESP32SimulatorClient
 
@@ -149,6 +153,7 @@ with ESP32SimulatorClient(port=8765) as client:
 ```
 
 ### Použití C client library
+
 ```c
 #include "esp32_sim_client.h"
 
@@ -162,12 +167,14 @@ esp32_sim_disconnect(&client);
 ## 📊 Výkon
 
 ### Metriky
-- **FPS**: 60-240 (konfigurovatelné)
+
+- **FPS**: 60-240 (konfiguratelné)
 - **Latence**: <5ms (substring diff)
 - **CPU**: 15-40% @ 120 FPS
 - **Paměť**: ~20MB
 
 ### Optimalizace
+
 - Substring diff: ✅ 70% méně I/O
 - ANSI optimalizace: ✅ 30% kratší sekvence
 - Periodic redraw: ✅ prevence driftu
