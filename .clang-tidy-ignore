@@ -1,0 +1,25 @@
+# ESP32OS clang-tidy ignore patterns
+# Files and directories to exclude from linting
+
+# External dependencies
+.pio/**
+.platformio/**
+build/**
+
+# ESP-IDF SDK components
+components/esp_rom/**
+components/freertos/**
+
+# Third-party libraries
+Unity/**
+
+# Generated files
+**/*.pb.c
+**/*.pb.h
+**/compile_commands.json
+
+# Build artifacts
+*.o
+*.a
+*.bin
+*.elf

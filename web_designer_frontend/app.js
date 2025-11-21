@@ -20,14 +20,12 @@ class App {
     draggedWidget = null;
     dragOffsetX = 0;
     dragOffsetY = 0;
-    dragState = null; // { mode: 'move'|'resize', handle?, widgetId, startCanvas:{x,y}, startRect:{x,y,w,h} }
+    dragState = null; // Tracks current drag operation state (move/resize metadata)
     wsMoveThrottle = null;
     panState = null; // { startX, startY, startPanX, startPanY }
     spacePressed = false;
     clipboard = null; // Copied widget data
     autoSaveInterval = null;
-
-    constructor() {}
 
     /**
      * Toggle simulator preview connection
@@ -458,7 +456,8 @@ class App {
                 // Determine if resizing via handle or moving
                 const handle = this.getHandleAtScreen(widget, sx, sy);
                 const startCanvas = this.renderer.screenToCanvas(e.clientX, e.clientY);
-                const isGroupMove = !handle && this.renderer.selectedWidgets && this.renderer.selectedWidgets.has(widgetId) && this.renderer.selectedWidgets.size > 1;
+                const selectedWidgets = this.renderer.selectedWidgets;
+                const isGroupMove = !handle && selectedWidgets?.has(widgetId) && selectedWidgets.size > 1;
                 
                 // Set cursor style
                 if (handle) {
@@ -479,8 +478,15 @@ class App {
                         if (w0) startRects[id] = { x: w0.x, y: w0.y, w: w0.width, h: w0.height };
                     }
                 }
+                let mode = 'move';
+                if (handle) {
+                    mode = 'resize';
+                } else if (isGroupMove) {
+                    mode = 'group-move';
+                }
+
                 this.dragState = {
-                    mode: handle ? 'resize' : (isGroupMove ? 'group-move' : 'move'),
+                    mode,
                     handle,
                     widgetId,
                     groupIds,
@@ -1222,7 +1228,7 @@ class App {
             '#f48771', '#4ec9b0', '#ce9178', '#dcdcaa', '#c586c0',
             '#9cdcfe', '#4fc1ff', '#b5cea8', '#d16969'
         ];
-        const hash = userId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const hash = userId.split('').reduce((acc, c) => acc + (c.codePointAt(0) || 0), 0);
         return colors[hash % colors.length];
     }
 
@@ -1310,7 +1316,7 @@ class App {
      * Auto-save to localStorage
      */
     autoSave() {
-        if (!this.ws || !this.ws.userId) return;
+        if (!this.ws?.userId) return;
         const key = `esp32os-design-autosave-${this.ws.userId}`;
         const design = {
             widgets: Array.from(this.renderer.widgets.values()),
@@ -1346,5 +1352,5 @@ class App {
 // Start application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     globalThis.app = new App();
-    void globalThis.app.init();
+    globalThis.app.init();
 });

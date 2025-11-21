@@ -10,6 +10,7 @@ Simple unified launcher for ESP32OS tools.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import webbrowser

@@ -2202,7 +2202,7 @@ class VisualPreviewWindow:
             selection = results_list.curselection()
             if not selection:
                 return
-++            idx = selection[0]
+            idx = selection[0]
             if idx >= len(filtered_components):
                 return
             self._add_component_to_scene(filtered_components[idx], dialog)
@@ -2223,12 +2223,6 @@ class VisualPreviewWindow:
         search_entry.bind("<Down>", on_arrow)
         search_entry.bind("<Up>", on_arrow)
         search_entry.bind(RETURN_KEY, lambda e: add_selected_component())
-            
-            idx = selection[0]
-            if idx >= len(filtered_components):
-                return
-            self._add_component_to_scene(filtered_components[idx], dialog)
-        
         # Bind events
         search_var.trace("w", update_results)
         results_list.bind("<Double-Button-1>", lambda e: add_selected_component())

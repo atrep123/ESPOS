@@ -57,20 +57,7 @@
         "focus": true
       },
       "problemMatcher": []
-    }
-  ],
-  "inputs": [
-    {
-      "id": "jsonPath",
-      "type": "promptString",
-      "description": "Path to a design JSON (relative to workspace)",
-      "default": "test_scene.json"
-    }
-  ]
-}
-{
-  "version": "2.0.0",
-  "tasks": [
+    },
     {
       "label": "Simulator: simctl icon_demo (auto)",
       "type": "shell",
@@ -79,6 +66,74 @@
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "C/C++: Lint Current File",
+      "type": "shell",
+      "command": "clang-tidy",
+      "args": [
+        "-p",
+        "${workspaceFolder}/.pio/build/esp32-s3-devkitm-1",
+        "${file}"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "C/C++: Format Current File",
+      "type": "shell",
+      "command": "clang-format",
+      "args": [
+        "-i",
+        "-style=file",
+        "${file}"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "C/C++: Lint All Sources",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Get-ChildItem -Path src,components -Include *.c,*.cpp,*.h,*.hpp -Recurse | ForEach-Object { clang-tidy -p .pio/build/esp32-s3-devkitm-1 $_.FullName }"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "jsonPath",
+      "type": "promptString",
+      "description": "Path to a design JSON (relative to workspace)",
+      "default": "test_scene.json"
     }
   ]
 }
