@@ -173,6 +173,49 @@ class DesignTokens:
 tokens = DesignTokens()
 
 
+# Helper functions for compatibility with existing codebase
+def rgb_to_terminal_color_name(rgb: Tuple[int, int, int]) -> str:
+    """Convert RGB tuple to terminal color name (approximation).
+    
+    Used for compatibility with existing string-based color system.
+    Maps design token RGB values to nearest ANSI color name.
+    """
+    r, g, b = rgb
+    
+    # Grayscale detection
+    if abs(r - g) < 20 and abs(g - b) < 20 and abs(r - b) < 20:
+        if r < 50:
+            return "black"
+        elif r > 200:
+            return "white"
+        else:
+            return "gray"
+    
+    # Color channel dominance
+    max_channel = max(r, g, b)
+    
+    if max_channel == b and b > 150:
+        return "blue" if r < 100 and g < 100 else "cyan"
+    elif max_channel == g and g > 150:
+        return "green" if r < 100 and b < 100 else "cyan"
+    elif max_channel == r and r > 150:
+        return "red" if g < 100 and b < 100 else "yellow"
+    
+    return "white"
+
+
+def get_semantic_color(semantic_name: str) -> Tuple[int, int, int]:
+    """Get RGB color for semantic token name.
+    
+    Args:
+        semantic_name: Token name like 'primary', 'surface', 'success', etc.
+        
+    Returns:
+        RGB tuple (r, g, b)
+    """
+    return getattr(tokens.colors, semantic_name)
+
+
 if __name__ == "__main__":
     # Demo usage
     print("=== ESP32OS Design Tokens ===\n")
@@ -200,3 +243,9 @@ if __name__ == "__main__":
     print(f"  Base duration: {tokens.animation.base}ms")
     print(f"  Ease out: {tokens.animation.ease_out}")
     print(f"  60fps frame budget: {tokens.animation.frame_budget_60fps}ms")
+    
+    # Demo helper functions
+    print("\n=== Helper Functions ===")
+    print(f"Primary → terminal color: '{rgb_to_terminal_color_name(tokens.colors.primary)}'")
+    print(f"Error → terminal color: '{rgb_to_terminal_color_name(tokens.colors.error)}'")
+    print(f"Get semantic 'success': {get_semantic_color('success')}")
