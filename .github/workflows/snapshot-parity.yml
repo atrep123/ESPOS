@@ -23,6 +23,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip install pillow
 
       - name: Generate snapshots
         env:
@@ -34,6 +35,10 @@ jobs:
             --baseline reports/baseline \
             --out-dir reports/snapshots \
             --threshold 0
+
+      - name: Token lint (report-only)
+        run: |
+          python tools/token_lint.py --paths ui_designer_preview.py ui_components.py ui_themes.py || true
 
       - name: Upload snapshots
         if: always()
