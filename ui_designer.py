@@ -1157,6 +1157,13 @@ class UIDesigner:
             diff['widgets']['removed'] = list(range(n, len(wa)))
         if len(wb) > n:
             diff['widgets']['added'] = list(range(n, len(wb)))
+
+    def _get_scene(self, scene_name: Optional[str]) -> Optional[SceneConfig]:
+        """Return SceneConfig by name (or current scene if None)."""
+        key = scene_name or self.current_scene
+        if key and key in self.scenes:
+            return self.scenes[key]
+        return None
     
     def save_to_json(self, filename: str):
         """Save design to JSON file"""
@@ -3253,8 +3260,3 @@ if __name__ == '__main__':
             sys.exit(1)
 
     create_cli_interface()
-    def _get_scene(self, scene_name: Optional[str]) -> Optional[SceneConfig]:
-        key = scene_name or self.current_scene
-        if key and key in self.scenes:
-            return self.scenes[key]
-        return None

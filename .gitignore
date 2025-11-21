@@ -37,6 +37,7 @@ src-tauri/target/
 
 # Logs
 simulator.log
+reports/ci_smoke_*.log
 
 # Generated test outputs
 test_export.html
@@ -46,3 +47,6 @@ test_integration.png
 test_scene.html
 test_scene.png
 *.live.html
+
+# Snapshot outputs
+reports/snapshots/
