@@ -43,6 +43,7 @@
 - **SVG Export** - Vector graphics with gradients/shadows
 - **JSON/HTML** - Web preview and data exchange
 - **PNG Rendering** - High-quality screenshots
+- **Snapshot Parity** - CI job to compare PNG/TXT snapshots against baseline scenes
 
 ### 🚀 Performance
 
