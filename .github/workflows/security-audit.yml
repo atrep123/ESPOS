@@ -128,6 +128,10 @@ jobs:
           if [ -f security_summary.txt ]; then
             summary=$(cat security_summary.txt)
           fi
+          
+          # Also generate compact SARIF summary for PR
+          python tools/aggregate_sarif_summary.py > sarif_compact_summary.md || true
+          
           echo "summary<<'EOF'" >> $GITHUB_OUTPUT
           echo "$summary" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -225,25 +229,27 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            let summary = process.env.SARIF_SUMMARY || '';
+            let compactSummary = '';
             let dashboardContent = '';
             
-            // Try to read summary
-            if (!summary) {
-              try { summary = fs.readFileSync('security_summary.txt','utf8'); } catch(e) { summary = ''; }
+            // Try to read compact SARIF summary (preferred for PRs)
+            try {
+              compactSummary = fs.readFileSync('sarif_compact_summary.md','utf8');
+            } catch(e) {
+              console.log('Compact summary not found, using fallback');
             }
             
-            // Try to read dashboard for rich PR comment
+            // Try to read full dashboard as fallback
             try {
               dashboardContent = fs.readFileSync('reports/security_dashboard.md','utf8');
             } catch(e) {
-              console.log('Dashboard file not found, using summary only');
+              console.log('Dashboard file not found');
             }
             
-            const artifactsHint = "\n\n**Artifacts**: security-dashboard, sarif-bundle, unified-sbom";
-            const body = dashboardContent 
-              ? `## 🔒 Security Audit Results\n\n${dashboardContent}\n${artifactsHint}`
-              : (summary || 'Security audit completed (no summary available).') + artifactsHint;
+            const artifactsHint = "\n\n**Artifacts**: `security-dashboard`, `sarif-bundle`, `unified-sbom`";
+            
+            let body = compactSummary || dashboardContent || process.env.SARIF_SUMMARY || 'Security audit completed (no summary available).';
+            body += artifactsHint;
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
