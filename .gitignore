@@ -50,3 +50,5 @@ test_scene.png
 
 # Snapshot outputs
 reports/snapshots/
+reports/baseline/*.png
+reports/baseline/*.txt
