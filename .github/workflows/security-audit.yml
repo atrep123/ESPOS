@@ -118,6 +118,7 @@ jobs:
           cp python/sbom-python.json ./sbom-python.json || true
           cp node/sbom-node.json ./sbom-node.json || true
           cp sbom-unified.json ./sbom-unified.json || true
+          mkdir -p reports
           python tools/security_dashboard.py --dashboard reports/security_dashboard.md --summary-file security_summary.txt || true
           ls -la reports || true
       - name: Aggregate summary for PR/UI
@@ -134,6 +135,14 @@ jobs:
         with:
           name: security-dashboard
           path: reports/security_dashboard.md
+      - name: Upload dashboard to repo
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/security_dashboard.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update security dashboard [skip ci]"
+          git push || true
       - name: Upload SARIF bundle
         uses: actions/upload-artifact@v4
         with:
@@ -217,11 +226,25 @@ jobs:
           script: |
             const fs = require('fs');
             let summary = process.env.SARIF_SUMMARY || '';
+            let dashboardContent = '';
+            
+            // Try to read summary
             if (!summary) {
               try { summary = fs.readFileSync('security_summary.txt','utf8'); } catch(e) { summary = ''; }
             }
-            const dashboardHint = "\n\nArtifacts: security-dashboard (reports/security_dashboard.md), npm_audit.sarif, pip_audit.sarif, bandit_report.sarif.";
-            const body = (summary || 'Security audit completed (no summary available).') + dashboardHint;
+            
+            // Try to read dashboard for rich PR comment
+            try {
+              dashboardContent = fs.readFileSync('reports/security_dashboard.md','utf8');
+            } catch(e) {
+              console.log('Dashboard file not found, using summary only');
+            }
+            
+            const artifactsHint = "\n\n**Artifacts**: security-dashboard, sarif-bundle, unified-sbom";
+            const body = dashboardContent 
+              ? `## 🔒 Security Audit Results\n\n${dashboardContent}\n${artifactsHint}`
+              : (summary || 'Security audit completed (no summary available).') + artifactsHint;
+            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -243,11 +266,14 @@ jobs:
         if: steps.evaluate.outputs.will_fail == 'true'
         run: exit 1
       - name: Notify Slack on critical findings
-        if: env.WILL_FAIL == 'true' && secrets.SLACK_WEBHOOK_URL != ''
+        if: steps.evaluate.outputs.will_fail == 'true'
         env:
           WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Security audit failed: ${SECURITY_SUMMARY}\"}" "$WEBHOOK" || true
+          if [ -n "$WEBHOOK" ]; then
+            summary="${{ steps.sarif_summary.outputs.summary }}"
+            curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"🚨 Security audit failed: $summary\"}" "$WEBHOOK" || true
+          fi
       - name: Auto-close resolved security issues
         if: steps.evaluate.outputs.will_fail != 'true'
         uses: actions/github-script@v7
