@@ -22,6 +22,7 @@
 | Animation | Scattered constants | Centralize durations & easing curves | `ui_animations.py` tokens |
 
 ## 3. Component Library Refinement
+
 | Component | Gap | Improvement | Test Strategy |
 |-----------|-----|------------|---------------|
 | Button | Variant duplication | Variant enum + style resolver | Snapshot + ASCII diff |
@@ -42,12 +43,13 @@
 | Action | Key Default | Enhancement |
 |--------|-------------|-------------|
 | Focus cycle | Tab / Shift+Tab | Add Home/End jump |
-| Component palette navigation | Arrows | Add type-to-filter and highlight | 
+| Component palette navigation | Arrows | Add type-to-filter and highlight |
 | Undo/Redo | Ctrl+Z / Ctrl+Y | Show transient overlay "Reverted / Reapplied" |
 | Multi-select add/remove | Shift+Click | Extend to Shift+Arrow for range |
 | Context actions | Right-click | Provide keyboard menu (F10) |
 
 ## 6. Accessibility Targets
+
 | Metric | Target |
 |--------|--------|
 | Color contrast (normal text) | WCAG AA (≥4.5:1) |
@@ -73,6 +75,7 @@
 | ASCII Snapshot | Write text grid | Rune diff (exact match) |
 
 ## 9. Performance Budgets (Design-Specific)
+
 | Area | Budget | Monitoring |
 |------|--------|-----------|
 | Initial UI load (sim) | < 500ms | Timestamp logs |

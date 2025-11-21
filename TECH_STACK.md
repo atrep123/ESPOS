@@ -15,6 +15,7 @@
 ---
 
 ## 🐍 Python Ecosystem
+
 **Dependency File:** `requirements.txt` / `pyproject.toml`
 
 ### Core Libraries
@@ -42,6 +43,7 @@
 ---
 
 ## 🌐 Web & Node.js Ecosystem
+
 **Dependency File:** `package.json` / `web_designer_frontend/package.json`
 
 ### Frontend
@@ -60,6 +62,7 @@
 ---
 
 ## 🔌 Firmware (ESP32)
+
 **Dependency File:** `platformio.ini`
 
 ### Frameworks
@@ -76,6 +79,7 @@
 ---
 
 ## ⚙️ DevOps & CI/CD
+
 **Config Files:** `.github/workflows/*.yml`
 
 ### GitHub Actions

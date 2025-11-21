@@ -45,14 +45,17 @@ The setup scripts will:
 ## Dependencies Breakdown
 
 ### Core (required)
+
 - `pillow` - Image handling for UI designer
 - `watchdog` - File watching for live preview  
 - `websockets` - WebSocket server for live preview
 
 ### UI (optional)
+
 - `tkinter` - GUI designer (usually bundled with Python)
 
 ### Development (optional)
+
 - `pytest` - Test framework
 - `hypothesis` - Property-based testing
 - `pre-commit` - Git hooks

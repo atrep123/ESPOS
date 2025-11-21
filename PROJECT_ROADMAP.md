@@ -279,16 +279,19 @@ A generated `SECURITY_DASHBOARD.md` linking:
 - Live collaborative editing conflict resolution strategies.
 
 ## 27. Decommission / Sunset Criteria
+
 - Any script unused for 3 consecutive months & no references in workflows.
 - License whitelist entry obsolete (no deps referencing) → remove.
 - Deprecated export formats replaced by stable alternatives.
 
 ## 28. Review & Update Mechanism
+
 - Monthly mini-review: update backlog scores.
 - Quarterly major review: revise phases & success criteria.
 - Automatic reminder issue created if roadmap untouched > 90 days.
 
 ## 29. Glossary (Quick Reference)
+
 | Term | Definition |
 |------|------------|
 | Parity | Identical visual/logical output across export targets |
@@ -298,6 +301,7 @@ A generated `SECURITY_DASHBOARD.md` linking:
 | Flaky Test | Test with intermittent pass/fail behavior |
 
 ## 30. Immediate Next Actions Snapshot
+
 1. Merge PR comment logic to main.
 2. Integrate npm SARIF into workflow artifacts + comment aggregation.
 3. Implement coverage reporting & badge.

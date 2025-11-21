@@ -72,7 +72,7 @@
 - Releases ship with SHA256 `CHECKSUMS.txt` covering all uploaded artifacts.
 - Release artifacts summary: see `reports/RELEASE_ARTIFACTS.md` (designer vs launcher builds and checksums).
 - Verify integrity: `sha256sum -c CHECKSUMS.txt` (Linux) or `shasum -a 256 -c CHECKSUMS.txt` (macOS).
- - Release body now combines changelog + artifact summary.
+- Release body now combines changelog + artifact summary.
 
 ## 🛠️ CI / Workflows Overview
 
@@ -86,39 +86,41 @@
 
 1. Generate demo UI artifacts
 
-```powershell
-python ui_export_c.py
-```
+   ```powershellell
+   python ui_export_c.py
+   ```
 
-Artifacts: `examples/ui_demo.json`, `examples/ui_demo.html`, `examples/ui_demo.png`, and `src/ui_design.h/.c`.
+   Artifacts: `examples/ui_demo.json`, `examples/ui_demo.html`, `examples/ui_demo.png`, and `src/ui_design.h/.c`.
 
-Unified launcher (starts designer, simulator, exporter, web mode) is available via:
-```powershell
-python tools/esp32os_launcher.py
-```
-- GUI mode: `python tools/esp32os_launcher.py --gui` (Tkinter buttons for start/stop/status/config/docs)
-Config lives at `~/.esp32os/config.json` (override scripts/args, ports); logging level can be set via `LOG_LEVEL`.
-Web mode now starts backend + serves frontend on http://127.0.0.1:<frontend_port> (default 8001) and opens it; menu includes stop/start.
-Use launcher option `p` to view ports/status while running.
-If `websockets` is installed, launcher reports backend WebSocket health (handshake/ping).
-Launcher menu: `p` status, `r` reset config, `e` edit config (uses $EDITOR/notepad/xdg-open).
-Simulator snapshots: `sim_run.py --snapshot out.txt|out.html|out.png --max-frames 1` for quick CI/headless renders (PNG requires Pillow).
+   Unified launcher (starts designer, simulator, exporter, web mode) is available via:
+
+   ```powershell
+   python tools/esp32os_launcher.py
+   ```
+
+   - GUI mode: `python tools/esp32os_launcher.py --gui` (Tkinter buttons for start/stop/status/config/docs)
+   - Config lives at `~/.esp32os/config.json` (override scripts/args, ports); logging level can be set via `LOG_LEVEL`.
+   - Web mode now starts backend + serves frontend on `http://127.0.0.1:<frontend_port>` (default 8001) and opens it; menu includes stop/start.
+   - Use launcher option `p` to view ports/status while running.
+   - If `websockets` is installed, launcher reports backend WebSocket health (handshake/ping).
+   - Launcher menu: `p` status, `r` reset config, `e` edit config (uses $EDITOR/notepad/xdg-open).
+   - Simulator snapshots: `sim_run.py --snapshot out.txt|out.html|out.png --max-frames 1` for quick CI/headless renders (PNG requires Pillow).
 
 2. Configure display
 
-- Edit `src/display_config.h` to set `DISPLAY_I2C_SDA_GPIO`, `DISPLAY_I2C_SCL_GPIO`, and `DISPLAY_I2C_ADDR`.
-- Optional: set `DISPLAY_COLOR_BITS` to `1` or `4`.
-- Optional: enable a conservative init with `#define SSD1363_USE_DEFAULT_INIT 1` (verify against your module datasheet).
+   - Edit `src/display_config.h` to set `DISPLAY_I2C_SDA_GPIO`, `DISPLAY_I2C_SCL_GPIO`, and `DISPLAY_I2C_ADDR`.
+   - Optional: set `DISPLAY_COLOR_BITS` to `1` or `4`.
+   - Optional: enable a conservative init with `#define SSD1363_USE_DEFAULT_INIT 1` (verify against your module datasheet).
 
 3. Build and flash (PlatformIO)
 
-```powershell
-pio run -e esp32-s3-devkitm-1
-pio run -e esp32-s3-devkitm-1 -t upload
-pio device monitor
-```
+   ```powershell
+   pio run -e esp32-s3-devkitm-1
+   pio run -e esp32-s3-devkitm-1 -t upload
+   pio device monitor
+   ```
 
-You should see a continuous demo render with performance logs.
+   You should see a continuous demo render with performance logs.
 
 ## Project Map
 
