@@ -246,6 +246,160 @@ tokens = DesignTokens()
 responsive_evaluator = ResponsiveEvaluator(tokens.responsive)
 
 
+# --- Convenience resolvers -------------------------------------------------
+
+# Precompute hex map for semantic roles
+COLOR_HEX = {
+    "primary": tokens.colors.to_hex(tokens.colors.primary),
+    "primary_dark": tokens.colors.to_hex(tokens.colors.primary_dark),
+    "primary_light": tokens.colors.to_hex(tokens.colors.primary_light),
+    "surface": tokens.colors.to_hex(tokens.colors.surface),
+    "surface_raised": tokens.colors.to_hex(tokens.colors.surface_raised),
+    "surface_overlay": tokens.colors.to_hex(tokens.colors.surface_overlay),
+    "text_primary": tokens.colors.to_hex(tokens.colors.text_primary),
+    "text_secondary": tokens.colors.to_hex(tokens.colors.text_secondary),
+    "text_disabled": tokens.colors.to_hex(tokens.colors.text_disabled),
+    "success": tokens.colors.to_hex(tokens.colors.success),
+    "warning": tokens.colors.to_hex(tokens.colors.warning),
+    "error": tokens.colors.to_hex(tokens.colors.error),
+    "info": tokens.colors.to_hex(tokens.colors.info),
+    "border": tokens.colors.to_hex(tokens.colors.border),
+    "border_focus": tokens.colors.to_hex(tokens.colors.border_focus),
+    "shadow": tokens.colors.to_hex(tokens.colors.shadow),
+}
+
+# Legacy/utility colors observed in existing UI (for incremental migration)
+_LEGACY_HEX = {
+    "legacy_green": "#00ff00",
+    "legacy_green_bright": "#00ff41",
+    "legacy_green_dark": "#00aa00",
+    "legacy_matrix": "#008f11",
+    "legacy_cyan": "#00ffff",
+    "legacy_magenta": "#ff00ff",
+    "legacy_blue": "#0066cc",
+    "legacy_gray1": "#888888",
+    "legacy_gray2": "#666666",
+    "legacy_gray3": "#333333",
+    "legacy_gray4": "#2b2b2b",
+    "legacy_gray5": "#1a1a1a",
+    "legacy_gray_light": "#cccccc",
+    "legacy_gray_lighter": "#e0e0e0",
+    "legacy_gray_soft": "#eceff4",
+    "legacy_nord_cyan": "#88c0d0",
+    "legacy_nord_slate": "#4c566a",
+    "legacy_nord_purple": "#bd93f9",
+    "legacy_nord_blue": "#6272a4",
+    "legacy_offwhite": "#f8f8f2",
+    "legacy_gray6": "#dddddd",
+    "legacy_orange": "#ff6600",
+    "legacy_gray7": "#999999",
+    "legacy_yellow": "#ffff00",
+    "legacy_green_deep": "#003300",
+    "legacy_nord_bg": "#3b4252",
+    "legacy_dracula_bg": "#282a36",
+    "legacy_dracula_slate": "#44475a",
+    "legacy_gray8": "#444444",
+    "legacy_gray9": "#d4d4d4",
+    "legacy_blue_light": "#569cd6",
+    "legacy_teal": "#4ec9b0",
+    "legacy_gray10": "#808080",
+    "legacy_gold": "#dcdcaa",
+    "legacy_salmon": "#ce9178",
+    "legacy_gray11": "#555555",
+    "legacy_green_lime": "#66ff66",
+    "legacy_blue_bright": "#00aaff",
+    "legacy_green_material": "#4caf50",
+    "legacy_orange_bright": "#ffaa00",
+    "legacy_gray12": "#eeeeee",
+    "legacy_gray13": "#111111",
+    "legacy_blue_pale": "#ddeeff",
+    "legacy_navyslate": "#1a1f4a",
+    "legacy_green_ultradark": "#001100",
+    "legacy_green_mid": "#00cc00",
+    "legacy_nord_base": "#2e3440",
+    "legacy_nord_light": "#d8dee9",
+    "legacy_green_midbright": "#00dd33",
+    "legacy_gray_faint": "#f9f9f9",
+    "legacy_handle_base": "#4cb2ff",
+    "legacy_handle_hover": "#6cc8ff",
+    "legacy_gray14": "#aaaaaa",
+    "legacy_green_mint": "#00ff88",
+    "legacy_blue_material": "#1976d2",
+    "legacy_gray15": "#101010",
+    "legacy_gray16": "#4a4a4a",
+    "legacy_green_mid2": "#00cc66",
+    "legacy_orange_warm": "#ffcc00",
+    "legacy_red_bright": "#ff3333",
+    "legacy_gray17": "#0d0d0d",
+    "legacy_green_soft": "#00aa44",
+    "legacy_orange_deep": "#ffb300",
+    "legacy_red_dark": "#cc0000",
+    "legacy_blue_mid": "#0088cc",
+    "legacy_gray18": "#e8e8e8",
+    "legacy_gray19": "#f5f5f5",
+    "legacy_gray20": "#fafafa",
+    "legacy_navy_deep": "#0a0e27",
+    "legacy_orange_soft": "#ff9900",
+    "legacy_pink_hot": "#ff0066",
+    "legacy_blue_cyan": "#00ccff",
+    "legacy_navy_ink": "#0f1333",
+    "legacy_navy_dark": "#0d1028",
+    "legacy_cyan_soft": "#66ffff",
+    "legacy_teal_muted": "#336666",
+    "legacy_navy_base": "#000033",
+    "legacy_orange_hot": "#ff5500",
+    "legacy_cyan_mid": "#00aaaa",
+    "legacy_green_base": "#006600",
+    "legacy_gray21": "#f0f0f0",
+    "legacy_nord_blue2": "#81a1c1",
+    "legacy_nord_green": "#a3be8c",
+    "legacy_nord_yellow": "#ebcb8b",
+    "legacy_nord_red": "#bf616a",
+    "legacy_nord_slate2": "#434c5e",
+    "legacy_nord_slate3": "#616e88",
+    "legacy_gray22": "#1c1f26",
+    "legacy_dracula_pink": "#ff79c6",
+    "legacy_dracula_green": "#50fa7b",
+    "legacy_dracula_yellow": "#f1fa8c",
+    "legacy_dracula_red": "#ff5555",
+    "legacy_dracula_cyan": "#8be9fd",
+    "legacy_gray23": "#191a21",
+    "legacy_green_forest": "#003b00",
+    "legacy_green_lime2": "#aaff00",
+    "legacy_red_soft": "#ff4444",
+    "legacy_green_mint2": "#00ffaa",
+    "legacy_green_deep2": "#005500",
+}
+COLOR_HEX.update(_LEGACY_HEX)
+
+SPACING_MAP = {
+    "xs": tokens.spacing.xs,
+    "sm": tokens.spacing.sm,
+    "md": tokens.spacing.md,
+    "lg": tokens.spacing.lg,
+    "xl": tokens.spacing.xl,
+    "xxl": tokens.spacing.xxl,
+    "button_padding_x": tokens.spacing.button_padding_x,
+    "button_padding_y": tokens.spacing.button_padding_y,
+    "dialog_padding": tokens.spacing.dialog_padding,
+    "list_item_padding": tokens.spacing.list_item_padding,
+}
+
+
+def color_hex(role: str) -> str:
+    """Return hex color for a semantic role; raises KeyError if unknown."""
+    if role not in COLOR_HEX:
+        raise KeyError(f"Unknown color role: {role}")
+    return COLOR_HEX[role]
+
+
+def spacing(name: str) -> int:
+    """Return spacing value for a named spacing token; raises KeyError if unknown."""
+    if name not in SPACING_MAP:
+        raise KeyError(f"Unknown spacing token: {name}")
+    return SPACING_MAP[name]
+
+
 # Helper functions for compatibility with existing codebase
 def rgb_to_terminal_color_name(rgb: Tuple[int, int, int]) -> str:
     """Convert RGB tuple to terminal color name (approximation).
