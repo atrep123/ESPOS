@@ -893,50 +893,154 @@ class VisualPreviewWindow:
     
     def refresh(self, force=False):
         """Refresh the preview with caching"""
-        # Headless path: still render to PIL for timing/profiler
-        if getattr(self, '_headless', False):
-            # Scene present?
-            if not self.designer.current_scene:
-                return
-            scene = self.designer.scenes.get(self.designer.current_scene)
-            if not scene:
-                return
-            # Measure render to PIL image only (no Tk usage)
-            t0 = time.perf_counter()
-            try:
-                _ = self._render_scene_image(
-                    scene,
-                    background_color=self.settings.background_color,
-                    include_grid=self.settings.grid_enabled,
-                    use_overlays=False,
-                    highlight_selection=False,
-                )
-            except Exception:
-                # If rendering fails in tests, still record a minimal frame time
-                pass
-            self._last_render_ms = (time.perf_counter() - t0) * 1000.0
-            # FPS estimate
-            self._last_fps = 1000.0 / self._last_render_ms if self._last_render_ms > 0 else 60.0
-            # Performance budget flags
-            if self.settings.performance_budget_enabled:
-                self._perf_over_budget = self._last_render_ms > self.settings.performance_budget_ms
-                self._perf_soft_warn = self._last_render_ms > self.settings.performance_warn_ms
-            # Record profiler metrics if enabled
-            if self._profiler_enabled and self._profiler:
-                self._profiler.record_frame(self._last_fps, self._last_render_ms, 0.0)
+        if self._refresh_headless():
             return
 
-        # Scene present?
-        if not self.designer.current_scene:
-            return
-
-        # Resolve scene
-        scene = self.designer.scenes.get(self.designer.current_scene)
+        scene = self._get_active_scene()
         if not scene:
             return
 
-        # Determine whether to re-render image cache (also detect content changes)
         t0 = time.perf_counter()
+        img = self._render_or_cache_scene(scene, force)
+        self._draw_canvas(img)
+        self._finalize_refresh(t0)
+
+    def _refresh_headless(self) -> bool:
+        """Handle headless refresh, returns True if handled."""
+        if not getattr(self, '_headless', False):
+            return False
+        if not self.designer.current_scene:
+            return True
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return True
+        t0 = time.perf_counter()
+        try:
+            _ = self._render_scene_image(
+                scene,
+                background_color=self.settings.background_color,
+                include_grid=self.settings.grid_enabled,
+                use_overlays=False,
+                highlight_selection=False,
+            )
+        except Exception:
+            pass
+        self._last_render_ms = (time.perf_counter() - t0) * 1000.0
+        self._last_fps = 1000.0 / self._last_render_ms if self._last_render_ms > 0 else 60.0
+        if self.settings.performance_budget_enabled:
+            self._perf_over_budget = self._last_render_ms > self.settings.performance_budget_ms
+            self._perf_soft_warn = self._last_render_ms > self.settings.performance_warn_ms
+        if self._profiler_enabled and self._profiler:
+            self._profiler.record_frame(self._last_fps, self._last_render_ms, 0.0)
+        return True
+
+    def _fill_component_results(self, query, filtered_components, results_list):
+        results_list.delete(0, tk.END)
+        filtered_components.clear()
+        for comp in self.ascii_components:
+            name_match = query in comp["name"].lower()
+            cat_match = query in comp["category"].lower()
+            desc_match = query in comp["description"].lower()
+            if not query or name_match or cat_match or desc_match:
+                filtered_components.append(comp)
+                display_text = f"{comp['name']} [{comp['category']}] - {comp['description']}"
+                results_list.insert(tk.END, display_text)
+
+    def _auto_select_first(self, listbox):
+        if listbox.size() > 0:
+            listbox.selection_set(0)
+            listbox.activate(0)
+
+    def _add_component_to_scene(self, component, dialog=None):
+        try:
+            widgets = component["factory"]()
+            scene = self.designer.scenes.get(self.designer.current_scene)
+            if not scene:
+                messagebox.showerror("Error", "No active scene")
+                return
+            start_idx = len(scene.widgets)
+            for w in widgets:
+                scene.widgets.append(w)
+            self.refresh()
+            new_indices = list(range(start_idx, start_idx + len(widgets)))
+            self.selected_widgets = new_indices
+            if new_indices:
+                self.selected_widget_idx = new_indices[0]
+            if dialog:
+                dialog.destroy()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to add component: {e}")
+
+    def _move_list_selection(self, listbox: tk.Listbox, delta: int):
+        current = listbox.curselection()
+        if not current:
+            return
+        new_idx = current[0] + delta
+        if new_idx < 0 or new_idx >= listbox.size():
+            return
+        listbox.selection_clear(0, tk.END)
+        listbox.selection_set(new_idx)
+        listbox.activate(new_idx)
+        listbox.see(new_idx)
+
+    def _add_text_field(self, widget_indices, widgets):
+        frame = ttk.Frame(self.props_frame)
+        frame.pack(fill=tk.X, pady=2)
+        ttk.Label(frame, text="Text:", width=10).pack(side=tk.LEFT)
+        text_value = widgets[0].text if len(widgets) == 1 else ""
+        text_var = tk.StringVar(value=text_value)
+        entry = ttk.Entry(frame, textvariable=text_var)
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        entry.bind(RETURN_KEY, lambda e: self._update_batch_prop(widget_indices, 'text', text_var.get()))
+
+    def _add_label_field(self, widget_indices, widgets):
+        frame = ttk.Frame(self.props_frame)
+        frame.pack(fill=tk.X, pady=2)
+        ttk.Label(frame, text="Label:", width=10).pack(side=tk.LEFT)
+        label_value = widgets[0].label if len(widgets) == 1 else ""
+        label_var = tk.StringVar(value=label_value)
+        entry = ttk.Entry(frame, textvariable=label_var)
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        entry.bind(RETURN_KEY, lambda e: self._update_batch_prop(widget_indices, 'label', label_var.get()))
+
+    def _add_value_field(self, widget_indices, widgets):
+        frame = ttk.Frame(self.props_frame)
+        frame.pack(fill=tk.X, pady=2)
+        ttk.Label(frame, text="Value:", width=10).pack(side=tk.LEFT)
+        value_value = str(widgets[0].value) if len(widgets) == 1 else ""
+        value_var = tk.StringVar(value=value_value)
+        entry = ttk.Entry(frame, textvariable=value_var)
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        entry.bind(RETURN_KEY, lambda e: self._update_batch_prop(widget_indices, 'value', value_var.get()))
+
+    def _add_color_field(self, widget_indices, widgets):
+        frame = ttk.Frame(self.props_frame)
+        frame.pack(fill=tk.X, pady=2)
+        ttk.Label(frame, text="Color:", width=10).pack(side=tk.LEFT)
+        color_value = widgets[0].color if len(widgets) == 1 else ""
+        color_var = tk.StringVar(value=color_value)
+        entry = ttk.Entry(frame, textvariable=color_var)
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        entry.bind(RETURN_KEY, lambda e: self._update_batch_prop(widget_indices, 'color', color_var.get()))
+
+    def _render_position_size_fields(self, widget_indices, widgets):
+        ttk.Label(self.props_frame, text="Position & Size:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(10, 5))
+        for prop in ['x', 'y', 'width', 'height']:
+            frame = ttk.Frame(self.props_frame)
+            frame.pack(fill=tk.X, pady=2)
+            ttk.Label(frame, text=f"{prop.capitalize()}:", width=10).pack(side=tk.LEFT)
+            prop_value = getattr(widgets[0], prop) if len(widgets) == 1 else 0
+            var = tk.IntVar(value=prop_value)
+            spinbox = ttk.Spinbox(frame, from_=0, to=200, textvariable=var, width=10)
+            spinbox.pack(side=tk.LEFT)
+            spinbox.bind(RETURN_KEY, lambda e, p=prop, v=var: self._update_batch_prop(widget_indices, p, v.get()))
+
+    def _get_active_scene(self):
+        if not self.designer.current_scene:
+            return None
+        return self.designer.scenes.get(self.designer.current_scene)
+
+    def _render_or_cache_scene(self, scene, force: bool):
         widget_count = len(scene.widgets)
         current_sig = self._compute_scene_signature(scene)
         need_render = (
@@ -946,7 +1050,6 @@ class VisualPreviewWindow:
             or widget_count != self._last_widget_count
             or self._last_signature != current_sig
         )
-
         if need_render:
             img = self._render_scene_image(
                 scene,
@@ -961,67 +1064,43 @@ class VisualPreviewWindow:
             self._last_signature = current_sig
         else:
             img = self._render_cache
+        return img
 
-        # Scale for zoom
+    def _draw_canvas(self, img):
         scaled_width = int(self.designer.width * self.settings.zoom)
         scaled_height = int(self.designer.height * self.settings.zoom)
         img_scaled = img.resize((scaled_width, scaled_height), Image.NEAREST)
-
-        # Prepare PhotoImage (GUI path only; safe because headless returned earlier)
         self.photo = ImageTk.PhotoImage(img_scaled)
+        if not hasattr(self, 'canvas'):
+            return
+        self.canvas.delete("all")
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+        self.canvas.configure(scrollregion=(0, 0, scaled_width, scaled_height))
+        if self.selected_widget_idx is not None and self.settings.show_handles:
+            self._draw_selection_handles()
+        if self._show_hints:
+            self._draw_hints_overlay()
+        if self.settings.show_alignment_guides and self.dragging and self.selected_widget_idx is not None:
+            self._draw_guides_overlay()
+        if getattr(self.settings, 'show_debug_overlay', False):
+            self._draw_bounds_selected_overlay()
+        if getattr(self.settings, 'show_debug_overlay', False):
+            self._draw_debug_overlay()
 
-        # Safe canvas usage: ensure attributes exist (defensive for partial headless init)
-        if hasattr(self, 'canvas'):
-            self.canvas.delete("all")
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
-            self.canvas.configure(scrollregion=(0, 0, scaled_width, scaled_height))
-            if self.selected_widget_idx is not None and self.settings.show_handles:
-                self._draw_selection_handles()
-            # On-canvas UX hints
-            if self._show_hints:
-                self._draw_hints_overlay()
-            # Magnetic alignment guides (only during drag/resize to reduce clutter)
-            if self.settings.show_alignment_guides and self.dragging and self.selected_widget_idx is not None:
-                # Prefer built-in overlay computation to avoid duplication
-                self._draw_guides_overlay()
-            # Draw selection bounds when debug overlay is on
-            if getattr(self.settings, 'show_debug_overlay', False):
-                self._draw_bounds_selected_overlay()
-            # Debug overlay with live info
-            if getattr(self.settings, 'show_debug_overlay', False):
-                self._draw_debug_overlay()
-
-        # Perf end
-        self._last_render_ms = (time.perf_counter() - t0) * 1000.0
-        # Calculate FPS from last render time
-        if self._last_render_ms > 0:
-            self._last_fps = 1000.0 / self._last_render_ms
-        else:
-            self._last_fps = 60.0  # Default
-        
-        # Record profiler metrics if enabled
+    def _finalize_refresh(self, start_time: float):
+        self._last_render_ms = (time.perf_counter() - start_time) * 1000.0
+        self._last_fps = 1000.0 / self._last_render_ms if self._last_render_ms > 0 else 60.0
         if self._profiler_enabled and self._profiler:
             self._profiler.record_frame(self._last_fps, self._last_render_ms, 0.0)
-        
         if self.settings.performance_budget_enabled:
             self._perf_over_budget = self._last_render_ms > self.settings.performance_budget_ms
             self._perf_soft_warn = self._last_render_ms > self.settings.performance_warn_ms
-
-        # Update status bar with live hints
         self._update_status_bar()
-        # Keep combobox in sync if present
         if hasattr(self, "_zoom_var"):
             try:
                 self._zoom_var.set(f"{self.settings.zoom:.1f}x")
             except Exception:
                 pass
-        # Keep combobox in sync if present
-        if hasattr(self, "_zoom_var"):
-            try:
-                self._zoom_var.set(f"{self.settings.zoom:.1f}x")
-            except Exception:
-                pass
-        # Schedule JSON watcher if enabled
         if self.settings.auto_reload_json:
             self._schedule_json_watch()
     
@@ -1695,7 +1774,6 @@ class VisualPreviewWindow:
                 self.canvas.configure(cursor="arrow")
             except Exception:
                 pass
-            return
     
     def _place_pending_component(self, canvas_x: int, canvas_y: int) -> None:
         if not self._pending_component:
@@ -1770,92 +1848,79 @@ class VisualPreviewWindow:
     def _on_mouse_drag(self, event):
         """Handle mouse drag"""
         if self._pan_dragging:
-            try:
-                self.canvas.scan_dragto(event.x, event.y, gain=1)
-            except Exception:
-                pass
+            self._drag_pan(event)
             return
-        
-        # Box select in progress
-        if self.box_select_start is not None:
-            # Update box select rectangle
-            x1, y1 = self.box_select_start
-            x2, y2 = event.x, event.y
-            
-            # Delete old rectangle if exists
-            if self.box_select_rect is not None:
-                self.canvas.delete(self.box_select_rect)
-            
-            # Draw new rectangle
-            self.box_select_rect = self.canvas.create_rectangle(
-                x1, y1, x2, y2,
-                outline="#00AAFF", width=2, dash=(4, 4),
-                tags="box_select"
-            )
+        if self._try_box_select_drag(event):
             return
-        
         if not self.dragging or self.selected_widget_idx is None:
             return
-        
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
             return
-        
         widget = scene.widgets[self.selected_widget_idx]
-        
         if self.resize_handle:
-            # Resize widget
-            wx, wy = self._canvas_to_widget_coords(event.x, event.y)
-            
-            if 'n' in self.resize_handle:
-                new_height = widget.y + widget.height - wy
-                if new_height > 4:
-                    widget.y = wy
-                    widget.height = new_height
-            if 's' in self.resize_handle:
-                widget.height = max(4, wy - widget.y)
-            if 'w' in self.resize_handle:
-                new_width = widget.x + widget.width - wx
-                if new_width > 4:
-                    widget.x = wx
-                    widget.width = new_width
-            if 'e' in self.resize_handle:
-                widget.width = max(4, wx - widget.x)
+            self._resize_active_widget(widget, event)
         else:
-            # Move widget
-            wx, wy = self._canvas_to_widget_coords(event.x, event.y)
-            if self.drag_offset is None:
-                return
-            dx, dy = self.drag_offset
-            new_x = wx - dx
-            new_y = wy - dy
-
-            # Optional axis-lock when Shift is held:
-            # move převážně v jedné ose podle směru tahu
-            if event.state & 0x0001 and self.drag_origin is not None and self.drag_start is not None:
-                sx, sy = self.drag_start
-                if abs(event.x - sx) >= abs(event.y - sy):
-                    new_y = self.drag_origin[1]
-                else:
-                    new_x = self.drag_origin[0]
-
-            # Apply snap-to-grid
-            if self.settings.snap_enabled:
-                new_x = round(new_x / self.settings.snap_size) * self.settings.snap_size
-                new_y = round(new_y / self.settings.snap_size) * self.settings.snap_size
-            
-            # Apply snap-to-widget (magnetic alignment)
-            if self.settings.snap_to_widgets:
-                new_x, new_y = self._apply_widget_snapping(widget, new_x, new_y)
-
-            widget.x = new_x
-            widget.y = new_y
-            
-            # Clamp to canvas
-            widget.x = max(0, min(widget.x, self.designer.width - widget.width))
-            widget.y = max(0, min(widget.y, self.designer.height - widget.height))
-        
+            self._move_active_widget(widget, event)
         self.refresh()
+
+    def _drag_pan(self, event):
+        try:
+            self.canvas.scan_dragto(event.x, event.y, gain=1)
+        except Exception:
+            pass
+
+    def _try_box_select_drag(self, event) -> bool:
+        if self.box_select_start is None:
+            return False
+        x1, y1 = self.box_select_start
+        x2, y2 = event.x, event.y
+        if self.box_select_rect is not None:
+            self.canvas.delete(self.box_select_rect)
+        self.box_select_rect = self.canvas.create_rectangle(
+            x1, y1, x2, y2,
+            outline="#00AAFF", width=2, dash=(4, 4),
+            tags="box_select"
+        )
+        return True
+
+    def _resize_active_widget(self, widget, event):
+        wx, wy = self._canvas_to_widget_coords(event.x, event.y)
+        if 'n' in self.resize_handle:
+            new_height = widget.y + widget.height - wy
+            if new_height > 4:
+                widget.y = wy
+                widget.height = new_height
+        if 's' in self.resize_handle:
+            widget.height = max(4, wy - widget.y)
+        if 'w' in self.resize_handle:
+            new_width = widget.x + widget.width - wx
+            if new_width > 4:
+                widget.x = wx
+                widget.width = new_width
+        if 'e' in self.resize_handle:
+            widget.width = max(4, wx - widget.x)
+
+    def _move_active_widget(self, widget, event):
+        wx, wy = self._canvas_to_widget_coords(event.x, event.y)
+        if self.drag_offset is None:
+            return
+        dx, dy = self.drag_offset
+        new_x = wx - dx
+        new_y = wy - dy
+        if event.state & 0x0001 and self.drag_origin is not None and self.drag_start is not None:
+            sx, sy = self.drag_start
+            if abs(event.x - sx) >= abs(event.y - sy):
+                new_y = self.drag_origin[1]
+            else:
+                new_x = self.drag_origin[0]
+        if self.settings.snap_enabled:
+            new_x = round(new_x / self.settings.snap_size) * self.settings.snap_size
+            new_y = round(new_y / self.settings.snap_size) * self.settings.snap_size
+        if self.settings.snap_to_widgets:
+            new_x, new_y = self._apply_widget_snapping(widget, new_x, new_y)
+        widget.x = max(0, min(new_x, self.designer.width - widget.width))
+        widget.y = max(0, min(new_y, self.designer.height - widget.height))
     
     def _on_mouse_up(self, event):
         """Handle mouse up"""
@@ -1863,56 +1928,8 @@ class VisualPreviewWindow:
             self._pan_dragging = False
             return
         
-        # Finish box select
-        if self.box_select_start is not None:
-            x1, y1 = self.box_select_start
-            x2, y2 = event.x, event.y
-            
-            # Normalize rectangle (x1 < x2, y1 < y2)
-            if x1 > x2:
-                x1, x2 = x2, x1
-            if y1 > y2:
-                y1, y2 = y2, y1
-            
-            # Find widgets within rectangle
-            scene = self.designer.scenes.get(self.designer.current_scene)
-            if scene:
-                selected_indices = []
-                for idx, widget in enumerate(scene.widgets):
-                    if not widget.visible:
-                        continue
-                    
-                    # Widget bounds in canvas coordinates
-                    wx1 = int(widget.x * self.settings.zoom)
-                    wy1 = int(widget.y * self.settings.zoom)
-                    wx2 = int((widget.x + widget.width) * self.settings.zoom)
-                    wy2 = int((widget.y + widget.height) * self.settings.zoom)
-                    
-                    # Check if widget overlaps with selection rectangle
-                    if not (wx2 < x1 or wx1 > x2 or wy2 < y1 or wy1 > y2):
-                        selected_indices.append(idx)
-                
-                # Update selection (Shift adds to existing, otherwise replaces)
-                if event.state & 0x0001:  # Shift key
-                    for idx in selected_indices:
-                        if idx not in self.selected_widgets:
-                            self.selected_widgets.append(idx)
-                else:
-                    self.selected_widgets = selected_indices
-                
-                if self.selected_widgets:
-                    self.selected_widget_idx = self.selected_widgets[0]
-                else:
-                    self.selected_widget_idx = None
-            
-            # Clean up box select
-            if self.box_select_rect is not None:
-                self.canvas.delete(self.box_select_rect)
-                self.box_select_rect = None
-            self.box_select_start = None
-            self.refresh()
+        if self._finish_box_select(event):
             return
-        
         if self.dragging:
             # Save state for undo
             self.designer._save_state()
@@ -1922,7 +1939,41 @@ class VisualPreviewWindow:
         self.drag_offset = None
         self.resize_handle = None
         self.drag_origin = None
-    
+
+    def _finish_box_select(self, event) -> bool:
+        if self.box_select_start is None:
+            return False
+        x1, y1 = self.box_select_start
+        x2, y2 = event.x, event.y
+        if x1 > x2:
+            x1, x2 = x2, x1
+        if y1 > y2:
+            y1, y2 = y2, y1
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if scene:
+            selected_indices = []
+            for idx, widget in enumerate(scene.widgets):
+                if not widget.visible:
+                    continue
+                wx1 = int(widget.x * self.settings.zoom)
+                wy1 = int(widget.y * self.settings.zoom)
+                wx2 = int((widget.x + widget.width) * self.settings.zoom)
+                wy2 = int((widget.y + widget.height) * self.settings.zoom)
+                if not (wx2 < x1 or wx1 > x2 or wy2 < y1 or wy1 > y2):
+                    selected_indices.append(idx)
+            if event.state & 0x0001:
+                for idx in selected_indices:
+                    if idx not in self.selected_widgets:
+                        self.selected_widgets.append(idx)
+            else:
+                self.selected_widgets = selected_indices
+            self.selected_widget_idx = self.selected_widgets[0] if self.selected_widgets else None
+        if self.box_select_rect is not None:
+            self.canvas.delete(self.box_select_rect)
+            self.box_select_rect = None
+        self.box_select_start = None
+        self.refresh()
+        return True
     def _on_mouse_move(self, event):
         """Handle mouse move (for cursor changes)"""
         self._last_mouse = (event.x, event.y)
@@ -2117,7 +2168,7 @@ class VisualPreviewWindow:
         search_frame = ttk.Frame(dialog)
         search_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        ttk.Label(search_frame, text="Search:", foreground="#aaa").pack(side=tk.LEFT, padx=5)
+        ttk.Label(search_frame, text=SEARCH_LABEL_TEXT, foreground="#aaa").pack(side=tk.LEFT, padx=5)
         search_var = tk.StringVar()
         search_entry = ttk.Entry(search_frame, textvariable=search_var, font=("Arial", 12))
         search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
@@ -2143,87 +2194,57 @@ class VisualPreviewWindow:
         def update_results(*args):
             """Update filtered results based on search text"""
             query = search_var.get().lower().strip()
-            results_list.delete(0, tk.END)
-            filtered_components.clear()
-            
-            # Filter components
-            for comp in self.ascii_components:
-                name_match = query in comp["name"].lower()
-                cat_match = query in comp["category"].lower()
-                desc_match = query in comp["description"].lower()
-                
-                if not query or name_match or cat_match or desc_match:
-                    filtered_components.append(comp)
-                    # Format: "ComponentName [Category] - Description"
-                    display_text = f"{comp['name']} [{comp['category']}] - {comp['description']}"
-                    results_list.insert(tk.END, display_text)
-            
-            # Auto-select first result
-            if results_list.size() > 0:
-                results_list.selection_set(0)
-                results_list.activate(0)
+            self._fill_component_results(query, filtered_components, results_list)
+            self._auto_select_first(results_list)
         
         def add_selected_component():
             """Add the selected component to canvas"""
             selection = results_list.curselection()
             if not selection:
                 return
-            
-            idx = selection[0]
+++            idx = selection[0]
             if idx >= len(filtered_components):
                 return
-            
-            component = filtered_components[idx]
-            try:
-                widgets = component["factory"]()
-                scene = self.designer.scenes.get(self.designer.current_scene)
-                if not scene:
-                    messagebox.showerror("Error", "No active scene")
-                    return
-                
-                # Add widgets at center of canvas
-                start_idx = len(scene.widgets)
-                for w in widgets:
-                    scene.widgets.append(w)
-                
-                self.refresh()
-                
-                # Select newly added widgets
-                new_indices = list(range(start_idx, start_idx + len(widgets)))
-                self.selected_widgets = new_indices
-                if new_indices:
-                    self.selected_widget_idx = new_indices[0]
-                
-                dialog.destroy()
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to add component: {e}")
-        
+            self._add_component_to_scene(filtered_components[idx], dialog)
+
         # Bind events
         search_var.trace("w", update_results)
         results_list.bind("<Double-Button-1>", lambda e: add_selected_component())
-        results_list.bind("<Return>", lambda e: add_selected_component())
+        results_list.bind(RETURN_KEY, lambda e: add_selected_component())
         dialog.bind("<Escape>", lambda e: dialog.destroy())
         
         # Arrow key navigation
         def on_arrow(event):
             if event.keysym == "Down":
-                current = results_list.curselection()
-                if current and current[0] < results_list.size() - 1:
-                    results_list.selection_clear(0, tk.END)
-                    results_list.selection_set(current[0] + 1)
-                    results_list.activate(current[0] + 1)
-                    results_list.see(current[0] + 1)
+                self._move_list_selection(results_list, +1)
             elif event.keysym == "Up":
-                current = results_list.curselection()
-                if current and current[0] > 0:
-                    results_list.selection_clear(0, tk.END)
-                    results_list.selection_set(current[0] - 1)
-                    results_list.activate(current[0] - 1)
-                    results_list.see(current[0] - 1)
+                self._move_list_selection(results_list, -1)
         
         search_entry.bind("<Down>", on_arrow)
         search_entry.bind("<Up>", on_arrow)
-        search_entry.bind("<Return>", lambda e: add_selected_component())
+        search_entry.bind(RETURN_KEY, lambda e: add_selected_component())
+            
+            idx = selection[0]
+            if idx >= len(filtered_components):
+                return
+            self._add_component_to_scene(filtered_components[idx], dialog)
+        
+        # Bind events
+        search_var.trace("w", update_results)
+        results_list.bind("<Double-Button-1>", lambda e: add_selected_component())
+        results_list.bind(RETURN_KEY, lambda e: add_selected_component())
+        dialog.bind("<Escape>", lambda e: dialog.destroy())
+        
+        # Arrow key navigation
+        def on_arrow(event):
+            if event.keysym == "Down":
+                self._move_list_selection(results_list, +1)
+            elif event.keysym == "Up":
+                self._move_list_selection(results_list, -1)
+        
+        search_entry.bind("<Down>", on_arrow)
+        search_entry.bind("<Up>", on_arrow)
+        search_entry.bind(RETURN_KEY, lambda e: add_selected_component())
         
         # Button frame
         button_frame = ttk.Frame(dialog)
@@ -2272,60 +2293,22 @@ class VisualPreviewWindow:
         
         # Text property (if common)
         if 'text' in common_props:
-            frame = ttk.Frame(self.props_frame)
-            frame.pack(fill=tk.X, pady=2)
-            ttk.Label(frame, text="Text:", width=10).pack(side=tk.LEFT)
-            # Show first widget's value for multi-selection
-            text_value = widgets[0].text if len(widgets) == 1 else ""
-            text_var = tk.StringVar(value=text_value)
-            entry = ttk.Entry(frame, textvariable=text_var)
-            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'text', text_var.get()))
+            self._add_text_field(widget_indices, widgets)
 
         # Label property (if common)
         if 'label' in common_props:
-            frame = ttk.Frame(self.props_frame)
-            frame.pack(fill=tk.X, pady=2)
-            ttk.Label(frame, text="Label:", width=10).pack(side=tk.LEFT)
-            label_value = widgets[0].label if len(widgets) == 1 else ""
-            label_var = tk.StringVar(value=label_value)
-            entry = ttk.Entry(frame, textvariable=label_var)
-            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'label', label_var.get()))
+            self._add_label_field(widget_indices, widgets)
 
         # Value property (if common)
         if 'value' in common_props:
-            frame = ttk.Frame(self.props_frame)
-            frame.pack(fill=tk.X, pady=2)
-            ttk.Label(frame, text="Value:", width=10).pack(side=tk.LEFT)
-            value_value = str(widgets[0].value) if len(widgets) == 1 else ""
-            value_var = tk.StringVar(value=value_value)
-            entry = ttk.Entry(frame, textvariable=value_var)
-            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'value', value_var.get()))
+            self._add_value_field(widget_indices, widgets)
 
         # Color property (if common)
         if 'color' in common_props:
-            frame = ttk.Frame(self.props_frame)
-            frame.pack(fill=tk.X, pady=2)
-            ttk.Label(frame, text="Color:", width=10).pack(side=tk.LEFT)
-            color_value = widgets[0].color if len(widgets) == 1 else ""
-            color_var = tk.StringVar(value=color_value)
-            entry = ttk.Entry(frame, textvariable=color_var)
-            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-            entry.bind("<Return>", lambda e: self._update_batch_prop(widget_indices, 'color', color_var.get()))
+            self._add_color_field(widget_indices, widgets)
 
         # Position and size (always available for all widgets)
-        ttk.Label(self.props_frame, text="Position & Size:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(10, 5))
-        for prop in ['x', 'y', 'width', 'height']:
-            frame = ttk.Frame(self.props_frame)
-            frame.pack(fill=tk.X, pady=2)
-            ttk.Label(frame, text=f"{prop.capitalize()}:", width=10).pack(side=tk.LEFT)
-            prop_value = getattr(widgets[0], prop) if len(widgets) == 1 else 0
-            var = tk.IntVar(value=prop_value)
-            spinbox = ttk.Spinbox(frame, from_=0, to=200, textvariable=var, width=10)
-            spinbox.pack(side=tk.LEFT)
-            spinbox.bind("<Return>", lambda e, p=prop, v=var: self._update_batch_prop(widget_indices, p, v.get()))
+        self._render_position_size_fields(widget_indices, widgets)
     
     def _update_batch_prop(self, widget_indices: list, prop: str, value: Any):
         """Update property for multiple widgets"""
@@ -2580,7 +2563,7 @@ class VisualPreviewWindow:
             
             # Save
             img.save(filename)
-            messagebox.showinfo("Export Complete", f"Saved @{scale}x PNG to:\n{filename}")
+            messagebox.showinfo(EXPORT_COMPLETE_TITLE, f"Saved @{scale}x PNG to:\n{filename}")
         else:
             messagebox.showerror(EXPORT_ERROR_TITLE, "No scene to export")
     
@@ -2593,7 +2576,7 @@ class VisualPreviewWindow:
         )
         if filename:
             self.designer.save_to_json(filename)
-            messagebox.showinfo("Export Complete", f"Saved JSON to: {filename}")
+            messagebox.showinfo(EXPORT_COMPLETE_TITLE, f"Saved JSON to: {filename}")
 
     def _export_c(self):
         """Export design as C code"""
@@ -2606,7 +2589,7 @@ class VisualPreviewWindow:
             # Use designer.export_code if available, else fallback
             if hasattr(self.designer, "export_code"):
                 self.designer.export_code(filename, self.designer.current_scene)
-                messagebox.showinfo("Export Complete", f"Saved C code to: {filename}")
+                messagebox.showinfo(EXPORT_COMPLETE_TITLE, f"Saved C code to: {filename}")
             else:
                 messagebox.showerror(EXPORT_ERROR_TITLE, "C code export not implemented.")
 
@@ -2631,7 +2614,7 @@ class VisualPreviewWindow:
                 lines.append(f"[{w.type}] " + ", ".join(props))
             with open(filename, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines))
-            messagebox.showinfo("Export Complete", f"Saved WidgetConfig to: {filename}")
+            messagebox.showinfo(EXPORT_COMPLETE_TITLE, f"Saved WidgetConfig to: {filename}")
         except Exception as e:
             messagebox.showerror(EXPORT_ERROR_TITLE, f"Failed: {e}")
 
@@ -2795,7 +2778,7 @@ class VisualPreviewWindow:
                 exporter.export_scene(scene, filename)
                 
                 dialog.destroy()
-                messagebox.showinfo("Export Complete", 
+                messagebox.showinfo(EXPORT_COMPLETE_TITLE, 
                                   f"Enhanced SVG exported to:\n{filename}\n\n"
                                   f"Preset: {preset_var.get().upper()}\n"
                                   f"Features: Gradients={gradients_var.get()}, "
@@ -3763,7 +3746,7 @@ class AnimationEditorWindow:
         """Add new keyframe"""
         anim_name = self.anim_var.get()
         if not anim_name or anim_name not in self.anim_designer.animations:
-            messagebox.showwarning("No Animation", "Select an animation first", parent=self.window)
+            messagebox.showwarning(NO_ANIMATION_TITLE, NO_ANIMATION_MSG, parent=self.window)
             return
         
         from ui_animations import Keyframe
@@ -3945,7 +3928,7 @@ class AnimationEditorWindow:
         """Apply property changes to selected animation"""
         anim_name = self.anim_var.get()
         if not anim_name or anim_name not in self.anim_designer.animations:
-            messagebox.showwarning("No Animation", "Select an animation first",
+            messagebox.showwarning(NO_ANIMATION_TITLE, NO_ANIMATION_MSG,
                                   parent=self.window)
             return
         
@@ -3981,7 +3964,7 @@ class AnimationEditorWindow:
         
         anim_name = self.anim_var.get()
         if not anim_name or anim_name not in self.anim_designer.animations:
-            messagebox.showwarning("No Animation", "Select an animation first",
+            messagebox.showwarning(NO_ANIMATION_TITLE, NO_ANIMATION_MSG,
                                   parent=self.window)
             return
         
@@ -4005,7 +3988,7 @@ class AnimationEditorWindow:
             header_file, impl_file = exporter.export_to_files(output_path)
             
             self.status.configure(text=f"Exported: {anim_name}")
-            messagebox.showinfo("Export Complete", 
+            messagebox.showinfo(EXPORT_COMPLETE_TITLE, 
                               f"Animation exported to:\n{header_file}\n{impl_file}",
                               parent=self.window)
         
@@ -4031,11 +4014,11 @@ if TK_AVAILABLE:
         def _build_ui(self):
             top = ttk.Frame(self)
             top.pack(fill=tk.X, padx=8, pady=6)
-            ttk.Label(top, text="Search:").pack(side=tk.LEFT)
+            ttk.Label(top, text=SEARCH_LABEL_TEXT).pack(side=tk.LEFT)
             self.search_var = tk.StringVar()
             entry = ttk.Entry(top, textvariable=self.search_var, width=32)
             entry.pack(side=tk.LEFT, padx=6)
-            entry.bind("<KeyRelease>", lambda e: self._refresh_list())
+            entry.bind(KEY_RELEASE, lambda e: self._refresh_list())
             # Category dropdown
             ttk.Label(top, text="Category:").pack(side=tk.LEFT)
             self.category_var = tk.StringVar(value="All")
@@ -4047,7 +4030,7 @@ if TK_AVAILABLE:
             self.tags_var = tk.StringVar()
             tags_entry = ttk.Entry(top, textvariable=self.tags_var, width=18)
             tags_entry.pack(side=tk.LEFT, padx=6)
-            tags_entry.bind("<KeyRelease>", lambda e: self._refresh_list())
+            tags_entry.bind(KEY_RELEASE, lambda e: self._refresh_list())
             ttk.Button(top, text="Close", command=self.destroy).pack(side=tk.RIGHT)
 
             body = ttk.Frame(self)
@@ -4056,7 +4039,7 @@ if TK_AVAILABLE:
             self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#4CAF50")
             self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
-            self.listbox.bind("<Return>", lambda e: self._insert_selected())
+            self.listbox.bind(RETURN_KEY, lambda e: self._insert_selected())
 
             right = ttk.Frame(body)
             right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
@@ -4243,11 +4226,11 @@ if TK_AVAILABLE:
         def _build_ui(self):
             top = ttk.Frame(self)
             top.pack(fill=tk.X, padx=8, pady=6)
-            ttk.Label(top, text="Search:").pack(side=tk.LEFT)
+            ttk.Label(top, text=SEARCH_LABEL_TEXT).pack(side=tk.LEFT)
             self.search_var = tk.StringVar()
             ent = ttk.Entry(top, textvariable=self.search_var, width=28)
             ent.pack(side=tk.LEFT, padx=6)
-            ent.bind("<KeyRelease>", lambda e: self._refresh_list())
+            ent.bind(KEY_RELEASE, lambda e: self._refresh_list())
 
             ttk.Label(top, text="Category:").pack(side=tk.LEFT)
             self.cat_var = tk.StringVar(value="All")
@@ -4264,7 +4247,7 @@ if TK_AVAILABLE:
             self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#1976d2")
             self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
-            self.listbox.bind("<Return>", lambda e: self._insert_selected())
+            self.listbox.bind(RETURN_KEY, lambda e: self._insert_selected())
 
             # Right panel
             right = ttk.Frame(body)
@@ -4322,7 +4305,10 @@ if TK_AVAILABLE:
                 return
             ascii_char = icon['ascii']
             # Basic sizing based on variant
-            w = 16 if size_variant == 'size_16' else 24 if size_variant == 'size_24' else 16
+            if size_variant == 'size_24':
+                w = 24
+            else:
+                w = 16
             h = w
             x = max(0, (self.preview.designer.width - w) // 2)
             y = max(0, (self.preview.designer.height - h) // 2)
@@ -4439,3 +4425,9 @@ if __name__ == "__main__":
         # No CLI headless args; do nothing (GUI usage via import)
         raise SystemExit(0)
 
+SEARCH_LABEL_TEXT = "Search:"
+RETURN_KEY = "<Return>"
+EXPORT_COMPLETE_TITLE = "Export Complete"
+NO_ANIMATION_TITLE = "No Animation"
+NO_ANIMATION_MSG = "Select an animation first"
+KEY_RELEASE = "<KeyRelease>"
