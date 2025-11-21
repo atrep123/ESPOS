@@ -369,6 +369,10 @@ _LEGACY_HEX = {
     "legacy_red_soft": "#ff4444",
     "legacy_green_mint2": "#00ffaa",
     "legacy_green_deep2": "#005500",
+    "accent_handle_base": "#4cb2ff",
+    "accent_handle_hover": "#6cc8ff",
+    "selection_outline": "#3ea7ff",
+    "selection_fill": "#45a4ff",
 }
 COLOR_HEX.update(_LEGACY_HEX)
 

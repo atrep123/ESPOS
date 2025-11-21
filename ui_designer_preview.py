@@ -49,6 +49,7 @@ from ui_components_library_ascii import (
     create_vertical_menu_ascii,
 )
 from ui_designer import UIDesigner, WidgetConfig, WidgetType
+from design_tokens import color_hex
 
 DATA_DISPLAY = "Data Display"
 COMBO_SELECTED = "<<ComboboxSelected>>"
@@ -1444,8 +1445,8 @@ class VisualPreviewWindow:
         
         # Larger handles for better UX (8px visual, 12-14px with scaling)
         handle_visual_size = max(8, min(14, int(10 * font_scale)))
-        handle_color = "#4CB2FF"
-        handle_hover_color = "#6CC8FF"  # Brighter on hover
+        handle_color = color_hex("accent_handle_base")
+        handle_hover_color = color_hex("accent_handle_hover")  # Brighter on hover
         
         # Corner handles
         handles = [
@@ -1924,7 +1925,8 @@ class VisualPreviewWindow:
             self.canvas.delete(self.box_select_rect)
         self.box_select_rect = self.canvas.create_rectangle(
             x1, y1, x2, y2,
-            outline="#00AAFF", width=2, dash=(4, 4),
+            outline=color_hex("selection_outline"), width=2, dash=(4, 4),
+            fill=color_hex("selection_fill"), stipple="gray50",
             tags="box_select"
         )
         return True
@@ -2284,10 +2286,16 @@ class VisualPreviewWindow:
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        results_list = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                                   font=("Arial", 10), bg="#1e1e1e", fg="#ffffff",
-                                   selectbackground="#4CAF50", selectforeground="#000000",
-                                   height=15)
+        results_list = tk.Listbox(
+            list_frame,
+            yscrollcommand=scrollbar.set,
+            font=("Arial", 10),
+            bg="#1e1e1e",
+            fg="#ffffff",
+            selectbackground=color_hex("legacy_green_material"),
+            selectforeground="#000000",
+            height=15,
+        )
         results_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=results_list.yview)
         
@@ -3113,7 +3121,7 @@ class VisualPreviewWindow:
             # Canvas extents in pixels (zoomed)
             width_px = int(self.designer.width * z)
             height_px = int(self.designer.height * z)
-            color = "#00FF88"
+            color = color_hex("legacy_green_mint")
             for orient, pos in guides:
                 if orient == "v":
                     x = int(pos * z)
@@ -3784,7 +3792,7 @@ class AnimationEditorWindow:
             x = 50 + int(bar_width * kf.time)
             
             # Keyframe marker
-            color = "#00ff00" if idx == self.selected_keyframe_idx else "#ffaa00"
+            color = color_hex("success") if idx == self.selected_keyframe_idx else color_hex("legacy_orange_bright")
             self.timeline_canvas.create_oval(
                 x - 8, timeline_y + 6, x + 8, timeline_y + 34,
                 fill=color, outline="white", width=2, tags=f"keyframe_{idx}"
@@ -3954,7 +3962,7 @@ class AnimationEditorWindow:
             points.extend([x, y])
         
         if len(points) >= 4:
-            self.easing_canvas.create_line(points, fill="#00ff00", width=2, smooth=True)
+            self.easing_canvas.create_line(points, fill=color_hex("success"), width=2, smooth=True)
         
         # Labels
         self.easing_canvas.create_text(width // 2, height - 3,
@@ -4133,7 +4141,7 @@ if TK_AVAILABLE:
             body = ttk.Frame(self)
             body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
-            self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#4CAF50")
+            self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground=color_hex("legacy_green_material"))
             self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
             self.listbox.bind(RETURN_KEY, lambda e: self._insert_selected())
@@ -4151,58 +4159,58 @@ if TK_AVAILABLE:
             self._build_library()
             self._refresh_list()
 
-        def _build_library(self):
-            self._entries = []
-            seen = set()
+    def _build_library(self):
+        self._entries = []
+        seen = set()
 
-            def make_tags(text: str):
-                base = (text or '').lower().replace(',', ' ').split()
-                return [t for t in base if len(t) > 2][:10]
+        def make_tags(text: str):
+            base = (text or '').lower().replace(',', ' ').split()
+            return [t for t in base if len(t) > 2][:10]
 
-            for comp in self.preview.ascii_components:
-                name = comp.get("name")
-                if not name or name in seen:
-                    continue
-                seen.add(name)
-                cat = comp.get("category", "Misc")
-                desc = comp.get("description", "")
+        for comp in self.preview.ascii_components:
+            name = comp.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            cat = comp.get("category", "Misc")
+            desc = comp.get("description", "")
+            self._entries.append({
+                'name': name,
+                'category': cat,
+                'desc': desc,
+                'factory': comp.get("factory"),
+                'tags': make_tags(name + ' ' + desc)
+            })
+        for qi in self.preview.quick_insert_components:
+            name = qi.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            cat = 'Quick'
+            desc = f"Quick insert {qi.get('type')}"
+            self._entries.append({
+                'name': name,
+                'category': cat,
+                'desc': desc,
+                'defaults': qi.get('defaults'),
+                'type': qi.get('type'),
+                'tags': make_tags(name + ' ' + desc)
+            })
+        # Add recent pseudo entries
+        for r in self.recent:
+            if r not in seen:
                 self._entries.append({
-                    'name': name,
-                    'category': cat,
-                    'desc': desc,
-                    'factory': comp.get("factory"),
-                    'tags': make_tags(name + ' ' + desc)
+                    'name': r,
+                    'category': 'Recent',
+                    'desc': 'Recently used component',
+                    'tags': make_tags(r)
                 })
-            for qi in self.preview.quick_insert_components:
-                name = qi.get("name")
-                if not name or name in seen:
-                    continue
-                seen.add(name)
-                cat = 'Quick'
-                desc = f"Quick insert {qi.get('type')}"
-                self._entries.append({
-                    'name': name,
-                    'category': cat,
-                    'desc': desc,
-                    'defaults': qi.get('defaults'),
-                    'type': qi.get('type'),
-                    'tags': make_tags(name + ' ' + desc)
-                })
-            # Add recent pseudo entries
-            for r in self.recent:
-                if r not in seen:
-                    self._entries.append({
-                        'name': r,
-                        'category': 'Recent',
-                        'desc': 'Recently used component',
-                        'tags': make_tags(r)
-                    })
-            self._entries.sort(key=lambda e: (e['category'], e['name']))
-            cats = sorted({e['category'] for e in self._entries})
-            if 'Recent' in cats:
-                cats.remove('Recent')
-                cats.insert(0, 'Recent')
-            self.category_combo['values'] = ['All'] + cats
+        self._entries.sort(key=lambda e: (e['category'], e['name']))
+        cats = sorted({e['category'] for e in self._entries})
+        if 'Recent' in cats:
+            cats.remove('Recent')
+            cats.insert(0, 'Recent')
+        self.category_combo['values'] = ['All'] + cats
 
         def _refresh_list(self):
             term = self.search_var.get().lower().strip()
