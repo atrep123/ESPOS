@@ -12,8 +12,8 @@ import pytest
 
 # Prevent third-party pytest plugins from being auto-discovered in constrained environments.
 os.environ.setdefault("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
-# Avoid capture failures on restricted filesystems/PTYs by default; CI can override.
-os.environ.setdefault("PYTEST_ADDOPTS", "--capture=no")
+# Ensure UTF-8 output to avoid Windows cp1250 console issues
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 # Force headless mode for ALL tests to prevent Tk initialization issues in CI/parallel runs
 # This MUST be set before any test imports ui_designer_preview
