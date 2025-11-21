@@ -121,6 +121,12 @@ class VisualPreviewWindow:
         self._profiler: Optional[PerformanceProfiler] = None
         self._profiler_enabled: bool = False
         self._last_fps: float = 0.0
+        # Responsive scaling helper (spacing/font) from design tokens
+        try:
+            from design_tokens import responsive_scalars  # type: ignore
+            self._responsive_scalars = responsive_scalars
+        except Exception:
+            self._responsive_scalars = lambda width, height=None: {"tier": "medium", "spacing_scale": 1.0, "font_scale": 1.0}
         # Pan/zoom runtime state
         self._pan_enabled: bool = False  # Space held
         self._pan_dragging: bool = False
@@ -436,6 +442,25 @@ class VisualPreviewWindow:
         grid_spin.grid(row=3, column=1, sticky=tk.W, padx=5, pady=2)
         ttk.Label(settings_frame, text="px", foreground="#888").grid(row=3, column=2, sticky=tk.W)
 
+        # Batch edit panel (multi-select position/size deltas)
+        batch_frame = ttk.LabelFrame(props_container, text="Batch Edit (Multi-Select)", padding=10)
+        batch_frame.pack(fill=tk.X, padx=5, pady=(5, 10))
+        self.batch_dx_var = tk.StringVar(value="0")
+        self.batch_dy_var = tk.StringVar(value="0")
+        self.batch_dw_var = tk.StringVar(value="0")
+        self.batch_dh_var = tk.StringVar(value="0")
+
+        ttk.Label(batch_frame, text="ΔX").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Entry(batch_frame, width=6, textvariable=self.batch_dx_var).grid(row=0, column=1, sticky=tk.W, padx=4)
+        ttk.Label(batch_frame, text="ΔY").grid(row=0, column=2, sticky=tk.W, pady=2)
+        ttk.Entry(batch_frame, width=6, textvariable=self.batch_dy_var).grid(row=0, column=3, sticky=tk.W, padx=4)
+        ttk.Label(batch_frame, text="ΔW").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Entry(batch_frame, width=6, textvariable=self.batch_dw_var).grid(row=1, column=1, sticky=tk.W, padx=4)
+        ttk.Label(batch_frame, text="ΔH").grid(row=1, column=2, sticky=tk.W, pady=2)
+        ttk.Entry(batch_frame, width=6, textvariable=self.batch_dh_var).grid(row=1, column=3, sticky=tk.W, padx=4)
+        ttk.Button(batch_frame, text="Apply to Selection", command=self._on_batch_apply).grid(row=0, column=4, rowspan=2, padx=8, pady=2)
+        ttk.Button(batch_frame, text="Reset", command=self._on_batch_reset).grid(row=0, column=5, rowspan=2, padx=4, pady=2)
+
         self.props_frame = ttk.Frame(props_container, padding=10)
         self.props_frame.pack(fill=tk.BOTH, expand=True)
         ttk.Label(self.props_frame, text="No widget selected").pack()
@@ -490,6 +515,20 @@ class VisualPreviewWindow:
         cx = max(0, (self.designer.width - w) // 2)
         cy = max(0, (self.designer.height - h) // 2)
         return cx, cy
+
+    def _get_responsive_scales(self) -> Tuple[float, float]:
+        """Return (spacing_scale, font_scale) based on current canvas size."""
+        try:
+            width = self.canvas.winfo_width()
+            height = self.canvas.winfo_height()
+        except Exception:
+            width = self.designer.width
+            height = self.designer.height
+        try:
+            scales = self._responsive_scalars(width, height)
+            return float(scales.get("spacing_scale", 1.0)), float(scales.get("font_scale", 1.0))
+        except Exception:
+            return 1.0, 1.0
 
     def _palette_add(self, kind: str):
         """Add a widget of given kind near center and select it."""
@@ -1395,16 +1434,18 @@ class VisualPreviewWindow:
         
         widget = scene.widgets[self.selected_widget_idx]
         
-        # Scale to canvas coordinates
+        _, font_scale = self._get_responsive_scales()
+
+        # Scale to canvas coordinates (render uses settings.zoom to keep parity)
         x = int(widget.x * self.settings.zoom)
         y = int(widget.y * self.settings.zoom)
         w = int(widget.width * self.settings.zoom)
         h = int(widget.height * self.settings.zoom)
         
-        # Larger handles for better UX (8px visual, 12px hitbox)
-        handle_visual_size = 8
-        handle_color = "#00AAFF"
-        handle_hover_color = "#00DDFF"  # Brighter on hover
+        # Larger handles for better UX (8px visual, 12-14px with scaling)
+        handle_visual_size = max(8, min(14, int(10 * font_scale)))
+        handle_color = "#4CB2FF"
+        handle_hover_color = "#6CC8FF"  # Brighter on hover
         
         # Corner handles
         handles = [
@@ -1679,8 +1720,12 @@ class VisualPreviewWindow:
         # Convert to widget coordinates
         wx, wy = self._canvas_to_widget_coords(x, y)
         
-        # Larger hitbox tolerance for easier handle grabbing (12px total area)
-        tolerance = 6
+        # Larger hitbox tolerance for easier handle grabbing (12-16px total area)
+        try:
+            spacing_scale, _ = self._get_responsive_scales()
+            tolerance = max(6, int(6 * spacing_scale))
+        except Exception:
+            tolerance = 6
         
         handles = [
             (widget.x, widget.y, "nw"),
@@ -2041,6 +2086,18 @@ class VisualPreviewWindow:
         new_x = widget.x + dx * step
         new_y = widget.y + dy * step
 
+        # Respect snap-to-grid if enabled
+        if self.settings.snap_enabled and self.settings.snap_size > 0:
+            snap = self.settings.snap_size
+            snapped_x = round(new_x / snap) * snap
+            snapped_y = round(new_y / snap) * snap
+            # If snapping collapses movement, step to next cell in the direction
+            if snapped_x == widget.x and dx != 0:
+                snapped_x = widget.x + (snap if dx > 0 else -snap)
+            if snapped_y == widget.y and dy != 0:
+                snapped_y = widget.y + (snap if dy > 0 else -snap)
+            new_x, new_y = snapped_x, snapped_y
+
         new_x = max(0, min(new_x, self.designer.width - widget.width))
         new_y = max(0, min(new_y, self.designer.height - widget.height))
 
@@ -2125,6 +2182,52 @@ class VisualPreviewWindow:
     def _on_nudge_shift_distance_change(self):
         """Update shift+nudge distance setting"""
         self.settings.nudge_shift_distance = self.nudge_shift_distance_var.get()
+    
+    def _on_batch_apply(self) -> None:
+        """Apply batch position/size deltas to current selection."""
+        def _parse(var: tk.StringVar) -> int:
+            try:
+                return int(var.get() or 0)
+            except Exception:
+                return 0
+        dx = _parse(self.batch_dx_var)
+        dy = _parse(self.batch_dy_var)
+        dw = _parse(self.batch_dw_var)
+        dh = _parse(self.batch_dh_var)
+        self._batch_apply_deltas(dx, dy, dw, dh)
+
+    def _on_batch_reset(self) -> None:
+        """Reset batch edit deltas to zero."""
+        for var in (self.batch_dx_var, self.batch_dy_var, self.batch_dw_var, self.batch_dh_var):
+            var.set("0")
+
+    def _batch_apply_deltas(self, dx: int, dy: int, dw: int, dh: int) -> None:
+        """Core batch apply logic (separate for testing)."""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        indices = self.selected_widgets or ([self.selected_widget_idx] if self.selected_widget_idx is not None else [])
+        if not indices:
+            return
+        for idx in indices:
+            if idx >= len(scene.widgets):
+                continue
+            w = scene.widgets[idx]
+            new_w = max(4, w.width + dw)
+            new_h = max(4, w.height + dh)
+            new_x = w.x + dx
+            new_y = w.y + dy
+            new_x = max(0, min(new_x, max(0, self.designer.width - new_w)))
+            new_y = max(0, min(new_y, max(0, self.designer.height - new_h)))
+            w.x = new_x
+            w.y = new_y
+            w.width = new_w
+            w.height = new_h
+        try:
+            self.designer._save_state()
+        except Exception:
+            pass
+        self.refresh()
     
     def _open_animation_editor(self):
         """Open animation timeline editor"""

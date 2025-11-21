@@ -159,6 +159,77 @@ class AnimationTokens:
 
 
 @dataclass(frozen=True)
+class ResponsiveBreakpoints:
+    """Viewport width breakpoints (columns/pixels depending on context)."""
+    tiny: int = 40     # <40 cols: minimal UI
+    small: int = 80    # 40-79: compact UI
+    medium: int = 120  # 80-119: comfortable default
+    wide: int = 160    # >=120: spacious layouts
+
+
+@dataclass(frozen=True)
+class ResponsiveTier:
+    """Resolved responsive tier with convenience flags."""
+    name: str
+    is_tiny: bool
+    is_small: bool
+    is_medium: bool
+    is_wide: bool
+
+
+class ResponsiveEvaluator:
+    """Map viewport sizes to responsive tiers using shared breakpoints."""
+
+    def __init__(self, breakpoints: ResponsiveBreakpoints | None = None) -> None:
+        self.breakpoints = breakpoints or ResponsiveBreakpoints()
+
+    def classify(self, width: int, height: int | None = None) -> ResponsiveTier:
+        """Return responsive tier for given width (height optional for future use)."""
+        bp = self.breakpoints
+        if width < bp.tiny:
+            name = "tiny"
+        elif width < bp.small:
+            name = "small"
+        elif width < bp.medium:
+            name = "medium"
+        else:
+            name = "wide"
+        return ResponsiveTier(
+            name=name,
+            is_tiny=name == "tiny",
+            is_small=name == "small",
+            is_medium=name == "medium",
+            is_wide=name == "wide",
+        )
+
+
+def responsive_scalars(width: int, height: int | None = None) -> Dict[str, float | str]:
+    """
+    Return simple scaling factors for spacing and typography based on width.
+
+    Intended for lightweight layout adjustments without changing scene data.
+    """
+    tier = responsive_evaluator.classify(width, height)
+    if tier.is_tiny:
+        space = 0.85
+        font = 0.9
+    elif tier.is_small:
+        space = 0.95
+        font = 0.95
+    elif tier.is_medium:
+        space = 1.0
+        font = 1.0
+    else:  # wide
+        space = 1.1
+        font = 1.05
+    return {
+        "tier": tier.name,
+        "spacing_scale": space,
+        "font_scale": font,
+    }
+
+
+@dataclass(frozen=True)
 class DesignTokens:
     """Master design tokens registry."""
     
@@ -167,10 +238,12 @@ class DesignTokens:
     typography: TypographyTokens = TypographyTokens()
     elevation: ElevationTokens = ElevationTokens()
     animation: AnimationTokens = AnimationTokens()
+    responsive: ResponsiveBreakpoints = ResponsiveBreakpoints()
 
 
 # Global singleton instance
 tokens = DesignTokens()
+responsive_evaluator = ResponsiveEvaluator(tokens.responsive)
 
 
 # Helper functions for compatibility with existing codebase

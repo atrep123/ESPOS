@@ -3,7 +3,14 @@
 Tests for design tokens module.
 """
 import pytest
-from design_tokens import tokens, ColorTokens, SpacingTokens
+from design_tokens import (
+    tokens,
+    ColorTokens,
+    SpacingTokens,
+    ResponsiveBreakpoints,
+    ResponsiveEvaluator,
+    responsive_scalars,
+)
 
 
 def test_color_tokens_immutable():
@@ -62,6 +69,27 @@ def test_tokens_singleton():
     """Tokens should be a singleton instance."""
     from design_tokens import tokens as tokens2
     assert tokens is tokens2
+
+
+def test_responsive_evaluator():
+    """Responsive evaluator should map widths to expected tiers."""
+    bp = ResponsiveBreakpoints(tiny=40, small=80, medium=120, wide=160)
+    ev = ResponsiveEvaluator(bp)
+    assert ev.classify(30).name == "tiny"
+    assert ev.classify(50).is_small
+    assert ev.classify(90).is_medium
+    assert ev.classify(140).is_wide
+    assert ev.classify(200).name == "wide"
+
+
+def test_responsive_scalars():
+    """Scaling factors should be monotonic across tiers."""
+    tiny = responsive_scalars(30)
+    small = responsive_scalars(60)
+    medium = responsive_scalars(100)
+    wide = responsive_scalars(180)
+    assert tiny["spacing_scale"] < small["spacing_scale"] <= medium["spacing_scale"] <= wide["spacing_scale"]
+    assert tiny["font_scale"] < wide["font_scale"]
 
 
 if __name__ == "__main__":

@@ -36,6 +36,13 @@ Pro vizuální editaci pomocí myši použij GUI nástroj:
 - Dvojklik otevře vlastnosti widgetu.
 - Uložení `Ctrl+S` zapíše změny do JSON (a spustí auto-exporty, pokud jsou zapnuté).
 - Pro čistý start: `Designer: New GUI (Blank)`.
+- Toolbar: tlačítko **Guides** zapíná/vypíná magnetické vodítka (výchozí ON, řídí se snap/grid); status bar dole ukazuje aktuální stav Snap/Grid/Guides a kontextové hinty.
+- Canvas ovládání: **Ctrl+MouseWheel** zoom, **Ctrl+Plus/Minus/0** zoom/reset, **Space (hold)+Drag** pan; zoom je nedestruktivní (nemění data scény).
+- Kontextové menu (pravý klik): horní položka Add → **Quick Search...** otevře typ-ahead vyhledávání komponent; Enter vloží vybranou komponentu, Esc dialog zavře.
+- Nudge vzdálenosti: v pravém panelu (Editor Settings) nastavíš základní a Shift nudge; pokud je zapnutý snap/grid, šipky se zarovnávají na mřížku.
+- Výběrové úchyty: větší hitboxy pro snadnější chycení; při najetí/resize ukazují hint “Resize handle • Shift=constrain” a kurzory odpovídající směru.
+- Batch edit: v panelu Properties → Batch Edit můžeš vybrané widgety hromadně posunout/změnit velikost pomocí ΔX/ΔY/ΔW/ΔH (platí na multi-select).
+- Batch panel má tlačítko Reset, které vrátí všechny ΔX/ΔY/ΔW/ΔH na 0.
 
 ### Preflight Severity
 

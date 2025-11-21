@@ -11,11 +11,12 @@ The `design_tokens.py` module provides a single source of truth for:
 - **Typography** – Font sizes, weights, families, line heights
 - **Elevation** – Shadow depths and ASCII shading characters
 - **Animation** – Durations and easing curves
+- **Responsive** – Breakpoints + evaluator for width-based tiers
 
 ## Usage
 
 ```python
-from design_tokens import tokens
+from design_tokens import tokens, responsive_evaluator, responsive_scalars
 
 # Colors
 bg_color = tokens.colors.surface  # (30, 30, 30)
@@ -36,6 +37,10 @@ ascii_char = tokens.elevation.ascii_shading[3]  # '▓'
 # Animation
 transition_time = tokens.animation.base  # 160ms
 easing = tokens.animation.ease_out  # "cubic-bezier(0.0, 0.0, 0.2, 1.0)"
+
+# Responsive
+tier = responsive_evaluator.classify(width=100).name  # "medium"
+scales = responsive_scalars(100)  # {"tier": "medium", "spacing_scale": 1.0, "font_scale": 1.0}
 ```
 
 ## Token Categories
@@ -85,6 +90,12 @@ Depth levels (0-4) with shadow blur and ASCII shading:
 - **Durations**: `fast` (80ms), `base` (160ms), `slow` (240ms)
 - **Easing**: `ease_in`, `ease_out`, `ease_in_out` (cubic-bezier values)
 - **Frame budgets**: `frame_budget_60fps` (16.67ms), `frame_budget_30fps` (33.33ms)
+
+### Responsive (ResponsiveBreakpoints / ResponsiveEvaluator)
+
+- Breakpoints: `tiny` (<40), `small` (<80), `medium` (<120), `wide` (>=120) — configurable
+- `responsive_evaluator.classify(width)` → tier with flags (`is_tiny`, `is_small`, `is_medium`, `is_wide`)
+- `responsive_scalars(width)` → lightweight `spacing_scale` / `font_scale` for adjusting layout without touching scene data
 
 ## Immutability
 

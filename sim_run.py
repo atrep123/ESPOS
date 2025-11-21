@@ -153,6 +153,10 @@ class RenderContext:
     sleep_ms: float = 0.0
     util: float = 0.0
     input_src: str = ""
+    max_frames: int = 0
+    hud_enabled: bool = False
+    help_overlay_enabled: bool = False
+    tui_panel: bool = False
 
 # --- Shared state snapshot for RPC get_state ---
 _snapshot_lock = threading.Lock()
@@ -382,6 +386,24 @@ class HUDWidget(Widget):
         line = f"{yellow}{msg:{' '}<{ctx.width+2}}{reset}"
         return [line]
 
+class TUIStatusWidget(Widget):
+    """Tiny TUI panel with toggle/help/state info"""
+    def render(self, ctx: RenderContext) -> List[str]:
+        use_color = ctx.use_color
+        dim = Color.DIM if use_color else ''
+        reset = Color.RESET if use_color else ''
+        yellow = Color.YELLOW if use_color else ''
+        max_frames = "inf" if ctx.max_frames == 0 else str(ctx.max_frames)
+        hud = "ON" if ctx.hud_enabled else "off"
+        help_on = "ON" if ctx.help_overlay_enabled else "off"
+        msg = (
+            f"{dim}TUI[F1]{reset} hud:{yellow}{hud}{reset} "
+            f"help:{yellow}{help_on}{reset} max:{yellow}{max_frames}{reset} "
+            f"keys: P/Pause  N/Step  H/Help  F10/HUD  Q/Quit"
+        )
+        line = f"{msg:{' '}<{ctx.width+2}}"
+        return [line]
+
 class HelpOverlayWidget(Widget):
     """Compact help overlay with key bindings"""
     def render(self, ctx: RenderContext) -> List[str]:
@@ -403,8 +425,8 @@ class HelpOverlayWidget(Widget):
         # Compact help content (2 lines + borders)
         help_width = min(width, 76)
         content = [
-            f"{bold}Q{reset}=Quit  {bold}Space{reset}=Pause  {bold}S{reset}=Step  {bold}C{reset}=Continue  {bold}H{reset}=Help  {bold}F10{reset}=HUD",
-            f"{bold}D{reset}=Demo  {bold}A/B/C{reset}=Buttons  {bold}R/G/Y/W/K{reset}=Colors  {bold}M{reset}=Metrics  {bold}E{reset}=Export"
+            f"{bold}Q{reset}=Quit  {bold}Space/P{reset}=Pause  {bold}S/N{reset}=Step  {bold}C{reset}=Continue  {bold}H{reset}=Help  {bold}F10{reset}=HUD",
+            f"{bold}D{reset}=Demo  {bold}F1{reset}=TUI  {bold}A/B/C{reset}=Buttons  {bold}R/G/Y/W/K{reset}=Colors  {bold}M{reset}=Metrics  {bold}E{reset}=Export"
         ]
         
         lines = []
@@ -792,7 +814,24 @@ def get_key_nonblocking() -> Optional[str]:
     if platform.system() == 'Windows':
         import msvcrt
         if msvcrt.kbhit():
-            return msvcrt.getch().decode('utf-8', errors='ignore').lower()
+            ch = msvcrt.getch()
+            # Special keys (function keys, arrows) start with 0 or 0xE0
+            if ch in (b'\x00', b'\xe0'):
+                code = msvcrt.getch()
+                f_keys = {
+                    b';': 'f1',
+                    b'<': 'f2',
+                    b'=': 'f3',
+                    b'>': 'f4',
+                    b'?': 'f5',
+                    b'@': 'f6',
+                    b'A': 'f7',
+                    b'B': 'f8',
+                    b'C': 'f9',
+                    b'D': 'f10',
+                }
+                return f_keys.get(code)
+            return ch.decode('utf-8', errors='ignore').lower()
     else:
         import select
         import termios  # type: ignore
@@ -802,7 +841,17 @@ def get_key_nonblocking() -> Optional[str]:
         try:
             tty.setcbreak(sys.stdin.fileno())  # type: ignore[attr-defined]
             if select.select([sys.stdin], [], [], 0)[0]:
-                return sys.stdin.read(1).lower()
+                first = sys.stdin.read(1)
+                if first == '\x1b':  # Possible escape sequence (F-keys)
+                    seq = first
+                    while select.select([sys.stdin], [], [], 0)[0]:
+                        seq += sys.stdin.read(1)
+                    if seq in ('\x1bOP', '\x1b[11~'):
+                        return 'f1'
+                    if seq in ('\x1b[21~', '\x1b[33~'):
+                        return 'f10'
+                    return seq.lower()
+                return first.lower()
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)  # type: ignore[attr-defined]
     return None
@@ -812,6 +861,8 @@ def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, h
                  compute_ms: float = 0.0, sleep_ms: float = 0.0, util: float = 0.0,
                  hud: bool = False,
                  help_overlay: bool = False,
+                 tui_panel: bool = False,
+                 max_frames: int = 0,
                  input_src: str = "") -> List[str]:
     """Render one frame using widget composition and return list of ANSI lines."""
     ctx = RenderContext(
@@ -826,12 +877,18 @@ def render_frame(state: UIState, frame_num: int, fps: float, width: int = 100, h
         sleep_ms=sleep_ms,
         util=util,
         input_src=input_src,
+        max_frames=max_frames,
+        hud_enabled=hud,
+        help_overlay_enabled=help_overlay,
+        tui_panel=tui_panel,
     )
     widgets: List[Widget] = [
         TitleBarWidget(),
     ]
     if hud:
         widgets.append(HUDWidget())
+    if tui_panel:
+        widgets.append(TUIStatusWidget())
     widgets += [
         DividerWidget(),
         SceneStatusWidget(),
@@ -1007,6 +1064,25 @@ def _maybe_write_ports_file(args: argparse.Namespace) -> None:
         log_error(f"Failed to write sim_ports.json: {e}")
 
 
+def _apply_preset(args: argparse.Namespace) -> None:
+    """Apply CLI preset mappings without changing defaults when unused."""
+    preset = (args.preset or '').lower()
+    if not preset:
+        return
+    if preset == 'dev':
+        args.auto_size = True
+        args.hud = True
+        args.help_overlay = True
+    elif preset == 'hud':
+        args.hud = True
+    elif preset == 'quiet':
+        args.hud = False
+        args.help_overlay = False
+        args.no_color = True
+        args.no_unicode = True
+        args.no_diff = True
+
+
 def _handle_keyboard_input(
     key: str,
     state: UIState,
@@ -1015,14 +1091,15 @@ def _handle_keyboard_input(
     auto_demo: bool,
     help_overlay_enabled: bool,
     hud_enabled: bool,
+    tui_panel_enabled: bool,
     paused: bool,
     step_one_frame: bool,
 ) -> Tuple[
-    bool, bool, bool, bool, bool, bool, str, Optional[MetricsRecorder]
+    bool, bool, bool, bool, bool, bool, bool, str, Optional[MetricsRecorder]
 ]:
     running = True
     if key == 'q':
-        return False, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, current_input_src, metrics_recorder
+        return False, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, tui_panel_enabled, current_input_src, metrics_recorder
     if key == 'a':
         state.btn_a = not state.btn_a
         if state.btn_a:
@@ -1034,10 +1111,10 @@ def _handle_keyboard_input(
     elif key == 'c' or key == 'C':
         state.btn_c = not state.btn_c
         current_input_src = 'kbd'
-    elif key == ' ':
+    elif key in (' ', 'p'):
         paused = not paused
         step_one_frame = False
-    elif key == 's' and paused:
+    elif key in ('s', 'n') and paused:
         step_one_frame = True
     elif key == 'c' and paused:
         paused = False
@@ -1056,7 +1133,9 @@ def _handle_keyboard_input(
         auto_demo = not auto_demo
     elif key == 'h':
         help_overlay_enabled = not help_overlay_enabled
-    elif key == '\x1b[21~':  # F10
+    elif key in ('f1', '\x1bOP', '\x1b[11~'):  # F1
+        tui_panel_enabled = not tui_panel_enabled
+    elif key in ('f10', '\x1b[21~'):  # F10
         hud_enabled = not hud_enabled
     elif key == 'm':
         if not metrics_recorder:
@@ -1069,7 +1148,7 @@ def _handle_keyboard_input(
         else:
             metrics_recorder.export()
             print(f"{Color.DIM}Metrics exported to {metrics_recorder.filepath}{Color.RESET}")
-    return running, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, current_input_src, metrics_recorder
+    return running, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, tui_panel_enabled, current_input_src, metrics_recorder
 
 def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     """Main simulator loop"""
@@ -1089,6 +1168,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     parser.add_argument('--full-redraw-interval', type=int, default=300, help='Periodic full redraw interval (frames, 0=disable)')
     parser.add_argument('--no-diff', action='store_true', help='Disable substring diff rendering (debug full redraw)')
     parser.add_argument('--config', type=str, default='', help='Load configuration from JSON file')
+    parser.add_argument('--preset', type=str, choices=['dev', 'hud', 'quiet'], default='', help='Apply preset: dev|hud|quiet')
     parser.add_argument('--export-metrics', type=str, default='', help='Export timing metrics to CSV file')
     parser.add_argument('--websocket-port', type=int, default=0, help='Enable WebSocket server for remote viewer (0=disabled)')
     parser.add_argument('--record', type=str, default='', help='Record session to file')
@@ -1099,6 +1179,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     parser.add_argument('--max-frames', type=int, default=0, help='Exit after rendering N frames (0=run indefinitely)')
     parser.add_argument('--help-overlay', action='store_true', help='Show help overlay with key bindings (toggle with H)')
     parser.add_argument('--hud', action='store_true', help='Show HUD with FPS and timing metrics (toggle with F10)')
+    parser.add_argument('--tui-panel', action='store_true', help='Show minimal TUI controls panel (toggle with F1)')
     parser.add_argument('--bridge-url', type=str, default='', help='Connect to WebSim bridge (e.g. ws://localhost:8765) for live design updates')
     parser.add_argument('--snapshot', type=str, default='', help='Write one-frame snapshot to path (.txt/.html) and exit after capture')
     args = parser.parse_args()
@@ -1126,8 +1207,13 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
         except Exception as e:
             log_error(f"Failed to load config {args.config}: {e}")
     
+    # Apply preset mappings (flags remain unchanged if preset not set)
+    _apply_preset(args)
+    
     # Auto-detect terminal size if requested
     _auto_size_terminal_if_requested(args)
+    if args.preset:
+        print(f"{Color.DIM}Preset applied: {args.preset}{Color.RESET}")
 
     evq: queue.Queue[Event] = queue.Queue()
     rpc_th, uart_th, com_th = _start_comm_services(args, evq)
@@ -1252,6 +1338,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     auto_demo = False
     hud_enabled = args.hud
     help_overlay_enabled = args.help_overlay
+    tui_panel_enabled = args.tui_panel
     paused = False
     step_one_frame = False  # single-step trigger
     prev_btn_a = state.btn_a
@@ -1404,7 +1491,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
         print(f"{Color.DIM}COM: {args.com_port} @ {args.baud}{Color.RESET}")
     if args.websocket_port:
         print(f"{Color.DIM}Remote Viewer: open web/remote_viewer.html?port={args.websocket_port}{Color.RESET}")
-    controls = "Q quit | D demo | H HUD | M metrics CSV | E export HTML"
+    controls = "Q quit | Space/P pause | S/N step | C continue | H help | F10 HUD | F1 TUI | D demo | M metrics CSV | E export HTML"
     if args.gamepad:
         controls += " | GAMEPAD 0/1/2 → A/B/C"
     if args.input_overlay:
@@ -1447,7 +1534,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
             if key:
                 if session_recorder:
                     session_recorder.record_event('key', {'key': key})
-                running, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, current_input_src, metrics_recorder = _handle_keyboard_input(
+                running, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, tui_panel_enabled, current_input_src, metrics_recorder = _handle_keyboard_input(
                     key,
                     state,
                     metrics_recorder,
@@ -1455,6 +1542,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                     auto_demo,
                     help_overlay_enabled,
                     hud_enabled,
+                    tui_panel_enabled,
                     paused,
                     step_one_frame,
                 )
@@ -1571,6 +1659,8 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                                  compute_ms=compute_ms_prev, sleep_ms=sleep_ms_prev, util=util_prev,
                                  hud=hud_enabled,
                                  help_overlay=help_overlay_enabled,
+                                 tui_panel=tui_panel_enabled,
+                                 max_frames=args.max_frames,
                                  input_src=current_input_src)
 
             if args.snapshot and frame == 0:

@@ -39,6 +39,9 @@ Press `Ctrl` + number key to quickly insert components:
 | **Arrow Keys** | Nudge selected widget(s) by 1 pixel |
 | **Mouse Drag** | Move selected widget(s) |
 | **Shift+Drag** | Resize widget (from handle) |
+| **Ctrl+MouseWheel** | Zoom in/out centered on cursor |
+| **Ctrl+Plus / Ctrl+Minus / Ctrl+0** | Zoom in / Zoom out / Reset zoom |
+| **Space (hold) + Drag** | Hand-pan the canvas |
 
 ## Component Palette Window
 
