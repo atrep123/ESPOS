@@ -189,8 +189,8 @@
     <div id="app">
         <div id="toolbar">
             <h1>🎨 ESP32OS Web UI Designer</h1>
-            <input type="text" id="projectId" placeholder="Project ID" value="demo_project">
-            <input type="text" id="userName" placeholder="Your name" value="User">
+            <input type="text" id="projectId" placeholder="Project ID" aria-label="Project ID" value="demo_project">
+            <input type="text" id="userName" placeholder="Your name" aria-label="Your name" value="User">
             <button id="connectBtn">Connect</button>
             <button id="disconnectBtn" disabled>Disconnect</button>
             <span class="status" id="status">Not connected</span>
@@ -252,7 +252,7 @@
         // Update users list
         function updateUsersList() {
             usersListEl.innerHTML = '';
-            users.forEach((user, uid) => {
+            for (const [uid, user] of users.entries()) {
                 const item = document.createElement('div');
                 item.className = 'user-item';
                 item.innerHTML = `
@@ -260,7 +260,7 @@
                     <span>${user.name}${uid === userId ? ' (you)' : ''}</span>
                 `;
                 usersListEl.appendChild(item);
-            });
+            }
         }
         
         // Update cursor display
@@ -320,7 +320,7 @@
             
             // Draw widgets
             if (scene.widgets) {
-                scene.widgets.forEach(widget => {
+                for (const widget of scene.widgets) {
                     const x = (widget.x || 0) * scale;
                     const y = (widget.y || 0) * scale;
                     const w = (widget.width || 20) * scale;
@@ -343,7 +343,7 @@
                         ctx.font = `${10 * scale}px monospace`;
                         ctx.fillText(widget.text, x + 4, y + h / 2 + 3);
                     }
-                });
+                }
             }
         }
         
@@ -355,9 +355,9 @@
                 case 'session_state':
                     userId = msg.user_id;
                     users.clear();
-                    (msg.session.users || []).forEach(user => {
+                    for (const user of (msg.session.users || [])) {
                         users.set(user.id, user);
-                    });
+                    }
                     log(`Connected as ${userNameInput.value}`, 'info');
                     updateUsersList();
                     break;
@@ -368,7 +368,7 @@
                     updateUsersList();
                     break;
                 
-                case 'user_left':
+                case 'user_left': {
                     const leftUser = users.get(msg.user_id);
                     if (leftUser) {
                         log(`${leftUser.name} left`, 'info');
@@ -377,8 +377,9 @@
                         updateUsersList();
                     }
                     break;
+                }
                 
-                case 'cursor':
+                case 'cursor': {
                     const user = users.get(msg.user_id);
                     if (user) {
                         user.cursor_x = msg.x;
@@ -386,6 +387,7 @@
                         updateCursor(user);
                     }
                     break;
+                }
                 
                 case 'widget_add':
                 case 'widget_update':

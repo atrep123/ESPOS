@@ -41,6 +41,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
+import logging
 
 try:
     from PIL import Image  # type: ignore
@@ -51,6 +52,9 @@ try:
     import cairosvg  # type: ignore
 except Exception:  # pragma: no cover
     cairosvg = None  # type: ignore
+
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -228,7 +232,7 @@ def batch_convert(src_dir: Path, size: int, prefix: str = "mi_", threshold: int 
             h_parts.append(f"extern const icon_t {sym};\n")
             symbols.append(sym)
         except Exception as exc:
-            print(f"[icon-pipeline] Skipping {path.name}: {exc}")
+            logger.warning("[icon-pipeline] Skipping %s: %s", path.name, exc)
             continue
 
     c_code = (
@@ -254,7 +258,7 @@ def main(argv: List[str] | None = None) -> int:
     try:
         c_code, h_code, symbols = batch_convert(args.src, args.size, args.prefix, args.threshold, args.invert)
     except Exception as exc:
-        print(f"[icon-pipeline] Failed: {exc}")
+        logger.error("[icon-pipeline] Failed: %s", exc)
         return 1
 
     if args.out_c and args.out_h:
@@ -262,10 +266,10 @@ def main(argv: List[str] | None = None) -> int:
         args.out_h.parent.mkdir(parents=True, exist_ok=True)
         args.out_c.write_text(c_code, encoding="utf-8")
         args.out_h.write_text(h_code, encoding="utf-8")
-        print(f"[icon-pipeline] Wrote {args.out_c} and {args.out_h} ({len(symbols)} icons)")
+        logger.info("[icon-pipeline] Wrote %s and %s (%d icons)", args.out_c, args.out_h, len(symbols))
     else:
         # Dry-run to stdout
-        print("[icon-pipeline] Dry-run (no --out-c/--out-h). Preview header: \n")
+        logger.info("[icon-pipeline] Dry-run (no --out-c/--out-h). Preview header:")
         sys.stdout.write(h_code)
     return 0
 

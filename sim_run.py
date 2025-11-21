@@ -16,6 +16,7 @@ import socket
 import sys
 import threading
 import time
+from io import BytesIO
 from dataclasses import dataclass
 from datetime import datetime
 from typing import (
@@ -34,6 +35,12 @@ from typing import (
     Union,
     cast,
 )
+try:
+    from PIL import Image, ImageDraw, ImageFont  # type: ignore
+except Exception:
+    Image = None  # type: ignore
+    ImageDraw = None  # type: ignore
+    ImageFont = None  # type: ignore
 
 pygame: Any
 try:
@@ -865,6 +872,204 @@ def optimize_ansi(line: str) -> str:
     line = _REDUNDANT_RE.sub(r'\1', line)
     return line
 
+
+def _write_snapshot(lines: List[str], path: str) -> None:
+    """Write a single-frame snapshot to text or HTML based on extension."""
+    try:
+        out_path = Path(path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        ext = out_path.suffix.lower()
+        if ext == ".html":
+            content = "<!DOCTYPE html><meta charset='utf-8'><pre>" + "\n".join(lines) + "</pre>"
+            out_path.write_text(content, encoding="utf-8")
+        elif ext == ".png":
+            if Image is None or ImageDraw is None or ImageFont is None:
+                print(f"{Color.DIM}Pillow not available; writing text snapshot instead{Color.RESET}")
+                out_path = out_path.with_suffix(".txt")
+                out_path.write_text("\n".join(lines), encoding="utf-8")
+            else:
+                font = ImageFont.load_default()
+                width = max(len(l) for l in lines) if lines else 0
+                height = len(lines)
+                img = Image.new("RGB", (max(1, width * 8), max(1, height * 16)), color=(0, 0, 0))
+                draw = ImageDraw.Draw(img)
+                for idx, line in enumerate(lines):
+                    draw.text((0, idx * 16), line, font=font, fill=(180, 255, 180))
+                img.save(out_path)
+        else:
+            out_path.write_text("\n".join(lines), encoding="utf-8")
+        print(f"{Color.DIM}Snapshot written to {out_path}{Color.RESET}")
+    except Exception as exc:
+        log_error(f"Snapshot failed: {exc}")
+
+
+def _auto_size_terminal_if_requested(args: argparse.Namespace) -> None:
+    if not args.auto_size:
+        return
+    try:
+        if platform.system() == 'Windows':
+            import ctypes
+            import ctypes.wintypes
+
+            kernel32 = ctypes.windll.kernel32
+            COORD = ctypes.wintypes._COORD  # type: ignore[attr-defined]
+            WORD = ctypes.wintypes.WORD
+            STD_OUTPUT_HANDLE = -11
+            handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+
+            class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):  # noqa: N801 - Windows API struct name
+                _fields_ = [
+                    ("dwSize", COORD),
+                    ("dwCursorPosition", COORD),
+                    ("wAttributes", WORD),
+                    ("srWindow", ctypes.wintypes.SMALL_RECT),
+                    ("dwMaximumWindowSize", COORD),
+                ]
+
+            csbi = CONSOLE_SCREEN_BUFFER_INFO()
+            if kernel32.GetConsoleScreenBufferInfo(handle, ctypes.byref(csbi)):
+                term_width = csbi.srWindow.Right - csbi.srWindow.Left + 1
+                term_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1
+                args.width = max(40, min(term_width - 4, 120))
+                args.height = max(16, min(term_height - 6, 40))
+        else:
+            import shutil
+            term_size = shutil.get_terminal_size((80, 24))
+            args.width = max(40, min(term_size.columns - 4, 120))
+            args.height = max(16, min(term_size.lines - 6, 40))
+    except Exception as e:
+        log_error(f"Auto-size detection failed: {e}")
+
+
+def _start_comm_services(args: argparse.Namespace, evq: queue.Queue[Event]) -> Tuple[Optional[threading.Thread], Optional[threading.Thread], Optional[threading.Thread]]:
+    rpc_th = None
+    uart_th = None
+    com_th = None
+    if args.rpc_port > 0:
+        rpc_th = start_rpc_server(args.rpc_port, evq)
+        if rpc_th is None:
+            msg = f"RPC port {args.rpc_port} is busy or cannot bind."
+            log_error(msg)
+            print(msg, file=sys.stderr)
+            return None, None, None
+    if args.uart_port > 0:
+        uart_th = start_uart_server(args.uart_port, evq)
+        if uart_th is None:
+            msg = f"UART-text port {args.uart_port} is busy or cannot bind."
+            log_error(msg)
+            print(msg, file=sys.stderr)
+            return rpc_th, None, None
+    if args.com_port:
+        com_th = start_com_bridge(args.com_port, args.baud, evq)
+    return rpc_th, uart_th, com_th
+
+
+def _prepare_script_events(args: argparse.Namespace, playback_events: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], float]:
+    script_events: List[Dict[str, Any]] = []
+    run_start = time.time()
+    if playback_events:
+        script_events = playback_events
+    elif args.script:
+        try:
+            with open(args.script, 'r', encoding='utf-8') as f:
+                script_events = json.load(f) or []
+            script_events.sort(key=lambda e: int(e.get('at_ms', 0)))
+        except Exception as e:
+            log_error(f"Failed to load script {args.script}: {e}")
+            script_events = []
+    return script_events, run_start
+
+
+def _maybe_write_ports_file(args: argparse.Namespace) -> None:
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        ports_path = os.path.join(base, "sim_ports.json")
+        ports_info: Dict[str, Optional[int]] = {
+            "rpc_port": int(args.rpc_port) if args.rpc_port else None,
+            "uart_port": int(args.uart_port) if args.uart_port else None,
+            "com_port": args.com_port or None,
+            "pid": os.getpid(),
+            "ts": int(time.time())
+        }
+        with open(ports_path, 'w', encoding='utf-8') as f:
+            json.dump(ports_info, f)
+
+        def _cleanup_ports_file():
+            try:
+                if os.path.exists(ports_path):
+                    os.remove(ports_path)
+            except Exception:
+                pass
+
+        atexit.register(_cleanup_ports_file)
+    except Exception as e:
+        log_error(f"Failed to write sim_ports.json: {e}")
+
+
+def _handle_keyboard_input(
+    key: str,
+    state: UIState,
+    metrics_recorder: Optional[MetricsRecorder],
+    current_input_src: str,
+    auto_demo: bool,
+    help_overlay_enabled: bool,
+    hud_enabled: bool,
+    paused: bool,
+    step_one_frame: bool,
+) -> Tuple[
+    bool, bool, bool, bool, bool, bool, str, Optional[MetricsRecorder]
+]:
+    running = True
+    if key == 'q':
+        return False, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, current_input_src, metrics_recorder
+    if key == 'a':
+        state.btn_a = not state.btn_a
+        if state.btn_a:
+            state.scene = (state.scene + 1) % 3
+        current_input_src = 'kbd'
+    elif key == 'b':
+        state.btn_b = not state.btn_b
+        current_input_src = 'kbd'
+    elif key == 'c' or key == 'C':
+        state.btn_c = not state.btn_c
+        current_input_src = 'kbd'
+    elif key == ' ':
+        paused = not paused
+        step_one_frame = False
+    elif key == 's' and paused:
+        step_one_frame = True
+    elif key == 'c' and paused:
+        paused = False
+        step_one_frame = False
+    elif key == 'r':
+        state.bg = rgb565(255, 0, 0)
+    elif key == 'g':
+        state.bg = rgb565(0, 255, 0)
+    elif key == 'y':
+        state.bg = rgb565(255, 255, 0)
+    elif key == 'w':
+        state.bg = rgb565(255, 255, 255)
+    elif key == 'k':
+        state.bg = rgb565(0, 0, 0)
+    elif key == 'd':
+        auto_demo = not auto_demo
+    elif key == 'h':
+        help_overlay_enabled = not help_overlay_enabled
+    elif key == '\x1b[21~':  # F10
+        hud_enabled = not hud_enabled
+    elif key == 'm':
+        if not metrics_recorder:
+            base = os.path.dirname(os.path.abspath(__file__))
+            out_dir = os.path.join(base, 'examples')
+            os.makedirs(out_dir, exist_ok=True)
+            csv_path = os.path.join(out_dir, 'sim_metrics.csv')
+            metrics_recorder = MetricsRecorder(csv_path)
+            print(f"{Color.DIM}Metrics recording: ON → {csv_path}{Color.RESET}")
+        else:
+            metrics_recorder.export()
+            print(f"{Color.DIM}Metrics exported to {metrics_recorder.filepath}{Color.RESET}")
+    return running, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, current_input_src, metrics_recorder
+
 def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     """Main simulator loop"""
     enable_ansi_colors()
@@ -894,6 +1099,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     parser.add_argument('--help-overlay', action='store_true', help='Show help overlay with key bindings (toggle with H)')
     parser.add_argument('--hud', action='store_true', help='Show HUD with FPS and timing metrics (toggle with F10)')
     parser.add_argument('--bridge-url', type=str, default='', help='Connect to WebSim bridge (e.g. ws://localhost:8765) for live design updates')
+    parser.add_argument('--snapshot', type=str, default='', help='Write one-frame snapshot to path (.txt/.html) and exit after capture')
     args = parser.parse_args()
 
     # Detect optional pygame for input hints (no hard import)
@@ -920,63 +1126,14 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
             log_error(f"Failed to load config {args.config}: {e}")
     
     # Auto-detect terminal size if requested
-    if args.auto_size:
-        try:
-            if platform.system() == 'Windows':
-                import ctypes
-                import ctypes.wintypes
-
-                kernel32 = ctypes.windll.kernel32
-                COORD = ctypes.wintypes._COORD  # type: ignore[attr-defined]
-                WORD = ctypes.wintypes.WORD
-                STD_OUTPUT_HANDLE = -11
-                handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
-
-                class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):  # noqa: N801 - Windows API struct name
-                    _fields_ = [
-                        ("dwSize", COORD),
-                        ("dwCursorPosition", COORD),
-                        ("wAttributes", WORD),
-                        ("srWindow", ctypes.wintypes.SMALL_RECT),
-                        ("dwMaximumWindowSize", COORD),
-                    ]
-
-                csbi = CONSOLE_SCREEN_BUFFER_INFO()
-                if kernel32.GetConsoleScreenBufferInfo(handle, ctypes.byref(csbi)):
-                    term_width = csbi.srWindow.Right - csbi.srWindow.Left + 1
-                    term_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1
-                    # Leave margins for borders
-                    args.width = max(40, min(term_width - 4, 120))
-                    args.height = max(16, min(term_height - 6, 40))
-            else:
-                import shutil
-                term_size = shutil.get_terminal_size((80, 24))
-                args.width = max(40, min(term_size.columns - 4, 120))
-                args.height = max(16, min(term_size.lines - 6, 40))
-        except Exception as e:
-            log_error(f"Auto-size detection failed: {e}")
+    _auto_size_terminal_if_requested(args)
 
     evq: queue.Queue[Event] = queue.Queue()
-    rpc_th = None
-    uart_th = None
-    com_th = None
-    if args.rpc_port > 0:
-        rpc_th = start_rpc_server(args.rpc_port, evq)
-        if rpc_th is None:
-            msg = f"RPC port {args.rpc_port} is busy or cannot bind."
-            log_error(msg)
-            print(msg, file=sys.stderr)
-            return
-    if args.uart_port > 0:
-        uart_th = start_uart_server(args.uart_port, evq)
-        if uart_th is None:
-            msg = f"UART-text port {args.uart_port} is busy or cannot bind."
-            log_error(msg)
-            print(msg, file=sys.stderr)
-            return
-    # Optional COM bridge
-    if args.com_port:
-        com_th = start_com_bridge(args.com_port, args.baud, evq)
+    rpc_th, uart_th, com_th = _start_comm_services(args, evq)
+    if args.rpc_port and rpc_th is None:
+        return
+    if args.uart_port and uart_th is None:
+        return
 
     # Initialize optional features
     metrics_recorder = None
@@ -1121,29 +1278,7 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
         pass
     
     # Write ports discovery file for tools (deleted on exit)
-    try:
-        base = os.path.dirname(os.path.abspath(__file__))
-        ports_path = os.path.join(base, "sim_ports.json")
-        ports_info: Dict[str, Optional[int]] = {
-            "rpc_port": int(args.rpc_port) if args.rpc_port else None,
-            "uart_port": int(args.uart_port) if args.uart_port else None,
-            "com_port": args.com_port or None,
-            "pid": os.getpid(),
-            "ts": int(time.time())
-        }
-        with open(ports_path, 'w', encoding='utf-8') as f:
-            json.dump(ports_info, f)
-
-        def _cleanup_ports_file():
-            try:
-                if os.path.exists(ports_path):
-                    os.remove(ports_path)
-            except Exception:
-                pass
-
-        atexit.register(_cleanup_ports_file)
-    except Exception as e:
-        log_error(f"Failed to write sim_ports.json: {e}")
+    _maybe_write_ports_file(args)
 
     # Optional input thread (pygame overlay / gamepad)
     input_state = {'A': False, 'B': False, 'C': False}
@@ -1286,22 +1421,8 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
 
         prev_lines: List[str] = []
 
-        # Load script if provided
-        script_events: List[Dict[str, Any]] = []
+        script_events, run_start = _prepare_script_events(args, playback_events)
         next_event_idx = 0
-        run_start = time.time()
-        
-        # Prefer playback over script
-        if playback_events:
-            script_events = playback_events
-        elif args.script:
-            try:
-                with open(args.script, 'r', encoding='utf-8') as f:
-                    script_events = json.load(f) or []
-                script_events.sort(key=lambda e: int(e.get('at_ms', 0)))
-            except Exception as e:
-                log_error(f"Failed to load script {args.script}: {e}")
-                script_events = []
 
         # Metrics from previous frame used in footer of current frame
         compute_ms_prev = 0.0
@@ -1325,55 +1446,20 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
             if key:
                 if session_recorder:
                     session_recorder.record_event('key', {'key': key})
-                if key == 'q':
-                    running = False
-                elif key == 'a':
-                    state.btn_a = not state.btn_a
-                    if state.btn_a:
-                        state.scene = (state.scene + 1) % 3
-                    current_input_src = 'kbd'
-                elif key == 'b':
-                    state.btn_b = not state.btn_b
-                    current_input_src = 'kbd'
-                elif key == 'c' or key == 'C':  # C or Shift+C toggles button C
-                    state.btn_c = not state.btn_c
-                    current_input_src = 'kbd'
-                elif key == ' ':  # Space = pause/unpause
-                    paused = not paused
-                    step_one_frame = False
-                elif key == 's' and paused:  # Step when paused
-                    step_one_frame = True
-                elif key == 'c' and paused:  # Continue (unpause)
-                    paused = False
-                    step_one_frame = False
-                elif key == 'r':
-                    state.bg = rgb565(255, 0, 0)
-                elif key == 'g':
-                    state.bg = rgb565(0, 255, 0)
-                elif key == 'y':
-                    state.bg = rgb565(255, 255, 0)
-                elif key == 'w':
-                    state.bg = rgb565(255, 255, 255)
-                elif key == 'k':
-                    state.bg = rgb565(0, 0, 0)
-                elif key == 'd':
-                    auto_demo = not auto_demo
-                elif key == 'h':
-                    help_overlay_enabled = not help_overlay_enabled
-                elif key == '\x1b[21~':  # F10
-                    hud_enabled = not hud_enabled
-                elif key == 'm':
-                    if not metrics_recorder:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        out_dir = os.path.join(base, 'examples')
-                        os.makedirs(out_dir, exist_ok=True)
-                        csv_path = os.path.join(out_dir, 'sim_metrics.csv')
-                        metrics_recorder = MetricsRecorder(csv_path)
-                        print(f"{Color.DIM}Metrics recording: ON → {csv_path}{Color.RESET}")
-                    else:
-                        metrics_recorder.export()
-                        print(f"{Color.DIM}Metrics exported to {metrics_recorder.filepath}{Color.RESET}")
-                elif key == 'e':
+                running, paused, step_one_frame, auto_demo, help_overlay_enabled, hud_enabled, current_input_src, metrics_recorder = _handle_keyboard_input(
+                    key,
+                    state,
+                    metrics_recorder,
+                    current_input_src,
+                    auto_demo,
+                    help_overlay_enabled,
+                    hud_enabled,
+                    paused,
+                    step_one_frame,
+                )
+                if not running:
+                    break
+                if key == 'e':
                     if metrics_recorder and metrics_recorder.data:
                         html_path = metrics_recorder.filepath.replace('.csv', '.html')
                         try:
@@ -1485,6 +1571,10 @@ def main() -> None:  # noqa: C901 - Main event loop intentionally complex
                                  hud=hud_enabled,
                                  help_overlay=help_overlay_enabled,
                                  input_src=current_input_src)
+
+            if args.snapshot and frame == 0:
+                _write_snapshot(lines, args.snapshot)
+                running = False
 
             # Cache footer index once
             if footer_index_cached is None:

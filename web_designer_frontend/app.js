@@ -10,26 +10,24 @@ import { UndoRedoUI } from './undo-redo-ui.js';
 import { WebSocketClient } from './websocket-client.js';
 
 class App {
-    constructor() {
-        this.ws = null;
-            this.previewClient = null;
-            this.previewConnected = false;
-        this.renderer = null;
-        this.undoRedoUI = null;
-        this.propertiesEditor = null;
-        this.cursors = new Map(); // userId -> cursor element
-        this.draggedWidget = null;
-        this.dragOffsetX = 0;
-        this.dragOffsetY = 0;
-        this.dragState = null; // { mode: 'move'|'resize', handle?, widgetId, startCanvas:{x,y}, startRect:{x,y,w,h} }
-        this.wsMoveThrottle = null;
-        this.panState = null; // { startX, startY, startPanX, startPanY }
-        this.spacePressed = false;
-        this.clipboard = null; // Copied widget data
-        this.autoSaveInterval = null;
-        
-        this.init();
-    }
+    ws = null;
+    previewClient = null;
+    previewConnected = false;
+    renderer = null;
+    undoRedoUI = null;
+    propertiesEditor = null;
+    cursors = new Map(); // userId -> cursor element
+    draggedWidget = null;
+    dragOffsetX = 0;
+    dragOffsetY = 0;
+    dragState = null; // { mode: 'move'|'resize', handle?, widgetId, startCanvas:{x,y}, startRect:{x,y,w,h} }
+    wsMoveThrottle = null;
+    panState = null; // { startX, startY, startPanX, startPanY }
+    spacePressed = false;
+    clipboard = null; // Copied widget data
+    autoSaveInterval = null;
+
+    constructor() {}
 
     /**
      * Toggle simulator preview connection
@@ -150,7 +148,7 @@ class App {
         console.log('[App] Initializing...');
         
         // Auto-connect with default credentials (skip modal)
-        const defaultUsername = 'User-' + Math.random().toString(36).substr(2, 5);
+        const defaultUsername = 'User-' + Math.random().toString(36).slice(2, 7);
         const defaultProject = 'demo_project';
         this.connect(defaultUsername, defaultProject);
     }
@@ -245,24 +243,24 @@ class App {
             console.log('[App] Session state:', msg);
             
             // Load widgets
-            if (msg.design && msg.design.widgets) {
+            if (msg.design?.widgets) {
                 this.renderer.clearWidgets();
-                msg.design.widgets.forEach(widget => {
+                for (const widget of msg.design.widgets) {
                     this.renderer.addWidget(widget.id, widget);
-                });
+                }
             }
 
             // Set my user id and render current users
             if (msg.user_id) {
                 this.ws.userId = msg.user_id;
             }
-            if (msg.session && Array.isArray(msg.session.users)) {
+            if (Array.isArray(msg.session?.users)) {
                 const userList = document.getElementById('user-list');
                 userList.innerHTML = '';
-                msg.session.users.forEach(u => {
+                for (const u of msg.session.users) {
                     // Backend users have fields id and name
                     this.addUserBadge(u.id, u.name);
-                });
+                }
             }
         });
 
@@ -365,13 +363,13 @@ class App {
         });
 
         // Widget toolbox drag & drop
-        document.querySelectorAll('.widget-item').forEach(item => {
+        for (const item of document.querySelectorAll('.widget-item')) {
             item.addEventListener('dragstart', (e) => {
                 const type = item.dataset.type;
                 e.dataTransfer.setData('widget-type', type);
                 console.log('[App] Drag start:', type);
             });
-        });
+        }
 
         // Export button
         const exportBtn = document.getElementById('exportBtn');
@@ -414,8 +412,8 @@ class App {
                     startPanY: this.renderer.panY
                 };
                 canvas.style.cursor = 'grabbing';
-                window.addEventListener('mousemove', this.onPanMove);
-                window.addEventListener('mouseup', this.onPanEnd, { once: true });
+                globalThis.addEventListener('mousemove', this.onPanMove);
+                globalThis.addEventListener('mouseup', this.onPanEnd, { once: true });
                 return;
             }
 
@@ -427,10 +425,10 @@ class App {
                 const groupRect = this.renderer.getBoundingBox(groupIds);
                 const startCanvas = this.renderer.screenToCanvas(e.clientX, e.clientY);
                 const startRects = {};
-                groupIds.forEach(id => {
+                for (const id of groupIds) {
                     const w0 = this.renderer.widgets.get(id);
                     if (w0) startRects[id] = { x: w0.x, y: w0.y, w: w0.width, h: w0.height };
-                });
+                }
                 this.dragState = {
                     mode: 'group-resize',
                     handle: groupHandle,
@@ -439,8 +437,8 @@ class App {
                     startCanvas,
                     startGroupRect: { ...groupRect }
                 };
-                window.addEventListener('mousemove', this.onDragMove);
-                window.addEventListener('mouseup', this.onDragEnd, { once: true });
+                globalThis.addEventListener('mousemove', this.onDragMove);
+                globalThis.addEventListener('mouseup', this.onDragEnd, { once: true });
                 return;
             }
 
@@ -476,10 +474,10 @@ class App {
                 if (isGroupMove) {
                     groupIds = Array.from(this.renderer.selectedWidgets);
                     startRects = {};
-                    groupIds.forEach(id => {
+                    for (const id of groupIds) {
                         const w0 = this.renderer.widgets.get(id);
                         if (w0) startRects[id] = { x: w0.x, y: w0.y, w: w0.width, h: w0.height };
-                    });
+                    }
                 }
                 this.dragState = {
                     mode: handle ? 'resize' : (isGroupMove ? 'group-move' : 'move'),
@@ -491,8 +489,8 @@ class App {
                     startRect: { x: widget.x, y: widget.y, w: widget.width, h: widget.height }
                 };
                 // Attach move/up listeners on window to track outside canvas
-                window.addEventListener('mousemove', this.onDragMove);
-                window.addEventListener('mouseup', this.onDragEnd, { once: true });
+                globalThis.addEventListener('mousemove', this.onDragMove);
+                globalThis.addEventListener('mouseup', this.onDragEnd, { once: true });
             } else {
                 // Start marquee selection
                 this.renderer.clearSelection();
@@ -532,15 +530,15 @@ class App {
                 };
 
                 const onUp = () => {
-                    window.removeEventListener('mousemove', onMove);
-                    window.removeEventListener('mouseup', onUp);
+                    globalThis.removeEventListener('mousemove', onMove);
+                    globalThis.removeEventListener('mouseup', onUp);
                     if (marquee) marquee.remove();
                     marquee = null;
                     marqueeStart = null;
                 };
 
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onUp, { once: true });
+                globalThis.addEventListener('mousemove', onMove);
+                globalThis.addEventListener('mouseup', onUp, { once: true });
             }
         });
 
@@ -558,9 +556,9 @@ class App {
                     if (newText !== null) {
                         this.renderer.updateWidget(widgetId, { text: newText });
                         this.ws.updateWidget(widgetId, { text: newText });
-                                                if (this.previewConnected) {
-                                                    this.sendDesignToPreview();
-                                                }
+                        if (this.previewConnected) {
+                            this.sendDesignToPreview();
+                        }
                         this.propertiesEditor.onWidgetUpdated(widgetId, { text: newText });
                     }
                 }
@@ -683,9 +681,9 @@ class App {
             newGH = Math.max(20, newGH);
             
             
-            ds.groupIds.forEach(id => {
+            for (const id of ds.groupIds) {
                 const s = ds.startRects[id];
-                if (!s) return;
+                if (!s) continue;
                 const relX = (s.x - gr.x) / gr.width;
                 const relY = (s.y - gr.y) / gr.height;
                 const relW = s.w / gr.width;
@@ -696,7 +694,7 @@ class App {
                 const nh = Math.max(10, relH * newGH);
                 this.renderer.updateWidget(id, { x: nx, y: ny, width: nw, height: nh });
                 this.propertiesEditor.onWidgetUpdated(id, { x: nx, y: ny, width: nw, height: nh });
-            });
+            }
 
             // No intermediate WS updates during drag - only at drag end
             return;
@@ -705,15 +703,15 @@ class App {
         // Group move: apply delta to all selected
         if (ds.mode === 'group-move' && ds.groupIds && ds.startRects) {
             const updates = {};
-            ds.groupIds.forEach(id => {
+            for (const id of ds.groupIds) {
                 const s = ds.startRects[id];
-                if (!s) return;
+                if (!s) continue;
                 const nx = this.snap(s.x + dx, grid);
                 const ny = this.snap(s.y + dy, grid);
                 updates[id] = { x: nx, y: ny };
                 this.renderer.updateWidget(id, { x: nx, y: ny });
                 this.propertiesEditor.onWidgetUpdated(id, { x: nx, y: ny });
-            });
+            }
 
             // No intermediate WS updates during drag - only at drag end
             return;
@@ -782,10 +780,10 @@ class App {
         const ds = this.dragState;
         // Send final updates for moved items
         if ((ds.mode === 'group-move' || ds.mode === 'group-resize') && ds.groupIds) {
-            ds.groupIds.forEach(id => {
+            for (const id of ds.groupIds) {
                 const w = this.renderer.widgets.get(id);
                 if (w) this.ws.updateWidget(id, { x: w.x, y: w.y, width: w.width, height: w.height });
-            });
+            }
             // Send to preview after group operations
             if (this.previewConnected) {
                 this.sendDesignToPreview();
@@ -803,7 +801,7 @@ class App {
         }
         this.dragState = null;
         this.renderer.canvas.style.cursor = 'default';
-        window.removeEventListener('mousemove', this.onDragMove);
+        globalThis.removeEventListener('mousemove', this.onDragMove);
         this.clearGuides();
     };
 
@@ -822,7 +820,7 @@ class App {
         e.preventDefault();
         this.panState = null;
         this.renderer.canvas.style.cursor = this.spacePressed ? 'grab' : 'default';
-        window.removeEventListener('mousemove', this.onPanMove);
+        globalThis.removeEventListener('mousemove', this.onPanMove);
     };
 
     snap(v, grid) {
@@ -934,7 +932,7 @@ class App {
                     if (w) {
                         const newWidget = {
                             ...w,
-                            id: `widget-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                            id: `widget-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                             x: w.x + 10,
                             y: w.y + 10
                         };
@@ -971,7 +969,7 @@ class App {
                     e.preventDefault();
                     const newWidget = {
                         ...this.clipboard,
-                        id: `widget-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                        id: `widget-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                         x: this.clipboard.x + 15,
                         y: this.clipboard.y + 15
                     };
@@ -997,7 +995,7 @@ class App {
         document.addEventListener('keyup', (e) => {
             if (e.key === ' ') {
                 this.spacePressed = false;
-                if (this.renderer && this.renderer.canvas && !this.panState) {
+                if (this.renderer?.canvas && !this.panState) {
                     this.renderer.canvas.style.cursor = 'default';
                 }
             }
@@ -1101,7 +1099,9 @@ class App {
 
     clearGuides() {
         const overlay = document.getElementById('cursors');
-        overlay.querySelectorAll('.guide-line').forEach(el => el.remove());
+        for (const el of overlay.querySelectorAll('.guide-line')) {
+            el.remove();
+        }
     }
 
     rectsIntersect(a, b) {
@@ -1112,7 +1112,7 @@ class App {
         // Convert screen to canvas coords before zoom
         const before = this.renderer.screenToCanvas(screenX, screenY);
         // Apply zoom
-        const newZoom = Math.max(0.1, Math.min(5.0, this.renderer.zoom * factor));
+        const newZoom = Math.max(0.1, Math.min(5, this.renderer.zoom * factor));
         this.renderer.zoom = newZoom;
         // Adjust pan so the point under cursor stays
         this.renderer.panX = screenX - before.x * newZoom;
@@ -1125,7 +1125,7 @@ class App {
      * Create new widget of given type
      */
     createWidget(type, x, y) {
-        const id = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
         
         const defaults = {
             label: { width: 100, height: 30, text: 'Label' },
@@ -1345,5 +1345,6 @@ class App {
 
 // Start application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.app = new App();
+    globalThis.app = new App();
+    void globalThis.app.init();
 });

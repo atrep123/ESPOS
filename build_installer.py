@@ -38,7 +38,7 @@ class InstallerBuilder:
             return False
         return True
     
-    def create_spec_file(self, onefile: bool = False, windowed: bool = True) -> str:
+    def create_spec_file(self, onefile: bool = False, windowed: bool = True, entry_script: str = "ui_designer_pro.py") -> str:
         """Create PyInstaller spec file"""
         exe_binaries = "a.binaries" if onefile else "[]"
         exe_zipfiles = "a.zipfiles" if onefile else "[]"
@@ -84,7 +84,7 @@ hiddenimports = [
 ]
 
 a = Analysis(
-    ['ui_designer_pro.py'],
+    ['{entry_script}'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -248,7 +248,7 @@ fi
             os.chmod(launcher_path, 0o755)
             print(f"✅ Created launcher: {launcher_path}")
     
-    def create_archive(self, archive_name: Optional[str] = None) -> Optional[str]:
+    def create_archive(self, archive_name: Optional[str] = None, suffix: str = "") -> Optional[str]:
         """Create distribution archive (ZIP/TAR.GZ)"""
         if archive_name is None:
             if sys.platform == "win32":
@@ -258,6 +258,9 @@ fi
             else:
                 archive_name = "ESP32OS_UI_Designer_Linux.tar.gz"
         assert archive_name is not None
+        if suffix:
+            stem, ext = os.path.splitext(archive_name)
+            archive_name = f"{stem}{suffix}{ext}"
         
         print(f"📦 Creating archive: {archive_name}")
         
@@ -306,7 +309,8 @@ fi
         print("✅ Cleanup complete")
     
     def build_all(self, onefile: bool = False, windowed: bool = True, 
-                  create_archive_flag: bool = True) -> bool:
+                  create_archive_flag: bool = True, entry_script: str = "ui_designer_pro.py",
+                  archive_suffix: str = "") -> bool:
         """Complete build process"""
         print("=" * 60)
         print("ESP32OS UI Designer - Installer Builder")
@@ -318,7 +322,7 @@ fi
             return False
         
         # Create spec file
-        spec_file = self.create_spec_file(onefile=onefile, windowed=windowed)
+        spec_file = self.create_spec_file(onefile=onefile, windowed=windowed, entry_script=entry_script)
         
         # Build executable
         if not self.build_executable(spec_file):
@@ -330,7 +334,7 @@ fi
         
         # Create archive
         if create_archive_flag:
-            archive = self.create_archive()
+            archive = self.create_archive(suffix=archive_suffix)
             if archive:
                 print()
                 print("=" * 60)
@@ -355,6 +359,10 @@ def main():
                        help="Skip archive creation")
     parser.add_argument("--clean", action="store_true",
                        help="Clean build artifacts only")
+    parser.add_argument("--entry", choices=["designer", "launcher"], default="designer",
+                        help="Entry script to bundle (designer or unified launcher)")
+    parser.add_argument("--archive-suffix", type=str, default="",
+                        help="Optional suffix to append to archive filename (e.g., _Launcher)")
     
     args = parser.parse_args()
     
@@ -365,11 +373,14 @@ def main():
         return 0
     
     windowed = args.windowed and not args.debug
+    entry_script = "ui_designer_pro.py" if args.entry == "designer" else "tools/esp32os_launcher.py"
     
     success = builder.build_all(
         onefile=args.onefile,
         windowed=windowed,
-        create_archive_flag=not args.no_archive
+        create_archive_flag=not args.no_archive,
+        entry_script=entry_script,
+        archive_suffix=args.archive_suffix,
     )
     
     return 0 if success else 1

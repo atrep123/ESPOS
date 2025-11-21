@@ -2,10 +2,13 @@
 
 [![Tests](https://github.com/atrep123/ESPOS/actions/workflows/tests.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/tests.yml)
 [![Release](https://github.com/atrep123/ESPOS/actions/workflows/release.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/release.yml)
+[![Security Audit](https://github.com/atrep123/ESPOS/actions/workflows/security-audit.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/security-audit.yml)
+[![Markdown Lint](https://github.com/atrep123/ESPOS/actions/workflows/markdown-lint.yml/badge.svg)](https://github.com/atrep123/ESPOS/actions/workflows/markdown-lint.yml)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/atrep123/ESPOS/releases)
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-complete-brightgreen.svg)](docs/)
+[![Security Policy](https://img.shields.io/badge/security-policy-blueviolet.svg)](SECURITY.md)
 
 🎨 Professional UI development system for ESP32 embedded displays with visual designer, simulator, and complete toolchain.
 
@@ -20,6 +23,9 @@
 - **Component Library** - 50+ pre-built components
 - **Template Manager** - Reusable UI patterns
 - **Icon Palette** - 50+ Material Design icons
+- **Live placement preview** for quick insert (Ctrl+1-9) before committing widget position
+- **Cancel placement** with right-click or Esc when previewing a widget
+- **Snap toggle**: press `G` to toggle snap-to-grid during placement; overlay shows size/coords and opens Properties after place
 
 ### 🖥️ Simulator & Runtime
 
@@ -53,6 +59,29 @@
 - **Cursor Tracking** - See other users in real-time
 - **Undo/Redo** - 50 levels with shared history
 
+## 🛡️ Security & Audits
+
+- Weekly `security-audit` workflow runs Python/Node vulnerability scans, license policy checks, SBOM generation, secret scan, and posts summaries.
+- CodeQL analysis, markdown lint, ESP32 firmware build, and dependency freshness checks run in CI; badges above show current status.
+- Dependency freshness checks (pip/npm) available via scheduled workflow.
+- Security dashboard artifact (`reports/security_dashboard.md`) summarizes SARIF findings (pip-audit, npm audit, Bandit, CodeQL if present) and license policy status.
+- Slack alerting is supported in `security-audit` via `SLACK_WEBHOOK_URL` secret (critical findings only). Trigger manually from the Actions tab for ad-hoc audits.
+- Release changelog is auto-generated from git history during release via `tools/generate_changelog.py` and attached to GitHub Releases.
+- SARIF bundle artifact (pip-audit, npm audit, Bandit) is uploaded from security-audit for downstream code scanning tools.
+- ESP32 firmware build workflow publishes artifact `esp32-firmware-esp32-s3-devkitm-1` containing `firmware.bin` and `firmware.elf`.
+- Releases ship with SHA256 `CHECKSUMS.txt` covering all uploaded artifacts.
+- Release artifacts summary: see `reports/RELEASE_ARTIFACTS.md` (designer vs launcher builds and checksums).
+- Verify integrity: `sha256sum -c CHECKSUMS.txt` (Linux) or `shasum -a 256 -c CHECKSUMS.txt` (macOS).
+ - Release body now combines changelog + artifact summary.
+
+## 🛠️ CI / Workflows Overview
+
+- **Tests:** Matrix (Ubuntu/macOS/Windows × Python 3.9–3.12) with pytest; separate tools-only test job; plugin autoload disabled for stability.
+- **Security Audit (weekly + manual):** Produces SARIF bundle, `reports/security_dashboard.md`, SBOMs (py/node/unified), license/secret scan summaries.
+- **Dependency Check (weekly + manual):** Uploads `outdated-pip` and `outdated-npm` artifacts with JSON reports of upgrade opportunities.
+- **ESP32 Firmware Build:** PlatformIO build for `esp32-s3-devkitm-1`, publishes `esp32-firmware-esp32-s3-devkitm-1` artifact (bin + elf).
+- **Release:** Generates changelog and attaches release artifacts; markdown lint runs on PRs to keep docs clean.
+
 ## 🚀 Quick Start
 
 1. Generate demo UI artifacts
@@ -62,6 +91,18 @@ python ui_export_c.py
 ```
 
 Artifacts: `examples/ui_demo.json`, `examples/ui_demo.html`, `examples/ui_demo.png`, and `src/ui_design.h/.c`.
+
+Unified launcher (starts designer, simulator, exporter, web mode) is available via:
+```powershell
+python tools/esp32os_launcher.py
+```
+- GUI mode: `python tools/esp32os_launcher.py --gui` (Tkinter buttons for start/stop/status/config/docs)
+Config lives at `~/.esp32os/config.json` (override scripts/args, ports); logging level can be set via `LOG_LEVEL`.
+Web mode now starts backend + serves frontend on http://127.0.0.1:<frontend_port> (default 8001) and opens it; menu includes stop/start.
+Use launcher option `p` to view ports/status while running.
+If `websockets` is installed, launcher reports backend WebSocket health (handshake/ping).
+Launcher menu: `p` status, `r` reset config, `e` edit config (uses $EDITOR/notepad/xdg-open).
+Simulator snapshots: `sim_run.py --snapshot out.txt|out.html|out.png --max-frames 1` for quick CI/headless renders (PNG requires Pillow).
 
 2. Configure display
 

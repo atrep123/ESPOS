@@ -199,6 +199,10 @@ class VisualPreviewWindow:
         # Content-change signatures to avoid stale caches when count is unchanged
         self._last_signature: Optional[int] = None
         self._last_ascii_signature: Optional[int] = None
+        # Pending placement preview
+        self._pending_component: Optional[Dict[str, Any]] = None
+        self._last_mouse: Optional[Tuple[int, int]] = None
+        self._pending_fill = (0, 200, 255, 80)
         
         # Headless mode: allow construction without Tk for tests/CI
         headless_env = os.environ.get("ESP32OS_HEADLESS") == "1" or os.environ.get("PYTEST_CURRENT_TEST") is not None
@@ -846,6 +850,7 @@ class VisualPreviewWindow:
         self.canvas.bind("<B1-Motion>", self._on_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_mouse_up)
         self.canvas.bind("<Motion>", self._on_mouse_move)
+        self.canvas.bind("<Button-3>", self._on_right_click)
         # Zoom with Ctrl+Wheel (Windows/Mac) and Button4/5 fallback (Linux)
         self.canvas.bind("<Control-MouseWheel>", self._on_ctrl_wheel_zoom)
         self.canvas.bind("<Control-Button-4>", lambda e: self._on_ctrl_wheel_zoom(self._mk_wheel_event(e, +120)))
@@ -867,6 +872,9 @@ class VisualPreviewWindow:
         self.root.bind("<Down>", lambda e: self._on_nudge(e, 0, 1))
         # Toggle Debug Overlay
         self.root.bind("<F12>", self._toggle_debug_overlay)
+        self.root.bind("<Escape>", lambda e: self._cancel_pending_overlay())
+        self.root.bind("<g>", lambda e: self._toggle_snap_key())
+        self.root.bind("<G>", lambda e: self._toggle_snap_key())
         
         # Quick Add Search dialog (Ctrl+Shift+A)
         self.root.bind("<Control-Shift-A>", self._open_quick_add_search)
@@ -1049,11 +1057,15 @@ class VisualPreviewWindow:
         # Multi-selection count
         if len(self.selected_widgets) > 1:
             parts.append(f"{len(self.selected_widgets)} selected")
+        if self._pending_component:
+            parts.append(f"Placing: {self._pending_component.get('name', 'widget')} (click to place)")
         
         # Live hints based on mode
         hint = self._get_context_hint()
         if hint:
             parts.append(f"💡 {hint}")
+        if self._pending_component:
+            parts.append("Hint: click to place, Esc/right-click to cancel, Enter to confirm at cursor")
         
         # Performance budget indicators
         if getattr(self.settings, 'performance_budget_enabled', False):
@@ -1610,6 +1622,12 @@ class VisualPreviewWindow:
     
     def _on_mouse_down(self, event):
         """Handle mouse down"""
+        if self._pending_component:
+            self._place_pending_component(event.x, event.y)
+            return
+        if event.keysym == "Return" and self._last_mouse:
+            self._place_pending_component(*self._last_mouse)
+            return
         # Pan mode (space held)
         if self._pan_enabled:
             try:
@@ -1668,6 +1686,86 @@ class VisualPreviewWindow:
             # Start box select
             self.box_select_start = (event.x, event.y)
             self.refresh()
+
+    def _on_right_click(self, event):
+        """Right click cancels pending placement."""
+        if self._pending_component:
+            self._cancel_pending_overlay()
+            try:
+                self.canvas.configure(cursor="arrow")
+            except Exception:
+                pass
+            return
+    
+    def _place_pending_component(self, canvas_x: int, canvas_y: int) -> None:
+        if not self._pending_component:
+            return
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            self.designer.create_scene("scene")
+            scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return
+        try:
+            from ui_designer import WidgetType
+            type_map = {
+                "label": WidgetType.LABEL,
+                "button": WidgetType.BUTTON,
+                "box": WidgetType.BOX if hasattr(WidgetType, 'BOX') else WidgetType.PANEL,
+                "panel": WidgetType.PANEL,
+                "progressbar": WidgetType.PROGRESSBAR,
+                "gauge": WidgetType.GAUGE,
+                "checkbox": WidgetType.CHECKBOX,
+                "slider": WidgetType.SLIDER,
+                "icon": WidgetType.LABEL,
+            }
+            widget_type = type_map.get(self._pending_component["type"], WidgetType.LABEL)
+            defaults = self._pending_component.get("defaults", {})
+            wx, wy = self._canvas_to_widget_coords(canvas_x, canvas_y)
+            self.designer.add_widget(
+                widget_type,
+                x=wx,
+                y=wy,
+                width=defaults.get("width", 40),
+                height=defaults.get("height", 12),
+                text=defaults.get("text", ""),
+                value=defaults.get("value", 0),
+                checked=defaults.get("checked", False)
+            )
+            self.selected_widget_idx = len(scene.widgets) - 1
+            try:
+                if hasattr(self, 'props_frame'):
+                    self._edit_widget_properties(self.selected_widget_idx)
+            except Exception:
+                pass
+        finally:
+            self._pending_component = None
+            self._invalidate_cache()
+            self.refresh()
+            self._update_status_bar()
+            self.designer._save_state()
+
+    def _cancel_pending_overlay(self) -> None:
+        if self._pending_component:
+            self._pending_component = None
+            self._invalidate_cache()
+            self.refresh()
+            self._update_status_bar()
+            try:
+                self.canvas.configure(cursor="arrow")
+            except Exception:
+                pass
+
+    def _toggle_snap_key(self) -> None:
+        """Toggle snap via keyboard shortcut."""
+        self.settings.snap_enabled = not self.settings.snap_enabled
+        if hasattr(self, "snap_var"):
+            try:
+                self.snap_var.set(self.settings.snap_enabled)
+            except Exception:
+                pass
+        self.refresh()
+        self._update_status_bar()
     
     def _on_mouse_drag(self, event):
         """Handle mouse drag"""
@@ -1827,6 +1925,13 @@ class VisualPreviewWindow:
     
     def _on_mouse_move(self, event):
         """Handle mouse move (for cursor changes)"""
+        self._last_mouse = (event.x, event.y)
+        if self._pending_component:
+            self.refresh()
+            try:
+                self.canvas.configure(cursor="crosshair")
+            except Exception:
+                pass
         if self.dragging:
             return
         # Hand cursor when panning active
@@ -2367,6 +2472,7 @@ class VisualPreviewWindow:
     def _on_snap_toggle(self):
         """Toggle snap"""
         self.settings.snap_enabled = self.snap_var.get()
+        self.refresh()
     
     def _on_hints_toggle(self):
         """Toggle on-canvas usage hints"""
@@ -3196,21 +3302,17 @@ class VisualPreviewWindow:
     def _on_quick_insert(self, index):
         """Handle number key press for quick insert."""
         try:
-            # Check if index is valid
             if not (0 <= index < len(self.quick_insert_components)):
                 return
-                
+
             component = self.quick_insert_components[index]
-            
-            # Check if UI is initialized (for tests)
+
+            # Headless test path: add immediately
             if not hasattr(self, 'canvas'):
-                # In test mode, just add widget directly
                 scene = self.designer.scenes.get(self.designer.current_scene)
                 if not scene:
                     self.designer.create_scene("test_scene")
                     scene = self.designer.scenes.get(self.designer.current_scene)
-                
-                # Map component type to WidgetType
                 from ui_designer import WidgetType
                 type_map = {
                     "label": WidgetType.LABEL,
@@ -3221,13 +3323,10 @@ class VisualPreviewWindow:
                     "gauge": WidgetType.GAUGE,
                     "checkbox": WidgetType.CHECKBOX,
                     "slider": WidgetType.SLIDER,
-                    "icon": WidgetType.LABEL,  # Use LABEL as fallback for icon
+                    "icon": WidgetType.LABEL,
                 }
-                
                 widget_type = type_map.get(component["type"], WidgetType.LABEL)
                 defaults = component.get("defaults", {})
-                
-                # Add widget
                 self.designer.add_widget(
                     widget_type,
                     x=10,
@@ -3238,65 +3337,19 @@ class VisualPreviewWindow:
                     value=defaults.get("value", 0),
                     checked=defaults.get("checked", False)
                 )
-                
-                # Select the new widget
                 self.selected_widget_idx = len(scene.widgets) - 1
                 return
-                
-            # Normal GUI flow
-            scene = self.designer.scenes.get(self.designer.current_scene)
-            if not scene:
-                self.designer.create_scene("scene")
-                scene = self.designer.scenes.get(self.designer.current_scene)
-            
-            # Find next available position
-            x, y = self._center_coords(
-                component.get("defaults", {}).get("width", 40),
-                component.get("defaults", {}).get("height", 12)
-            )
-            
-            # Map component type to WidgetType
-            from ui_designer import WidgetType
-            type_map = {
-                "label": WidgetType.LABEL,
-                "button": WidgetType.BUTTON,
-                "box": WidgetType.BOX if hasattr(WidgetType, 'BOX') else WidgetType.PANEL,
-                "panel": WidgetType.PANEL,
-                "progressbar": WidgetType.PROGRESSBAR,
-                "gauge": WidgetType.GAUGE,
-                "checkbox": WidgetType.CHECKBOX,
-                "slider": WidgetType.SLIDER,
-                "icon": WidgetType.LABEL,
-            }
-            
-            widget_type = type_map.get(component["type"], WidgetType.LABEL)
-            defaults = component.get("defaults", {})
-            
-            # Add widget
-            self.designer.add_widget(
-                widget_type,
-                x=x,
-                y=y,
-                width=defaults.get("width", 40),
-                height=defaults.get("height", 12),
-                text=defaults.get("text", ""),
-                value=defaults.get("value", 0),
-                checked=defaults.get("checked", False)
-            )
-            
-            # Select the new widget
-            self.selected_widget_idx = len(scene.widgets) - 1
-            
-            # Update UI
+
+            # GUI placement: set pending component to show preview until click
+            self._pending_component = component
             self._invalidate_cache()
             self.refresh()
-                
+            self._update_status_bar()
+
         except Exception as e:
-            # Only update status bar if it exists
             if hasattr(self, 'status_bar'):
                 self.status_bar.configure(text=f"Failed to insert: {e}")
             else:
-                # Re-raise in tests so we can see the error
                 raise
 
     def run(self):
@@ -3363,6 +3416,39 @@ class VisualPreviewWindow:
             ov = overlay if use_overlays else None
             sel = is_sel if highlight_selection else False
             self._draw_widget(draw, widget, sel, ov)
+
+        if self._pending_component and self._last_mouse:
+            defaults = self._pending_component.get("defaults", {})
+            pw = int(defaults.get("width", 40))
+            ph = int(defaults.get("height", 20))
+            # Snap preview to snap/grid if enabled
+            x = int(self._last_mouse[0])
+            y = int(self._last_mouse[1])
+            if self.settings.snap_enabled and self.settings.snap_size > 0:
+                size = self.settings.snap_size
+                x = round(x / size) * size
+                y = round(y / size) * size
+            elif self.settings.grid_enabled and self.settings.grid_size > 0:
+                size = self.settings.grid_size
+                x = (x // size) * size
+                y = (y // size) * size
+            x = max(0, min(self.designer.width - pw, x))
+            y = max(0, min(self.designer.height - ph, y))
+            if pw > 0 and ph > 0 and hasattr(draw, "rectangle"):
+                try:
+                    from PIL import ImageDraw as _ID  # type: ignore
+                    overlay = Image.new("RGBA", (self.designer.width, self.designer.height), (0, 0, 0, 0))
+                    o_draw = _ID.Draw(overlay)
+                    o_draw.rectangle([(x, y), (x + pw, y + ph)], fill=self._pending_fill, outline=(0, 200, 255, 150), width=1)
+                    img.paste(overlay, (0, 0), overlay)
+                except Exception:
+                    draw.rectangle([(x, y), (x + pw, y + ph)], outline=(0, 200, 255), width=1)
+            name = self._pending_component.get("name", "widget")
+            try:
+                draw.text((x + 2, y + 2), f"Preview: {name}", fill=(0, 220, 255))
+                draw.text((x + 2, y + 16), f"{pw}×{ph} @ {x},{y}", fill=(0, 220, 255))
+            except Exception:
+                pass
 
         return img
 

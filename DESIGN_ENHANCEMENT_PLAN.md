@@ -3,6 +3,7 @@
 > Focus: Elevate UI/UX quality, consistency, accessibility, performance, and export parity across simulator, web designer, ASCII, and firmware C exports.
 
 ## 1. Design Principles
+ 
 - Consistency: Single source of truth for tokens (color, spacing, typography, elevation).
 - Clarity: Reduce visual noise; prioritize readable hierarchy (size, weight, contrast).
 - Responsiveness: Seamless scaling across terminal sizes, web viewport widths, and embedded display dimensions.
@@ -11,6 +12,7 @@
 - Parity: Visual + interactive equivalence across ASCII, HTML, and exported C assets.
 
 ## 2. Token & Theming System
+
 | Category | Status | Action | Output |
 |----------|--------|--------|--------|
 | Colors | Basic palettes | Introduce semantic roles (primary, surface, info, warning) | `ui_themes.py` enhancement |
@@ -29,12 +31,14 @@
 | List / Tree | Scroll jitter | Virtualization prototype (batch render) | Perf frame log |
 
 ## 4. Layout & Responsive Rules
+
 - Define breakpoint tiers: tiny (<40 cols), small (40–80), medium (80–120), wide (>120).
 - ASCII compression rules: truncate labels, reduce padding first, then collapse icons.
 - Web designer: auto-flow into 2–3 column adaptive grids for property panels.
 - Firmware display: fallback rendering path with minimal diff from simulator.
 
 ## 5. Interaction & Keyboard Model
+
 | Action | Key Default | Enhancement |
 |--------|-------------|-------------|
 | Focus cycle | Tab / Shift+Tab | Add Home/End jump |
@@ -52,12 +56,14 @@
 | Reduced motion mode | All animations skip / shorten (<50ms) |
 
 ## 7. Animation Strategy
+
 - Standard durations: fast 80ms, base 160ms, modal 240ms.
 - Easing: use cubic-bezier tokens (easeOut, easeInOut).
 - Frame budget: target ≤ 4ms per animation tick (CPU-bound).
 - Profiling hook: add lightweight timing wrapper logging to `performance_profiler.py`.
 
 ## 8. Export Parity Workflow
+
 | Stage | Action | Validation |
 |-------|--------|------------|
 | Design | Create / modify component | Visual diff (HTML vs ASCII) |
@@ -75,12 +81,14 @@
 | Reflow operations per action | ≤ 2 | Debug counters |
 
 ## 10. Proposed Refactors
+
 - Central Token Registry: New `design_tokens.py` consolidating theme + spacing + typography + animation.
 - Component Rendering Hooks: Introduce pre/post render callbacks for instrumentation.
 - Responsive Evaluator: Utility to map current size class to component adjustments.
 - ASCII Render Layer Cleanup: Replace scattered width calculations with unified function.
 
 ## 11. New Testing Additions
+
 | Test Name | Purpose |
 |-----------|---------|
 | `test_design_tokens_consistency.py` | Ensure no duplicate / conflicting tokens |
@@ -90,6 +98,7 @@
 | `test_accessibility_focus_cycle.py` | Ensure full keyboard traversal |
 
 ## 12. Incremental Delivery Plan
+
 1. Token registry scaffold (read-only mapping consumed by existing modules).
 2. Migrate color + spacing usage in 2–3 representative components.
 3. Add responsive evaluator + breakpoints tests.
@@ -100,6 +109,7 @@
 8. Adopt virtualization experiment for large lists.
 
 ## 13. Risks & Mitigation (Design Scope)
+
 | Risk | Mitigation |
 |------|-----------|
 | Token churn causing regressions | Migrate in small slices + snapshot tests |
@@ -108,6 +118,7 @@
 | Performance instrumentation overhead | Lazy-enable instrumentation via flag |
 
 ## 14. Success Criteria (Design Focus)
+
 - All core components use centralized tokens (≥90%).
 - Export parity tests green across three formats for top 10 components.
 - Accessibility keyboard coverage 100% in audit test.
@@ -115,6 +126,7 @@
 - Responsive breakpoint tests stable for ASCII + HTML.
 
 ## 15. Immediate Action Candidates
+
 | Priority | Task |
 |----------|------|
 | High | Create `design_tokens.py` scaffold |

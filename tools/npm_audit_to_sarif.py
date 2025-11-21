@@ -1,7 +1,12 @@
 import json
+import logging
 import sys
 import uuid
 from datetime import datetime
+
+
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+
 
 def npm_severity_to_sarif(sev):
     mapping = {
@@ -12,11 +17,12 @@ def npm_severity_to_sarif(sev):
     }
     return mapping.get(sev, 'note')
 
-def main():
-    if len(sys.argv) < 3:
-        print('Usage: npm_audit_to_sarif.py <npm_audit.json> <output.sarif>')
+def main(argv=None):
+    argv = argv or sys.argv[1:]
+    if len(argv) < 2:
+        logging.error('Usage: npm_audit_to_sarif.py <npm_audit.json> <output.sarif>')
         sys.exit(1)
-    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    with open(argv[0], 'r', encoding='utf-8-sig') as f:
         npm_data = json.load(f)
     sarif = {
         "version": "2.1.0",
@@ -70,8 +76,9 @@ def main():
         results.append(result)
     sarif['runs'][0]['tool']['driver']['rules'] = list(rules.values())
     sarif['runs'][0]['results'] = results
-    with open(sys.argv[2], 'w', encoding='utf-8') as f:
+    with open(argv[1], 'w', encoding='utf-8') as f:
         json.dump(sarif, f, indent=2)
+    logging.info("npm audit SARIF written to %s (rules=%d, results=%d)", argv[1], len(rules), len(results))
 
 if __name__ == '__main__':
     main()

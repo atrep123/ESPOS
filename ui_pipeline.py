@@ -479,3 +479,5 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+python tools/npm_audit_to_sarif.py npm_vulns.json npm_audit.sarif

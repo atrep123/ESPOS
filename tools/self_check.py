@@ -14,16 +14,19 @@ from __future__ import annotations
 import subprocess
 import sys
 import tempfile
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
-
 
 ROOT = Path(__file__).resolve().parent.parent
 
 # Ensure project root is on sys.path for imports like state_inspector.
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -208,7 +211,7 @@ def run_all_checks() -> List[CheckResult]:
 
 
 def main() -> int:
-    print("=== ESP32OS Self-check ===")
+    logger.info("=== ESP32OS Self-check ===")
     results = run_all_checks()
     # Přidej integrační kontrolu RPC get_state
     results.append(check_sim_rpc_get_state())
@@ -218,14 +221,14 @@ def main() -> int:
         extra = ""
         if res.detail and not res.ok:
             extra = f" ({res.detail})"
-        print(f"{mark} {res.name}{extra}")
+        logger.info("%s %s%s", mark, res.name, extra)
         if not res.ok:
             all_ok = False
 
     if all_ok:
-        print("\nVše vypadá v pořádku.")
+        logger.info("Vše vypadá v pořádku.")
         return 0
-    print("\nNěkteré kontroly selhaly – zkontroluj detaily výše.")
+    logger.warning("Některé kontroly selhaly – zkontroluj detaily výše.")
     return 1
 
 

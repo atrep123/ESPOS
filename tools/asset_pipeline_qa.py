@@ -18,6 +18,7 @@ Notes:
 
 import argparse
 import json
+import logging
 import re
 import sys
 from pathlib import Path
@@ -31,6 +32,8 @@ class ImageProto(Protocol):
 
 pil_available = False
 PILImage: Any = None
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 try:
     from PIL import Image as PILImage  # type: ignore[import-not-found]
@@ -206,7 +209,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     roots = [Path(p).resolve() for p in args.assets]
     images = list_images(roots)
     if not images:
-        print('No images found in:', ', '.join(str(r) for r in roots))
+        logger.warning('No images found in: %s', ', '.join(str(r) for r in roots))
     results: List[Dict[str, Any]] = []
     for p in images:
         res = analyze_image(p, args.profile)
@@ -216,26 +219,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     total = len(results)
     errs = sum(1 for r in results if r.get('errors'))
     warns = sum(1 for r in results if r.get('warnings'))
-    print(f"Scanned {total} assets | errors: {errs} | warnings: {warns}")
+    logger.info("Scanned %d assets | errors: %d | warnings: %d", total, errs, warns)
 
     # Write JSON report
     report_path = Path(args.report)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     with open(report_path, 'w', encoding='utf-8') as f:
         json.dump({'profile': args.profile, 'total': total, 'results': results}, f, indent=2)
-    print(f"📄 Report: {report_path}")
+    logger.info("Report: %s", report_path)
 
     # Optional HTML
     if args.emit_html:
         out_html = Path(args.emit_html)
         html_gallery(results, out_html)
-        print(f"🌐 Gallery: {out_html}")
+        logger.info("Gallery: %s", out_html)
 
     # Optional C emit
     if args.emit_c:
         out_c = Path(args.emit_c)
         emit_c_assets(results, out_c)
-        print(f"🧩 C assets: {out_c} (+ {out_c.with_suffix('.h')})")
+        logger.info("C assets: %s (+ %s)", out_c, out_c.with_suffix('.h'))
 
     # Exit code: non-zero if any errors
     return 1 if errs > 0 else 0

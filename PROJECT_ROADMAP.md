@@ -104,11 +104,11 @@
 - Semantic versioning (MAJOR.MINOR.PATCH).
 - Automated changelog generation from conventional commits.
 - Release packaging: simulator binary (PyInstaller), firmware build artifacts, SBOM bundle, SARIF bundle.
-- Tag-triggered `release.yml` with checksum generation.
+- Tag-triggered `release.yml` with checksum generation; release artifacts documented in `reports/RELEASE_ARTIFACTS.md` and attached (designer + launcher builds, checksums).
 
 ## 9. Documentation Roadmap
 
-- `SECURITY.md`: audit process, reporting channels.
+- `SECURITY.md`: audit process, reporting channels. ✅
 - `CONTRIBUTING.md`: coding standards, test matrix, commit format.
 - `ROADMAP` (this file) updated quarterly.
 - `UI_DESIGNER_GUIDE.md`: workflow from design → export.
