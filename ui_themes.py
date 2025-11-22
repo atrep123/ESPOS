@@ -9,6 +9,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
 
+from design_tokens import COLOR_HEX
+
 
 class ThemePreset(Enum):
     """Pre-built theme presets"""
@@ -147,7 +149,7 @@ class ThemeManager:
                 border_heavy="#999999",
                 shadow="#000000",
                 highlight="#FFFFFF",
-                selection="#0066CC"
+                selection=COLOR_HEX["legacy_blue"]
             ),
             tags=["dark", "classic", "high-contrast"]
         )
@@ -161,31 +163,31 @@ class ThemeManager:
             colors=ColorScheme(
                 background="#FFFFFF",
                 foreground="#000000",
-                primary="#0066CC",
-                secondary="#E0E0E0",
-                accent="#FF6600",
-                success="#00AA44",
-                warning="#FFB300",
-                error="#CC0000",
-                info="#0088CC",
-                button_bg="#E8E8E8",
-                button_fg="#000000",
-                button_active="#0066CC",
-                input_bg="#F5F5F5",
-                input_fg="#000000",
-                input_border="#CCCCCC",
-                panel_bg="#FAFAFA",
-                panel_fg="#333333",
-                panel_border="#DDDDDD",
-                text_primary="#000000",
-                text_secondary="#555555",
-                text_muted="#999999",
-                border_light="#E0E0E0",
-                border_normal="#CCCCCC",
-                border_heavy="#999999",
-                shadow="#CCCCCC",
-                highlight="#000000",
-                selection="#0066CC"
+                primary=COLOR_HEX["legacy_blue"],
+                secondary=COLOR_HEX["legacy_gray_lighter"],
+                accent=COLOR_HEX["legacy_orange"],
+                success=COLOR_HEX["legacy_green_soft"],
+                warning=COLOR_HEX["legacy_orange_deep"],
+                error=COLOR_HEX["legacy_red_dark"],
+                info=COLOR_HEX["legacy_blue_mid"],
+                button_bg=COLOR_HEX["legacy_gray18"],
+                button_fg=COLOR_HEX["shadow"],
+                button_active=COLOR_HEX["legacy_blue"],
+                input_bg=COLOR_HEX["legacy_gray19"],
+                input_fg=COLOR_HEX["shadow"],
+                input_border=COLOR_HEX["legacy_gray_light"],
+                panel_bg=COLOR_HEX["legacy_gray20"],
+                panel_fg=COLOR_HEX["legacy_gray3"],
+                panel_border=COLOR_HEX["legacy_gray6"],
+                text_primary=COLOR_HEX["shadow"],
+                text_secondary=COLOR_HEX["legacy_gray11"],
+                text_muted=COLOR_HEX["legacy_gray7"],
+                border_light=COLOR_HEX["legacy_gray18"],
+                border_normal=COLOR_HEX["legacy_gray_light"],
+                border_heavy=COLOR_HEX["legacy_gray7"],
+                shadow=COLOR_HEX["legacy_gray_light"],
+                highlight=COLOR_HEX["shadow"],
+                selection=COLOR_HEX["legacy_blue"]
             ),
             tags=["light", "clean", "minimal"]
         )
@@ -199,31 +201,31 @@ class ThemeManager:
             colors=ColorScheme(
                 background="#0A0E27",
                 foreground="#00FFFF",
-                primary="#FF00FF",
-                secondary="#1A1F4A",
-                accent="#FFFF00",
-                success="#00FF00",
-                warning="#FF9900",
-                error="#FF0066",
-                info="#00CCFF",
-                button_bg="#1A1F4A",
-                button_fg="#00FFFF",
-                button_active="#FF00FF",
-                input_bg="#0F1333",
-                input_fg="#00FFFF",
-                input_border="#FF00FF",
-                panel_bg="#0D1028",
-                panel_fg="#00FFFF",
-                panel_border="#FF00FF",
-                text_primary="#00FFFF",
-                text_secondary="#66FFFF",
-                text_muted="#336666",
-                border_light="#FF00FF",
-                border_normal="#00FFFF",
-                border_heavy="#FFFF00",
-                shadow="#000033",
-                highlight="#00FFFF",
-                selection="#FF00FF"
+                primary=COLOR_HEX["legacy_dracula_pink"],
+                secondary=COLOR_HEX["legacy_navyslate"],
+                accent=COLOR_HEX["legacy_yellow"],
+                success=COLOR_HEX["legacy_green"],
+                warning=COLOR_HEX["legacy_orange_soft"],
+                error=COLOR_HEX["legacy_pink_hot"],
+                info=COLOR_HEX["legacy_blue_cyan"],
+                button_bg=COLOR_HEX["legacy_navyslate"],
+                button_fg=COLOR_HEX["legacy_dracula_cyan"],
+                button_active=COLOR_HEX["legacy_dracula_pink"],
+                input_bg=COLOR_HEX["legacy_navy_ink"],
+                input_fg=COLOR_HEX["legacy_dracula_cyan"],
+                input_border=COLOR_HEX["legacy_dracula_pink"],
+                panel_bg=COLOR_HEX["legacy_navy_dark"],
+                panel_fg=COLOR_HEX["legacy_dracula_cyan"],
+                panel_border=COLOR_HEX["legacy_dracula_pink"],
+                text_primary=COLOR_HEX["legacy_dracula_cyan"],
+                text_secondary=COLOR_HEX["legacy_cyan_soft"],
+                text_muted=COLOR_HEX["legacy_teal_muted"],
+                border_light=COLOR_HEX["legacy_dracula_pink"],
+                border_normal=COLOR_HEX["legacy_dracula_cyan"],
+                border_heavy=COLOR_HEX["legacy_yellow"],
+                shadow=COLOR_HEX["legacy_navy_base"],
+                highlight=COLOR_HEX["legacy_dracula_cyan"],
+                selection=COLOR_HEX["legacy_dracula_pink"]
             ),
             tags=["dark", "neon", "vibrant", "cyberpunk"]
         )
