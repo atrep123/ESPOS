@@ -19,7 +19,7 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Any, Dict, Mapping, Tuple
 
 
 @dataclass(frozen=True)
@@ -270,87 +270,52 @@ COLOR_HEX = {
 
 # Legacy/utility colors observed in existing UI (for incremental migration)
 _LEGACY_HEX = {
+    # Common palette used in legacy widgets and ASCII preview tags
     "legacy_green": "#00ff00",
     "legacy_green_bright": "#00ff41",
     "legacy_green_dark": "#00aa00",
+    "legacy_green_deep": "#003300",
+    "legacy_green_ultradark": "#001100",
+    "legacy_green_mid": "#00cc00",
+    "legacy_green_midbright": "#00dd33",
+    "legacy_green_mid2": "#00cc66",
     "legacy_matrix": "#008f11",
     "legacy_cyan": "#00ffff",
     "legacy_magenta": "#ff00ff",
     "legacy_blue": "#0066cc",
+    "legacy_orange": "#ff6600",
     "legacy_gray1": "#888888",
     "legacy_gray2": "#666666",
     "legacy_gray3": "#333333",
     "legacy_gray4": "#2b2b2b",
     "legacy_gray5": "#1a1a1a",
+    "legacy_gray8": "#444444",
+    "legacy_gray9": "#d4d4d4",
+    "legacy_gray10": "#808080",
+    "legacy_gray11": "#555555",
+    "legacy_gray14": "#aaaaaa",
+    "legacy_gray15": "#101010",
+    "legacy_gray16": "#4a4a4a",
+    "legacy_gray18": "#e8e8e8",
+    "legacy_gray19": "#f5f5f5",
+    "legacy_gray20": "#fafafa",
+    "legacy_gray24": "#222222",
     "legacy_gray_light": "#cccccc",
-    "legacy_gray_lighter": "#e0e0e0",
+    "legacy_gray_faint": "#f9f9f9",
     "legacy_gray_soft": "#eceff4",
+    "legacy_offwhite": "#f8f8f2",
+    "legacy_gray17": "#0d0d0d",
+    "legacy_gray7": "#999999",
+    "legacy_gray21": "#f0f0f0",
+    "legacy_gray23": "#191a21",
+    # Nord/Dracula palettes used in ui_themes
     "legacy_nord_cyan": "#88c0d0",
     "legacy_nord_slate": "#4c566a",
     "legacy_nord_purple": "#bd93f9",
     "legacy_nord_blue": "#6272a4",
-    "legacy_offwhite": "#f8f8f2",
-    "legacy_gray6": "#dddddd",
-    "legacy_orange": "#ff6600",
-    "legacy_gray7": "#999999",
-    "legacy_yellow": "#ffff00",
-    "legacy_green_deep": "#003300",
     "legacy_nord_bg": "#3b4252",
-    "legacy_dracula_bg": "#282a36",
-    "legacy_dracula_slate": "#44475a",
-    "legacy_gray8": "#444444",
-    "legacy_gray9": "#d4d4d4",
-    "legacy_blue_light": "#569cd6",
-    "legacy_teal": "#4ec9b0",
-    "legacy_gray10": "#808080",
-    "legacy_gold": "#dcdcaa",
-    "legacy_salmon": "#ce9178",
-    "legacy_gray11": "#555555",
-    "legacy_green_lime": "#66ff66",
-    "legacy_blue_bright": "#00aaff",
-    "legacy_green_material": "#4caf50",
-    "legacy_orange_bright": "#ffaa00",
-    "legacy_gray12": "#eeeeee",
-    "legacy_gray13": "#111111",
-    "legacy_blue_pale": "#ddeeff",
-    "legacy_navyslate": "#1a1f4a",
-    "legacy_green_ultradark": "#001100",
-    "legacy_green_mid": "#00cc00",
     "legacy_nord_base": "#2e3440",
     "legacy_nord_light": "#d8dee9",
-    "legacy_green_midbright": "#00dd33",
-    "legacy_gray_faint": "#f9f9f9",
-    "legacy_handle_base": "#4cb2ff",
-    "legacy_handle_hover": "#6cc8ff",
-    "legacy_gray14": "#aaaaaa",
-    "legacy_green_mint": "#00ff88",
-    "legacy_blue_material": "#1976d2",
-    "legacy_gray15": "#101010",
-    "legacy_gray16": "#4a4a4a",
-    "legacy_green_mid2": "#00cc66",
-    "legacy_orange_warm": "#ffcc00",
-    "legacy_red_bright": "#ff3333",
-    "legacy_gray17": "#0d0d0d",
-    "legacy_green_soft": "#00aa44",
-    "legacy_orange_deep": "#ffb300",
-    "legacy_red_dark": "#cc0000",
-    "legacy_blue_mid": "#0088cc",
-    "legacy_gray18": "#e8e8e8",
-    "legacy_gray19": "#f5f5f5",
-    "legacy_gray20": "#fafafa",
-    "legacy_navy_deep": "#0a0e27",
-    "legacy_orange_soft": "#ff9900",
-    "legacy_pink_hot": "#ff0066",
-    "legacy_blue_cyan": "#00ccff",
-    "legacy_navy_ink": "#0f1333",
-    "legacy_navy_dark": "#0d1028",
-    "legacy_cyan_soft": "#66ffff",
-    "legacy_teal_muted": "#336666",
-    "legacy_navy_base": "#000033",
-    "legacy_orange_hot": "#ff5500",
-    "legacy_cyan_mid": "#00aaaa",
-    "legacy_green_base": "#006600",
-    "legacy_gray21": "#f0f0f0",
     "legacy_nord_blue2": "#81a1c1",
     "legacy_nord_green": "#a3be8c",
     "legacy_nord_yellow": "#ebcb8b",
@@ -358,17 +323,64 @@ _LEGACY_HEX = {
     "legacy_nord_slate2": "#434c5e",
     "legacy_nord_slate3": "#616e88",
     "legacy_gray22": "#1c1f26",
+    "legacy_dracula_bg": "#282a36",
+    "legacy_dracula_slate": "#44475a",
     "legacy_dracula_pink": "#ff79c6",
     "legacy_dracula_green": "#50fa7b",
     "legacy_dracula_yellow": "#f1fa8c",
     "legacy_dracula_red": "#ff5555",
     "legacy_dracula_cyan": "#8be9fd",
-    "legacy_gray23": "#191a21",
+    "legacy_navy_deep": "#0a0e27",
     "legacy_green_forest": "#003b00",
     "legacy_green_lime2": "#aaff00",
     "legacy_red_soft": "#ff4444",
     "legacy_green_mint2": "#00ffaa",
     "legacy_green_deep2": "#005500",
+    "legacy_blue_bright": "#00aaff",
+    "legacy_orange_bright": "#ffaa00",
+    "legacy_orange_warm": "#ffcc00",
+    "legacy_orange_hot": "#ff5500",
+    "legacy_cyan_mid": "#00aaaa",
+    "legacy_green_base": "#006600",
+    "legacy_gray12": "#eeeeee",
+    "legacy_orange_warm": "#ffcc00",
+    "legacy_red_bright": "#ff3333",
+    "legacy_orange_hot": "#ff5500",
+    "legacy_cyan_mid": "#00aaaa",
+    "legacy_green_base": "#006600",
+    "legacy_red": "#ff0000",
+    # Designer theme palettes (kept explicit for CLI/export parity)
+    "theme_light_bg": "#f7f7f7",
+    "theme_light_text": "#111111",
+    "theme_light_primary": "#0066cc",
+    "theme_light_secondary": "#2e7d32",
+    "theme_light_accent": "#ff8f00",
+    "theme_light_danger": "#c62828",
+    "theme_dark_bg": "#121212",
+    "theme_dark_text": "#e0e0e0",
+    "theme_dark_primary": "#64b5f6",
+    "theme_dark_secondary": "#81c784",
+    "theme_dark_accent": "#ffd54f",
+    "theme_dark_danger": "#ef5350",
+    "theme_hc_bg": "#000000",
+    "theme_hc_text": "#ffffff",
+    "theme_hc_primary": "#00ffff",
+    "theme_hc_secondary": "#00ff00",
+    "theme_hc_accent": "#ffff00",
+    "theme_hc_danger": "#ff0000",
+    "theme_default_bg": "#000000",
+    "theme_default_text": "#ffffff",
+    "theme_default_primary": "#00ffff",
+    "theme_default_secondary": "#00ff00",
+    "theme_default_accent": "#ffff00",
+    "theme_default_danger": "#ff0000",
+    "theme_cyber_bg": "#0a0f14",
+    "theme_cyber_text": "#05f1fe",
+    "theme_cyber_primary": "#27f78d",
+    "theme_cyber_secondary": "#9a4dff",
+    "theme_cyber_accent": "#ff2e97",
+    "theme_cyber_danger": "#ff3b30",
+    # Interactive affordances
     "accent_handle_base": "#4cb2ff",
     "accent_handle_hover": "#6cc8ff",
     "selection_outline": "#3ea7ff",
@@ -402,6 +414,39 @@ def spacing(name: str) -> int:
     if name not in SPACING_MAP:
         raise KeyError(f"Unknown spacing token: {name}")
     return SPACING_MAP[name]
+
+
+def resolve_token(name: str) -> str | int:
+    """Resolve a design token name to its concrete value (color hex or spacing)."""
+    if name in COLOR_HEX:
+        return COLOR_HEX[name]
+    if name in SPACING_MAP:
+        return SPACING_MAP[name]
+    raise KeyError(f"Unknown design token: {name}")
+
+
+def apply_tokens(target: Any, mapping: Mapping[str, str]) -> Any:
+    """
+    Apply token names to a dict-like object or simple attribute container.
+
+    Each mapping entry is {field: token_name}. Fields present on the target
+    are updated to the resolved token value (color hex or spacing integer).
+    Unknown fields or token names are ignored to keep the helper safe for
+    incremental migrations.
+    """
+    for field, token_name in mapping.items():
+        try:
+            value = resolve_token(token_name)
+        except KeyError:
+            continue
+        if isinstance(target, dict):
+            target[field] = value
+        elif hasattr(target, field):
+            try:
+                setattr(target, field, value)
+            except Exception:
+                continue
+    return target
 
 
 # Helper functions for compatibility with existing codebase

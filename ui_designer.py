@@ -15,6 +15,8 @@ from html import escape
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict, Union, cast
 
+from design_tokens import color_hex
+
 # CLI message constants
 MSG_INVALID_INDEX = "Invalid index"
 MSG_NO_SCENE = "No scene loaded"
@@ -376,11 +378,46 @@ class UIDesigner:
 
         # Theme presets
         self.themes: Dict[str, Dict[str, str]] = {
-            'default': {'bg':'black','text':'white','primary':'cyan','secondary':'green','accent':'yellow','danger':'red'},
-            'light':   {'bg':'#f7f7f7','text':'#111','primary':'#0066cc','secondary':'#2e7d32','accent':'#ff8f00','danger':'#c62828'},
-            'dark':    {'bg':'#121212','text':'#e0e0e0','primary':'#64b5f6','secondary':'#81c784','accent':'#ffd54f','danger':'#ef5350'},
-            'hc':      {'bg':'#000','text':'#fff','primary':'#0ff','secondary':'#0f0','accent':'#ff0','danger':'#f00'},
-            'cyber':   {'bg':'#0a0f14','text':'#05f1fe','primary':'#27f78d','secondary':'#9a4dff','accent':'#ff2e97','danger':'#ff3b30'},
+            'default': {
+                'bg': color_hex("theme_default_bg"),
+                'text': color_hex("theme_default_text"),
+                'primary': color_hex("theme_default_primary"),
+                'secondary': color_hex("theme_default_secondary"),
+                'accent': color_hex("theme_default_accent"),
+                'danger': color_hex("theme_default_danger"),
+            },
+            'light':   {
+                'bg': color_hex("theme_light_bg"),
+                'text': color_hex("theme_light_text"),
+                'primary': color_hex("theme_light_primary"),
+                'secondary': color_hex("theme_light_secondary"),
+                'accent': color_hex("theme_light_accent"),
+                'danger': color_hex("theme_light_danger"),
+            },
+            'dark':    {
+                'bg': color_hex("theme_dark_bg"),
+                'text': color_hex("theme_dark_text"),
+                'primary': color_hex("theme_dark_primary"),
+                'secondary': color_hex("theme_dark_secondary"),
+                'accent': color_hex("theme_dark_accent"),
+                'danger': color_hex("theme_dark_danger"),
+            },
+            'hc':      {
+                'bg': color_hex("theme_hc_bg"),
+                'text': color_hex("theme_hc_text"),
+                'primary': color_hex("theme_hc_primary"),
+                'secondary': color_hex("theme_hc_secondary"),
+                'accent': color_hex("theme_hc_accent"),
+                'danger': color_hex("theme_hc_danger"),
+            },
+            'cyber':   {
+                'bg': color_hex("theme_cyber_bg"),
+                'text': color_hex("theme_cyber_text"),
+                'primary': color_hex("theme_cyber_primary"),
+                'secondary': color_hex("theme_cyber_secondary"),
+                'accent': color_hex("theme_cyber_accent"),
+                'danger': color_hex("theme_cyber_danger"),
+            },
         }
         self.theme_contrast_min = 4.5
 
@@ -1430,7 +1467,12 @@ class UIDesigner:
         scene = self.scenes[scene_name]
         preview_raw = self.preview_ascii(scene_name)
         preview = escape(preview_raw)
-        
+        body_bg = color_hex("legacy_gray5")
+        body_text = color_hex("legacy_green")
+        preview_bg = color_hex("shadow")
+        preview_border = color_hex("legacy_green")
+        info_color = color_hex("legacy_cyan")
+
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1439,14 +1481,14 @@ class UIDesigner:
     <title>{scene.name} - UI Design Preview</title>
     <style>
         body {{
-            background: #1a1a1a;
-            color: #00ff00;
+            background: {body_bg};
+            color: {body_text};
             font-family: 'Courier New', monospace;
             padding: 20px;
         }}
         .preview {{
-            background: #000;
-            border: 2px solid #00ff00;
+            background: {preview_bg};
+            border: 2px solid {preview_border};
             padding: 20px;
             display: inline-block;
             white-space: pre;
@@ -1454,7 +1496,7 @@ class UIDesigner:
         }}
         .info {{
             margin-top: 20px;
-            color: #00ffff;
+            color: {info_color};
         }}
     </style>
 </head>
@@ -3213,8 +3255,8 @@ if __name__ == '__main__':
         # Define button states
         btn = sc.widgets[1]
         btn.state_overrides = {
-            'hover': {'style': 'bold', 'color_bg': '#222'},
-            'active': {'style': 'inverse', 'color_bg': '#444'},
+            'hover': {'style': 'bold', 'color_bg': color_hex("legacy_gray24")},
+            'active': {'style': 'inverse', 'color_bg': color_hex("legacy_gray8")},
             'disabled': {'enabled': False, 'style': 'default'}
         }
         btn.state = 'default'

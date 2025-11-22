@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-Token lint - report hardcoded hex colors in selected files.
+Token inventory - report most common hardcoded literals to migrate onto design tokens.
 
 Usage:
-    python tools/token_lint.py --paths ui_designer_preview.py ui_components.py
+    python tools/token_inventory.py --paths ui_designer_preview.py ui_components.py
 
-Exit code:
-    1 when non-token literals are found (unless --no-fail).
+Outputs:
+    Top N hex literals (normalized) with counts. Optional report file via --out.
 """
 from __future__ import annotations
 
 import argparse
 import re
-from collections import Counter
 import sys
+from collections import Counter
 from pathlib import Path
-from typing import Iterable, List, Set
+from typing import Iterable, List, Set, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -23,14 +23,13 @@ if str(ROOT) not in sys.path:
 
 from design_tokens import COLOR_HEX
 
-
 HEX_RE = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})")
 
 
 def _normalize_hex(h: str) -> str:
     h = h.lower()
     if len(h) == 4:  # 3-digit -> expanded 6-digit
-        return "#" + "".join([c * 2 for c in h[1:]])
+        return "#" + "".join(c * 2 for c in h[1:])
     return h
 
 
@@ -49,7 +48,7 @@ def _load_allow_file(path: Path) -> Set[str]:
     return allow
 
 
-def find_hex_literals(paths: Iterable[Path], allow: Set[str]) -> Counter:
+def collect_hex_counts(paths: Iterable[Path]) -> Counter:
     counts: Counter = Counter()
     for path in paths:
         try:
@@ -57,57 +56,62 @@ def find_hex_literals(paths: Iterable[Path], allow: Set[str]) -> Counter:
         except Exception:
             continue
         for m in HEX_RE.finditer(text):
-            # Skip preprocessor words like "#define" that accidentally match.
+            # Skip tokens that are clearly part of words/directives (e.g., '#define').
             end = m.end()
             if end < len(text) and text[end].isalpha():
                 continue
-            hx = _normalize_hex(m.group())
-            if hx not in allow:
-                counts[hx] += 1
+            counts[_normalize_hex(m.group())] += 1
     return counts
 
 
+def gather_targets(path_args: List[str], exts: List[str]) -> List[Path]:
+    targets: List[Path] = []
+    for p in path_args:
+        path = Path(p)
+        if path.is_dir():
+            targets.extend(sorted(fp for fp in path.rglob("*") if fp.suffix in exts))
+        elif path.is_file():
+            targets.append(path)
+    return targets
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Report hardcoded hex colors outside design tokens.")
+    parser = argparse.ArgumentParser(description="Inventory literals to migrate to design tokens.")
     parser.add_argument("--paths", nargs="+", required=True, help="Files or directories to scan.")
     parser.add_argument("--ext", nargs="*", default=[".py"], help="File extensions to include when scanning directories.")
     parser.add_argument("--allow-file", help="Optional file with extra allowed hex values (one per line, with or without leading #).")
     parser.add_argument("--top", type=int, default=20, help="Show top N literals.")
-    parser.add_argument("--out", help="Write report to file.")
-    parser.add_argument("--no-fail", action="store_true", help="Do not fail (exit 1) when non-token literals are found.")
+    parser.add_argument("--out", help="Optional output file to write the report.")
     args = parser.parse_args()
 
-    targets: List[Path] = []
-    for p in args.paths:
-        path = Path(p)
-        if path.is_dir():
-            targets.extend(sorted(fp for fp in path.rglob("*") if fp.suffix in args.ext))
-        elif path.is_file():
-            targets.append(path)
+    targets = gather_targets(args.paths, args.ext)
+    if not targets:
+        print("No valid files to scan.")
+        return 0
 
     allow = set(_normalize_hex(v) for v in COLOR_HEX.values())
     if args.allow_file:
         allow |= _load_allow_file(Path(args.allow_file))
+    counts = collect_hex_counts(targets)
 
-    counts = find_hex_literals(targets, allow)
+    top = counts.most_common(args.top)
     lines: List[str] = []
-    if not counts:
-        lines.append("No non-token hex literals found.")
+    if not top:
+        lines.append("No hex literals found.")
     else:
-        lines.append("Non-token hex literals (top):")
-        for literal, cnt in counts.most_common(args.top):
-            lines.append(f"{literal}  x{cnt}")
+        lines.append("Top hex literals (including allowed tokens):")
+        for literal, cnt in top:
+            status = "token" if literal in allow else "non-token"
+            lines.append(f"{literal:8} x{cnt:4}  [{status}]")
+
     report = "\n".join(lines)
     print(report)
 
     if args.out:
         try:
             Path(args.out).write_text(report + "\n", encoding="utf-8")
-        except Exception:
-            pass
-
-    if counts and not args.no_fail:
-        return 1
+        except Exception as e:
+            print(f"Failed to write report to {args.out}: {e}", file=sys.stderr)
     return 0
 
 

@@ -17,6 +17,7 @@ def test_token_lint_reports_hex():
         "tools/token_lint.py",
         "--paths",
         str(target),
+        "--no-fail",
     ]
     out = subprocess.check_output(cmd, env=os.environ.copy(), cwd=Path(__file__).resolve().parent)
     assert b"123abc" in out

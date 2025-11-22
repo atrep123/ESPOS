@@ -80,7 +80,7 @@ class PreviewSettings:
     snap_size: int = 4
     show_bounds: bool = True
     show_handles: bool = True
-    background_color: str = "#000000"
+    background_color: str = color_hex("shadow")
     pixel_perfect: bool = True
     nudge_distance: int = 1  # Normal arrow nudge distance (px)
     nudge_shift_distance: int = 8  # Shift+arrow nudge distance (px)
@@ -231,7 +231,7 @@ class VisualPreviewWindow:
         # Create main window
         self.root = tk.Tk()
         self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
-        self.root.configure(bg="#2b2b2b")
+        self.root.configure(bg=color_hex("legacy_gray4"))
         
         # Setup UI
         self._setup_ui()
@@ -381,12 +381,12 @@ class VisualPreviewWindow:
         canvas_width = int(self.designer.width * self.settings.zoom)
         canvas_height = int(self.designer.height * self.settings.zoom)
         
-        self.canvas = tk.Canvas(canvas_frame, 
-                               width=canvas_width, 
+        self.canvas = tk.Canvas(canvas_frame,
+                               width=canvas_width,
                                height=canvas_height,
-                               bg="#1e1e1e",
+                               bg=color_hex("surface"),
                                highlightthickness=1,
-                               highlightbackground="#444")
+                               highlightbackground=color_hex("legacy_gray8"))
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Scrollbars
@@ -422,7 +422,7 @@ class VisualPreviewWindow:
                                  textvariable=self.nudge_distance_var,
                                  command=self._on_nudge_distance_change)
         nudge_spin.grid(row=0, column=1, sticky=tk.W, padx=5, pady=2)
-        ttk.Label(settings_frame, text="px", foreground="#888").grid(row=0, column=2, sticky=tk.W)
+        ttk.Label(settings_frame, text="px", foreground=color_hex("legacy_gray1")).grid(row=0, column=2, sticky=tk.W)
         
         ttk.Label(settings_frame, text="Shift+Nudge:").grid(row=1, column=0, sticky=tk.W, pady=2)
         self.nudge_shift_distance_var = tk.IntVar(value=self.settings.nudge_shift_distance)
@@ -430,7 +430,7 @@ class VisualPreviewWindow:
                                        textvariable=self.nudge_shift_distance_var,
                                        command=self._on_nudge_shift_distance_change)
         nudge_shift_spin.grid(row=1, column=1, sticky=tk.W, padx=5, pady=2)
-        ttk.Label(settings_frame, text="px", foreground="#888").grid(row=1, column=2, sticky=tk.W)
+        ttk.Label(settings_frame, text="px", foreground=color_hex("legacy_gray1")).grid(row=1, column=2, sticky=tk.W)
         
         ttk.Separator(settings_frame, orient=tk.HORIZONTAL).grid(row=2, column=0, columnspan=3, sticky="ew", pady=8)
         
@@ -441,7 +441,7 @@ class VisualPreviewWindow:
                                textvariable=self.grid_size_var,
                                command=lambda: setattr(self.settings, 'grid_size', self.grid_size_var.get()) or self.refresh())
         grid_spin.grid(row=3, column=1, sticky=tk.W, padx=5, pady=2)
-        ttk.Label(settings_frame, text="px", foreground="#888").grid(row=3, column=2, sticky=tk.W)
+        ttk.Label(settings_frame, text="px", foreground=color_hex("legacy_gray1")).grid(row=3, column=2, sticky=tk.W)
 
         # Batch edit panel (multi-select position/size deltas)
         batch_frame = ttk.LabelFrame(props_container, text="Batch Edit (Multi-Select)", padding=10)
@@ -486,9 +486,9 @@ class VisualPreviewWindow:
         self.ascii_text_widget = tk.Text(
             ascii_frame,
             font=("Consolas", 9),
-            bg="#1a1a1a",
-            fg="#d4d4d4",
-            insertbackground="#ffffff",
+            bg=color_hex("legacy_gray5"),
+            fg=color_hex("legacy_gray9"),
+            insertbackground=color_hex("text_primary"),
             yscrollcommand=ascii_scrollbar.set,
             wrap=tk.NONE,
             relief=tk.FLAT,
@@ -497,11 +497,11 @@ class VisualPreviewWindow:
         self.ascii_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ascii_scrollbar.config(command=self.ascii_text_widget.yview)
         # Syntax highlighting tags
-        self.ascii_text_widget.tag_config("border", foreground="#569cd6")
-        self.ascii_text_widget.tag_config("fill_button", foreground="#4ec9b0")
-        self.ascii_text_widget.tag_config("fill_box", foreground="#808080")
-        self.ascii_text_widget.tag_config("fill_icon", foreground="#dcdcaa")
-        self.ascii_text_widget.tag_config("text_label", foreground="#ce9178")
+        self.ascii_text_widget.tag_config("border", foreground=color_hex("legacy_blue_light"))
+        self.ascii_text_widget.tag_config("fill_button", foreground=color_hex("legacy_teal"))
+        self.ascii_text_widget.tag_config("fill_box", foreground=color_hex("legacy_gray10"))
+        self.ascii_text_widget.tag_config("fill_icon", foreground=color_hex("legacy_gold"))
+        self.ascii_text_widget.tag_config("text_label", foreground=color_hex("legacy_salmon"))
 
         # Wire toolbar actions now that widgets exist
         self._ascii_refresh_btn.configure(command=lambda: self._refresh_ascii_preview(self.ascii_text_widget, self.designer.scenes.get(self.designer.current_scene)))
@@ -638,7 +638,7 @@ class VisualPreviewWindow:
             window = tk.Toplevel(self.root)
             window.title("⚡ Performance Profiler")
             window.geometry("500x600")
-            window.configure(bg="#2b2b2b")
+            window.configure(bg=color_hex("legacy_gray4"))
             self._profiler_window = window
 
             header = ttk.Frame(window)
@@ -803,8 +803,8 @@ class VisualPreviewWindow:
         tips_frame = ttk.Frame(dialog)
         tips_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         
-        tips_text = tk.Text(tips_frame, wrap=tk.WORD, font=("Arial", 10), 
-                           height=15, width=50, bg="#f9f9f9")
+        tips_text = tk.Text(tips_frame, wrap=tk.WORD, font=("Arial", 10),
+                           height=15, width=50, bg=color_hex("legacy_gray_faint"))
         tips_text.pack(fill=tk.BOTH, expand=True)
         
         tips_content = """Základní ovládání:
@@ -872,7 +872,7 @@ class VisualPreviewWindow:
         props_window = tk.Toplevel(self.root)
         props_window.title("Widget Properties")
         props_window.geometry("300x500")
-        props_window.configure(bg="#2b2b2b")
+        props_window.configure(bg=color_hex("legacy_gray4"))
         
         # Make it stay on top but not modal
         props_window.attributes("-topmost", False)
@@ -1592,7 +1592,9 @@ class VisualPreviewWindow:
             z = self.settings.zoom
             x0, y0 = 8, int(self.designer.height * z) - 90
             x1, y1 = x0 + 360, y0 + 82
-            self.canvas.create_rectangle(x0, y0, x1, y1, fill="#000", outline="#555", stipple="gray25")
+            self.canvas.create_rectangle(
+                x0, y0, x1, y1, fill=color_hex("shadow"), outline=color_hex("legacy_gray11"), stipple="gray25"
+            )
             lines = []
             # Scene info
             sc = self.designer.scenes.get(self.designer.current_scene) if self.designer.current_scene else None
@@ -1609,7 +1611,7 @@ class VisualPreviewWindow:
             # Paint
             ty = y0 + 10
             for ln in lines:
-                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill="#fff")
+                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill=color_hex("text_primary"))
                 ty += 14
         except Exception:
             pass
@@ -1638,8 +1640,9 @@ class VisualPreviewWindow:
                     y = int(w.y * z)
                     rw = int(w.width * z)
                     rh = int(w.height * z)
-                    self.canvas.create_rectangle(x, y, x + rw, y + rh, outline="#66FF66", width=1, dash=(2,2))
-                    self.canvas.create_text(x + 2, y + 2, anchor=tk.NW, text=f"#{idx} z={getattr(w,'z_index',0)}", fill="#66FF66")
+                    lime = color_hex("legacy_green_lime")
+                    self.canvas.create_rectangle(x, y, x + rw, y + rh, outline=lime, width=1, dash=(2, 2))
+                    self.canvas.create_text(x + 2, y + 2, anchor=tk.NW, text=f"#{idx} z={getattr(w,'z_index',0)}", fill=lime)
         except Exception:
             pass
     
@@ -2265,7 +2268,7 @@ class VisualPreviewWindow:
         dialog = tk.Toplevel(self.root)
         dialog.title("Quick Add Component")
         dialog.geometry("500x400")
-        dialog.configure(bg="#2b2b2b")
+        dialog.configure(bg=color_hex("legacy_gray4"))
         dialog.transient(self.root)
         dialog.grab_set()
         
@@ -2273,7 +2276,7 @@ class VisualPreviewWindow:
         search_frame = ttk.Frame(dialog)
         search_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        ttk.Label(search_frame, text=SEARCH_LABEL_TEXT, foreground="#aaa").pack(side=tk.LEFT, padx=5)
+        ttk.Label(search_frame, text=SEARCH_LABEL_TEXT, foreground=color_hex("legacy_gray14")).pack(side=tk.LEFT, padx=5)
         search_var = tk.StringVar()
         search_entry = ttk.Entry(search_frame, textvariable=search_var, font=("Arial", 12))
         search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
@@ -2290,10 +2293,10 @@ class VisualPreviewWindow:
             list_frame,
             yscrollcommand=scrollbar.set,
             font=("Arial", 10),
-            bg="#1e1e1e",
-            fg="#ffffff",
+            bg=color_hex("surface"),
+            fg=color_hex("text_primary"),
             selectbackground=color_hex("legacy_green_material"),
-            selectforeground="#000000",
+            selectforeground=color_hex("shadow"),
             height=15,
         )
         results_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -2740,15 +2743,15 @@ class VisualPreviewWindow:
         dialog.geometry("500x600")
         dialog.transient(self.root)
         dialog.grab_set()
-        dialog.configure(bg="#2b2b2b")
+        dialog.configure(bg=color_hex("legacy_gray4"))
         
         # Header
         header = ttk.Frame(dialog)
         header.pack(fill=tk.X, padx=20, pady=10)
-        ttk.Label(header, text="🖼️ Enhanced SVG Export", 
+        ttk.Label(header, text="🖼️ Enhanced SVG Export",
                  font=("Arial", 14, "bold")).pack()
         ttk.Label(header, text="Professional-quality vector export with advanced features",
-                 foreground="#888").pack()
+                 foreground=color_hex("legacy_gray1")).pack()
         
         # Main content
         content = ttk.Frame(dialog)
@@ -2769,9 +2772,9 @@ class VisualPreviewWindow:
         for value, label, desc in presets:
             frame = ttk.Frame(preset_frame)
             frame.pack(fill=tk.X, pady=2)
-            ttk.Radiobutton(frame, text=label, variable=preset_var, 
+            ttk.Radiobutton(frame, text=label, variable=preset_var,
                            value=value).pack(side=tk.LEFT)
-            ttk.Label(frame, text=desc, foreground="#888", 
+            ttk.Label(frame, text=desc, foreground=color_hex("legacy_gray1"),
                      font=("Arial", 8)).pack(side=tk.LEFT, padx=(10, 0))
         
         # Advanced options
@@ -2907,7 +2910,7 @@ class VisualPreviewWindow:
         win = tk.Toplevel(self.root)
         win.title(f"Live ASCII Preview - {self.designer.current_scene}")
         win.geometry("800x600")
-        win.configure(bg="#1e1e1e")
+        win.configure(bg=color_hex("surface"))
         
         # Create toolbar
         toolbar = ttk.Frame(win)
@@ -2924,18 +2927,18 @@ class VisualPreviewWindow:
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        text_widget = tk.Text(frame, font=("Consolas", 9), bg="#1a1a1a", fg="#d4d4d4",
-                             insertbackground="#ffffff", yscrollcommand=scrollbar.set,
+        text_widget = tk.Text(frame, font=("Consolas", 9), bg=color_hex("legacy_gray5"), fg=color_hex("legacy_gray9"),
+                             insertbackground=color_hex("text_primary"), yscrollcommand=scrollbar.set,
                              wrap=tk.NONE, relief=tk.FLAT, borderwidth=0)
         text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text_widget.yview)
         
         # Configure text tags for syntax highlighting
-        text_widget.tag_config("border", foreground="#569cd6")  # Blue for borders
-        text_widget.tag_config("fill_button", foreground="#4ec9b0")  # Teal for buttons
-        text_widget.tag_config("fill_box", foreground="#808080")  # Gray for boxes
-        text_widget.tag_config("fill_icon", foreground="#dcdcaa")  # Yellow for icons
-        text_widget.tag_config("text_label", foreground="#ce9178")  # Orange for text
+        text_widget.tag_config("border", foreground=color_hex("legacy_blue_light"))  # Blue for borders
+        text_widget.tag_config("fill_button", foreground=color_hex("legacy_teal"))  # Teal for buttons
+        text_widget.tag_config("fill_box", foreground=color_hex("legacy_gray10"))  # Gray for boxes
+        text_widget.tag_config("fill_icon", foreground=color_hex("legacy_gold"))  # Yellow for icons
+        text_widget.tag_config("text_label", foreground=color_hex("legacy_salmon"))  # Orange for text
         
         # Render ASCII UI
         self._refresh_ascii_preview(text_widget, scene)
@@ -3038,7 +3041,9 @@ class VisualPreviewWindow:
             x0, y0 = 8, 8
             x1, y1 = 8 + 360, 8 + 56
             # Simulated translucency via stipple
-            self.canvas.create_rectangle(x0, y0, x1, y1, fill="#000", outline="#444", stipple="gray25")
+            self.canvas.create_rectangle(
+                x0, y0, x1, y1, fill=color_hex("shadow"), outline=color_hex("legacy_gray8"), stipple="gray25"
+            )
             lines = [
                 "Drag to move • Resize via corners/edges",
                 "Shift+Drag=axis lock • Shift+Click=multi-select",
@@ -3047,7 +3052,7 @@ class VisualPreviewWindow:
             ]
             ty = y0 + 10
             for ln in lines:
-                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill="#fff")
+                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill=color_hex("text_primary"))
                 ty += 14
         except Exception:
             pass
@@ -3583,7 +3588,7 @@ class AnimationEditorWindow:
         self.window = tk.Toplevel(parent)
         self.window.title("Animation Timeline Editor")
         self.window.geometry("800x600")
-        self.window.configure(bg="#2b2b2b")
+        self.window.configure(bg=color_hex("legacy_gray4"))
         
         self._setup_ui()
     
@@ -3660,7 +3665,7 @@ class AnimationEditorWindow:
         easing_combo.bind(COMBO_SELECTED, self._on_easing_changed)
         
         # Easing curve preview
-        self.easing_canvas = tk.Canvas(props_frame, width=120, height=80, bg="#1e1e1e")
+        self.easing_canvas = tk.Canvas(props_frame, width=120, height=80, bg=color_hex("surface"))
         self.easing_canvas.grid(row=3, column=0, columnspan=2, pady=5)
         self._draw_easing_curve()
         
@@ -3693,7 +3698,7 @@ class AnimationEditorWindow:
         canvas_container = ttk.Frame(timeline_frame)
         canvas_container.pack(fill=tk.BOTH, expand=True)
         
-        self.timeline_canvas = tk.Canvas(canvas_container, bg="#2b2b2b", height=200)
+        self.timeline_canvas = tk.Canvas(canvas_container, bg=color_hex("legacy_gray4"), height=200)
         scrollbar = ttk.Scrollbar(canvas_container, orient=tk.VERTICAL, command=self.timeline_canvas.yview)
         self.timeline_canvas.configure(yscrollcommand=scrollbar.set)
         
@@ -3767,17 +3772,19 @@ class AnimationEditorWindow:
         # Background bar
         self.timeline_canvas.create_rectangle(
             50, timeline_y, canvas_width - 50, timeline_y + timeline_height,
-            fill="#1e1e1e", outline="white", width=2, tags="timeline_bar"
+            fill=color_hex("surface"), outline=color_hex("text_primary"), width=2, tags="timeline_bar"
         )
         
         # Time markers (0%, 25%, 50%, 75%, 100%)
         bar_width = canvas_width - 100
         for pct in [0, 0.25, 0.5, 0.75, 1.0]:
             x = 50 + int(bar_width * pct)
-            self.timeline_canvas.create_line(x, timeline_y + timeline_height, x, timeline_y + timeline_height + 10,
-                                            fill="white", width=1)
-            self.timeline_canvas.create_text(x, timeline_y + timeline_height + 20,
-                                            text=f"{int(pct*100)}%", fill="white", font=("Arial", 8))
+            self.timeline_canvas.create_line(
+                x, timeline_y + timeline_height, x, timeline_y + timeline_height + 10, fill=color_hex("text_primary"), width=1
+            )
+            self.timeline_canvas.create_text(
+                x, timeline_y + timeline_height + 20, text=f"{int(pct*100)}%", fill=color_hex("text_primary"), font=("Arial", 8)
+            )
         
         # Draw keyframes
         if not anim.keyframes:
@@ -4109,7 +4116,7 @@ if TK_AVAILABLE:
         def __init__(self, root, preview: 'VisualPreviewWindow'):
             super().__init__(root)
             self.title("Component Library")
-            self.configure(bg="#2b2b2b")
+            self.configure(bg=color_hex("legacy_gray4"))
             self.preview = preview
             self.geometry("640x520")
             self.recent = getattr(preview, 'recent_components', [])
@@ -4141,7 +4148,12 @@ if TK_AVAILABLE:
             body = ttk.Frame(self)
             body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
-            self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground=color_hex("legacy_green_material"))
+            self.listbox = tk.Listbox(
+                body,
+                bg=color_hex("legacy_gray4"),
+                fg=color_hex("text_primary"),
+                selectbackground=color_hex("legacy_green_material"),
+            )
             self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
             self.listbox.bind(RETURN_KEY, lambda e: self._insert_selected())
@@ -4149,12 +4161,16 @@ if TK_AVAILABLE:
             right = ttk.Frame(body)
             right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
             ttk.Label(right, text="Preview:").pack(anchor=tk.W)
-            self.preview_text = tk.Text(right, height=20, bg="#111", fg="#ddd", state=tk.DISABLED)
+            self.preview_text = tk.Text(
+                right, height=20, bg=color_hex("legacy_gray15"), fg=color_hex("text_secondary"), state=tk.DISABLED
+            )
             self.preview_text.pack(fill=tk.BOTH, expand=True)
             btn_row = ttk.Frame(right)
             btn_row.pack(fill=tk.X, pady=4)
             ttk.Button(btn_row, text="Insert", command=self._insert_selected).pack(side=tk.LEFT)
-            ttk.Button(btn_row, text="Add ButtonGroup", command=lambda: self._insert_component("ButtonGroup")).pack(side=tk.LEFT, padx=4)
+            ttk.Button(btn_row, text="Add ButtonGroup", command=lambda: self._insert_component("ButtonGroup")).pack(
+                side=tk.LEFT, padx=4
+            )
 
             self._build_library()
             self._refresh_list()
@@ -4317,7 +4333,7 @@ if TK_AVAILABLE:
                 get_all_categories,
             )
             self.title("Icon Palette")
-            self.configure(bg="#2b2b2b")
+            self.configure(bg=color_hex("legacy_gray4"))
             self.preview = preview
             self.geometry("640x420")
             self.resizable(True, True)
@@ -4349,7 +4365,12 @@ if TK_AVAILABLE:
             body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
             # Icon list
-            self.listbox = tk.Listbox(body, bg="#1e1e1e", fg="#eee", selectbackground="#1976d2")
+            self.listbox = tk.Listbox(
+                body,
+                bg=color_hex("surface"),
+                fg=color_hex("legacy_gray12"),
+                selectbackground=color_hex("legacy_blue_material"),
+            )
             self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             self.listbox.bind("<<ListboxSelect>>", lambda e: self._show_preview())
             self.listbox.bind(RETURN_KEY, lambda e: self._insert_selected())
@@ -4358,7 +4379,14 @@ if TK_AVAILABLE:
             right = ttk.Frame(body)
             right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
             ttk.Label(right, text="Preview:").pack(anchor=tk.W)
-            self.preview_text = tk.Text(right, height=14, bg="#111", fg="#ddd", state=tk.DISABLED, wrap=tk.WORD)
+            self.preview_text = tk.Text(
+                right,
+                height=14,
+                bg=color_hex("legacy_gray13"),
+                fg=color_hex("legacy_gray6"),
+                state=tk.DISABLED,
+                wrap=tk.WORD,
+            )
             self.preview_text.pack(fill=tk.BOTH, expand=True)
 
             btn_row = ttk.Frame(right)
@@ -4464,7 +4492,13 @@ if __name__ == "__main__":
     parser.add_argument("--out-png", dest="out_png", help="Output PNG file path")
     parser.add_argument("--out-html", dest="out_html", help="Optional output HTML path (export from designer)")
     parser.add_argument("--scene", dest="scene", help="Optional scene name to render")
-    parser.add_argument("--bg", dest="bg", default="#000000", help="Background color for PNG (default: #000000)")
+    default_bg = color_hex("shadow")
+    parser.add_argument(
+        "--bg",
+        dest="bg",
+        default=default_bg,
+        help=f"Background color for PNG (default: {default_bg})",
+    )
     args, _unknown = parser.parse_known_args()
 
     run_headless = args.headless_preview or args.headless
@@ -4488,7 +4522,15 @@ if __name__ == "__main__":
                 sc = designer.scenes.get(designer.current_scene)
                 if sc:
                     # Simple background panel
-                    designer.add_widget(WidgetType.PANEL, x=4, y=4, width=max(8, sc.width-8), height=max(6, sc.height-8), text="", color_bg="#101010")
+                    designer.add_widget(
+                        WidgetType.PANEL,
+                        x=4,
+                        y=4,
+                        width=max(8, sc.width - 8),
+                        height=max(6, sc.height - 8),
+                        text="",
+                        color_bg=color_hex("legacy_gray15"),
+                    )
                     # Centered label
                     label_text = "ESP32OS Preview"
                     lw = max(40, len(label_text) + 12)

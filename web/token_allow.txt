@@ -1,0 +1,5 @@
+# Allowed sample colors for HTML/docs (intentional gradients/backgrounds)
+# Format: one hex per line (with or without leading #)
+020617
+30363d
+c9d1d9

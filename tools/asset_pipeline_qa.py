@@ -126,9 +126,37 @@ def analyze_image(path: Path, profile: str) -> Dict[str, Any]:
 
 def html_gallery(items: List[Dict[str, Any]], out_html: Path) -> None:
     out_html.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        from design_tokens import color_hex
+        bg_body = color_hex("legacy_gray15")
+        text_body = color_hex("text_secondary")
+        card_bg = color_hex("legacy_gray24")
+        border = color_hex("legacy_gray3")
+        img_bg = color_hex("shadow")
+        bad = color_hex("legacy_red_soft")
+        warn = color_hex("legacy_orange_warm")
+        ok = color_hex("legacy_green_midbright")
+    except Exception:
+        # Fallback to named colors to avoid hardcoding hex when tokens are unavailable
+        bg_body = "black"
+        text_body = "whitesmoke"
+        card_bg = "dimgray"
+        border = "gray"
+        img_bg = "black"
+        bad = "red"
+        warn = "gold"
+        ok = "limegreen"
     rows: List[str] = []
     rows.append('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Assets QA</title>')
-    rows.append('<style>body{font-family:Arial;background:#111;color:#eee;padding:16px} .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px} .card{background:#1c1c1c;border:1px solid #333;padding:10px;border-radius:8px} img{max-width:100%;background:#000;border:1px solid #333} .bad{color:#ff6961} .warn{color:#ffd166} .ok{color:#8bd17c}</style>')
+    rows.append(
+        "<style>"
+        f"body{{font-family:Arial;background:{bg_body};color:{text_body};padding:16px}} "
+        ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px} "
+        f".card{{background:{card_bg};border:1px solid {border};padding:10px;border-radius:8px}} "
+        f"img{{max-width:100%;background:{img_bg};border:1px solid {border}}} "
+        f".bad{{color:{bad}}} .warn{{color:{warn}}} .ok{{color:{ok}}}"
+        "</style>"
+    )
     rows.append('</head><body>')
     rows.append('<h2>Assets QA</h2>')
     rows.append('<div class="grid">')
