@@ -541,16 +541,18 @@ class VisualPreviewWindow:
             if not scene:
                 return
 
-        # Defaults per widget type
+        spacing_scale, font_scale = self._get_responsive_scales()
+        size = lambda w, h: (int(w * spacing_scale), int(h * spacing_scale))
+        # Defaults per widget type (scaled)
         defaults = {
-            "label":      (60, 10, {"text": "Label", "border": False}),
-            "button":     (50, 12, {"text": "Button"}),
-            "box":        (60, 40, {}),
-            "panel":      (60, 40, {}),
-            "progressbar":(80, 8,  {"value": 50}),
-            "gauge":      (20, 30, {"value": 70}),
-            "checkbox":   (60, 10, {"text": "Check me", "checked": True}),
-            "slider":     (80, 8,  {"value": 50}),
+            "label":      (*size(60, 10), {"text": "Label", "border": False}),
+            "button":     (*size(50, 12), {"text": "Button"}),
+            "box":        (*size(60, 40), {}),
+            "panel":      (*size(60, 40), {}),
+            "progressbar":(*size(80, 8),  {"value": 50}),
+            "gauge":      (*size(20, 30), {"value": 70}),
+            "checkbox":   (*size(60, 10), {"text": "Check me", "checked": True}),
+            "slider":     (*size(80, 8),  {"value": 50}),
         }
 
         w, h, props = defaults.get(kind, (40, 12, {}))
@@ -1167,7 +1169,7 @@ class VisualPreviewWindow:
         if hasattr(self, '_anim_speed_multiplier'):
             state = '▶' if self.playing else '⏸'
             parts.append(f"Anim {state} {self._anim_speed_multiplier:.2f}x")
-        
+
         # Selection info
         if self.selected_widget_idx is not None and self.selected_widget_idx < len(scene.widgets):
             w = scene.widgets[self.selected_widget_idx]
@@ -1178,7 +1180,17 @@ class VisualPreviewWindow:
             parts.append(f"{len(self.selected_widgets)} selected")
         if self._pending_component:
             parts.append(f"Placing: {self._pending_component.get('name', 'widget')} (click to place)")
-        
+
+        # Editor toggles (compact)
+        toggles = []
+        toggles.append(f"Grid:{'on' if self.settings.grid_enabled else 'off'}")
+        toggles.append(f"Snap:{'on' if self.settings.snap_enabled else 'off'}")
+        toggles.append(f"Guides:{'on' if self.settings.show_alignment_guides else 'off'}")
+        toggles.append(f"Handles:{'on' if self.settings.show_handles else 'off'}")
+        if self.settings.auto_reload_json:
+            toggles.append("AutoReload:on")
+        parts.append(" ".join(toggles))
+
         # Live hints based on mode
         hint = self._get_context_hint()
         if hint:

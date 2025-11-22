@@ -60,6 +60,13 @@
 - **Cursor Tracking** - See other users in real-time
 - **Undo/Redo** - 50 levels with shared history
 
+## Rychlý start (lint, testy, tokeny)
+
+- Lint tokenů (kód): `python tools/token_lint.py --paths ui_designer.py ui_designer_preview.py ui_components.py ui_themes.py tools src --ext .py .c .h`
+- Lint tokenů (HTML/docs s allow-listem): `python tools/token_lint.py --paths web docs --ext .html --allow-file web/token_allow.txt --no-fail`
+- Rychlé testy: `pytest -q test_token_allow_file.py test_design_tokens_apply.py test_token_lint.py test_ui_designer_nudge_snap.py test_ui_designer_batch_edit.py`
+- Inventura tokenů (použité/nepoužité): `python tools/token_usage.py --paths . --ext .py .c .h .html --out reports/token_usage.txt`
+
 ## 🛡️ Security & Audits
 
 - Weekly `security-audit` workflow runs Python/Node vulnerability scans, license policy checks, SBOM generation, secret scan, and posts summaries.
