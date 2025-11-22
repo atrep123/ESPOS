@@ -55,3 +55,7 @@ reports/baseline/*.txt
 reports/*.png
 reports/*.html
 reports/token_usage.txt
+examples/showcase.html
+examples/showcase.py
+test_scene.html
+test_scene.py
