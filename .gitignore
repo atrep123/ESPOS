@@ -52,3 +52,6 @@ test_scene.png
 reports/snapshots/
 reports/baseline/*.png
 reports/baseline/*.txt
+reports/*.png
+reports/*.html
+reports/token_usage.txt
