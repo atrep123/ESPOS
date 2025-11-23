@@ -63,21 +63,23 @@ class UIDesignerApp:
             # Wait for process to complete (it's a script, not long-running GUI)
             # Give it time to generate output files
             time.sleep(4)
-            
+
             # Process should complete successfully
             if self.process.poll() is None:
                 # Still running after 4 seconds - that's fine
                 return True
-            
+
             # Completed - check exit code
             return_code = self.process.returncode
             if return_code == 0:
                 return True
-            
+
             stderr = self.process.stderr.read() if self.process.stderr else b""
-            print(f"Process exited with code {return_code}. Stderr: {stderr.decode('utf-8', errors='ignore')}")
+            print(
+                f"Process exited with code {return_code}. Stderr: {stderr.decode('utf-8', errors='ignore')}"
+            )
             return False
-            
+
         except Exception as e:
             print(f"Failed to launch: {e}")
             return False
@@ -194,26 +196,26 @@ def ui_app():
 def test_ui_designer_launches(ui_app):
     """Test that UI Designer application launches and generates output"""
     assert ui_app.launch(), "UI Designer should launch"
-    
+
     # ui_designer_pro.py generates these files
     output_files = [
         Path("ui_designer_pro_demo.json"),
         Path("ui_designer_pro_demo.html"),
         Path("ui_designer_pro_demo.png"),
     ]
-    
+
     # Wait a bit more for files to be written
     time.sleep(2)
-    
+
     # Check that at least one output file was created
     files_exist = [f.exists() for f in output_files]
     assert any(files_exist), f"No output files generated. Checked: {[str(f) for f in output_files]}"
-    
+
     # Take screenshot to verify visual output
     screenshot = ui_app.screenshot()
     assert screenshot.size[0] > 0, "Should capture screenshot"
     screenshot.save("test_ui_launch.png")
-    
+
     print(f"[OK] Generated files: {[str(f) for f in output_files if f.exists()]}")
 
 
@@ -222,47 +224,51 @@ def test_ui_designer_creates_widget(ui_app):
     """Test that UI Designer creates widgets in output"""
     assert ui_app.launch(), "Should launch"
     time.sleep(2)
-    
+
     # Check generated JSON contains widgets
     json_file = Path("ui_designer_pro_demo.json")
     if json_file.exists():
         with open(json_file) as f:
             design = json.load(f)
-        
+
         # Validate structure
         assert "width" in design or "scenes" in design, "JSON should have design structure"
-        
+
         # ui_designer_pro.py creates demo with widgets
         if "scenes" in design:
             # Multi-scene format
             assert len(design["scenes"]) > 0, "Should have at least one scene"
-        
+
         # Take screenshot of generated HTML
         screenshot = ui_app.screenshot()
         screenshot.save("test_ui_widget_create.png")
-        
+
         print(f"[OK] Validated design structure in {json_file}")
     else:
         pytest.skip("JSON output not found - ui_designer_pro.py may have changed")
+
+
 @pytest.mark.timeout(45)
 def test_ui_designer_drag_drop(ui_app):
     """Test that UI Designer generates visual output (simulates drag & drop result)"""
     assert ui_app.launch(), "Should launch"
     time.sleep(2)
-    
+
     # Check PNG output was generated (visual representation)
     png_file = Path("ui_designer_pro_demo.png")
     if png_file.exists():
         # Verify PNG file has content
         assert png_file.stat().st_size > 0, "PNG file should not be empty"
-        
+
         # Take screenshot to compare
         screenshot = ui_app.screenshot()
         screenshot.save("test_ui_drag_drop.png")
-        
+
         print(f"[OK] Validated visual output: {png_file} ({png_file.stat().st_size} bytes)")
     else:
         pytest.skip("PNG output not found")
+
+
 @pytest.mark.timeout(30)
 def test_ui_designer_keyboard_shortcuts(ui_app):
     """Test keyboard shortcuts"""
@@ -295,19 +301,21 @@ def test_ui_designer_menu_navigation(ui_app):
     html_file = Path("ui_designer_pro_demo.html")
     if html_file.exists():
         # Validate HTML content
-        with open(html_file, encoding='utf-8') as f:
+        with open(html_file, encoding="utf-8") as f:
             html_content = f.read()
-        
+
         assert len(html_content) > 100, "HTML should have content"
         assert "<" in html_content and ">" in html_content, "Should be valid HTML"
-        
+
         # Take screenshot
         screenshot = ui_app.screenshot()
         screenshot.save("test_ui_menu.png")
-        
+
         print(f"[OK] Validated HTML export: {html_file} ({len(html_content)} chars)")
     else:
         pytest.skip("HTML output not found")
+
+
 @pytest.mark.timeout(50)
 def test_ui_designer_export_functionality(ui_app):
     """Test export functionality through UI"""
