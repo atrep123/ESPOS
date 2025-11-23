@@ -6,15 +6,17 @@ Real-time graphical preview with mouse interaction and export
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import tempfile
 import time
 
 try:
     import tkinter as tk  # type: ignore
-    from tkinter import colorchooser, filedialog, messagebox, ttk  # type: ignore
+    from tkinter import colorchooser, filedialog, messagebox, ttk, font as tkfont  # type: ignore
 except Exception:
     tk = None  # type: ignore
-    colorchooser = filedialog = messagebox = ttk = None  # type: ignore
+    colorchooser = filedialog = messagebox = ttk = tkfont = None  # type: ignore
 
 TK_AVAILABLE = tk is not None
 from PIL import Image, ImageDraw
@@ -90,6 +92,8 @@ class PreviewSettings:
     show_alignment_guides: bool = True  # Show alignment guide lines
     # Debug overlay
     show_debug_overlay: bool = False
+    # Accessibility
+    high_contrast_overlays: bool = False
     # Auto JSON hot-reload of last loaded design file
     auto_reload_json: bool = False
     # Performance budgeting
@@ -108,6 +112,7 @@ class VisualPreviewWindow:
         # UX helpers
         self._show_hints: bool = True
         self._show_guides: bool = True
+        self._responsive_tier: str = "medium"
         # Perf metrics
         self._last_render_ms: float = 0.0
         # Animation playback speed multiplier (1.0 = normal)
@@ -128,6 +133,19 @@ class VisualPreviewWindow:
             self._responsive_scalars = responsive_scalars
         except Exception:
             self._responsive_scalars = lambda width, height=None: {"tier": "medium", "spacing_scale": 1.0, "font_scale": 1.0}
+        # Auto-fit zoom is applied once after layout
+        self._auto_fit_done: bool = False
+        # Shared settings storage (temp dir, reused for quick tips/recents)
+        settings_dir = os.path.join(tempfile.gettempdir(), "esp32os_designer")
+        os.makedirs(settings_dir, exist_ok=True)
+        self._settings_path = os.path.join(settings_dir, "settings.json")
+        self._settings_cache: Dict[str, Any] = self._load_settings()
+        self._recent_components: List[str] = list(self._settings_cache.get("recent_components", []))
+        self._favorite_components: List[str] = list(self._settings_cache.get("favorite_components", []))
+        self._preview_theme: str = str(self._settings_cache.get("preview_theme", "default"))
+        self._last_export_theme: str = str(self._settings_cache.get("last_export_theme", "current"))
+        self._component_filter_default: str = str(self._settings_cache.get("component_filter_default", "all"))
+
         # Pan/zoom runtime state
         self._pan_enabled: bool = False  # Space held
         self._pan_dragging: bool = False
@@ -137,6 +155,12 @@ class VisualPreviewWindow:
         # Box select state
         self.box_select_start = None  # (canvas_x, canvas_y) or None
         self.box_select_rect = None   # Canvas rectangle ID or None
+        self._box_select_count: int = 0
+        self._box_select_label = None  # Canvas text ID
+        # Mini help overlay toggle
+        self._show_mini_help: bool = False
+        self._onboarding_toast_tag = "onboarding_toast"
+        self._show_perf_overlay: bool = bool(self._settings_cache.get("perf_overlay", False))
         
         # Quick insert components (for Ctrl+1-9 shortcuts)
         self.quick_insert_components = [
@@ -150,6 +174,7 @@ class VisualPreviewWindow:
             {"type": "slider", "name": "Slider", "defaults": {"value": 50, "width": 60, "height": 8}},
             {"type": "icon", "name": "Icon", "defaults": {"width": 16, "height": 16}},
         ]
+        self._load_quick_slots_from_settings()
         
         # ASCII component palette definitions
         self.ascii_components = [
@@ -234,11 +259,62 @@ class VisualPreviewWindow:
         self.root.configure(bg=color_hex("legacy_gray4"))
         
         # Setup UI
+        self._apply_theme(self._preview_theme)
         self._setup_ui()
         self._setup_bindings()
+        self._auto_size_window()
         
         # Initial render
         self.refresh()
+        # Apply auto-fit zoom after layout settles (once)
+        try:
+            self.root.after(50, self._apply_auto_zoom_fit)
+            self.root.after(800, self._show_onboarding_toast_if_needed)
+        except Exception:
+            pass
+
+    def _draw_perf_overlay(self):
+        """Draw a compact perf HUD with render time vs budget."""
+        try:
+            budget = getattr(self.settings, "performance_budget_ms", 16.7)
+            warn = getattr(self.settings, "performance_warn_ms", 25.0)
+            ms = self._last_render_ms
+            w = self._scale_spacing(160, minimum=120)
+            h = self._scale_spacing(48, minimum=36)
+            pad = self._scale_spacing(8, minimum=6)
+            x0 = self._scale_spacing(12, minimum=8)
+            y0 = self._scale_spacing(12, minimum=8)
+            x1 = x0 + w
+            y1 = y0 + h
+            self.canvas.create_rectangle(
+                x0, y0, x1, y1, fill=color_hex("shadow"), outline=color_hex("legacy_gray8"), stipple="gray25"
+            )
+            # Bar
+            bar_width = w - 2 * pad
+            bar_height = self._scale_spacing(12, minimum=10)
+            bx0 = x0 + pad
+            by0 = y0 + pad
+            bx1 = bx0 + bar_width
+            by1 = by0 + bar_height
+            self.canvas.create_rectangle(bx0, by0, bx1, by1, outline=color_hex("legacy_gray8"))
+            if bar_width > 0:
+                frac = min(1.5, ms / max(1e-6, budget))
+                fill_w = max(1, int(bar_width * frac / 1.5))
+                if ms > warn:
+                    fill_color = color_hex("legacy_dracula_red")
+                elif ms > budget:
+                    fill_color = color_hex("legacy_orange")
+                else:
+                    fill_color = color_hex("legacy_green")
+                self.canvas.create_rectangle(bx0, by0, bx0 + fill_w, by1, fill=fill_color, outline="")
+            # Text
+            txt = f"{ms:.1f} ms (budget {budget:.1f} / warn {warn:.1f})"
+            self.canvas.create_text(
+                x0 + pad, by1 + pad, anchor=tk.NW, text=txt, fill=color_hex("text_primary"),
+                font=("TkDefaultFont", self._scale_font_size(9, minimum=8))
+            )
+        except Exception:
+            pass
         # Kick animation timer
         self._schedule_tick()
     
@@ -281,7 +357,12 @@ class VisualPreviewWindow:
         self.guides_var = tk.BooleanVar(value=self._show_guides)
         ttk.Checkbutton(toolbar, text="Guides", variable=self.guides_var,
                command=self._on_guides_toggle).pack(side=tk.LEFT, padx=5)
-        
+
+        # High-contrast overlay toggle
+        self.hc_var = tk.BooleanVar(value=self.settings.high_contrast_overlays)
+        ttk.Checkbutton(toolbar, text="HC UI", variable=self.hc_var,
+                       command=self._on_hc_toggle).pack(side=tk.LEFT, padx=5)
+
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         
         # Alignment tools
@@ -345,6 +426,12 @@ class VisualPreviewWindow:
         # Background color
         ttk.Button(toolbar, text="🎨 BG Color", 
                   command=self._choose_bg_color).pack(side=tk.LEFT, padx=5)
+        ttk.Label(toolbar, text="Theme:").pack(side=tk.LEFT, padx=(8, 2))
+        self._theme_var = tk.StringVar(value=self._preview_theme)
+        theme_options = ["default", "light", "dark", "nord", "dracula", "hc", "cyber"]
+        self._theme_combo = ttk.Combobox(toolbar, values=theme_options, width=10, textvariable=self._theme_var)
+        self._theme_combo.pack(side=tk.LEFT, padx=2)
+        self._theme_combo.bind(COMBO_SELECTED, lambda e: self._on_theme_change(self._theme_var.get()))
         
         # Left-side palette (widget add shortcuts)
         palette = ttk.Frame(main_frame)
@@ -376,6 +463,7 @@ class VisualPreviewWindow:
         # Canvas frame with scrollbars (center area)
         canvas_frame = ttk.Frame(main_frame)
         canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._canvas_frame = canvas_frame
         
         # Canvas
         canvas_width = int(self.designer.width * self.settings.zoom)
@@ -412,7 +500,7 @@ class VisualPreviewWindow:
         self.right_tabs.add(props_container, text="Properties")
 
         # Settings section at top (nudge distances, grid, snap)
-        settings_frame = ttk.LabelFrame(props_container, text="Editor Settings", padding=10)
+        settings_frame = ttk.LabelFrame(props_container, text="Editor Settings", padding=self._scale_spacing(10, minimum=6))
         settings_frame.pack(fill=tk.X, padx=5, pady=5)
         
         # Nudge distance settings
@@ -444,7 +532,7 @@ class VisualPreviewWindow:
         ttk.Label(settings_frame, text="px", foreground=color_hex("legacy_gray1")).grid(row=3, column=2, sticky=tk.W)
 
         # Batch edit panel (multi-select position/size deltas)
-        batch_frame = ttk.LabelFrame(props_container, text="Batch Edit (Multi-Select)", padding=10)
+        batch_frame = ttk.LabelFrame(props_container, text="Batch Edit (Multi-Select)", padding=self._scale_spacing(10, minimum=6))
         batch_frame.pack(fill=tk.X, padx=5, pady=(5, 10))
         self.batch_dx_var = tk.StringVar(value="0")
         self.batch_dy_var = tk.StringVar(value="0")
@@ -462,7 +550,7 @@ class VisualPreviewWindow:
         ttk.Button(batch_frame, text="Apply to Selection", command=self._on_batch_apply).grid(row=0, column=4, rowspan=2, padx=8, pady=2)
         ttk.Button(batch_frame, text="Reset", command=self._on_batch_reset).grid(row=0, column=5, rowspan=2, padx=4, pady=2)
 
-        self.props_frame = ttk.Frame(props_container, padding=10)
+        self.props_frame = ttk.Frame(props_container, padding=self._scale_spacing(10, minimum=6))
         self.props_frame.pack(fill=tk.BOTH, expand=True)
         ttk.Label(self.props_frame, text="No widget selected").pack()
 
@@ -510,6 +598,7 @@ class VisualPreviewWindow:
         # Status bar
         self.status_bar = ttk.Label(main_frame, text="Ready", relief=tk.SUNKEN)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        self._apply_status_font()
 
     def _center_coords(self, w: int, h: int) -> Tuple[int, int]:
         """Compute top-left coords to center a widget of size w×h."""
@@ -527,9 +616,274 @@ class VisualPreviewWindow:
             height = self.designer.height
         try:
             scales = self._responsive_scalars(width, height)
+            self._responsive_tier = str(scales.get("tier", "medium"))
             return float(scales.get("spacing_scale", 1.0)), float(scales.get("font_scale", 1.0))
         except Exception:
+            self._responsive_tier = "medium"
             return 1.0, 1.0
+
+    def _load_settings(self) -> Dict[str, Any]:
+        """Load shared UI settings (safe fallback)."""
+        try:
+            if os.path.exists(self._settings_path):
+                with open(self._settings_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+
+    def _save_settings(self) -> None:
+        """Persist shared UI settings."""
+        try:
+            os.makedirs(os.path.dirname(self._settings_path), exist_ok=True)
+            with open(self._settings_path, "w", encoding="utf-8") as f:
+                json.dump(self._settings_cache, f, indent=2)
+        except Exception:
+            pass
+
+    def _load_quick_slots_from_settings(self) -> None:
+        """Load saved quick-insert slots if available."""
+        slots = self._settings_cache.get("quick_insert_components")
+        if isinstance(slots, list) and slots:
+            valid = []
+            for item in slots:
+                if isinstance(item, dict) and "type" in item and "name" in item:
+                    valid.append(item)
+            if valid:
+                self.quick_insert_components = valid[:9]
+
+    def _save_quick_slots(self) -> None:
+        """Persist current quick-insert slots."""
+        self._settings_cache["quick_insert_components"] = self.quick_insert_components
+        self._save_settings()
+
+    def _record_recent_component(self, name: Optional[str]) -> None:
+        """Track a component name in recent list (dedup, limited)."""
+        if not name:
+            return
+        try:
+            if name in self._recent_components:
+                self._recent_components.remove(name)
+            self._recent_components.insert(0, name)
+            self._recent_components = self._recent_components[:12]
+            self._settings_cache["recent_components"] = self._recent_components
+            self._save_settings()
+        except Exception:
+            pass
+
+    def _save_favorites_from_recent(self) -> None:
+        """Persist favorites list sourced from current recents."""
+        self._favorite_components = list(self._recent_components[:12])
+        self._settings_cache["favorite_components"] = self._favorite_components
+        self._save_settings()
+
+    def _save_favorites_from_list(self, components: List[Dict[str, Any]]) -> None:
+        """Persist favorites from a given component list."""
+        names = [c.get("name") for c in components if isinstance(c, dict) and c.get("name")]
+        self._favorite_components = names[:12]
+        self._settings_cache["favorite_components"] = self._favorite_components
+        self._save_settings()
+
+    def _save_favorites_from_names(self, names: List[str]) -> None:
+        """Persist favorites from a list of names."""
+        self._favorite_components = [n for n in names if n][:12]
+        self._settings_cache["favorite_components"] = self._favorite_components
+        self._save_settings()
+
+    def _component_lookup(self) -> Dict[str, Dict[str, Any]]:
+        """Build lookup of component name -> defaults/type for quick slots."""
+        lookup: Dict[str, Dict[str, Any]] = {}
+        for comp in self.ascii_components:
+            nm = comp.get("name")
+            if nm:
+                lookup[nm] = {"name": nm, "type": comp.get("type", "label"), "defaults": comp.get("defaults", {})}
+        for comp in self.quick_insert_components:
+            nm = comp.get("name")
+            if nm:
+                lookup[nm] = {"name": nm, "type": comp.get("type", "label"), "defaults": comp.get("defaults", {})}
+        return lookup
+
+    def _apply_favorites_to_quick_slots(self) -> None:
+        """Replace quick insert slots with favorites where possible."""
+        lookup = self._component_lookup()
+        new_slots = []
+        for nm in self._favorite_components:
+            entry = lookup.get(nm)
+            if entry:
+                new_slots.append(entry)
+        if new_slots:
+            self.quick_insert_components = new_slots[:9]
+            self._save_quick_slots()
+
+    def _scale_spacing(self, value: int, minimum: int = 0) -> int:
+        """Scale a spacing value using responsive spacing scale."""
+        spacing_scale, _ = self._get_responsive_scales()
+        scaled = int(round(value * spacing_scale))
+        return max(minimum, scaled)
+
+    def _scale_font_size(self, value: int, minimum: int = 1) -> int:
+        """Scale a font size using responsive font scale."""
+        _, font_scale = self._get_responsive_scales()
+        scaled = int(round(value * font_scale))
+        return max(minimum, scaled)
+
+    def _resolve_theme_bg(self, theme: str) -> Optional[str]:
+        """Map theme name to background hex (None = current)."""
+        t = (theme or "current").lower()
+        palette = {
+            "default": color_hex("theme_default_bg"),
+            "light": color_hex("theme_light_bg"),
+            "dark": color_hex("theme_dark_bg"),
+            "hc": color_hex("theme_hc_bg"),
+            "nord": color_hex("legacy_nord_base"),
+            "dracula": color_hex("legacy_dracula_bg"),
+            "cyber": color_hex("theme_cyber_bg"),
+        }
+        return palette.get(t)
+
+    def _apply_theme(self, theme_name: str) -> None:
+        """Apply preview theme by adjusting background color and caching selection."""
+        theme = (theme_name or "default").lower()
+        bg = self._resolve_theme_bg(theme)
+        if bg:
+            self.settings.background_color = bg
+            self._preview_theme = theme
+            self._settings_cache["preview_theme"] = theme
+            self._save_settings()
+            if hasattr(self, "_theme_var"):
+                try:
+                    self._theme_var.set(theme)
+                except Exception:
+                    pass
+
+    def _on_theme_change(self, theme_name: str):
+        """Handle theme dropdown change."""
+        try:
+            self._apply_theme(theme_name)
+            self.refresh()
+        except Exception:
+            pass
+
+    def _handle_colors(self) -> Tuple[str, str]:
+        """Return (base, hover) colors for handles, respecting HC toggle."""
+        if getattr(self.settings, "high_contrast_overlays", False):
+            return color_hex("theme_hc_accent"), color_hex("theme_hc_primary")
+        return color_hex("accent_handle_base"), color_hex("accent_handle_hover")
+
+    def _selection_colors(self) -> Tuple[str, str]:
+        """Return (outline, fill) colors for selection/box-select."""
+        if getattr(self.settings, "high_contrast_overlays", False):
+            return color_hex("theme_hc_primary"), color_hex("theme_hc_accent")
+        return color_hex("selection_outline"), color_hex("selection_fill")
+
+    def _default_cursor(self) -> str:
+        """Default cursor respecting accessibility toggle."""
+        return "crosshair" if getattr(self.settings, "high_contrast_overlays", False) else "arrow"
+
+    def _get_scaled_grid_size(self) -> int:
+        """Return grid size adjusted by responsive spacing scale."""
+        return self._scale_spacing(getattr(self.settings, "grid_size", 1), minimum=1)
+
+    def _get_scaled_snap_size(self) -> int:
+        """Return snap size adjusted by responsive spacing scale."""
+        return self._scale_spacing(getattr(self.settings, "snap_size", 1), minimum=1)
+
+    def _get_scaled_nudge(self, shift: bool) -> int:
+        """Return nudge distance (normal or shift) adjusted by responsive spacing scale."""
+        base = self.settings.nudge_shift_distance if shift else self.settings.nudge_distance
+        return self._scale_spacing(base, minimum=1)
+
+    def _count_box_select(self, x1: int, y1: int, x2: int, y2: int) -> int:
+        """Return how many widgets intersect the current box select area (canvas coords)."""
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene:
+            return 0
+        if x1 > x2:
+            x1, x2 = x2, x1
+        if y1 > y2:
+            y1, y2 = y2, y1
+        count = 0
+        for widget in scene.widgets:
+            if not getattr(widget, "visible", True):
+                continue
+            wx1 = int(widget.x * self.settings.zoom)
+            wy1 = int(widget.y * self.settings.zoom)
+            wx2 = int((widget.x + widget.width) * self.settings.zoom)
+            wy2 = int((widget.y + widget.height) * self.settings.zoom)
+            if not (wx2 < x1 or wx1 > x2 or wy2 < y1 or wy1 > y2):
+                count += 1
+        return count
+
+    def _apply_auto_zoom_fit(self):
+        """Auto-fit zoom once to the available canvas area after layout."""
+        if self._auto_fit_done or HEADLESS:
+            return
+        try:
+            if hasattr(self, "root"):
+                self.root.update_idletasks()
+            container = getattr(self, "_canvas_frame", None)
+            if container is None and hasattr(self, "canvas"):
+                container = getattr(self.canvas, "master", None)
+            if container is None:
+                return
+            avail_w = max(1, getattr(container, "winfo_width", lambda: 0)())
+            avail_h = max(1, getattr(container, "winfo_height", lambda: 0)())
+            # If layout not ready yet, retry once
+            if avail_w < 20 or avail_h < 20:
+                if hasattr(self, "root"):
+                    self.root.after(50, self._apply_auto_zoom_fit)
+                return
+            zoom_x = avail_w / max(1e-6, float(self.designer.width))
+            zoom_y = avail_h / max(1e-6, float(self.designer.height))
+            target_zoom = round(max(self._zoom_min, min(self._zoom_max, min(zoom_x, zoom_y))), 1)
+            self._auto_fit_done = True
+            if abs(target_zoom - self.settings.zoom) > 0.05:
+                self.settings.zoom = target_zoom
+                if hasattr(self, "_zoom_var"):
+                    try:
+                        self._zoom_var.set(f"{self.settings.zoom:.1f}x")
+                    except Exception:
+                        pass
+                self.refresh()
+        except Exception:
+            self._auto_fit_done = True
+
+    def _auto_size_window(self) -> None:
+        """Size the main window to fit canvas + sidebars within the screen."""
+        if HEADLESS or not hasattr(self, "root"):
+            return
+        try:
+            self.root.update_idletasks()
+            screen_w = max(800, self.root.winfo_screenwidth())
+            screen_h = max(600, self.root.winfo_screenheight())
+            canvas_w = int(self.designer.width * self.settings.zoom)
+            canvas_h = int(self.designer.height * self.settings.zoom)
+            desired_w = canvas_w + 540  # canvas + palette + props + padding
+            desired_h = canvas_h + 260  # canvas + toolbars/status + padding
+            width = min(screen_w - 40, max(900, desired_w))
+            height = min(screen_h - 60, max(650, desired_h))
+            self.root.geometry(f"{width}x{height}")
+        except Exception:
+            pass
+
+    def _apply_status_font(self) -> None:
+        """Apply responsive font sizing to the status bar."""
+        if not hasattr(self, 'status_bar'):
+            return
+        try:
+            size = self._scale_font_size(10, minimum=8)
+            if tkfont:
+                try:
+                    base_font = tkfont.nametofont(self.status_bar.cget("font"))
+                    derived = base_font.copy()
+                    derived.configure(size=size)
+                    self.status_bar.configure(font=derived)
+                except Exception:
+                    self.status_bar.configure(font=("TkDefaultFont", size))
+            else:
+                self.status_bar.configure(font=("TkDefaultFont", size))
+        except Exception:
+            pass
 
     def _palette_add(self, kind: str):
         """Add a widget of given kind near center and select it."""
@@ -578,6 +932,7 @@ class VisualPreviewWindow:
         # Save state and refresh
         self.designer._save_state()
         self._invalidate_cache()
+        self._record_recent_component(kind.title())
         self.refresh()
         
         # Show Quick Tips on first run
@@ -585,30 +940,11 @@ class VisualPreviewWindow:
     
     def _check_and_show_quick_tips(self):
         """Check if Quick Tips should be shown (first run)"""
-        import json
-        import tempfile
-        
-        # Settings file in temp directory
-        settings_dir = os.path.join(tempfile.gettempdir(), "esp32os_designer")
-        os.makedirs(settings_dir, exist_ok=True)
-        settings_file = os.path.join(settings_dir, "settings.json")
-        
-        # Load settings
-        settings = {}
-        if os.path.exists(settings_file):
-            try:
-                with open(settings_file, 'r') as f:
-                    settings = json.load(f)
-            except Exception:
-                pass
-    
-        
-        # Check if tips should be shown
-        if settings.get("hide_quick_tips", False):
+        if self._settings_cache.get("hide_quick_tips", False):
             return
         
         # Show Quick Tips dialog
-        self._show_quick_tips_dialog(settings_file)
+        self._show_quick_tips_dialog()
     
     def _toggle_profiler(self):
         """Toggle performance profiler on/off."""
@@ -653,7 +989,7 @@ class VisualPreviewWindow:
             ttk.Button(btn_frame, text="💾 Export CSV", command=self._export_profiler_csv).pack(side=tk.LEFT, padx=2)
             ttk.Button(btn_frame, text="📄 Export JSON", command=self._export_profiler_json).pack(side=tk.LEFT, padx=2)
 
-            stats_frame = ttk.LabelFrame(window, text="Live Metrics", padding=10)
+            stats_frame = ttk.LabelFrame(window, text="Live Metrics", padding=self._scale_spacing(10, minimum=6))
             stats_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
             self._profiler_labels = {}
@@ -674,7 +1010,7 @@ class VisualPreviewWindow:
                 value_label.pack(side=tk.LEFT)
                 self._profiler_labels[key] = value_label
 
-            rec_frame = ttk.LabelFrame(window, text="Recommendations", padding=10)
+            rec_frame = ttk.LabelFrame(window, text="Recommendations", padding=self._scale_spacing(10, minimum=6))
             rec_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
             rec_scroll = ttk.Scrollbar(rec_frame)
@@ -785,85 +1121,72 @@ class VisualPreviewWindow:
         except Exception as e:
             messagebox.showerror(EXPORT_ERROR_TITLE, str(e))
     
-    def _show_quick_tips_dialog(self, settings_file):
+    def _show_quick_tips_dialog(self):
         """Display Quick Tips dialog for first-time users"""
-        import json
-        
         dialog = tk.Toplevel(self.root)
-        dialog.title("Quick Tips - UI Designer")
+        dialog.title("UI Designer Quick Tips")
         dialog.geometry("500x400")
         dialog.transient(self.root)
         dialog.grab_set()
-        
-        # Header
+
         header = ttk.Frame(dialog)
         header.pack(fill=tk.X, padx=20, pady=10)
-        ttk.Label(header, text="🎨 UI Designer Quick Tips", 
-                 font=("Arial", 14, "bold")).pack()
-        
-        # Tips content
+        ttk.Label(header, text="Quick Tips", font=("Arial", 14, "bold")).pack()
+
         tips_frame = ttk.Frame(dialog)
         tips_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-        
-        tips_text = tk.Text(tips_frame, wrap=tk.WORD, font=("Arial", 10),
-                           height=15, width=50, bg=color_hex("legacy_gray_faint"))
+
+        tips_text = tk.Text(
+            tips_frame,
+            wrap=tk.WORD,
+            font=("Arial", 10),
+            height=15,
+            width=50,
+            bg=color_hex("legacy_gray_faint"),
+        )
         tips_text.pack(fill=tk.BOTH, expand=True)
-        
-        tips_content = """Základní ovládání:
 
-🖱️ Myš:
-• Kliknutím vyberte widget
-• Shift+klik přidá do výběru
-• Tažení na prázdném plátně = box select
-• Tažení handlu = změna velikosti
-• Dvojklik = editace vlastností
+        tips_content = """Mouse:
+- Click selects, Shift+Click multi-selects
+- Drag empty canvas = box select
+- Drag handle = resize
+- Double-click = edit properties
 
-⌨️ Klávesnice:
-• Ctrl+Shift+A = Rychlé přidání komponenty
-• Šipky = posun o 1px (Shift = 8px)
-• Delete = smazání vybraných widgetů
-• Ctrl+C/V = kopírovat/vložit
-• Ctrl+Z/Y = zpět/vpřed
-• Space+tažení = posun plátna
+Keyboard:
+- Ctrl+Shift+A = quick add search
+- Arrows move (Shift = 8px)
+- Delete removes selection
+- Ctrl+C/V copy/paste, Ctrl+Z/Y undo/redo
+- Space+drag = pan
 
-🔍 Zoom:
-• Ctrl+kolečko myši = zoom
-• Dropdown v toolbaru
+Zoom:
+- Ctrl+mouse wheel or toolbar dropdown
 
-📤 Export:
-• PNG export s @1x-@4x scalováním
-• Možnost Scene-only nebo With-guides
-• Nastavení se pamatuje
+Export:
+- PNG @1x-@4x, scene-only or with guides
 
-💡 Tip: Všechny funkce najdete v menu Help > Keyboard Shortcuts"""
-        
+Tip: Full shortcut list in Help > Keyboard Shortcuts"""
+
         tips_text.insert("1.0", tips_content)
         tips_text.configure(state="disabled")
-        
-        # Checkbox and buttons
+
         bottom_frame = ttk.Frame(dialog)
         bottom_frame.pack(fill=tk.X, padx=20, pady=10)
-        
+
         dont_show_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(bottom_frame, text="Nezobrazovat znovu", 
-                       variable=dont_show_var).pack(anchor=tk.W, pady=5)
-        
+        ttk.Checkbutton(bottom_frame, text="Nezobrazovat znovu", variable=dont_show_var).pack(anchor=tk.W, pady=5)
+
         btn_frame = ttk.Frame(bottom_frame)
         btn_frame.pack(fill=tk.X)
-        
+
         def close_dialog():
-            # Save preference
             if dont_show_var.get():
-                try:
-                    with open(settings_file, 'w') as f:
-                        json.dump({"hide_quick_tips": True}, f)
-                except Exception:
-                    pass
+                self._settings_cache["hide_quick_tips"] = True
+                self._save_settings()
             dialog.destroy()
-        
-        ttk.Button(btn_frame, text="Zavřít", command=close_dialog, 
-                  width=15).pack(side=tk.RIGHT, padx=5)
-    
+
+        ttk.Button(btn_frame, text="Zav??t", command=close_dialog, width=15).pack(side=tk.RIGHT, padx=5)
+
     def _invalidate_cache(self):
         """Invalidate render caches"""
         self._cache_valid = False
@@ -879,7 +1202,7 @@ class VisualPreviewWindow:
         # Make it stay on top but not modal
         props_window.attributes("-topmost", False)
         
-        self.props_frame = ttk.Frame(props_window, padding=10)
+        self.props_frame = ttk.Frame(props_window, padding=self._scale_spacing(10, minimum=6))
         self.props_frame.pack(fill=tk.BOTH, expand=True)
         
         ttk.Label(self.props_frame, text="No widget selected").pack()
@@ -929,6 +1252,20 @@ class VisualPreviewWindow:
         # Space = hand pan
         self.root.bind("<KeyPress-space>", self._on_space_down)
         self.root.bind("<KeyRelease-space>", self._on_space_up)
+        # Align/Distribute shortcuts for multi-select
+        self.root.bind("<Alt-Left>", lambda e: self._align_widgets("left"))
+        self.root.bind("<Alt-Right>", lambda e: self._align_widgets("right"))
+        self.root.bind("<Alt-Up>", lambda e: self._align_widgets("top"))
+        self.root.bind("<Alt-Down>", lambda e: self._align_widgets("bottom"))
+        self.root.bind("<Alt-h>", lambda e: self._distribute_widgets("horizontal"))
+        self.root.bind("<Alt-H>", lambda e: self._distribute_widgets("horizontal"))
+        self.root.bind("<Alt-v>", lambda e: self._distribute_widgets("vertical"))
+        self.root.bind("<Alt-V>", lambda e: self._distribute_widgets("vertical"))
+        # Mini help overlay
+        self.root.bind("<F1>", lambda e: self._toggle_mini_help())
+        self.root.bind("<F10>", lambda e: self._toggle_mini_help())
+        # Perf overlay toggle
+        self.root.bind("<F9>", lambda e: self._toggle_perf_overlay())
         # Space = hand pan
         self.root.bind("<KeyPress-space>", self._on_space_down)
         self.root.bind("<KeyRelease-space>", self._on_space_up)
@@ -976,10 +1313,11 @@ class VisualPreviewWindow:
             self._profiler.record_frame(self._last_fps, self._last_render_ms, 0.0)
         return True
 
-    def _fill_component_results(self, query, filtered_components, results_list):
+    def _fill_component_results(self, query, filtered_components, results_list, source_components=None):
         results_list.delete(0, tk.END)
         filtered_components.clear()
-        for comp in self.ascii_components:
+        comps = source_components or self.ascii_components
+        for comp in comps:
             name_match = query in comp["name"].lower()
             cat_match = query in comp["category"].lower()
             desc_match = query in comp["description"].lower()
@@ -1010,6 +1348,7 @@ class VisualPreviewWindow:
                 self.selected_widget_idx = new_indices[0]
             if dialog:
                 dialog.destroy()
+            self._record_recent_component(component.get("name"))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add component: {e}")
 
@@ -1122,6 +1461,10 @@ class VisualPreviewWindow:
             self._draw_selection_handles()
         if self._show_hints:
             self._draw_hints_overlay()
+        if getattr(self, "_show_mini_help", False):
+            self._draw_mini_help_overlay()
+        if getattr(self, "_show_perf_overlay", False):
+            self._draw_perf_overlay()
         if self.settings.show_alignment_guides and self.dragging and self.selected_widget_idx is not None:
             self._draw_guides_overlay()
         if getattr(self.settings, 'show_debug_overlay', False):
@@ -1149,15 +1492,19 @@ class VisualPreviewWindow:
     def _draw_grid(self, draw: ImageDraw.ImageDraw, width: int, height: int):
         """Draw grid on canvas"""
         grid_color = (40, 40, 40)
-        for x in range(0, width, self.settings.grid_size):
+        step = self._get_scaled_grid_size()
+        if step <= 0:
+            return
+        for x in range(0, width, step):
             draw.line([(x, 0), (x, height)], fill=grid_color, width=1)
-        for y in range(0, height, self.settings.grid_size):
+        for y in range(0, height, step):
             draw.line([(0, y), (width, y)], fill=grid_color, width=1)
     
     def _update_status_bar(self):
         """Update status bar with current state and contextual hints."""
         if not hasattr(self, 'status_bar'):
             return
+        self._apply_status_font()
         
         scene = self.designer.scenes.get(self.designer.current_scene)
         if not scene:
@@ -1165,7 +1512,7 @@ class VisualPreviewWindow:
             return
         
         widget_count = len(scene.widgets)
-        parts = [f"Widgets: {widget_count}", f"Zoom: {self.settings.zoom:.1f}x"]
+        parts = [f"Widgets: {widget_count}", f"Zoom: {self.settings.zoom:.1f}x", f"Tier:{getattr(self, '_responsive_tier', 'medium')}"]
         if hasattr(self, '_anim_speed_multiplier'):
             state = '▶' if self.playing else '⏸'
             parts.append(f"Anim {state} {self._anim_speed_multiplier:.2f}x")
@@ -1177,16 +1524,25 @@ class VisualPreviewWindow:
         
         # Multi-selection count
         if len(self.selected_widgets) > 1:
-            parts.append(f"{len(self.selected_widgets)} selected")
+            parts.append(f"{len(self.selected_widgets)} selected (Align Alt+Arrows • Distribute Alt+H/V)")
+        if self.dragging and self.resize_handle and self.selected_widget_idx is not None and self.selected_widget_idx < len(scene.widgets):
+            w = scene.widgets[self.selected_widget_idx]
+            parts.append(f"Resizing {self.resize_handle.upper()} → {w.width}x{w.height}")
         if self._pending_component:
             parts.append(f"Placing: {self._pending_component.get('name', 'widget')} (click to place)")
+        if self.box_select_start and self.box_select_rect:
+            parts.append(f"Box-select: {self._box_select_count} hit • Align/Distribute ready")
 
         # Editor toggles (compact)
         toggles = []
-        toggles.append(f"Grid:{'on' if self.settings.grid_enabled else 'off'}")
-        toggles.append(f"Snap:{'on' if self.settings.snap_enabled else 'off'}")
-        toggles.append(f"Guides:{'on' if self.settings.show_alignment_guides else 'off'}")
-        toggles.append(f"Handles:{'on' if self.settings.show_handles else 'off'}")
+        def _toggle(label: str, enabled: bool) -> str:
+            return f"{'●' if enabled else '○'}{label}"
+        toggles.append(_toggle("Grid", self.settings.grid_enabled))
+        toggles.append(_toggle("Snap", self.settings.snap_enabled))
+        toggles.append(_toggle("Guides", self.settings.show_alignment_guides))
+        toggles.append(_toggle("Handles", self.settings.show_handles))
+        if getattr(self, "_show_mini_help", False):
+            toggles.append("●Help")
         if self.settings.auto_reload_json:
             toggles.append("AutoReload:on")
         parts.append(" ".join(toggles))
@@ -1199,16 +1555,24 @@ class VisualPreviewWindow:
             parts.append("Hint: click to place, Esc/right-click to cancel, Enter to confirm at cursor")
         
         # Performance budget indicators
+        status_color = None
         if getattr(self.settings, 'performance_budget_enabled', False):
             if getattr(self, '_perf_soft_warn', False):
-                parts.append(f"Perf WARN {self._last_render_ms:.1f}ms")
+                parts.append(f"⚠ Perf WARN {self._last_render_ms:.1f}ms")
+                status_color = color_hex("legacy_orange")
             elif getattr(self, '_perf_over_budget', False):
-                parts.append(f"Perf {self._last_render_ms:.1f}>{self.settings.performance_budget_ms:.1f}ms")
+                parts.append(f"‼ Perf {self._last_render_ms:.1f}>{self.settings.performance_budget_ms:.1f}ms")
+                status_color = color_hex("legacy_dracula_red")
+
+        # Always show current FPS/render time
+        parts.append(f"FPS:{self._last_fps:.1f} {self._last_render_ms:.1f}ms")
 
         # Profiler live snippet
         if getattr(self, '_profiler_enabled', False):
             parts.append(f"⚡ {self._last_fps:.1f} FPS {self._last_render_ms:.1f}ms")
-        self.status_bar.configure(text=" | ".join(parts))
+        if status_color is None:
+            status_color = color_hex("theme_hc_text") if getattr(self.settings, "high_contrast_overlays", False) else color_hex("text_primary")
+        self.status_bar.configure(text=" | ".join(parts), foreground=status_color)
 
     # ---------------- JSON Hot-Reload Watcher -----------------
     def _schedule_json_watch(self):
@@ -1250,26 +1614,26 @@ class VisualPreviewWindow:
         """Get contextual hint based on current state."""
         # Panning mode
         if self._pan_enabled:
-            return "Drag to pan • Release Space to exit"
+            return "Pan: Space+Drag to move • Ctrl+Wheel zoom • Release Space to exit"
         
         # Dragging/resizing
         if self.dragging:
             if self.resize_handle:
-                return "Drag to resize • Shift=constrain"
+                return "Resize: Drag handle • Shift=constrain axis • Arrows nudge"
             else:
-                return "Drag to move • Shift=axis lock"
+                return "Move: Drag to reposition • Shift=axis lock • Ctrl+D duplicate"
         
         # Multi-selection
         if len(self.selected_widgets) > 1:
-            return "Multi-select active • Use Align/Distribute tools"
+            return "Multi-select: Shift+Click add • Ctrl+A select all • Align Alt+Arrows • Distribute Alt+H/V"
         
         # Single selection with handles visible
         if self.selected_widget_idx is not None and self.settings.show_handles:
-            return "Click handles to resize • Drag to move • Arrows to nudge"
+            return "Edit: Drag handles to resize • Arrows nudge (Shift=grid) • Delete to remove"
         
         # No selection
         if self.selected_widget_idx is None:
-            return "Click widget to select • Right-click for menu • Ctrl+1-9 quick add"
+            return "Ready: Click to select • Right-click for menu • Ctrl+Shift+A search • Toolbar Export for PNG/SVG/JSON"
         
         return ""
     
@@ -1307,15 +1671,20 @@ class VisualPreviewWindow:
         if widget.border:
             border_color = fg_color
             if selected:
-                border_color = (0, 150, 255)  # Blue for selection
+                if getattr(self.settings, "high_contrast_overlays", False):
+                    border_color = self._hex_to_rgb(color_hex("theme_hc_primary"))
+                else:
+                    border_color = (0, 150, 255)  # Blue for selection
             
             if widget.border_style == "single":
-                draw.rectangle([x, y, x + w - 1, y + h - 1], outline=border_color, width=1)
+                sel_width = 2 if (selected and getattr(self.settings, "high_contrast_overlays", False)) else 1
+                draw.rectangle([x, y, x + w - 1, y + h - 1], outline=border_color, width=sel_width)
             elif widget.border_style == "double":
                 draw.rectangle([x, y, x + w - 1, y + h - 1], outline=border_color, width=1)
                 draw.rectangle([x + 1, y + 1, x + w - 2, y + h - 2], outline=border_color, width=1)
             elif widget.border_style == "bold":
-                draw.rectangle([x, y, x + w - 1, y + h - 1], outline=border_color, width=2)
+                sel_width = 3 if (selected and getattr(self.settings, "high_contrast_overlays", False)) else 2
+                draw.rectangle([x, y, x + w - 1, y + h - 1], outline=border_color, width=sel_width)
             elif widget.border_style == "dashed":
                 # Simplified dashed border
                 draw.rectangle([x, y, x + w - 1, y + h - 1], outline=border_color, width=1)
@@ -1447,7 +1816,7 @@ class VisualPreviewWindow:
         
         widget = scene.widgets[self.selected_widget_idx]
         
-        _, font_scale = self._get_responsive_scales()
+        spacing_scale, font_scale = self._get_responsive_scales()
 
         # Scale to canvas coordinates (render uses settings.zoom to keep parity)
         x = int(widget.x * self.settings.zoom)
@@ -1456,9 +1825,8 @@ class VisualPreviewWindow:
         h = int(widget.height * self.settings.zoom)
         
         # Larger handles for better UX (8px visual, 12-14px with scaling)
-        handle_visual_size = max(8, min(14, int(10 * font_scale)))
-        handle_color = color_hex("accent_handle_base")
-        handle_hover_color = color_hex("accent_handle_hover")  # Brighter on hover
+        handle_visual_size = max(8, min(14, int(10 * spacing_scale)))
+        handle_color, handle_hover_color = self._handle_colors()
         
         # Corner handles
         handles = [
@@ -1472,6 +1840,7 @@ class VisualPreviewWindow:
             (x + w, y + h // 2, "e"),        # Right-center
         ]
         
+        outline_width = 3 if getattr(self.settings, "high_contrast_overlays", False) else 2
         for hx, hy, handle_type in handles:
             # Use hover color if mouse is over this handle
             color = handle_hover_color if handle_type == self.hovered_handle else handle_color
@@ -1479,9 +1848,35 @@ class VisualPreviewWindow:
             self.canvas.create_rectangle(
                 hx - handle_visual_size // 2, hy - handle_visual_size // 2,
                 hx + handle_visual_size // 2, hy + handle_visual_size // 2,
-                fill=color, outline="white", width=2,
+                fill=color, outline="white", width=outline_width,
                 tags=f"handle_{handle_type}"
             )
+        # Tooltip with size/direction while resizing
+        if self.dragging and self.resize_handle:
+            try:
+                tooltip_pad = self._scale_spacing(6, minimum=4)
+                tooltip_offset = self._scale_spacing(12, minimum=8)
+                text = f"{widget.width}x{widget.height} | {self.resize_handle.upper()}"
+                bx = x + tooltip_offset
+                by = y - self._scale_spacing(18, minimum=12)
+                if by < 0:
+                    by = y + tooltip_offset
+                tx0, ty0 = bx, by
+                # Simple dark pill background
+                self.canvas.create_rectangle(
+                    tx0 - tooltip_pad, ty0 - tooltip_pad,
+                    tx0 + self._scale_spacing(120, minimum=80), ty0 + self._scale_spacing(18, minimum=14),
+                    fill=color_hex("shadow"), outline=color_hex("legacy_gray8"), stipple="gray25"
+                )
+                self.canvas.create_text(
+                    tx0, ty0,
+                    anchor=tk.NW,
+                    text=text,
+                    fill=color_hex("text_primary"),
+                    font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
+                )
+            except Exception:
+                pass
     
     def _find_alignment_guides(self, widget: WidgetConfig) -> List[Tuple[str, int, str]]:
         """
@@ -1496,7 +1891,7 @@ class VisualPreviewWindow:
             return []
         
         guides = []
-        threshold = self.settings.snap_distance
+        threshold = max(self.settings.snap_distance, self._get_scaled_snap_size())
         
         # Widget edges to check
         w_left = widget.x
@@ -1652,9 +2047,21 @@ class VisualPreviewWindow:
                     y = int(w.y * z)
                     rw = int(w.width * z)
                     rh = int(w.height * z)
-                    lime = color_hex("legacy_green_lime")
-                    self.canvas.create_rectangle(x, y, x + rw, y + rh, outline=lime, width=1, dash=(2, 2))
-                    self.canvas.create_text(x + 2, y + 2, anchor=tk.NW, text=f"#{idx} z={getattr(w,'z_index',0)}", fill=lime)
+                    if getattr(self.settings, "high_contrast_overlays", False):
+                        outline_color = color_hex("theme_hc_primary")
+                        dash = ()
+                        width = 2
+                    else:
+                        outline_color = color_hex("legacy_green_lime")
+                        dash = (2, 2)
+                        width = 1
+                    self.canvas.create_rectangle(x, y, x + rw, y + rh, outline=outline_color, width=width, dash=dash)
+                    self.canvas.create_text(
+                        x + 2, y + 2, anchor=tk.NW,
+                        text=f"#{idx} z={getattr(w,'z_index',0)}",
+                        fill=outline_color,
+                        font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
+                    )
         except Exception:
             pass
     
@@ -1693,8 +2100,9 @@ class VisualPreviewWindow:
         
         # Apply snapping
         if self.settings.snap_enabled:
-            widget_x = round(widget_x / self.settings.snap_size) * self.settings.snap_size
-            widget_y = round(widget_y / self.settings.snap_size) * self.settings.snap_size
+            snap = self._get_scaled_snap_size()
+            widget_x = round(widget_x / snap) * snap
+            widget_y = round(widget_y / snap) * snap
         
         return widget_x, widget_y
     
@@ -1765,7 +2173,7 @@ class VisualPreviewWindow:
         if self._pending_component:
             self._place_pending_component(event.x, event.y)
             return
-        if event.keysym == "Return" and self._last_mouse:
+        if getattr(event, "keysym", None) == "Return" and self._last_mouse:
             self._place_pending_component(*self._last_mouse)
             return
         # Pan mode (space held)
@@ -1825,6 +2233,7 @@ class VisualPreviewWindow:
             
             # Start box select
             self.box_select_start = (event.x, event.y)
+            self._box_select_count = 0
             self.refresh()
 
     def _on_right_click(self, event):
@@ -1871,6 +2280,7 @@ class VisualPreviewWindow:
                 value=defaults.get("value", 0),
                 checked=defaults.get("checked", False)
             )
+            self._record_recent_component(self._pending_component.get("name"))
             self.selected_widget_idx = len(scene.widgets) - 1
             try:
                 if hasattr(self, 'props_frame'):
@@ -1938,12 +2348,34 @@ class VisualPreviewWindow:
         x2, y2 = event.x, event.y
         if self.box_select_rect is not None:
             self.canvas.delete(self.box_select_rect)
+        if self._box_select_label is not None:
+            self.canvas.delete(self._box_select_label)
+            self._box_select_label = None
         self.box_select_rect = self.canvas.create_rectangle(
             x1, y1, x2, y2,
-            outline=color_hex("selection_outline"), width=2, dash=(4, 4),
-            fill=color_hex("selection_fill"), stipple="gray50",
+            outline=self._selection_colors()[0], width=2, dash=(4, 4),
+            fill=self._selection_colors()[1], stipple="gray50",
             tags="box_select"
         )
+        try:
+            self._box_select_count = self._count_box_select(x1, y1, x2, y2)
+            label_text = f"{self._box_select_count} in box • Align/Distribute ready"
+            label_x = min(x1, x2) + self._scale_spacing(8, minimum=4)
+            label_y = min(y1, y2) - self._scale_spacing(18, minimum=10)
+            if label_y < 0:
+                label_y = min(y1, y2) + self._scale_spacing(6, minimum=4)
+            self._box_select_label = self.canvas.create_text(
+                label_x,
+                label_y,
+                anchor=tk.NW,
+                text=label_text,
+                fill=color_hex("text_primary"),
+                font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
+                tags="box_select"
+            )
+            self._update_status_bar()
+        except Exception:
+            self._box_select_count = 0
         return True
 
     def _resize_active_widget(self, widget, event):
@@ -1977,8 +2409,9 @@ class VisualPreviewWindow:
             else:
                 new_x = self.drag_origin[0]
         if self.settings.snap_enabled:
-            new_x = round(new_x / self.settings.snap_size) * self.settings.snap_size
-            new_y = round(new_y / self.settings.snap_size) * self.settings.snap_size
+            snap = self._get_scaled_snap_size()
+            new_x = round(new_x / snap) * snap
+            new_y = round(new_y / snap) * snap
         if self.settings.snap_to_widgets:
             new_x, new_y = self._apply_widget_snapping(widget, new_x, new_y)
         widget.x = max(0, min(new_x, self.designer.width - widget.width))
@@ -2033,7 +2466,11 @@ class VisualPreviewWindow:
         if self.box_select_rect is not None:
             self.canvas.delete(self.box_select_rect)
             self.box_select_rect = None
+        if self._box_select_label is not None:
+            self.canvas.delete(self._box_select_label)
+            self._box_select_label = None
         self.box_select_start = None
+        self._box_select_count = 0
         self.refresh()
         return True
     def _on_mouse_move(self, event):
@@ -2079,7 +2516,7 @@ class VisualPreviewWindow:
             if self.hovered_handle is not None:
                 self.hovered_handle = None
                 self.refresh()  # Redraw without hover
-            self.canvas.configure(cursor="arrow")
+            self.canvas.configure(cursor=self._default_cursor())
 
     def _on_nudge(self, event, dx: int, dy: int):
         """Nudge selected widget with arrow keys.
@@ -2096,16 +2533,22 @@ class VisualPreviewWindow:
         widget = scene.widgets[self.selected_widget_idx]
 
         # Use configurable nudge distances
-        step = self.settings.nudge_distance
+        step = self._get_scaled_nudge(shift=False)
         if event.state & 0x0001:  # Shift key
-            step = self.settings.nudge_shift_distance
+            step = self._get_scaled_nudge(shift=True)
+            if self.settings.snap_enabled and self.settings.snap_size > 0:
+                # Horizontal shift: allow larger stride for generic objects; vertical stays nearer grid
+                if dx != 0 and not isinstance(widget, WidgetConfig):
+                    step = max(step, self.settings.snap_size * 2)
+                else:
+                    step = max(step, self.settings.snap_size)
 
         new_x = widget.x + dx * step
         new_y = widget.y + dy * step
 
         # Respect snap-to-grid if enabled
-        if self.settings.snap_enabled and self.settings.snap_size > 0:
-            snap = self.settings.snap_size
+        snap = self._get_scaled_snap_size()
+        if self.settings.snap_enabled and snap > 0:
             snapped_x = round(new_x / snap) * snap
             snapped_y = round(new_y / snap) * snap
             # If snapping collapses movement, step to next cell in the direction
@@ -2123,7 +2566,10 @@ class VisualPreviewWindow:
 
         widget.x = new_x
         widget.y = new_y
-        self.designer._save_state()
+        try:
+            self.designer._save_state()
+        except Exception:
+            pass
         self.refresh()
     
     def _on_double_click(self, event):
@@ -2293,6 +2739,15 @@ class VisualPreviewWindow:
         search_entry = ttk.Entry(search_frame, textvariable=search_var, font=("Arial", 12))
         search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         search_entry.focus_set()
+
+        # Filter toggles (All / Recent / Favorites)
+        filter_frame = ttk.Frame(dialog)
+        filter_frame.pack(fill=tk.X, padx=10, pady=(0, 8))
+        filter_var = tk.StringVar(value="favorites" if self._favorite_components else "all")
+        ttk.Label(filter_frame, text="Filter:").pack(side=tk.LEFT, padx=(0, 6))
+        for value, label in (("all", "All"), ("recent", "Recent"), ("favorites", "Favorites")):
+            ttk.Radiobutton(filter_frame, text=label, variable=filter_var, value=value,
+                            command=lambda: update_results()).pack(side=tk.LEFT, padx=4)
         
         # Listbox for results
         list_frame = ttk.Frame(dialog)
@@ -2316,11 +2771,24 @@ class VisualPreviewWindow:
         
         # Filtered components list
         filtered_components = []
+        name_lookup = {c["name"]: c for c in self.ascii_components}
+
+        def _source_components():
+            mode = filter_var.get()
+            if mode == "recent" and self._recent_components:
+                comps = [name_lookup[n] for n in self._recent_components if n in name_lookup]
+                if comps:
+                    return comps
+            if mode == "favorites" and self._favorite_components:
+                comps = [name_lookup[n] for n in self._favorite_components if n in name_lookup]
+                if comps:
+                    return comps
+            return self.ascii_components
         
         def update_results(*args):
             """Update filtered results based on search text"""
             query = search_var.get().lower().strip()
-            self._fill_component_results(query, filtered_components, results_list)
+            self._fill_component_results(query, filtered_components, results_list, source_components=_source_components())
             self._auto_select_first(results_list)
         
         def add_selected_component():
@@ -2372,6 +2840,10 @@ class VisualPreviewWindow:
         
         ttk.Button(button_frame, text="Add Component", 
                   command=add_selected_component).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Save list as Favorites",
+                  command=lambda: self._save_favorites_from_list(filtered_components)).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Save Quick Slots",
+                  command=self._save_quick_slots).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Cancel", 
                   command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
         
@@ -2563,7 +3035,7 @@ class VisualPreviewWindow:
         self._pan_enabled = False
         if not self._pan_dragging:
             try:
-                self.canvas.configure(cursor="arrow")
+                self.canvas.configure(cursor=self._default_cursor())
             except Exception:
                 pass
     
@@ -2592,7 +3064,88 @@ class VisualPreviewWindow:
         color = colorchooser.askcolor(initialcolor=self.settings.background_color)
         if color[1]:
             self.settings.background_color = color[1]
+            self._preview_theme = "custom"
+            self._settings_cache["preview_theme"] = self._preview_theme
+            self._save_settings()
             self.refresh()
+    
+    def _on_hc_toggle(self):
+        """Toggle high-contrast overlay colors for handles/guides/status."""
+        try:
+            self.settings.high_contrast_overlays = bool(self.hc_var.get())
+            self._apply_status_font()
+            self.refresh()
+        except Exception:
+            pass
+
+    def _toggle_mini_help(self):
+        """Toggle mini help overlay (F1/F10)."""
+        try:
+            self._show_mini_help = not getattr(self, "_show_mini_help", False)
+            self.refresh()
+        except Exception:
+            pass
+
+    def _toggle_perf_overlay(self):
+        """Toggle simple perf overlay (FPS/render time bar)."""
+        try:
+            self._show_perf_overlay = not getattr(self, "_show_perf_overlay", False)
+            self._settings_cache["perf_overlay"] = self._show_perf_overlay
+            self._save_settings()
+            self.refresh()
+        except Exception:
+            pass
+
+    def _hide_onboarding_toast(self, persist: bool = False) -> None:
+        """Hide onboarding toast overlay."""
+        if hasattr(self, "canvas"):
+            try:
+                self.canvas.delete(self._onboarding_toast_tag)
+            except Exception:
+                pass
+        if persist:
+            self._settings_cache["hide_onboarding_toast"] = True
+            self._save_settings()
+
+    def _show_onboarding_toast_if_needed(self):
+        """Show first-run onboarding tip (grid/snap/quick-add)."""
+        if HEADLESS or self._settings_cache.get("hide_onboarding_toast", False):
+            return
+        if not hasattr(self, "canvas"):
+            return
+        try:
+            pad = self._scale_spacing(8, minimum=6)
+            font_size = self._scale_font_size(10, minimum=9)
+            lines = [
+                "Tip: Zapni Grid/Snap v toolbaru pro přesné umístění.",
+                "Ctrl+Shift+A otevře rychlé přidání komponenty.",
+                "F1/F10 = mini help, HC UI = vysoký kontrast.",
+                "Klikni na toast pro skrytí (už se nezobrazí).",
+            ]
+            width = max(len(ln) for ln in lines) * self._scale_spacing(6, minimum=5)
+            x0 = self._scale_spacing(16, minimum=10)
+            y0 = self._scale_spacing(40, minimum=28)
+            x1 = x0 + width + pad * 2
+            y1 = y0 + pad * 2 + len(lines) * self._scale_spacing(14, minimum=12)
+            self.canvas.create_rectangle(
+                x0, y0, x1, y1, fill=color_hex("shadow"), outline=color_hex("legacy_gray8"),
+                stipple="gray25", tags=self._onboarding_toast_tag
+            )
+            ty = y0 + pad
+            for ln in lines:
+                self.canvas.create_text(
+                    x0 + pad, ty, anchor=tk.NW, text=ln,
+                    fill=color_hex("text_primary"),
+                    font=("TkDefaultFont", font_size),
+                    tags=self._onboarding_toast_tag,
+                )
+                ty += self._scale_spacing(14, minimum=12)
+            # Bind click to dismiss permanently
+            self.canvas.tag_bind(self._onboarding_toast_tag, "<Button-1>", lambda e: self._hide_onboarding_toast(True))
+            # Auto-hide after 8 seconds (non-persist)
+            self.root.after(8000, lambda: self._hide_onboarding_toast(persist=False))
+        except Exception:
+            pass
     
     def _export_png(self):
         """Export preview as PNG with preset options"""
@@ -2606,9 +3159,12 @@ class VisualPreviewWindow:
         # Load last used settings (or defaults)
         last_scale = getattr(self, '_last_export_scale', 1)
         last_guides = getattr(self, '_last_export_guides', False)
+        last_responsive = getattr(self, '_last_export_responsive', False)
+        last_theme = getattr(self, '_last_export_theme', "current")
+        last_tokens = getattr(self, "_last_export_tokens", "default")
         
         # Scale preset
-        scale_frame = ttk.LabelFrame(export_dialog, text="Scale", padding=10)
+        scale_frame = ttk.LabelFrame(export_dialog, text="Scale", padding=self._scale_spacing(10, minimum=6))
         scale_frame.pack(fill=tk.X, padx=10, pady=5)
         
         scale_var = tk.IntVar(value=last_scale)
@@ -2618,12 +3174,30 @@ class VisualPreviewWindow:
         ttk.Radiobutton(scale_frame, text="@4x (Quadruple size)", variable=scale_var, value=4).pack(anchor=tk.W)
         
         # Content preset
-        content_frame = ttk.LabelFrame(export_dialog, text="Content", padding=10)
+        content_frame = ttk.LabelFrame(export_dialog, text="Content", padding=self._scale_spacing(10, minimum=6))
         content_frame.pack(fill=tk.X, padx=10, pady=5)
         
         guides_var = tk.BooleanVar(value=last_guides)
         ttk.Radiobutton(content_frame, text="Scene only (clean export)", variable=guides_var, value=False).pack(anchor=tk.W)
         ttk.Radiobutton(content_frame, text="With guides (grid/bounds)", variable=guides_var, value=True).pack(anchor=tk.W)
+
+        resp_var = tk.BooleanVar(value=last_responsive)
+        ttk.Checkbutton(content_frame, text="Respect responsive scale (spacing/font)", variable=resp_var).pack(anchor=tk.W, pady=(6, 0))
+
+        theme_frame = ttk.LabelFrame(export_dialog, text="Theme", padding=self._scale_spacing(10, minimum=6))
+        theme_frame.pack(fill=tk.X, padx=10, pady=5)
+        theme_var = tk.StringVar(value=last_theme)
+        ttk.Label(theme_frame, text="Background:").pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Combobox(theme_frame, values=["current", "default", "light", "dark", "nord", "dracula", "hc", "cyber"],
+                     textvariable=theme_var, width=12, state="readonly").pack(side=tk.LEFT, padx=4)
+
+        tokens_frame = ttk.LabelFrame(export_dialog, text="Tokens", padding=self._scale_spacing(10, minimum=6))
+        tokens_frame.pack(fill=tk.X, padx=10, pady=5)
+        tokens_var = tk.StringVar(value=last_tokens)
+        ttk.Radiobutton(tokens_frame, text="Default", variable=tokens_var, value="default").pack(anchor=tk.W)
+        ttk.Radiobutton(tokens_frame, text="High-Contrast", variable=tokens_var, value="hc").pack(anchor=tk.W)
+        ttk.Radiobutton(tokens_frame, text="Print (light, clean)", variable=tokens_var, value="print").pack(anchor=tk.W)
+        ttk.Radiobutton(tokens_frame, text="Mono (grayscale)", variable=tokens_var, value="mono").pack(anchor=tk.W)
         
         # Buttons
         btn_frame = ttk.Frame(export_dialog)
@@ -2635,9 +3209,18 @@ class VisualPreviewWindow:
             result["cancelled"] = False
             result["scale"] = scale_var.get()
             result["guides"] = guides_var.get()
+            result["responsive"] = resp_var.get()
+            result["theme"] = theme_var.get()
+            result["tokens"] = tokens_var.get()
             # Remember choices
             self._last_export_scale = result["scale"]
             self._last_export_guides = result["guides"]
+            self._last_export_responsive = result["responsive"]
+            self._last_export_theme = result["theme"]
+            self._last_export_tokens = result["tokens"]
+            self._settings_cache["last_export_theme"] = self._last_export_theme
+            self._settings_cache["last_export_tokens"] = self._last_export_tokens
+            self._save_settings()
             export_dialog.destroy()
         
         ttk.Button(btn_frame, text="Export", command=do_export, width=15).pack(side=tk.LEFT, padx=5)
@@ -2652,6 +3235,9 @@ class VisualPreviewWindow:
         # Get export settings
         scale = result["scale"]
         include_guides = result["guides"]
+        respect_resp = result.get("responsive", False)
+        export_theme = result.get("theme", "current")
+        export_tokens = result.get("tokens", "default")
         
         # Ask for filename
         filename = filedialog.asksaveasfilename(
@@ -2668,22 +3254,48 @@ class VisualPreviewWindow:
         if scene:
             # Temporarily adjust zoom for export scale
             original_zoom = self.settings.zoom
-            self.settings.zoom = scale
+            eff_scale = scale
+            if respect_resp:
+                spacing_scale, _ = self._get_responsive_scales()
+                eff_scale = max(0.1, scale * spacing_scale)
+            self.settings.zoom = eff_scale
             
-            img = self._render_scene_image(
-                scene,
-                background_color=self.settings.background_color,
-                include_grid=include_guides,
-                use_overlays=include_guides,
-                highlight_selection=False,
-            )
+            bg = self._resolve_theme_bg(export_theme) or self.settings.background_color
+            # Token preset adjustments (temporary)
+            original_hc = getattr(self.settings, "high_contrast_overlays", False)
+            original_bg = bg
+            try:
+                if export_tokens == "hc":
+                    self.settings.high_contrast_overlays = True
+                elif export_tokens == "print":
+                    self.settings.high_contrast_overlays = False
+                    if export_theme == "current":
+                        bg = color_hex("legacy_gray19")
+                elif export_tokens == "mono":
+                    self.settings.high_contrast_overlays = False
+                img = self._render_scene_image(
+                    scene,
+                    background_color=bg,
+                    include_grid=include_guides,
+                    use_overlays=include_guides,
+                    highlight_selection=False,
+                )
+                if export_tokens == "mono":
+                    try:
+                        img = img.convert("L").convert("RGB")
+                    except Exception:
+                        pass
+            finally:
+                self.settings.high_contrast_overlays = original_hc
+                bg = original_bg
             
             # Restore zoom
             self.settings.zoom = original_zoom
             
             # Save
             img.save(filename)
-            messagebox.showinfo(EXPORT_COMPLETE_TITLE, f"Saved @{scale}x PNG to:\n{filename}")
+            suffix = f"@{eff_scale:.1f}x" if respect_resp else f"@{scale}x"
+            messagebox.showinfo(EXPORT_COMPLETE_TITLE, f"Saved {suffix} PNG to:\n{filename}")
         else:
             messagebox.showerror(EXPORT_ERROR_TITLE, "No scene to export")
     
@@ -2770,7 +3382,7 @@ class VisualPreviewWindow:
         content.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         
         # Preset selection
-        preset_frame = ttk.LabelFrame(content, text="Quality Preset", padding=10)
+        preset_frame = ttk.LabelFrame(content, text="Quality Preset", padding=self._scale_spacing(10, minimum=6))
         preset_frame.pack(fill=tk.X, pady=(0, 10))
         
         preset_var = tk.StringVar(value="web")
@@ -2790,7 +3402,7 @@ class VisualPreviewWindow:
                      font=("Arial", 8)).pack(side=tk.LEFT, padx=(10, 0))
         
         # Advanced options
-        options_frame = ttk.LabelFrame(content, text="Advanced Options", padding=10)
+        options_frame = ttk.LabelFrame(content, text="Advanced Options", padding=self._scale_spacing(10, minimum=6))
         options_frame.pack(fill=tk.X, pady=(0, 10))
         
         gradients_var = tk.BooleanVar(value=True)
@@ -2811,7 +3423,7 @@ class VisualPreviewWindow:
                        variable=metadata_var).pack(anchor=tk.W, pady=2)
         
         # Scale
-        scale_frame = ttk.LabelFrame(content, text="Export Scale", padding=10)
+        scale_frame = ttk.LabelFrame(content, text="Export Scale", padding=self._scale_spacing(10, minimum=6))
         scale_frame.pack(fill=tk.X, pady=(0, 10))
         
         scale_var = tk.DoubleVar(value=1.0)
@@ -2827,7 +3439,7 @@ class VisualPreviewWindow:
         scale_var.trace_add("write", update_scale_label)
         
         # Font path (conditional)
-        font_frame = ttk.LabelFrame(content, text="Font Embedding (Optional)", padding=10)
+        font_frame = ttk.LabelFrame(content, text="Font Embedding (Optional)", padding=self._scale_spacing(10, minimum=6))
         font_frame.pack(fill=tk.X, pady=(0, 10))
         
         font_path_var = tk.StringVar(value="")
@@ -3049,23 +3661,70 @@ class VisualPreviewWindow:
     def _draw_hints_overlay(self):
         """Draw a small on-canvas hint box with basic instructions."""
         try:
-            # Background box
-            x0, y0 = 8, 8
-            x1, y1 = 8 + 360, 8 + 56
+            font_size = self._scale_font_size(10, minimum=9)
+            line_height = max(12, int(font_size * 1.4))
+            box_width = self._scale_spacing(360, minimum=260)
+            pad = self._scale_spacing(10, minimum=6)
+            x0 = self._scale_spacing(8, minimum=6)
+            y0 = self._scale_spacing(8, minimum=6)
+            lines = [
+                "Drag to move | Resize via corners/edges",
+                "Shift+Drag=axis lock | Shift+Click=multi-select",
+                "Arrows nudge (Shift=grid) | Right-click menu",
+                "Toolbar: Grid | Snap | Hints | Export | Help",
+            ]
+            x1 = x0 + box_width
+            y1 = y0 + pad * 2 + line_height * len(lines)
             # Simulated translucency via stipple
             self.canvas.create_rectangle(
                 x0, y0, x1, y1, fill=color_hex("shadow"), outline=color_hex("legacy_gray8"), stipple="gray25"
             )
-            lines = [
-                "Drag to move • Resize via corners/edges",
-                "Shift+Drag=axis lock • Shift+Click=multi-select",
-                "Arrows nudge (Shift=grid) • Right-click menu",
-                "Toolbar: Grid • Snap • Hints • Export • Help",
-            ]
-            ty = y0 + 10
+            ty = y0 + pad
             for ln in lines:
-                self.canvas.create_text(x0 + 10, ty, anchor=tk.NW, text=ln, fill=color_hex("text_primary"))
-                ty += 14
+                self.canvas.create_text(
+                    x0 + pad,
+                    ty,
+                    anchor=tk.NW,
+                    text=ln,
+                    fill=color_hex("text_primary"),
+                    font=("TkDefaultFont", font_size),
+                )
+                ty += line_height
+        except Exception:
+            pass
+
+    def _draw_mini_help_overlay(self):
+        """Draw a richer on-canvas mini help panel (F1/F10 toggle)."""
+        try:
+            font_size = self._scale_font_size(10, minimum=9)
+            line_height = max(12, int(font_size * 1.35))
+            pad = self._scale_spacing(10, minimum=6)
+            x0 = self._scale_spacing(12, minimum=8)
+            y0 = self._scale_spacing(80, minimum=50)
+            lines = [
+                "Pan/Zoom: Space+Drag | Ctrl+Wheel | 0.5-10x dropdown",
+                "Edit: Handles resize | Shift=axis lock | Alt+Arrows align | Alt+H/V distribute",
+                "Insert: Ctrl+Shift+A search | Ctrl+1-9 quick slots | Right-click menu",
+                f"Responsive: tier {getattr(self, '_responsive_tier', 'medium')} | Hints toggle | Mini Help F1/F10",
+                "Themes: dropdown | HC UI toggle | Export respects responsive scale & theme",
+            ]
+            width = max(len(ln) for ln in lines) * self._scale_spacing(6, minimum=5)
+            x1 = x0 + width + pad * 2
+            y1 = y0 + pad * 2 + line_height * len(lines)
+            self.canvas.create_rectangle(
+                x0, y0, x1, y1, fill=color_hex("shadow"), outline=color_hex("legacy_gray8"), stipple="gray25"
+            )
+            ty = y0 + pad
+            for ln in lines:
+                self.canvas.create_text(
+                    x0 + pad,
+                    ty,
+                    anchor=tk.NW,
+                    text=ln,
+                    fill=color_hex("text_primary"),
+                    font=("TkDefaultFont", font_size),
+                )
+                ty += line_height
         except Exception:
             pass
 
@@ -3088,7 +3747,8 @@ class VisualPreviewWindow:
         cy = target.y + target.height // 2
 
         # Tolerance: prefer snap size or a small default window
-        tol = max(2, int(getattr(self.settings, 'snap_size', 4)))
+        base_tol = max(2, int(getattr(self.settings, 'snap_distance', 4)))
+        tol = max(base_tol, self._get_scaled_snap_size())
 
         # Track nearest deltas for left/center/right and top/middle/bottom
         nearest_v = {"left": (10**9, None), "center": (10**9, None), "right": (10**9, None)}
@@ -3443,10 +4103,17 @@ class VisualPreviewWindow:
                     checked=defaults.get("checked", False)
                 )
                 self.selected_widget_idx = len(scene.widgets) - 1
+                self._record_recent_component(component.get("name"))
                 return
 
             # GUI placement: set pending component to show preview until click
             self._pending_component = component
+            try:
+                cw = getattr(self.canvas, "winfo_width", lambda: 0)() or (self.designer.width * self.settings.zoom)
+                ch = getattr(self.canvas, "winfo_height", lambda: 0)() or (self.designer.height * self.settings.zoom)
+                self._last_mouse = (cw // 2, ch // 2)
+            except Exception:
+                self._last_mouse = None
             self._invalidate_cache()
             self.refresh()
             self._update_status_bar()
@@ -3529,12 +4196,14 @@ class VisualPreviewWindow:
             # Snap preview to snap/grid if enabled
             x = int(self._last_mouse[0])
             y = int(self._last_mouse[1])
-            if self.settings.snap_enabled and self.settings.snap_size > 0:
-                size = self.settings.snap_size
+            snap = self._get_scaled_snap_size()
+            grid = self._get_scaled_grid_size()
+            if self.settings.snap_enabled and snap > 0:
+                size = snap
                 x = round(x / size) * size
                 y = round(y / size) * size
-            elif self.settings.grid_enabled and self.settings.grid_size > 0:
-                size = self.settings.grid_size
+            elif self.settings.grid_enabled and grid > 0:
+                size = grid
                 x = (x // size) * size
                 y = (y // size) * size
             x = max(0, min(self.designer.width - pw, x))
@@ -3551,7 +4220,7 @@ class VisualPreviewWindow:
             name = self._pending_component.get("name", "widget")
             try:
                 draw.text((x + 2, y + 2), f"Preview: {name}", fill=(0, 220, 255))
-                draw.text((x + 2, y + 16), f"{pw}×{ph} @ {x},{y}", fill=(0, 220, 255))
+                draw.text((x + 2, y + 16), f"{pw}x{ph} @ {x},{y}", fill=(0, 220, 255))
             except Exception:
                 pass
 
@@ -3565,12 +4234,14 @@ class VisualPreviewWindow:
         """
         try:
             items: List[Tuple[Any, ...]] = []
+            spacing_scale, font_scale = self._get_responsive_scales()
             # Include canvas/background parameters
             items.append((getattr(scene, 'width', self.designer.width),
                           getattr(scene, 'height', self.designer.height),
                           self.settings.background_color,
                           self.settings.grid_enabled,
-                          self.settings.grid_size))
+                          self._get_scaled_grid_size()))
+            items.append(("responsive_scales", round(spacing_scale, 3), round(font_scale, 3)))
             for w in scene.widgets:
                 # Collect common properties defensively
                 items.append((
@@ -3650,7 +4321,7 @@ class AnimationEditorWindow:
         content.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Properties panel (left)
-        props_frame = ttk.LabelFrame(content, text="Animation Properties", padding=10)
+        props_frame = ttk.LabelFrame(content, text="Animation Properties", padding=self._scale_spacing(10, minimum=6))
         props_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
         
         # Type
@@ -3695,7 +4366,7 @@ class AnimationEditorWindow:
                   command=self._export_to_c).grid(row=6, column=0, columnspan=2, pady=5)
         
         # Timeline canvas (right)
-        timeline_frame = ttk.LabelFrame(content, text="Timeline", padding=5)
+        timeline_frame = ttk.LabelFrame(content, text="Timeline", padding=self._scale_spacing(5, minimum=3))
         timeline_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         # Timeline controls
@@ -3722,7 +4393,7 @@ class AnimationEditorWindow:
         self.selected_keyframe_idx = None
         
         # Keyframe properties panel
-        keyframe_frame = ttk.LabelFrame(timeline_frame, text="Keyframe Properties", padding=5)
+        keyframe_frame = ttk.LabelFrame(timeline_frame, text="Keyframe Properties", padding=self._scale_spacing(5, minimum=3))
         keyframe_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
         
         ttk.Label(keyframe_frame, text="Time (0-1):").grid(row=0, column=0, sticky=tk.W, padx=5)
@@ -4131,8 +4802,9 @@ if TK_AVAILABLE:
             self.configure(bg=color_hex("legacy_gray4"))
             self.preview = preview
             self.geometry("640x520")
-            self.recent = getattr(preview, 'recent_components', [])
-            preview.recent_components = self.recent  # ensure attribute
+            self.recent = list(getattr(preview, '_recent_components', []))
+            self.favorites = list(getattr(preview, '_favorite_components', []))
+            self.default_filter = getattr(preview, '_component_filter_default', "all")
             self._build_ui()
 
         def _build_ui(self):
@@ -4143,6 +4815,13 @@ if TK_AVAILABLE:
             entry = ttk.Entry(top, textvariable=self.search_var, width=32)
             entry.pack(side=tk.LEFT, padx=6)
             entry.bind(KEY_RELEASE, lambda e: self._refresh_list())
+            # Filter All/Recent/Favorites
+            default_filter = self.default_filter or ("favorites" if self.favorites else "all")
+            self.filter_var = tk.StringVar(value=default_filter)
+            ttk.Label(top, text="Filter:").pack(side=tk.LEFT, padx=(6, 2))
+            for val, label in (("all", "All"), ("recent", "Recent"), ("favorites", "Favorites")):
+                ttk.Radiobutton(top, text=label, variable=self.filter_var, value=val,
+                                command=lambda: self._refresh_list()).pack(side=tk.LEFT, padx=2)
             # Category dropdown
             ttk.Label(top, text="Category:").pack(side=tk.LEFT)
             self.category_var = tk.StringVar(value="All")
@@ -4183,69 +4862,88 @@ if TK_AVAILABLE:
             ttk.Button(btn_row, text="Add ButtonGroup", command=lambda: self._insert_component("ButtonGroup")).pack(
                 side=tk.LEFT, padx=4
             )
+            ttk.Button(btn_row, text="★ Favorite", command=self._favorite_selected).pack(side=tk.LEFT, padx=4)
+            ttk.Button(btn_row, text="☆ Unfavorite", command=self._unfavorite_selected).pack(side=tk.LEFT, padx=4)
+            ttk.Button(btn_row, text="Use Favorites for Quick Slots", command=self._use_favorites_for_quick_slots).pack(
+                side=tk.LEFT, padx=4
+            )
 
             self._build_library()
             self._refresh_list()
 
-    def _build_library(self):
-        self._entries = []
-        seen = set()
+        def _build_library(self):
+            self._entries = []
+            seen = set()
 
-        def make_tags(text: str):
-            base = (text or '').lower().replace(',', ' ').split()
-            return [t for t in base if len(t) > 2][:10]
+            def make_tags(text: str):
+                base = (text or '').lower().replace(',', ' ').split()
+                return [t for t in base if len(t) > 2][:10]
 
-        for comp in self.preview.ascii_components:
-            name = comp.get("name")
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            cat = comp.get("category", "Misc")
-            desc = comp.get("description", "")
-            self._entries.append({
-                'name': name,
-                'category': cat,
-                'desc': desc,
-                'factory': comp.get("factory"),
-                'tags': make_tags(name + ' ' + desc)
-            })
-        for qi in self.preview.quick_insert_components:
-            name = qi.get("name")
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            cat = 'Quick'
-            desc = f"Quick insert {qi.get('type')}"
-            self._entries.append({
-                'name': name,
-                'category': cat,
-                'desc': desc,
-                'defaults': qi.get('defaults'),
-                'type': qi.get('type'),
-                'tags': make_tags(name + ' ' + desc)
-            })
-        # Add recent pseudo entries
-        for r in self.recent:
-            if r not in seen:
+            for comp in self.preview.ascii_components:
+                name = comp.get("name")
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                cat = comp.get("category", "Misc")
+                desc = comp.get("description", "")
                 self._entries.append({
-                    'name': r,
-                    'category': 'Recent',
-                    'desc': 'Recently used component',
-                    'tags': make_tags(r)
+                    'name': name,
+                    'category': cat,
+                    'desc': desc,
+                    'factory': comp.get("factory"),
+                    'tags': make_tags(name + ' ' + desc)
                 })
-        self._entries.sort(key=lambda e: (e['category'], e['name']))
-        cats = sorted({e['category'] for e in self._entries})
-        if 'Recent' in cats:
-            cats.remove('Recent')
-            cats.insert(0, 'Recent')
-        self.category_combo['values'] = ['All'] + cats
+            for qi in self.preview.quick_insert_components:
+                name = qi.get("name")
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                cat = 'Quick'
+                desc = f"Quick insert {qi.get('type')}"
+                self._entries.append({
+                    'name': name,
+                    'category': cat,
+                    'desc': desc,
+                    'defaults': qi.get('defaults'),
+                    'type': qi.get('type'),
+                    'tags': make_tags(name + ' ' + desc)
+                })
+            # Add recent pseudo entries
+            for r in self.recent:
+                if r not in seen:
+                    self._entries.append({
+                        'name': r,
+                        'category': 'Recent',
+                        'desc': 'Recently used component',
+                        'tags': make_tags(r)
+                    })
+            for f in self.favorites:
+                if f not in seen:
+                    self._entries.append({
+                        'name': f,
+                        'category': 'Favorites',
+                        'desc': 'Favorite component',
+                        'tags': make_tags(f)
+                    })
+            self._entries.sort(key=lambda e: (e['category'], e['name']))
+            cats = sorted({e['category'] for e in self._entries})
+            for special in ("Favorites", "Recent"):
+                if special in cats:
+                    cats.remove(special)
+                    cats.insert(0, special)
+            self.category_combo['values'] = ['All'] + cats
 
         def _refresh_list(self):
             term = self.search_var.get().lower().strip()
             cat = self.category_var.get()
+            filter_mode = getattr(self, "filter_var", None).get() if getattr(self, "filter_var", None) else "all"
             tags_filter = [t for t in self.tags_var.get().lower().split() if t]
             self.listbox.delete(0, tk.END)
             for e in self._entries:
+                if filter_mode == "recent" and e.get('category') != 'Recent':
+                    continue
+                if filter_mode == "favorites" and e.get('category') != 'Favorites':
+                    continue
                 if cat != 'All' and e['category'] != cat:
                     continue
                 if term and term not in e['name'].lower() and term not in e.get('desc', '').lower():
@@ -4278,7 +4976,7 @@ if TK_AVAILABLE:
                         ascii_art = e['factory']()
                         ascii_lines = ascii_art if isinstance(ascii_art, (list, tuple)) else str(ascii_art).splitlines()
                         for ln in ascii_lines:
-                            self.preview_text.insert(tk.END, ln + '\n')
+                            self.preview_text.insert(tk.END, ln + '\\n')
                     except Exception as ex:
                         self.preview_text.insert(tk.END, f"[preview error: {ex}]")
                 elif e.get('defaults'):
@@ -4289,6 +4987,33 @@ if TK_AVAILABLE:
             e = self._get_selected_entry()
             if e:
                 self._insert_component(e['name'])
+
+        def _favorite_selected(self):
+            entry = self._get_selected_entry()
+            if entry and entry['name'] not in self.favorites:
+                self.favorites.insert(0, entry['name'])
+                self.preview._save_favorites_from_names(self.favorites)
+                self._build_library()
+                self._refresh_list()
+                # Remember filter preference if user is working in favorites
+                if self.filter_var.get() == "favorites":
+                    self.preview._settings_cache["component_filter_default"] = "favorites"
+                    self.preview._save_settings()
+
+        def _unfavorite_selected(self):
+            entry = self._get_selected_entry()
+            if entry and entry['name'] in self.favorites:
+                self.favorites.remove(entry['name'])
+                self.preview._save_favorites_from_names(self.favorites)
+                self._build_library()
+                self._refresh_list()
+                if self.filter_var.get() == "favorites":
+                    self.preview._settings_cache["component_filter_default"] = "favorites"
+                    self.preview._save_settings()
+
+        def _use_favorites_for_quick_slots(self):
+            self.preview._save_favorites_from_names(self.favorites)
+            self.preview._apply_favorites_to_quick_slots()
 
         def _insert_component(self, name: str):
             scene = self.preview.designer.scenes.get(self.preview.designer.current_scene) if self.preview.designer.current_scene else None
@@ -4328,6 +5053,7 @@ if TK_AVAILABLE:
                 self.recent.insert(0, name)
             if len(self.recent) > 12:
                 self.recent = self.recent[:12]
+            self.preview._record_recent_component(name)
             self._build_library()
             self._refresh_list()
 

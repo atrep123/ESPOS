@@ -1,0 +1,64 @@
+Control Identifiers:
+
+Dialog - 'ESP32OS Launcher'    (L26, T26, R462, B485)
+['ESP32OS Launcher', 'ESP32OS LauncherDialog', 'Dialog']
+child_window(title="ESP32OS Launcher", control_type="Window")
+   | 
+   | Pane - ''    (L34, T57, R454, B477)
+   | ['Pane']
+   |    | 
+   |    | Button - ''    (L127, T440, R361, B472)
+   |    | ['Button', 'Button0', 'Button1']
+   |    | 
+   |    | Button - ''    (L127, T402, R361, B434)
+   |    | ['Button2']
+   |    | 
+   |    | Button - ''    (L127, T364, R361, B396)
+   |    | ['Button3']
+   |    | 
+   |    | Button - ''    (L127, T326, R361, B358)
+   |    | ['Button4']
+   |    | 
+   |    | Button - ''    (L127, T288, R361, B320)
+   |    | ['Button5']
+   |    | 
+   |    | Button - ''    (L127, T250, R361, B282)
+   |    | ['Button6']
+   |    | 
+   |    | Button - ''    (L127, T212, R361, B244)
+   |    | ['Button7']
+   |    | 
+   |    | Button - ''    (L127, T174, R361, B206)
+   |    | ['Button8']
+   |    | 
+   |    | Button - ''    (L127, T136, R361, B168)
+   |    | ['Button9']
+   |    | 
+   |    | Button - ''    (L127, T98, R361, B130)
+   |    | ['Button10']
+   |    | 
+   |    | Button - ''    (L127, T60, R361, B92)
+   |    | ['Button11']
+   | 
+   | TitleBar - ''    (L50, T29, R454, B57)
+   | ['TitleBar']
+   |    | 
+   |    | Menu - 'Systém'    (L34, T34, R56, B56)
+   |    | ['Menu', 'SystémMenu', 'Systém', 'Systém0', 'Systém1']
+   |    | child_window(title="Systém", auto_id="MenuBar", control_type="MenuBar")
+   |    |    | 
+   |    |    | MenuItem - 'Systém'    (L34, T34, R56, B56)
+   |    |    | ['Systém2', 'MenuItem', 'SystémMenuItem']
+   |    |    | child_window(title="Systém", control_type="MenuItem")
+   |    | 
+   |    | Button - 'Minimalizovat'    (L315, T27, R362, B57)
+   |    | ['MinimalizovatButton', 'Button12', 'Minimalizovat']
+   |    | child_window(title="Minimalizovat", control_type="Button")
+   |    | 
+   |    | Button - 'Maximalizovat'    (L362, T27, R408, B57)
+   |    | ['MaximalizovatButton', 'Button13', 'Maximalizovat']
+   |    | child_window(title="Maximalizovat", control_type="Button")
+   |    | 
+   |    | Button - 'Zavřít'    (L408, T27, R455, B57)
+   |    | ['Zavřít', 'Button14', 'ZavřítButton']
+   |    | child_window(title="Zavřít", control_type="Button")

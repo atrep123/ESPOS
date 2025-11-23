@@ -1222,13 +1222,13 @@ class UIDesigner:
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
         
-        print(f"💾 Design saved: {filename}")
+        print(f"[OK] Design saved: {filename}")
         # Auto: run preflight and export previews unless disabled
         try:
             if os.environ.get('ESP32OS_AUTO_EXPORT', '1') != '0':
                 _auto_preflight_and_export(self, filename)
         except Exception as _e:
-            print(f"⚠️ Auto-export skipped: {_e}")
+            print(f"[WARN] Auto-export skipped: {_e}")
     
     def load_from_json(self, filename: str):
         """Load design from JSON file"""
@@ -1238,7 +1238,7 @@ class UIDesigner:
         self.scenes = self._build_scenes_from_data(data)
         if self.scenes:
             self.current_scene = list(self.scenes.keys())[0]
-        print(f"📂 Design loaded: {filename}")
+        print(f"[OK] Design loaded: {filename}")
         self._record_json_watch(filename)
 
     def _read_json_file(self, filename: str) -> Dict[str, Any]:
@@ -1340,7 +1340,7 @@ class UIDesigner:
         with open(filename, 'w') as f:
             f.write(code)
         
-        print(f"🐍 Code exported: {filename}")
+        print(f"[OK] Code exported: {filename}")
     
     def auto_layout(self, layout_type: str = 'vertical', spacing: int = 4,
                     scene_name: Optional[str] = None):
@@ -1399,11 +1399,32 @@ class UIDesigner:
         if not widgets:
             return
         alignment = (alignment or '').lower()
+
+        def _align_edge(ws: List[WidgetConfig], edge: str) -> None:
+            if not ws:
+                return
+            if edge == 'left':
+                target = min(w.x for w in ws)
+                for w in ws:
+                    w.x = target
+            elif edge == 'right':
+                target = max(w.x + w.width for w in ws)
+                for w in ws:
+                    w.x = target - w.width
+            elif edge == 'top':
+                target = min(w.y for w in ws)
+                for w in ws:
+                    w.y = target
+            elif edge == 'bottom':
+                target = max(w.y + w.height for w in ws)
+                for w in ws:
+                    w.y = target - w.height
+
         align_map = {
-            'left': lambda ws: self._align_axis(ws, key=lambda w: w.x, setter=lambda w, v: setattr(w, 'x', v)),
-            'right': lambda ws: self._align_axis(ws, key=lambda w: w.x + w.width, setter=lambda w, v: setattr(w, 'x', v - w.width)),
-            'top': lambda ws: self._align_axis(ws, key=lambda w: w.y, setter=lambda w, v: setattr(w, 'y', v)),
-            'bottom': lambda ws: self._align_axis(ws, key=lambda w: w.y + w.height, setter=lambda w, v: setattr(w, 'y', v - w.height)),
+            'left': lambda ws: _align_edge(ws, 'left'),
+            'right': lambda ws: _align_edge(ws, 'right'),
+            'top': lambda ws: _align_edge(ws, 'top'),
+            'bottom': lambda ws: _align_edge(ws, 'bottom'),
             'center_h': lambda ws: self._align_center(ws, axis='x'),
             'center_v': lambda ws: self._align_center(ws, axis='y'),
         }
@@ -1514,7 +1535,7 @@ class UIDesigner:
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html)
         
-        print(f"🌐 HTML preview exported: {filename}")
+        print(f"[OK] HTML preview exported: {filename}")
     
     def preview_ascii(self, scene_name: Optional[str] = None, show_grid: bool = False) -> str:
         """Generate ASCII preview of scene with enhanced rendering"""
@@ -1875,17 +1896,17 @@ def _auto_preflight_and_export(designer: 'UIDesigner', json_path: str) -> None:
         result = _preflight_scene(scene)
         _log_preflight(result)
     except Exception as e:
-        print(f"⚠️ Preflight failed: {e}")
+        print(f"[WARN] Preflight failed: {e}")
 
     try:
         _run_auto_export(designer, json_path)
     except Exception as e:
-        print(f"⚠️ Auto-export failed: {e}")
+        print(f"[WARN] Auto-export failed: {e}")
 
 
 def _log_preflight(result: Dict[str, Any]) -> None:
     counts = result['counts']
-    print("\n🔎 Preflight:")
+    print("\n[INFO] Preflight:")
     if counts['issues']:
         for m in result['issues'][:10]:
             print(f"  [fail] {m}")
@@ -1911,7 +1932,7 @@ def _run_auto_export(designer: 'UIDesigner', json_path: str) -> None:
         subprocess.run(cmd, check=False)
     except Exception:
         pass
-    print(f"🖼️ Auto-export: {out_html} | {out_png}")
+    print(f"[OK] Auto-export: {out_html} | {out_png}")
 
 def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - CLI handler intentionally complex  # NOSONAR
     """Advanced CLI interface for UI designer.

@@ -33,17 +33,24 @@ class InstallerBuilder:
     def check_pyinstaller(self) -> bool:
         """Check if PyInstaller is installed"""
         if importlib.util.find_spec("PyInstaller") is None:
-            print("❌ PyInstaller not installed")
+            print("[ERROR] PyInstaller not installed")
             print("Install with: pip install pyinstaller")
             return False
         return True
     
-    def create_spec_file(self, onefile: bool = False, windowed: bool = True, entry_script: str = "ui_designer_pro.py") -> str:
+    def create_spec_file(
+        self,
+        onefile: bool = False,
+        windowed: bool = True,
+        entry_script: str = "ui_designer_pro.py",
+        use_upx: bool = False,
+    ) -> str:
         """Create PyInstaller spec file"""
         exe_binaries = "a.binaries" if onefile else "[]"
         exe_zipfiles = "a.zipfiles" if onefile else "[]"
         exe_datas = "a.datas" if onefile else "[]"
         exclude_binaries = "False" if onefile else "True"
+        upx_flag = "True" if use_upx else "False"
         collect_section = ""
         if not onefile:
             collect_section = """
@@ -54,13 +61,14 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=""" + upx_flag + """,
     upx_exclude=[],
     name="ESP32OS_UI_Designer",
 )
 """
 
-        spec_content = f"""# -*- mode: python ; coding: utf-8 -*-
+        console_flag = "False" if windowed else "True"
+        spec_template = """# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 
@@ -81,6 +89,13 @@ hiddenimports = [
     'websockets',
     'reportlab',
     'watchdog',
+    # pkg_resources vendored dependencies (setuptools >= 70)
+    'jaraco.context',
+    'jaraco.functools',
+    'jaraco.text',
+    'more_itertools',
+    'more_itertools.more',
+    'more_itertools.recipes',
 ]
 
 a = Analysis(
@@ -113,10 +128,10 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx={upx_flag},
     upx_exclude=[],
     runtime_tmpdir=None,
-    console={'False' if windowed else 'True'},
+    console={console_flag},
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -127,26 +142,36 @@ exe = EXE(
 
 {collect_section}
 """
+        spec_content = spec_template.format(
+            entry_script=entry_script,
+            exe_binaries=exe_binaries,
+            exe_zipfiles=exe_zipfiles,
+            exe_datas=exe_datas,
+            exclude_binaries=exclude_binaries,
+            upx_flag=upx_flag,
+            console_flag=console_flag,
+            collect_section=collect_section,
+        )
         
         with open(self.spec_file, 'w') as f:
             f.write(spec_content)
         
-        print(f"✅ Created spec file: {self.spec_file}")
+        print(f"[OK] Created spec file: {self.spec_file}")
         return str(self.spec_file)
     
     def build_executable(self, spec_file: str) -> bool:
         """Build executable using PyInstaller"""
-        print("🔨 Building executable...")
+        print("[INFO] Building executable...")
         
         cmd = ["pyinstaller", "--clean", spec_file]
         
         try:
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             print(result.stdout)
-            print("✅ Build successful!")
+            print("[OK] Build successful!")
             return True
         except subprocess.CalledProcessError as e:
-            print(f"❌ Build failed: {e}")
+            print(f"[ERROR] Build failed: {e}")
             print(e.stderr)
             return False
     
@@ -163,7 +188,7 @@ exe = EXE(
 ### macOS
 1. Extract ZIP archive
 2. Run `ESP32OS_UI_Designer.app`
-3. If macOS blocks it: Right-click → Open → Confirm
+3. If macOS blocks it: Right-click -> Open -> Confirm
 
 ### Linux
 1. Extract archive
@@ -213,7 +238,7 @@ See LICENSE file for details.
         with open(readme_path, 'w') as f:
             f.write(readme)
         
-        print(f"✅ Created README: {readme_path}")
+        print(f"[OK] Created README: {readme_path}")
     
     def create_launcher_script(self):
         """Create launcher script for better error handling"""
@@ -231,7 +256,7 @@ if errorlevel 1 (
             launcher_path = self.dist_dir / "ESP32OS_UI_Designer" / "Launch.bat"
             with open(launcher_path, 'w') as f:
                 f.write(launcher)
-            print(f"✅ Created launcher: {launcher_path}")
+            print(f"[OK] Created launcher: {launcher_path}")
         else:
             launcher = """#!/bin/bash
 echo "Starting ESP32OS UI Designer..."
@@ -246,8 +271,37 @@ fi
             with open(launcher_path, 'w') as f:
                 f.write(launcher)
             os.chmod(launcher_path, 0o755)
-            print(f"✅ Created launcher: {launcher_path}")
+            print(f"[OK] Created launcher: {launcher_path}")
     
+    def relocate_demo_assets(self, target_subdir: str = "demo_samples"):
+        """Move demo/sample artifacts out of the main app folder to keep the bundle clean."""
+        target_dir = self.dist_dir / target_subdir
+        patterns = [
+            "ui_designer_pro_demo*.json",
+            "ui_designer_pro_demo*.html",
+        ]
+        moved = 0
+        for src_dir in (self.dist_dir, self.dist_dir / "ESP32OS_UI_Designer"):
+            if not src_dir.exists():
+                continue
+            for pattern in patterns:
+                for path in src_dir.glob(pattern):
+                    if not path.is_file():
+                        continue
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    dest = target_dir / path.name
+                    try:
+                        if dest.exists():
+                            dest.unlink()
+                        shutil.move(str(path), dest)
+                        moved += 1
+                    except Exception:
+                        pass
+        if moved:
+            print(f"[INFO] Moved {moved} demo/sample files to {target_dir}")
+        else:
+            print("[INFO] No demo/sample files to relocate")
+
     def create_archive(self, archive_name: Optional[str] = None, suffix: str = "") -> Optional[str]:
         """Create distribution archive (ZIP/TAR.GZ)"""
         if archive_name is None:
@@ -262,11 +316,11 @@ fi
             stem, ext = os.path.splitext(archive_name)
             archive_name = f"{stem}{suffix}{ext}"
         
-        print(f"📦 Creating archive: {archive_name}")
+        print(f"[INFO] Creating archive: {archive_name}")
         
         dist_folder = self.dist_dir / "ESP32OS_UI_Designer"
         if not dist_folder.exists():
-            print(f"❌ Dist folder not found: {dist_folder}")
+            print(f"[ERROR] Dist folder not found: {dist_folder}")
             return None
         
         archive_path = self.dist_dir / archive_name
@@ -287,12 +341,12 @@ fi
                 'ESP32OS_UI_Designer'
             )
         
-        print(f"✅ Archive created: {archive_path}")
+        print(f"[OK] Archive created: {archive_path}")
         return str(archive_path)
     
     def clean_build_artifacts(self):
         """Clean build artifacts"""
-        print("🧹 Cleaning build artifacts...")
+        print("[INFO] Cleaning build artifacts...")
         
         if self.build_dir.exists():
             shutil.rmtree(self.build_dir)
@@ -306,11 +360,11 @@ fi
         for pycache in self.project_root.rglob("__pycache__"):
             shutil.rmtree(pycache)
         
-        print("✅ Cleanup complete")
+        print("[OK] Cleanup complete")
     
     def build_all(self, onefile: bool = False, windowed: bool = True, 
                   create_archive_flag: bool = True, entry_script: str = "ui_designer_pro.py",
-                  archive_suffix: str = "") -> bool:
+                  archive_suffix: str = "", use_upx: bool = False) -> bool:
         """Complete build process"""
         print("=" * 60)
         print("ESP32OS UI Designer - Installer Builder")
@@ -322,7 +376,12 @@ fi
             return False
         
         # Create spec file
-        spec_file = self.create_spec_file(onefile=onefile, windowed=windowed, entry_script=entry_script)
+        spec_file = self.create_spec_file(
+            onefile=onefile,
+            windowed=windowed,
+            entry_script=entry_script,
+            use_upx=use_upx,
+        )
         
         # Build executable
         if not self.build_executable(spec_file):
@@ -331,6 +390,7 @@ fi
         # Create additional files
         self.create_readme()
         self.create_launcher_script()
+        self.relocate_demo_assets()
         
         # Create archive
         if create_archive_flag:
@@ -338,7 +398,7 @@ fi
             if archive:
                 print()
                 print("=" * 60)
-                print("✅ BUILD SUCCESSFUL!")
+                print("[OK] BUILD SUCCESSFUL!")
                 print("=" * 60)
                 print(f"Archive: {archive}")
                 print(f"Size: {os.path.getsize(archive) / 1024 / 1024:.1f} MB")
@@ -363,6 +423,8 @@ def main():
                         help="Entry script to bundle (designer or unified launcher)")
     parser.add_argument("--archive-suffix", type=str, default="",
                         help="Optional suffix to append to archive filename (e.g., _Launcher)")
+    parser.add_argument("--upx", action="store_true",
+                        help="Enable UPX compression (disabled by default to reduce AV false positives)")
     
     args = parser.parse_args()
     
@@ -381,6 +443,7 @@ def main():
         create_archive_flag=not args.no_archive,
         entry_script=entry_script,
         archive_suffix=args.archive_suffix,
+        use_upx=args.upx,
     )
     
     return 0 if success else 1

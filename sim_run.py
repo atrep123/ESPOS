@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import io
 import json
 import os
 import platform
@@ -809,6 +810,32 @@ def enable_ansi_colors() -> None:
             # Fallback: best-effort no-op
             pass
 
+def _configure_stdio() -> None:
+    """Ensure stdout/stderr can emit Unicode even on legacy Windows codepages."""
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        return
+    except Exception:
+        # Older Python or already detached stdio
+        pass
+    try:
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer,
+            encoding=sys.stdout.encoding or 'utf-8',
+            errors='replace',
+            line_buffering=True,
+        )
+        sys.stderr = io.TextIOWrapper(
+            sys.stderr.buffer,
+            encoding=sys.stderr.encoding or 'utf-8',
+            errors='replace',
+            line_buffering=True,
+        )
+    except Exception:
+        # Final fallback: leave streams as-is
+        pass
+
 def get_key_nonblocking() -> Optional[str]:
     """Get keyboard input without blocking (platform-specific)"""
     if platform.system() == 'Windows':
@@ -1152,6 +1179,7 @@ def _handle_keyboard_input(
 
 def main() -> None:  # noqa: C901 - Main event loop intentionally complex
     """Main simulator loop"""
+    _configure_stdio()
     enable_ansi_colors()
     
     parser = argparse.ArgumentParser(description='ESP32 UI Simulator')

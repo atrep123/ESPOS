@@ -114,3 +114,33 @@ jobs:
       with:
         name: sim-snapshot
         path: reports/sim_snapshot.*
+
+  windows-ui-smoke:
+    runs-on: windows-latest
+    env:
+      PYTHONIOENCODING: "utf-8"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Create venv and install dependencies
+      shell: pwsh
+      run: |
+        python -m venv .venv
+        .\.venv\Scripts\python -m pip install --upgrade pip
+        .\.venv\Scripts\python -m pip install -r requirements.txt -r requirements-dev.txt
+    - name: Run Windows UI smoke
+      shell: pwsh
+      run: |
+        pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./tools/smoke_app.ps1
+    - name: Upload UI smoke artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ui-smoke-windows
+        path: |
+          reports/smoke_app/
+          reports/ci_smoke_*.log

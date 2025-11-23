@@ -7,4 +7,7 @@ mypy>=1.7
 pre-commit>=3.7
 
 # Build and distribution
-pyinstaller>=6.0.0
+pyinstaller>=6.9.0
+
+# UI automation (Windows)
+pywinauto>=0.6.8

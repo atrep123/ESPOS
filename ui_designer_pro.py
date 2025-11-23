@@ -4,14 +4,101 @@ UI Designer Pro - Complete Integration
 All features combined: Preview, Themes, Components, Animations, Responsive
 """
 
-import sys
+import atexit
 import json
-from typing import Optional, Dict, Any, List
+import os
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from ui_designer import UIDesigner, WidgetType, BorderStyle, WidgetConfig
 from ui_themes import ThemeManager, Theme
 from ui_components import ComponentLibrary, ComponentTemplate
 from ui_animations import AnimationDesigner, Animation
 from ui_responsive import ResponsiveLayoutSystem, LayoutConstraints
+
+
+class _SafeStream:
+    """Wrapper to prevent stdout/stderr crashes on consoles without Unicode support."""
+
+    def __init__(self, stream):
+        if stream is None:
+            stream = open(os.devnull, "w", encoding="utf-8", errors="ignore")
+        self.stream = stream
+
+    def write(self, data):
+        try:
+            return self.stream.write(data)
+        except (OSError, ValueError):
+            return 0
+
+    def flush(self):
+        try:
+            return self.stream.flush()
+        except (OSError, ValueError):
+            return None
+
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+
+
+def _configure_stdio() -> None:
+    """Ensure stdout/stderr can print Unicode without crashing on legacy codepages."""
+    def _wrap(stream):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+        return _SafeStream(stream)
+
+    sys.stdout = _wrap(sys.stdout)
+    sys.stderr = _wrap(sys.stderr)
+
+
+_INSTANCE_LOCK_HANDLE: Optional[object] = None
+
+
+def _release_single_instance_lock() -> None:
+    """Release the single-instance lock if held."""
+    global _INSTANCE_LOCK_HANDLE
+    handle = _INSTANCE_LOCK_HANDLE
+    _INSTANCE_LOCK_HANDLE = None
+    if handle is None:
+        return
+    try:
+        if os.name == "nt":
+            import msvcrt
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+        handle.close()
+    except Exception:
+        pass
+
+
+def _acquire_single_instance_lock() -> bool:
+    """Prevent multiple instances from spawning repeatedly (helps avoid respawn storms)."""
+    if os.environ.get("ESP32OS_DISABLE_SINGLE_INSTANCE") == "1":
+        return True
+    lock_path = Path(tempfile.gettempdir()) / "esp32os_ui_designer.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        handle = open(lock_path, "w")
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return False
+    except Exception:
+        return False
+    global _INSTANCE_LOCK_HANDLE
+    _INSTANCE_LOCK_HANDLE = handle
+    atexit.register(_release_single_instance_lock)
+    return True
 
 
 class UIDesignerPro:
@@ -39,7 +126,7 @@ class UIDesignerPro:
         if theme_name not in self.theme_manager.themes:
             raise ValueError(f"Theme '{theme_name}' not found")
         self.theme_manager.current_theme = theme_name
-        print(f"✓ Theme set to '{theme_name}'")
+        print(f"[OK] Theme set to '{theme_name}'")
     
     def add_component(self, component_name: str, x: int = 0, y: int = 0, 
                      params: Optional[Dict[str, Any]] = None):
@@ -63,7 +150,7 @@ class UIDesignerPro:
             scene.widgets.extend(widgets)
             self.designer._save_state()
         
-        print(f"✓ Added component '{component_name}' with {len(widgets)} widgets")
+        print(f"[OK] Added component '{component_name}' with {len(widgets)} widgets")
         return widgets
     
     def add_widget_with_theme(self, widget_type: WidgetType, **kwargs):
@@ -91,7 +178,7 @@ class UIDesignerPro:
     def add_animation(self, animation_name: str, widget_index: int):
         """Add animation to widget"""
         self.animation_designer.play_animation(animation_name, widget_index)
-        print(f"✓ Animation '{animation_name}' added to widget {widget_index}")
+        print(f"[OK] Animation '{animation_name}' added to widget {widget_index}")
     
     def make_responsive(self, from_size: tuple, to_size: tuple, mode: str = "proportional"):
         """Convert current scene to responsive layout"""
@@ -118,7 +205,7 @@ class UIDesignerPro:
         scene.width = to_w
         scene.height = to_h
         
-        print(f"✓ Scene scaled from {from_w}×{from_h} to {to_w}×{to_h} ({mode})")
+        print(f"[OK] Scene scaled from {from_w}x{from_h} to {to_w}x{to_h} ({mode})")
     
     def export_complete(self, base_filename: str):
         """Export everything: design, theme, animations, responsive config"""
@@ -140,10 +227,10 @@ class UIDesignerPro:
                     f"{base_filename}_anim_{anim_name.lower()}.json"
                 )
         
-        print(f"✓ Complete export saved:")
-        print(f"  • {base_filename}.json (design)")
-        print(f"  • {base_filename}_theme.json (theme)")
-        print(f"  • {base_filename}_anim_*.json (animations)")
+        print(f"[OK] Complete export saved:")
+        print(f"  - {base_filename}.json (design)")
+        print(f"  - {base_filename}_theme.json (theme)")
+        print(f"  - {base_filename}_anim_*.json (animations)")
     
     def launch_preview(self):
         """Launch visual preview window"""
@@ -152,7 +239,7 @@ class UIDesignerPro:
             preview = VisualPreviewWindow(self.designer)
             preview.run()
         except ImportError as e:
-            print(f"✗ Preview requires tkinter and PIL: {e}")
+            print(f"[WARN] Preview requires tkinter and PIL: {e}")
             print("  Install with: pip install pillow")
     
     def show_stats(self):
@@ -163,18 +250,18 @@ class UIDesignerPro:
         print("UI DESIGNER PRO - STATISTICS")
         print("="*60)
         print(f"Current Scene: {self.designer.current_scene}")
-        print(f"Display Size:  {self.designer.width}×{self.designer.height}")
+        print(f"Display Size:  {self.designer.width}x{self.designer.height}")
         print(f"Current Theme: {self.theme_manager.current_theme}")
         print()
-        
+
         if scene:
             print(f"Widgets:       {len(scene.widgets)}")
             widget_types = {}
             for w in scene.widgets:
                 widget_types[w.type] = widget_types.get(w.type, 0) + 1
             for wtype, count in sorted(widget_types.items()):
-                print(f"  • {wtype:12} {count:3d}")
-        
+                print(f"  - {wtype:12} {count:3d}")
+
         print()
         print(f"Available Themes:      {len(self.theme_manager.themes)}")
         print(f"Available Components:  {len(self.component_library.components)}")
@@ -185,13 +272,17 @@ class UIDesignerPro:
 
 def main():
     """Demo UI Designer Pro"""
-    print("🎨 UI DESIGNER PRO - COMPLETE EDITION\n")
+    _configure_stdio()
+    if not _acquire_single_instance_lock():
+        print("[WARN] Another ESP32OS UI Designer instance is already running; exiting.")
+        return
+    print("UI DESIGNER PRO - COMPLETE EDITION\n")
     print("All features integrated:")
-    print("  ✓ Visual Preview Window")
-    print("  ✓ Theme System (8 built-in themes)")
-    print("  ✓ Component Library (9 pre-built components)")
-    print("  ✓ Animation Designer (6 animations, 8 transitions)")
-    print("  ✓ Responsive Layout System")
+    print("  - Visual Preview Window")
+    print("  - Theme System (8 built-in themes)")
+    print("  - Component Library (9 pre-built components)")
+    print("  - Animation Designer (6 animations, 8 transitions)")
+    print("  - Responsive Layout System")
     print()
     
     # Create designer
@@ -199,16 +290,16 @@ def main():
     designer_pro.create_scene("pro_demo")
     
     # Set theme
-    print("🎨 Setting theme...")
+    print("Setting theme...")
     designer_pro.set_theme("Cyberpunk")
     
     # Add components
-    print("\n📦 Adding components...")
+    print("\nAdding components...")
     designer_pro.add_component("StatusBar", x=0, y=54)
     designer_pro.add_component("CardWidget", x=5, y=5)
     
     # Add custom widgets with theme
-    print("\n🔧 Adding custom widgets...")
+    print("\nAdding custom widgets...")
     designer_pro.add_widget_with_theme(
         WidgetType.BUTTON,
         x=70, y=10, width=50, height=12,
@@ -216,28 +307,30 @@ def main():
     )
     
     # Show current state
-    print("\n📊 Current Design (ASCII preview):")
-    print(designer_pro.designer.preview_ascii())
+    print("\nCurrent Design (ASCII preview):")
+    preview = designer_pro.designer.preview_ascii()
+    safe_preview = preview.encode("ascii", "replace").decode("ascii")
+    print(safe_preview)
     
     # Show stats
     designer_pro.show_stats()
     
     # Export
-    print("\n💾 Exporting...")
+    print("\nExporting...")
     designer_pro.export_complete("ui_designer_pro_demo")
     
     # Make responsive version
-    print("\n📱 Creating responsive versions...")
+    print("\nCreating responsive versions...")
     designer_pro.make_responsive((128, 64), (320, 240), "proportional")
     designer_pro.designer.save_to_json("ui_designer_pro_demo_320x240.json")
     
-    print("\n✅ UI Designer Pro demo complete!")
+    print("\nUI Designer Pro demo complete!")
     print("\nNext steps:")
-    print("  • Run: python ui_designer_preview.py (launch visual editor)")
-    print("  • Run: python ui_themes.py (preview all themes)")
-    print("  • Run: python ui_components.py (browse component library)")
-    print("  • Run: python ui_animations.py (test animation system)")
-    print("  • Run: python ui_responsive.py (test responsive layouts)")
+    print("  - Run: python ui_designer_preview.py (launch visual editor)")
+    print("  - Run: python ui_themes.py (preview all themes)")
+    print("  - Run: python ui_components.py (browse component library)")
+    print("  - Run: python ui_animations.py (test animation system)")
+    print("  - Run: python ui_responsive.py (test responsive layouts)")
 
 
 if __name__ == "__main__":

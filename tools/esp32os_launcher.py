@@ -13,21 +13,25 @@ import argparse
 import os
 import subprocess
 import sys
+import traceback
 import webbrowser
 from pathlib import Path
 from typing import Dict, Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = Path.home() / ".esp32os" / "config.json"
+LOG_PATH = Path.home() / ".esp32os" / "launcher.log"
 from tools.common_logging import setup_logging  # noqa: E402
 from tools.common_config import load_config as load_cfg, save_config as save_cfg  # noqa: E402
 
 logger = setup_logging("launcher")
 try:
     import tkinter as tk  # type: ignore
+    from tkinter import ttk  # type: ignore
     from tkinter import messagebox  # type: ignore
 except Exception:
     tk = None  # type: ignore
+    ttk = None  # type: ignore
     messagebox = None  # type: ignore
 
 
@@ -43,6 +47,23 @@ DEFAULT_CONFIG: Dict[str, object] = {
     "exporter_args": [],
 }
 
+# Async/automation mode is enabled via this env flag (used by UI smoke tests).
+AUTOMATION_ASYNC = os.getenv("ESP32OS_LAUNCHER_ASYNC") == "1"
+
+
+def _log_to_file(message: str) -> None:
+    """Append launcher messages to a file for troubleshooting silent exits."""
+    try:
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LOG_PATH.write_text(
+            (LOG_PATH.read_text(encoding="utf-8", errors="ignore") if LOG_PATH.exists() else "")
+            + message
+            + "\n",
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
 
 def load_config() -> Dict[str, object]:
     cfg = load_cfg(CONFIG_PATH, DEFAULT_CONFIG)
@@ -57,32 +78,50 @@ def save_config(cfg: Dict[str, object]) -> None:
         logger.error("Failed to save config: %s", exc)
 
 
-def run_command(desc: str, cmd: list[str], cwd: Optional[Path] = None) -> None:
-    logger.info("Starting %s: %s", desc, " ".join(cmd))
+def run_command(desc: str, cmd: list[str], cwd: Optional[Path] = None, async_mode: Optional[bool] = None) -> None:
+    async_mode = AUTOMATION_ASYNC if async_mode is None else async_mode
+    logger.info("Starting %s (%s): %s", desc, "async" if async_mode else "sync", " ".join(cmd))
+    _log_to_file(f"[run] {desc}: {' '.join(cmd)} (async={async_mode})")
     try:
+        if async_mode:
+            proc = subprocess.Popen(cmd, cwd=cwd or ROOT)
+            _log_to_file(f"[popen] {desc} pid={proc.pid}")
+            return
         subprocess.run(cmd, cwd=cwd or ROOT, check=True)
     except subprocess.CalledProcessError as exc:
         logger.error("%s exited with %s", desc, exc.returncode)
+        _log_to_file(f"[error] {desc} exit={exc.returncode}")
     except FileNotFoundError:
         logger.error("Command not found: %s", cmd[0])
+        _log_to_file(f"[error] command not found: {cmd[0]}")
+    except Exception as exc:  # defensive catch for frozen exe
+        logger.error("Unexpected failure running %s: %s", desc, exc)
+        _log_to_file(f"[error] {desc} unexpected: {exc}")
 
 
 def start_designer(cfg: Dict[str, object]) -> None:
     script = cfg.get("designer_script", DEFAULT_CONFIG["designer_script"])
     args = list(cfg.get("designer_args", []))
-    run_command("UI Designer", [sys.executable, str(ROOT / script), *map(str, args)])
+    run_command("UI Designer", [sys.executable, str(ROOT / script), *map(str, args)], async_mode=AUTOMATION_ASYNC)
 
 
 def start_simulator(cfg: Dict[str, object]) -> None:
     script = cfg.get("simulator_script", DEFAULT_CONFIG["simulator_script"])
     args = list(cfg.get("sim_args", []))
-    run_command("Simulator", [sys.executable, str(ROOT / script), *map(str, args)])
+    if AUTOMATION_ASYNC and not args:
+        frames = os.getenv("ESP32OS_AUTOMATION_SIM_FRAMES", "30")
+        try:
+            int(frames)
+        except Exception:
+            frames = "30"
+        args = ["--auto-size", "--max-frames", str(frames)]
+    run_command("Simulator", [sys.executable, str(ROOT / script), *map(str, args)], async_mode=AUTOMATION_ASYNC)
 
 
 def run_exporter(cfg: Dict[str, object]) -> None:
     script = "ui_export_c.py"
     args = list(cfg.get("exporter_args", []))
-    run_command("Exporter", [sys.executable, str(ROOT / script), *map(str, args)])
+    run_command("Exporter", [sys.executable, str(ROOT / script), *map(str, args)], async_mode=AUTOMATION_ASYNC)
 
 
 _web_process: Dict[str, Optional[subprocess.Popen]] = {"backend": None, "frontend": None}
@@ -231,13 +270,18 @@ def open_backend(cfg: Dict[str, object]) -> None:
 
 
 def run_gui(cfg: Dict[str, object]) -> None:
-    if tk is None:
+    if tk is None or ttk is None:
         print("Tkinter not available; use CLI mode.")
         return
     root = tk.Tk()
     root.title("ESP32OS Launcher")
     root.geometry("420x420")
     status_var = tk.StringVar(value="Status pending...")
+    auto_exit_ms = 0
+    try:
+        auto_exit_ms = int(os.getenv("ESP32OS_AUTOMATION_EXIT", "0"))
+    except Exception:
+        auto_exit_ms = 0
 
     def refresh_status():
         try:
@@ -247,21 +291,31 @@ def run_gui(cfg: Dict[str, object]) -> None:
         root.after(2000, refresh_status)
 
     btns = [
-        ("UI Designer", lambda: start_designer(cfg)),
-        ("Simulator", lambda: start_simulator(cfg)),
-        ("Export C assets", lambda: run_exporter(cfg)),
-        ("Start Web mode", lambda: start_web_mode(cfg)),
-        ("Stop Web mode", stop_web_mode),
-        ("Open frontend", lambda: open_frontend(cfg)),
-        ("Open backend URL", lambda: open_backend(cfg)),
-        ("Edit config", lambda: edit_config(cfg)),
-        ("Reset config", lambda: reset_config()),
-        ("Docs", open_docs),
-        ("Quit", root.destroy),
+        ("Alt+1  UI Designer", lambda: start_designer(cfg), "1"),
+        ("Alt+2  Simulator", lambda: start_simulator(cfg), "2"),
+        ("Alt+3  Export C assets", lambda: run_exporter(cfg), "3"),
+        ("Alt+4  Start Web mode", lambda: start_web_mode(cfg), "4"),
+        ("Alt+5  Stop Web mode", stop_web_mode, "5"),
+        ("Alt+6  Open frontend", lambda: open_frontend(cfg), "6"),
+        ("Alt+7  Open backend URL", lambda: open_backend(cfg), "7"),
+        ("Alt+8  Edit config", lambda: edit_config(cfg), "8"),
+        ("Alt+9  Reset config", lambda: reset_config(), "9"),
+        ("Alt+0  Docs", open_docs, "0"),
+        ("Alt+Q  Quit", root.destroy, "q"),
     ]
-    for text, cmd in btns:
-        b = tk.Button(root, text=text, command=cmd, width=32, pady=4)
+    for text, cmd, hotkey in btns:
+        # Set a widget name for automation tools (no spaces, lowercase)
+        widget_name = text.lower().replace(" ", "_").replace("-", "_")
+        b = ttk.Button(root, text=text, command=cmd, width=32, name=widget_name, takefocus=True)
         b.pack(pady=3)
+        try:
+            root.bind_all(f"<Alt-{hotkey}>", lambda e, c=cmd: c())
+        except Exception:
+            pass
+    try:
+        root.bind_all("<Alt-F4>", lambda e: root.destroy())
+    except Exception:
+        pass
 
     tk.Label(root, text="Status (auto-refresh):").pack(pady=(6, 0))
     status_label = tk.Label(root, textvariable=status_var, justify="left", fg="gray20", wraplength=380)
@@ -269,6 +323,16 @@ def run_gui(cfg: Dict[str, object]) -> None:
 
     lbl = tk.Label(root, text=f"Config: {CONFIG_PATH}", fg="gray")
     lbl.pack(pady=6)
+    try:
+        root.focus_force()
+    except Exception:
+        pass
+    if auto_exit_ms > 0:
+        try:
+            root.after(auto_exit_ms, root.destroy)
+            logger.info("Automation exit scheduled after %sms", auto_exit_ms)
+        except Exception:
+            pass
     refresh_status()
     root.mainloop()
 
@@ -323,9 +387,25 @@ def main() -> None:
         else:
             return run_gui(cfg)
 
+    # If stdin is not interactive (e.g., windowed exe), auto-start designer instead of waiting for input().
+    try:
+        stdin_ok = sys.stdin is not None and sys.stdin.isatty()
+    except Exception:
+        stdin_ok = False
+    if not stdin_ok:
+        print("Non-interactive session detected; starting UI Designer...")
+        _log_to_file("[info] stdin not interactive, auto-starting designer")
+        start_designer(cfg)
+        return
+
     while True:
         print_menu()
-        choice = input("Select option: ").strip().lower()
+        try:
+            choice = input("Select option: ").strip().lower()
+        except (EOFError, RuntimeError):
+            print("Input unavailable; exiting.")
+            _log_to_file("[warn] input unavailable, exiting menu loop")
+            break
         if choice == '1':
             start_designer(cfg)
         elif choice == '2':
@@ -354,4 +434,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:  # Make silent failures visible
+        _log_to_file("[fatal] " + "".join(traceback.format_exception(exc)))
+        try:
+            if messagebox:
+                messagebox.showerror("Launcher error", f"Failed to start: {exc}\nLog: {LOG_PATH}")
+        except Exception:
+            pass

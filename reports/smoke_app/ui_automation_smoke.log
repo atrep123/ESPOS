@@ -1,0 +1,13 @@
+[smoke] Starting: "F:\UserData\Desktop\ESP32OS\dist\ESP32OS_UI_Designer\ESP32OS_UI_Designer.exe" --gui (backend=uia)
+[smoke] Window detected: 'ESP32OS Launcher'
+[smoke] Fallback hotkey Alt+1: UI Designer
+[smoke] Fallback hotkey Alt+3: Export C assets
+[smoke] Fallback hotkey Alt+4: Start Web mode
+[smoke] Fallback hotkey Alt+5: Stop Web mode
+[smoke] Fallback hotkey Alt+6: Open frontend
+[smoke] Fallback hotkey Alt+7: Open backend URL
+[smoke] Fallback hotkey Alt+8: Edit config
+[smoke] Fallback hotkey Alt+9: Reset config
+[smoke] Fallback hotkey Alt+0: Docs
+[smoke] Automation clicks=0 fallback_hotkeys=9
+[smoke] Window still exists; killing process
