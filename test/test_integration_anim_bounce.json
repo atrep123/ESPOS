@@ -1,0 +1,17 @@
+{
+  "name": "Bounce",
+  "type": "bounce",
+  "duration": 600,
+  "delay": 0,
+  "iterations": 1,
+  "direction": "normal",
+  "easing": "ease_out_bounce",
+  "keyframes": [],
+  "widget_id": null,
+  "scene_name": null,
+  "start_value": null,
+  "end_value": null,
+  "current_iteration": 0,
+  "start_time": null,
+  "is_playing": false
+}
