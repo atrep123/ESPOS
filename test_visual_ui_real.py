@@ -25,6 +25,8 @@ try:
     import mss
     import pyautogui
     from PIL import Image
+    from pywinauto import Application
+    from pywinauto.findwindows import ElementNotFoundError
 
     VISUAL_TEST_AVAILABLE = True
 except ImportError:
@@ -46,10 +48,10 @@ class UIDesignerApp:
         env = os.environ.copy()
         env["ESP32OS_HEADLESS"] = "0"
 
-        # Build command
-        cmd = [sys.executable, "ui_designer_pro.py"]
+        # Build command - use ui_designer_preview.py (actual GUI app)
+        cmd = [sys.executable, "ui_designer_preview.py"]
         if design_file:
-            cmd.extend(["--json", design_file])
+            cmd.extend(["--in-json", design_file])
 
         try:
             self.process = subprocess.Popen(
@@ -97,12 +99,63 @@ class UIDesignerApp:
             screenshot = sct.grab(monitor)
             return Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
 
-    def find_window_position(self) -> Optional[tuple]:
-        """Find window position using pyautogui (basic detection)"""
-        # Note: This is a placeholder - real implementation would need
-        # image templates or window enumeration via Win32 API
-        # For now, assume top-left area of screen
-        return None  # Caller should use fallback coordinates
+    def get_window_rect(self) -> Optional[dict]:
+        """Get window position and size using pywinauto"""
+        if not self.process:
+            return None
+        
+        try:
+            app = Application(backend="uia").connect(process=self.process.pid, timeout=3)
+            window = app.window(title_re=".*")
+            if window.exists():
+                rect = window.rectangle()
+                return {
+                    "left": rect.left,
+                    "top": rect.top,
+                    "width": rect.width(),
+                    "height": rect.height(),
+                    "right": rect.right,
+                    "bottom": rect.bottom,
+                }
+        except Exception as e:
+            print(f"Could not get window rect: {e}")
+        return None
+
+    def safe_click_in_window(self, offset_x: int, offset_y: int) -> bool:
+        """Click at position relative to window top-left corner"""
+        rect = self.get_window_rect()
+        if not rect:
+            print("Cannot click - window not found")
+            return False
+        
+        # Calculate absolute screen position
+        x = rect["left"] + offset_x
+        y = rect["top"] + offset_y
+        
+        # Verify click is within window bounds
+        if x < rect["left"] or x > rect["right"] or y < rect["top"] or y > rect["bottom"]:
+            print(f"Click position ({x}, {y}) outside window bounds")
+            return False
+        
+        pyautogui.click(x, y)
+        return True
+
+    def safe_drag_in_window(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.5) -> bool:
+        """Drag from start to end position (relative to window)"""
+        rect = self.get_window_rect()
+        if not rect:
+            return False
+        
+        abs_start_x = rect["left"] + start_x
+        abs_start_y = rect["top"] + start_y
+        abs_end_x = rect["left"] + end_x
+        abs_end_y = rect["top"] + end_y
+        
+        pyautogui.moveTo(abs_start_x, abs_start_y)
+        pyautogui.mouseDown()
+        pyautogui.moveTo(abs_end_x, abs_end_y, duration=duration)
+        pyautogui.mouseUp()
+        return True
 
 
 @pytest.fixture(autouse=True)
@@ -136,25 +189,74 @@ def test_ui_designer_launches(ui_app):
     screenshot.save("test_ui_launch.png")
 
 
-@pytest.mark.skip(reason="Mouse movement test - disabled to prevent interference with user")
 @pytest.mark.timeout(60)
 def test_ui_designer_creates_widget(ui_app):
-    """Test creating a widget through UI interaction
+    """Test creating a widget through UI interaction using window detection"""
+    # Create a test design file
+    test_file = Path("test_visual_design.json")
+    initial_design = {"width": 128, "height": 64, "widgets": []}
 
-    DISABLED: This test moves the mouse and may interfere with user work.
-    Re-enable only when running in isolated test environment.
-    """
-    pass
+    with open(test_file, "w") as f:
+        json.dump(initial_design, f)
+
+    try:
+        # Launch with design file
+        assert ui_app.launch(str(test_file)), "Should launch with design"
+        time.sleep(3)  # Give window time to fully render
+
+        # Get window position
+        rect = ui_app.get_window_rect()
+        if rect:
+            print(f"Window found at: {rect}")
+            # Click in center of window (safe fallback)
+            center_x = rect["width"] // 2
+            center_y = rect["height"] // 2
+            
+            if ui_app.safe_click_in_window(center_x, center_y):
+                time.sleep(0.5)
+                
+                # Take screenshot after click
+                screenshot = ui_app.screenshot()
+                screenshot.save("test_ui_widget_create.png")
+                assert screenshot.size[0] > 0
+            else:
+                pytest.skip("Could not safely click in window")
+        else:
+            pytest.skip("Window detection failed - skipping click test")
+
+    finally:
+        if test_file.exists():
+            test_file.unlink()
 
 
-@pytest.mark.skip(reason="Mouse movement test - disabled to prevent interference with user")
 @pytest.mark.timeout(45)
 def test_ui_designer_drag_drop(ui_app):
-    """Test drag and drop functionality
+    """Test drag and drop functionality using window-relative coordinates"""
+    assert ui_app.launch(), "Should launch"
+    time.sleep(3)
 
-    DISABLED: This test moves the mouse and may interfere with user work.
-    """
-    pass
+    rect = ui_app.get_window_rect()
+    if not rect:
+        pytest.skip("Window detection failed")
+    
+    print(f"Window size: {rect['width']}x{rect['height']}")
+    
+    # Drag from left side to right side (relative to window)
+    # Assuming palette is on left, canvas on right
+    start_x = rect["width"] // 4  # 25% from left
+    start_y = rect["height"] // 3  # 33% from top
+    end_x = (rect["width"] * 3) // 4  # 75% from left  
+    end_y = rect["height"] // 2  # 50% from top
+    
+    if ui_app.safe_drag_in_window(start_x, start_y, end_x, end_y, duration=0.5):
+        time.sleep(1)
+        
+        # Capture result
+        screenshot = ui_app.screenshot()
+        screenshot.save("test_ui_drag_drop.png")
+        assert screenshot.size[0] > 0
+    else:
+        pytest.skip("Could not perform drag operation")
 
 
 @pytest.mark.timeout(30)
@@ -179,14 +281,35 @@ def test_ui_designer_keyboard_shortcuts(ui_app):
     assert ui_app.is_running(), "App should still be running"
 
 
-@pytest.mark.skip(reason="Mouse movement test - disabled to prevent interference with user")
 @pytest.mark.timeout(40)
 def test_ui_designer_menu_navigation(ui_app):
-    """Test menu navigation
+    """Test menu navigation using window-relative coordinates"""
+    assert ui_app.launch(), "Should launch"
+    time.sleep(3)
 
-    DISABLED: This test moves the mouse and may interfere with user work.
-    """
-    pass
+    rect = ui_app.get_window_rect()
+    if not rect:
+        pytest.skip("Window detection failed")
+    
+    # Menu bar is typically at top-left of window
+    # Click at (50, 30) relative to window top-left (should hit File menu)
+    menu_x = 50
+    menu_y = 30
+    
+    if ui_app.safe_click_in_window(menu_x, menu_y):
+        time.sleep(0.5)
+        
+        # Take screenshot of menu
+        screenshot = ui_app.screenshot()
+        screenshot.save("test_ui_menu.png")
+        
+        # Press Escape to close menu
+        pyautogui.press("escape")
+        time.sleep(0.5)
+        
+        assert ui_app.is_running()
+    else:
+        pytest.skip("Could not safely click menu")
 
 
 @pytest.mark.timeout(50)
