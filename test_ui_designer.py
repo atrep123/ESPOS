@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """Quick test of UI Designer functionality"""
 
 import sys
@@ -21,26 +22,26 @@ def test_ui_designer():
     designer.add_widget_from_template('title_label', 'title', x=10, y=2, text="Dashboard")
     designer.add_widget_from_template('button_primary', 'btn1', x=10, y=8, text="Start")
     designer.add_widget_from_template('gauge_half', 'gauge1', x=60, y=8)
-    print("   ✓ Added 3 widgets from templates")
+    print("   [OK] Added 3 widgets from templates")
     
     # Test 2: Clone widget
     print("\n2. Testing clone:")
     designer.clone_widget(1, offset_x=0, offset_y=4)  # Clone button by index
-    print(f"   ✓ Cloned button")
+    print("   [OK] Cloned button")
     
     # Test 3: Undo/Redo
     print("\n3. Testing undo/redo:")
     designer.undo()
     scene = designer.scenes[designer.current_scene]
-    print(f"   ✓ Undo - widgets: {len(scene.widgets)}")
+    print(f"   [OK] Undo - widgets: {len(scene.widgets)}")
     designer.redo()
     scene = designer.scenes[designer.current_scene]
-    print(f"   ✓ Redo - widgets: {len(scene.widgets)}")
+    print(f"   [OK] Redo - widgets: {len(scene.widgets)}")
     
     # Test 4: Auto layout
     print("\n4. Testing auto-layout:")
     designer.auto_layout('vertical', spacing=4)
-    print("   ✓ Applied vertical layout")
+    print("   [OK] Applied vertical layout")
     
     # Test 5: ASCII Preview
     print("\n5. ASCII Preview:")
@@ -51,15 +52,15 @@ def test_ui_designer():
     
     # JSON
     designer.save_to_json('test_scene.json')
-    print("   ✓ Saved JSON: test_scene.json")
+    print("   [OK] Saved JSON: test_scene.json")
     
     # Python code
     designer.export_code('test_scene.py')
-    print("   ✓ Generated Python code: test_scene.py")
+    print("   [OK] Generated Python code: test_scene.py")
     
     # HTML
     designer.export_to_html('test_scene.html')
-    print("   ✓ Generated HTML: test_scene.html")
+    print("   [OK] Generated HTML: test_scene.html")
     
     # Test 7: Widget types
     print("\n7. Testing all widget types:")
@@ -72,7 +73,7 @@ def test_ui_designer():
     
     for widget in test_widgets:
         designer.add_widget(widget)
-        print(f"   ✓ {widget.type}")
+        print(f"   [OK] {widget.type}")
     
     # Test 8: Border styles
     print("\n8. Testing border styles:")
@@ -84,10 +85,10 @@ def test_ui_designer():
             border_style=style.value
         )
         designer.add_widget(widget)
-        print(f"   ✓ {style.value}")
+        print(f"   [OK] {style.value}")
     
     print("\n" + "=" * 60)
-    print("✅ ALL TESTS PASSED!")
+    print("[PASS] ALL TESTS PASSED!")
     print("=" * 60)
     scene = designer.scenes[designer.current_scene]
     print(f"\nFinal stats:")
