@@ -19,7 +19,7 @@ def create_dashboard_demo():
     
     # Enable grid for precise placement
     designer.grid_enabled = True
-    print("\n✓ Grid enabled (4px)")
+    print("\n[OK] Grid enabled (4px)")
     
     # 1. Add title from template
     print("\n1️⃣  Adding title label...")
@@ -68,13 +68,13 @@ def create_dashboard_demo():
     os.makedirs(out_dir, exist_ok=True)
 
     designer.save_to_json(os.path.join(out_dir, 'dashboard_demo.json'))
-    print("✓ JSON saved: examples/dashboard_demo.json")
+    print("[OK] JSON saved: examples/dashboard_demo.json")
     
     designer.export_code(os.path.join(out_dir, 'dashboard_demo.py'))
-    print("✓ Python code: examples/dashboard_demo.py")
+    print("[OK] Python code: examples/dashboard_demo.py")
     
     designer.export_to_html(os.path.join(out_dir, 'dashboard_demo.html'))
-    print("✓ HTML preview: examples/dashboard_demo.html")
+    print("[OK] HTML preview: examples/dashboard_demo.html")
     
     # Widget summary
     print("\n" + "=" * 70)
@@ -107,7 +107,7 @@ def create_dashboard_demo():
     print(f"After redo:  {len(scene.widgets)} widgets")
     
     print("\n" + "=" * 70)
-    print("✅ DEMO COMPLETED!")
+    print("[PASS] DEMO COMPLETED!")
     print("=" * 70)
     print("\nNext steps:")
     print("  • Open examples/dashboard_demo.html in browser for preview")
