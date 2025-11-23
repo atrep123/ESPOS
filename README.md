@@ -62,10 +62,25 @@
 
 ## Rychlý start (lint, testy, tokeny)
 
+### Běžné testy (headless - bez GUI)
+
+- Všechny testy: `pytest -q`
+- UI testy (headless): `pytest -k test_ui -q`
 - Lint tokenů (kód): `python tools/token_lint.py --paths ui_designer.py ui_designer_preview.py ui_components.py ui_themes.py tools src --ext .py .c .h`
 - Lint tokenů (HTML/docs s allow-listem): `python tools/token_lint.py --paths web docs --ext .html --allow-file web/token_allow.txt --no-fail`
 - Rychlé testy: `pytest -q test_token_allow_file.py test_design_tokens_apply.py test_token_lint.py test_ui_designer_nudge_snap.py test_ui_designer_batch_edit.py`
 - Inventura tokenů (použité/nepoužité): `python tools/token_usage.py --paths . --ext .py .c .h .html --out reports/token_usage.txt`
+
+### Vizuální UI testy (vyžaduje grafický display)
+
+- **Instalace:** `pip install -r requirements-dev.txt`
+- **Demo:** `python demo_visual_testing.py` - Ukázka automatizace UI
+- **Všechny vizuální testy:** `pytest test_visual_ui_*.py -v -s`
+- **PyAutoGUI testy:** `pytest test_visual_ui_real.py -v -s`
+- **PyWinAuto testy:** `pytest test_visual_ui_advanced.py -v -s`
+- **Dokumentace:** `VISUAL_UI_TESTING.md`
+
+> **Poznámka:** Vizuální testy automaticky testují skutečné GUI - drag&drop, klávesové zkratky, menu navigaci. Vyžadují grafický display a jsou automaticky přeskočeny v CI/CD.
 
 ## 🛡️ Security & Audits
 

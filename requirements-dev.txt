@@ -11,3 +11,9 @@ pyinstaller>=6.9.0
 
 # UI automation (Windows)
 pywinauto>=0.6.8
+
+# Visual UI testing
+pyautogui>=0.9.54
+Pillow>=10.0.0  # Already required but ensure it's here
+pytest-timeout>=2.2.0  # Timeout for UI tests
+mss>=9.0.1  # Fast screenshot capture
