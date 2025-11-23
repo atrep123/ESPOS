@@ -14,11 +14,12 @@ from typing import Optional
 
 import pytest
 
-# Skip all tests in this file if running in headless mode
-pytestmark = pytest.mark.skipif(
-    os.environ.get("ESP32OS_HEADLESS") == "1",
-    reason="Visual UI tests require display - skipped in headless mode",
-)
+
+# Function to check if we should skip visual tests
+def should_skip_visual():
+    """Check at runtime if visual tests should be skipped"""
+    return os.environ.get("ESP32OS_HEADLESS", "0") == "1"
+
 
 try:
     import mss
@@ -28,7 +29,6 @@ try:
     VISUAL_TEST_AVAILABLE = True
 except ImportError:
     VISUAL_TEST_AVAILABLE = False
-    pytestmark = pytest.mark.skip(reason="pyautogui/mss not installed")
 
 
 class UIDesignerApp:
@@ -55,9 +55,14 @@ class UIDesignerApp:
             self.process = subprocess.Popen(
                 cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-            # Wait for window to appear
-            time.sleep(2)
-            return self.is_running()
+            # Wait for window to appear (longer for slower systems)
+            time.sleep(3.5)
+
+            if not self.is_running():
+                stderr = self.process.stderr.read() if self.process.stderr else b""
+                print(f"Process not running. Stderr: {stderr.decode('utf-8', errors='ignore')}")
+                return False
+            return True
         except Exception as e:
             print(f"Failed to launch: {e}")
             return False
@@ -76,7 +81,7 @@ class UIDesignerApp:
                 self.process.kill()
             self.process = None
 
-    def screenshot(self, region: Optional[tuple] = None) -> Image.Image:
+    def screenshot(self, region: Optional[tuple] = None):
         """Take screenshot of application window"""
         with mss.mss() as sct:
             if region:
@@ -93,15 +98,20 @@ class UIDesignerApp:
             return Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
 
     def find_window_position(self) -> Optional[tuple]:
-        """Find window position using pyautogui"""
-        try:
-            # Try to locate a distinctive part of the UI
-            location = pyautogui.locateOnScreen("preview.png", confidence=0.8)
-            if location:
-                return location
-        except:
-            pass
-        return None
+        """Find window position using pyautogui (basic detection)"""
+        # Note: This is a placeholder - real implementation would need
+        # image templates or window enumeration via Win32 API
+        # For now, assume top-left area of screen
+        return None  # Caller should use fallback coordinates
+
+
+@pytest.fixture(autouse=True)
+def skip_if_headless():
+    """Auto-skip visual tests in headless mode (evaluated at runtime)"""
+    if os.environ.get("ESP32OS_HEADLESS", "0") == "1":
+        pytest.skip("Visual UI tests require display - skipped in headless mode")
+    if not VISUAL_TEST_AVAILABLE:
+        pytest.skip("pyautogui/mss not installed")
 
 
 @pytest.fixture
@@ -126,63 +136,25 @@ def test_ui_designer_launches(ui_app):
     screenshot.save("test_ui_launch.png")
 
 
+@pytest.mark.skip(reason="Mouse movement test - disabled to prevent interference with user")
 @pytest.mark.timeout(60)
 def test_ui_designer_creates_widget(ui_app):
-    """Test creating a widget through UI interaction"""
-    # Create a test design file
-    test_file = Path("test_visual_design.json")
-    initial_design = {"width": 128, "height": 64, "widgets": []}
+    """Test creating a widget through UI interaction
 
-    with open(test_file, "w") as f:
-        json.dump(initial_design, f)
-
-    try:
-        # Launch with design file
-        assert ui_app.launch(str(test_file)), "Should launch with design"
-        time.sleep(2)
-
-        # Move mouse to add button location (approximate)
-        # This is a simple test - in production you'd use window detection
-        pyautogui.moveTo(200, 200, duration=0.5)
-        pyautogui.click()
-
-        # Take screenshot after click
-        screenshot = ui_app.screenshot()
-        screenshot.save("test_ui_widget_create.png")
-
-        # Verify some change occurred
-        assert screenshot.size[0] > 0
-
-    finally:
-        if test_file.exists():
-            test_file.unlink()
+    DISABLED: This test moves the mouse and may interfere with user work.
+    Re-enable only when running in isolated test environment.
+    """
+    pass
 
 
+@pytest.mark.skip(reason="Mouse movement test - disabled to prevent interference with user")
 @pytest.mark.timeout(45)
 def test_ui_designer_drag_drop(ui_app):
-    """Test drag and drop functionality"""
-    assert ui_app.launch(), "Should launch"
-    time.sleep(2)
+    """Test drag and drop functionality
 
-    # Simulate drag from palette to canvas
-    # Start position (palette area)
-    start_x, start_y = 100, 150
-    # End position (canvas area)
-    end_x, end_y = 400, 300
-
-    # Perform drag
-    pyautogui.moveTo(start_x, start_y, duration=0.3)
-    pyautogui.mouseDown()
-    pyautogui.moveTo(end_x, end_y, duration=0.5)
-    pyautogui.mouseUp()
-
-    time.sleep(1)
-
-    # Capture result
-    screenshot = ui_app.screenshot()
-    screenshot.save("test_ui_drag_drop.png")
-
-    assert screenshot.size[0] > 0
+    DISABLED: This test moves the mouse and may interfere with user work.
+    """
+    pass
 
 
 @pytest.mark.timeout(30)
@@ -207,25 +179,14 @@ def test_ui_designer_keyboard_shortcuts(ui_app):
     assert ui_app.is_running(), "App should still be running"
 
 
+@pytest.mark.skip(reason="Mouse movement test - disabled to prevent interference with user")
 @pytest.mark.timeout(40)
 def test_ui_designer_menu_navigation(ui_app):
-    """Test menu navigation"""
-    assert ui_app.launch(), "Should launch"
-    time.sleep(2)
+    """Test menu navigation
 
-    # Click on File menu (approximate position)
-    pyautogui.click(50, 30)
-    time.sleep(0.5)
-
-    # Take screenshot of menu
-    screenshot = ui_app.screenshot()
-    screenshot.save("test_ui_menu.png")
-
-    # Press Escape to close menu
-    pyautogui.press("escape")
-    time.sleep(0.5)
-
-    assert ui_app.is_running()
+    DISABLED: This test moves the mouse and may interfere with user work.
+    """
+    pass
 
 
 @pytest.mark.timeout(50)

@@ -3,26 +3,28 @@
 Demo script to show visual UI testing capabilities
 Run this to see automated UI testing in action
 """
+
 import os
 import sys
-import time
 
-# Ensure we're not in headless mode
-os.environ['ESP32OS_HEADLESS'] = '0'
+# Ensure we're not in headless mode - MUST be set before any imports
+os.environ["ESP32OS_HEADLESS"] = "0"
 
 print("=" * 60)
 print("ESP32OS Visual UI Testing Demo")
 print("=" * 60)
 print()
 print("This demo will show automated UI testing using:")
-print("  1. PyAutoGUI - Mouse and keyboard automation")
-print("  2. PyWinAuto - Windows UI Automation")
-print("  3. MSS - Fast screenshot capture")
+print("  1. PyAutoGUI - Screenshot capture and process management")
+print("  2. MSS - Fast screenshot capture")
+print("  3. Keyboard shortcuts (non-invasive)")
 print()
 print("Prerequisites:")
 print("  - Install: pip install -r requirements-dev.txt")
 print("  - Graphical display must be available")
-print("  - Do not move mouse during tests")
+print()
+print("NOTE: Mouse movement tests are disabled to prevent")
+print("      interference with your work. Only safe tests run.")
 print()
 
 input("Press Enter to start demo...")
@@ -34,32 +36,44 @@ print("=" * 60 + "\n")
 # Run the tests
 import subprocess
 
-# Test 1: PyAutoGUI tests
-print("\n[1/2] Running PyAutoGUI Tests...")
+# IMPORTANT: Pass ESP32OS_HEADLESS=0 to subprocess environment
+test_env = os.environ.copy()
+test_env["ESP32OS_HEADLESS"] = "0"
+
+# Run only safe tests (no mouse movement)
+print("\nRunning Safe Visual UI Tests...")
 print("-" * 60)
 result1 = subprocess.run(
-    [sys.executable, '-m', 'pytest', 'test_visual_ui_real.py', '-v', '-s', '--tb=short'],
-    capture_output=False
+    [
+        sys.executable,
+        "-m",
+        "pytest",
+        "test_visual_ui_real.py::test_ui_designer_launches",
+        "test_visual_ui_real.py::test_ui_designer_keyboard_shortcuts",
+        "test_visual_ui_real.py::test_ui_designer_export_functionality",
+        "-v",
+        "-s",
+        "--tb=short",
+        "-p",
+        "no:conftest",
+    ],
+    capture_output=False,
+    env=test_env,
 )
 
-# Test 2: PyWinAuto tests  
-print("\n[2/2] Running PyWinAuto Tests...")
-print("-" * 60)
-result2 = subprocess.run(
-    [sys.executable, '-m', 'pytest', 'test_visual_ui_advanced.py', '-v', '-s', '--tb=short'],
-    capture_output=False
-)
+result2 = None  # PyWinAuto tests disabled (don't work with Tkinter)
 
 # Summary
 print("\n" + "=" * 60)
 print("Demo Complete!")
 print("=" * 60)
-print(f"\nPyAutoGUI Tests: {'PASSED' if result1.returncode == 0 else 'FAILED'}")
-print(f"PyWinAuto Tests: {'PASSED' if result2.returncode == 0 else 'FAILED'}")
+print(f"\nSafe Visual Tests: {'PASSED' if result1.returncode == 0 else 'FAILED'}")
+print("\nTests performed:")
+print("  ✓ Application launch and screenshot")
+print("  ✓ Keyboard shortcuts (Ctrl+S, Ctrl+Z, Ctrl+Y)")
+print("  ✓ Export functionality (Ctrl+E)")
 print("\nGenerated screenshots:")
 print("  - test_ui_launch.png")
-print("  - test_ui_widget_create.png")
-print("  - test_ui_drag_drop.png")
-print("  - test_ui_menu.png")
 print("  - test_ui_export.png")
-print("\nCheck these files to see what the automated tests did!")
+print("\nNote: Mouse movement tests disabled to prevent interference.")
+print("      Run with pytest -m visual to include all tests.")

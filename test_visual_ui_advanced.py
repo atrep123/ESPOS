@@ -52,6 +52,7 @@ class UIDesignerWindow:
 
             # Wait for window to appear and connect
             start_time = time.time()
+            last_error = None
             while time.time() - start_time < timeout:
                 try:
                     # Try to connect to the application
@@ -59,13 +60,16 @@ class UIDesignerWindow:
                         process=self.process.pid, timeout=2
                     )
 
-                    # Try to get main window
-                    self.main_window = self.app.window(title_re=".*UI Designer.*")
+                    # Try to get main window (Tkinter může používat různé titulky)
+                    self.main_window = self.app.window(title_re=".*UI Designer.*|tk.*")
                     if self.main_window.exists():
+                        print(f"Connected to window: {self.main_window.window_text()}")
                         return True
-                except:
+                except Exception as e:
+                    last_error = str(e)
                     time.sleep(0.5)
 
+            print(f"Failed to connect to window. Last error: {last_error}")
             return False
         except Exception as e:
             print(f"Launch failed: {e}")

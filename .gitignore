@@ -59,3 +59,10 @@ examples/showcase.html
 examples/showcase.py
 test_scene.html
 test_scene.py
+
+# Visual UI test artifacts
+test_ui_*.png
+quick_test_screenshot.png
+ui_designer_pro_demo*.json
+ui_designer_pro_demo*.html
+ui_designer_pro_demo*.png
