@@ -24,7 +24,13 @@ from PIL import Image, ImageDraw
 if TK_AVAILABLE:
     from PIL import ImageTk
 
-from preview.rendering import *
+from preview.rendering import (
+    size,
+    widget_edges,
+    get_color_rgb,
+    hex_to_rgb,
+    draw_rounded_rectangle,
+)
 from preview.settings import PreviewSettings
 from ui_animations import AnimationDesigner
 
@@ -645,6 +651,11 @@ class VisualPreviewWindow:
         )
 
         ttk.Button(toolbar, text=REFRESH_LABEL, command=self.refresh).pack(side=tk.LEFT, padx=5)
+        ttk.Button(
+            toolbar,
+            text="📸 Shot",
+            command=self._screenshot_canvas
+        ).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="🚀 Push", command=self._push_stub).pack(side=tk.LEFT, padx=5)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
@@ -1440,7 +1451,10 @@ class VisualPreviewWindow:
                     text=f"{stats.fps_avg:.1f} (min: {stats.fps_min:.1f}, max: {stats.fps_max:.1f})"
                 )
                 self._profiler_labels["render_ms"].config(
-                    text=f"{stats.render_avg_ms:.2f} ms (min: {stats.render_min_ms:.2f}, max: {stats.render_max_ms:.2f})"
+                    text=(
+                        f"{stats.render_avg_ms:.2f} ms "
+                        f"(min: {stats.render_min_ms:.2f}, max: {stats.render_max_ms:.2f})"
+                    )
                 )
                 self._profiler_labels["frame_ms"].config(text=f"{stats.frame_avg_ms:.2f} ms")
                 self._profiler_labels["memory_mb"].config(
@@ -1694,6 +1708,11 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         t0 = time.perf_counter()
         img = self._render_or_cache_scene(scene, force)
         self._draw_canvas(img)
+        # Keep last rendered PIL image for screenshot capture
+        try:
+            self._last_image = img
+        except Exception:
+            pass
         # Performance tracking
         self._finalize_refresh(t0)
         try:
@@ -1704,13 +1723,37 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         if hasattr(self, "status_bar") and self._predicted_fps is not None:
             try:
                 base = self.status_bar.cget("text")
-                perf_snippet = f" | est FPS: {int(self._predicted_fps)} (complexity {self._complexity_score})"
+                perf_snippet = (
+                    f" | est FPS: {int(self._predicted_fps)} "
+                    f"(complexity {self._complexity_score})"
+                )
                 # Avoid duplicating
                 if "est FPS:" in base:
                     base = base.split(" | est FPS:")[0]
                 self.status_bar.config(text=base + perf_snippet)
             except Exception:
                 pass
+        # Optional perf log export
+        if os.environ.get("ESP32OS_PERF_LOG") == "1":
+            try:
+                log_dir = os.path.join(os.getcwd(), "output")
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, "perf_log.csv")
+                new_file = not os.path.exists(log_path)
+                with open(log_path, "a", encoding="utf-8") as f:
+                    if new_file:
+                        f.write("timestamp,scene,complexity,est_fps,render_ms\n")
+                    f.write(
+                        f"{time.time():.3f},{scene.name if hasattr(scene,'name') else self.designer.current_scene},{self._complexity_score},{self._predicted_fps:.1f},{self._last_render_ms:.2f}\n"
+                    )
+            except Exception:
+                pass
+        # Auto screenshot on first render if env set
+        if os.environ.get("ESP32OS_SCREENSHOT_ON_START") == "1" and not getattr(
+            self, "_auto_shot_done", False
+        ):
+            self._auto_shot_done = True
+            self._screenshot_canvas()
 
     def _estimate_scene_perf(self, scene) -> Tuple[float, int]:
         """Estimate rendering performance (rough heuristic).
@@ -1748,6 +1791,39 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         fps = max(8.0, 120.0 / (complexity / 10.0))
         fps = min(60.0, fps)
         return fps, int(complexity)
+
+    def _screenshot_canvas(self):
+        """Capture current canvas render to PNG in output/screenshots."""
+        if not getattr(self, "_last_image", None):
+            try:
+                messagebox.showwarning("Screenshot", "No rendered image yet")
+            except Exception:
+                pass
+            return
+        # Ensure output/screenshots directory exists
+        out_dir = os.path.join(os.getcwd(), "output", "screenshots")
+        os.makedirs(out_dir, exist_ok=True)
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        comp = getattr(self, "_complexity_score", None)
+        fps = getattr(self, "_predicted_fps", None)
+        parts = ["shot", ts]
+        if comp is not None:
+            parts.append(f"C{comp}")
+        if fps is not None:
+            parts.append(f"FPS{int(fps)}")
+        fname = "_".join(parts) + ".png"
+        path = os.path.join(out_dir, fname)
+        try:
+            self._last_image.save(path)
+            try:
+                messagebox.showinfo("Screenshot", f"Saved {path}")
+            except Exception:
+                pass
+        except Exception as e:
+            try:
+                messagebox.showerror("Screenshot Failed", f"Could not save: {e}")
+            except Exception:
+                pass
 
     def _refresh_headless(self) -> bool:
         """Handle headless refresh, returns True if handled."""
@@ -1975,7 +2051,11 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                     else self.settings.grid_color_dark
                 )
                 for x in range(padding, scaled_width - padding, step):
-                    draw.line([(x, padding), (x, scaled_height - padding)], fill=grid_color, width=1)
+                    draw.line(
+                        [(x, padding), (x, scaled_height - padding)],
+                        fill=grid_color,
+                        width=1,
+                    )
                 for y in range(padding, scaled_height - padding, step):
                     draw.line([(padding, y), (scaled_width - padding, y)], fill=grid_color, width=1)
             except Exception:
@@ -5148,13 +5228,19 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             payload = json.dumps(scene.to_dict()) if hasattr(scene, "to_dict") else json.dumps(
                 {"widgets": [getattr(w, "__dict__", {}) for w in scene.widgets]}
             )
-            path = os.path.join(tempfile.gettempdir(), "esp32os_push_payload.json")
+            path = os.path.join(
+                tempfile.gettempdir(),
+                "esp32os_push_payload.json",
+            )
             with open(path, "w", encoding="utf-8") as f:
                 f.write(payload)
             try:
                 messagebox.showinfo(
                     "Push",
-                    f"Payload written to {path}\n(This is a stub – replace with network/WebSocket push)",
+                    (
+                        f"Payload written to {path}\n"
+                        "(This is a stub – replace with network/WebSocket push)"
+                    ),
                 )
             except Exception:
                 pass
