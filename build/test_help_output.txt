@@ -1,4 +1,0 @@
-﻿=== ESP32 UI SIMULATOR STARTED ===
-Controls: Q quit | D demo | H HUD | M metrics CSV | E export HTML
-Help overlay test output sanitized to ASCII.
-
