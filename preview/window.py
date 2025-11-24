@@ -25,11 +25,7 @@ if TK_AVAILABLE:
     from PIL import ImageTk
 
 from preview.rendering import (
-    size,
-    widget_edges,
-    get_color_rgb,
     hex_to_rgb,
-    draw_rounded_rectangle,
 )
 from preview.settings import PreviewSettings
 from ui_animations import AnimationDesigner
@@ -657,6 +653,11 @@ class VisualPreviewWindow:
             command=self._screenshot_canvas
         ).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="🚀 Push", command=self._push_stub).pack(side=tk.LEFT, padx=5)
+        ttk.Button(
+            toolbar,
+            text="🔎 Layout",
+            command=self._show_layout_warnings,
+        ).pack(side=tk.LEFT, padx=5)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
 
@@ -1743,9 +1744,13 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                 with open(log_path, "a", encoding="utf-8") as f:
                     if new_file:
                         f.write("timestamp,scene,complexity,est_fps,render_ms\n")
-                    f.write(
-                        f"{time.time():.3f},{scene.name if hasattr(scene,'name') else self.designer.current_scene},{self._complexity_score},{self._predicted_fps:.1f},{self._last_render_ms:.2f}\n"
+                    ts_val = f"{time.time():.3f}"
+                    scene_name = (
+                        scene.name if hasattr(scene, "name") else self.designer.current_scene
                     )
+                    line = \
+                        f"{ts_val},{scene_name},{self._complexity_score},{self._predicted_fps:.1f},{self._last_render_ms:.2f}\n"
+                    f.write(line)
             except Exception:
                 pass
         # Auto screenshot on first render if env set
@@ -1822,6 +1827,74 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         except Exception as e:
             try:
                 messagebox.showerror("Screenshot Failed", f"Could not save: {e}")
+            except Exception:
+                pass
+
+    # ---------------- Layout Analysis -----------------
+    def _layout_warnings(self):
+        """Return list of layout warning strings for current scene."""
+        scene = self._get_active_scene()
+        if not scene:
+            return ["No active scene"]
+        warnings = []
+        widgets = scene.widgets
+        # Bounds checks
+        for idx, w in enumerate(widgets):
+            x2 = w.x + w.width
+            y2 = w.y + w.height
+            if w.width <= 0 or w.height <= 0:
+                warnings.append(f"Widget #{idx} has non-positive size ({w.width}x{w.height})")
+            if w.x < 0 or w.y < 0:
+                warnings.append(f"Widget #{idx} positioned with negative origin ({w.x},{w.y})")
+            if x2 > self.designer.width or y2 > self.designer.height:
+                warnings.append(
+                    (
+                        f"Widget #{idx} overflows display "
+                        f"({x2}>{self.designer.width} or {y2}>{self.designer.height})"
+                    )
+                )
+        # Overlap detection (simple O(n^2))
+        for i in range(len(widgets)):
+            a = widgets[i]
+            ax2 = a.x + a.width
+            ay2 = a.y + a.height
+            for j in range(i + 1, len(widgets)):
+                b = widgets[j]
+                bx2 = b.x + b.width
+                by2 = b.y + b.height
+                overlap_w = min(ax2, bx2) - max(a.x, b.x)
+                overlap_h = min(ay2, by2) - max(a.y, b.y)
+                if overlap_w > 0 and overlap_h > 0:
+                    area = overlap_w * overlap_h
+                    if area > 0:
+                        warnings.append(
+                            (
+                                f"Widgets #{i} and #{j} overlap "
+                                f"({overlap_w}x{overlap_h} = {area} px)"
+                            )
+                        )
+        # Edge padding guidance
+        pad_min = 2
+        for idx, w in enumerate(widgets):
+            if w.x < pad_min:
+                warnings.append(f"Widget #{idx} very close to left edge (<{pad_min}px)")
+            if w.y < pad_min:
+                warnings.append(f"Widget #{idx} very close to top edge (<{pad_min}px)")
+            if w.x + w.width > self.designer.width - pad_min:
+                warnings.append(f"Widget #{idx} very close to right edge (<{pad_min}px)")
+            if w.y + w.height > self.designer.height - pad_min:
+                warnings.append(f"Widget #{idx} very close to bottom edge (<{pad_min}px)")
+        return warnings or ["No layout issues detected"]
+
+    def _show_layout_warnings(self):
+        """Display layout warnings in a popup dialog."""
+        try:
+            warnings = self._layout_warnings()
+            msg = "\n".join(warnings)
+            messagebox.showinfo("Layout Analysis", msg)
+        except Exception as e:
+            try:
+                messagebox.showerror("Layout Analysis Failed", str(e))
             except Exception:
                 pass
 
