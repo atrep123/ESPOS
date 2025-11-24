@@ -134,6 +134,8 @@ class VisualPreviewWindow:
         # Perf budget state
         self._perf_over_budget: bool = False
         self._perf_soft_warn: bool = False
+        # Auto-fit/zoom state
+        self._auto_fit_job = None
         # Performance profiler
         self._profiler: Optional[PerformanceProfiler] = None
         self._profiler_enabled: bool = False
@@ -361,6 +363,9 @@ class VisualPreviewWindow:
         self.drag_offset: Optional[Tuple[int, int]] = None
         self.drag_origin: Optional[Tuple[int, int]] = None
         self.resize_handle: Optional[str] = None  # ne, nw, se, sw, n, s, e, w
+        # Slider interaction state (so dragging the thumb doesn't move the whole widget)
+        self._slider_drag_idx: Optional[int] = None
+        self._slider_value_changed: bool = False
 
         # Handle hover state for visual feedback
         self.hovered_handle: Optional[str] = None
@@ -414,59 +419,8 @@ class VisualPreviewWindow:
         self.root = tk.Tk()
         self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
         self.root.configure(bg=color_hex("legacy_gray4"))
-        
-        # Configure dark theme for ttk widgets
-        style = ttk.Style()
-        style.theme_use('clam')  # Use clam theme as base for dark customization
-        
-        # Dark color scheme
-        style.configure(".", background=color_hex("legacy_gray4"), 
-                       foreground=color_hex("text_primary"),
-                       fieldbackground=color_hex("legacy_gray5"),
-                       bordercolor=color_hex("legacy_gray8"),
-                       darkcolor=color_hex("legacy_gray5"),
-                       lightcolor=color_hex("legacy_gray6"))
-        
-        # Button styling
-        style.configure("TButton", background=color_hex("legacy_gray6"),
-                       foreground=color_hex("text_primary"),
-                       borderwidth=1,
-                       relief="flat")
-        style.map("TButton", background=[("active", color_hex("primary"))])
-        
-        # Entry/Combobox
-        style.configure("TEntry", fieldbackground=color_hex("legacy_gray5"),
-                       foreground=color_hex("text_primary"))
-        style.configure("TCombobox", fieldbackground=color_hex("legacy_gray5"),
-                       foreground=color_hex("text_primary"),
-                       arrowcolor=color_hex("text_primary"))
-        
-        # Frame/LabelFrame
-        style.configure("TFrame", background=color_hex("legacy_gray4"))
-        style.configure("TLabelframe", background=color_hex("legacy_gray4"),
-                       foreground=color_hex("text_primary"))
-        style.configure("TLabelframe.Label", background=color_hex("legacy_gray4"),
-                       foreground=color_hex("text_primary"))
-        
-        # Label
-        style.configure("TLabel", background=color_hex("legacy_gray4"),
-                       foreground=color_hex("text_primary"))
-        
-        # Checkbutton
-        style.configure("TCheckbutton", background=color_hex("legacy_gray4"),
-                       foreground=color_hex("text_primary"))
-        
-        # Notebook (tabs)
-        style.configure("TNotebook", background=color_hex("legacy_gray4"),
-                       borderwidth=0)
-        style.configure("TNotebook.Tab", background=color_hex("legacy_gray6"),
-                       foreground=color_hex("text_secondary"),
-                       padding=[10, 5])
-        style.map("TNotebook.Tab", 
-                 background=[("selected", color_hex("legacy_gray4"))],
-                 foreground=[("selected", color_hex("text_primary"))])
 
-        # Setup UI
+        # Setup UI with theme (theme will configure all ttk styles)
         self._apply_theme(self._preview_theme)
         self._setup_ui()
         self._setup_bindings()
@@ -548,6 +502,12 @@ class VisualPreviewWindow:
         toolbar = ttk.Frame(main_frame)
         toolbar.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
+        # Main content area with resizable panes
+        content_frame = ttk.Frame(main_frame)
+        content_frame.pack(fill=tk.BOTH, expand=True)
+        panes = ttk.PanedWindow(content_frame, orient=tk.HORIZONTAL)
+        panes.pack(fill=tk.BOTH, expand=True)
+
         # Zoom controls
         ttk.Label(toolbar, text="Zoom:").pack(side=tk.LEFT, padx=5)
         self._zoom_var = tk.StringVar(value=f"{self.settings.zoom:.1f}x")
@@ -559,6 +519,9 @@ class VisualPreviewWindow:
         )
         self._zoom_combo.pack(side=tk.LEFT, padx=5)
         self._zoom_combo.bind(COMBO_SELECTED, self._on_zoom_change)
+        ttk.Button(toolbar, text="Fit", command=lambda: self._on_zoom_fit()).pack(
+            side=tk.LEFT, padx=(2, 8)
+        )
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
 
@@ -682,6 +645,7 @@ class VisualPreviewWindow:
         )
 
         ttk.Button(toolbar, text=REFRESH_LABEL, command=self.refresh).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="🚀 Push", command=self._push_stub).pack(side=tk.LEFT, padx=5)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
 
@@ -734,8 +698,7 @@ class VisualPreviewWindow:
         )
 
         # Left-side palette (widget add shortcuts)
-        palette = ttk.Frame(main_frame)
-        palette.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+        palette = ttk.Frame(panes)
 
         ttk.Label(palette, text="Add Widgets").pack(anchor=tk.W)
         ttk.Separator(palette, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=4)
@@ -764,8 +727,8 @@ class VisualPreviewWindow:
         )
 
         # Canvas frame with scrollbars (center area)
-        canvas_frame = ttk.Frame(main_frame)
-        canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        canvas_frame = ttk.Frame(panes)
+        canvas_frame.pack_propagate(False)
         self._canvas_frame = canvas_frame
 
         # Canvas
@@ -785,17 +748,18 @@ class VisualPreviewWindow:
         # Scrollbars
         v_scroll = ttk.Scrollbar(canvas_frame, orient=tk.VERTICAL, command=self.canvas.yview)
         v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        h_scroll = ttk.Scrollbar(main_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
-        h_scroll.pack(side=tk.BOTTOM, fill=tk.X, padx=5)
+        h_scroll = ttk.Scrollbar(canvas_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
         # Context menu bindings (Right-click / Ctrl+Click)
         self.canvas.bind("<Button-3>", self._on_context_menu)
         self.canvas.bind("<Control-Button-1>", self._on_context_menu)
+        # Re-fit canvas when the container resizes (panes drag/resize)
+        canvas_frame.bind("<Configure>", lambda e: self._schedule_auto_zoom_fit(reset_override=True))
 
         # Right-side panel with tabs (Properties, ASCII)
-        right_panel = ttk.Frame(main_frame)
-        right_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+        right_panel = ttk.Frame(panes)
 
         self.right_tabs = ttk.Notebook(right_panel)
         self.right_tabs.pack(fill=tk.BOTH, expand=True)
@@ -949,6 +913,30 @@ class VisualPreviewWindow:
         self._ascii_copy_btn.configure(
             command=lambda: self._copy_ascii_to_clipboard(self.ascii_text_widget)
         )
+
+        # Add panes to allow mouse-resizable layout: palette | canvas | properties
+        added = False
+        try:
+            # Use conservative options for broader Tk compatibility
+            panes.add(palette)
+            panes.add(canvas_frame)
+            panes.add(right_panel)
+            try:
+                panes.paneconfig(palette, weight=0)
+                panes.paneconfig(canvas_frame, weight=3)
+                panes.paneconfig(right_panel, weight=1)
+            except Exception:
+                pass
+            added = True
+        except Exception as e:
+            # Fallback for Tk builds that don't support weight/minsize args
+            print(f"[WARN] Paned layout failed: {e}; falling back to fixed layout")
+        if not added:
+            palette.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+            canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+            right_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+        # Ensure auto-fit runs after panes settle
+        self._schedule_auto_zoom_fit()
 
         # Status bar
         self.status_bar = ttk.Label(main_frame, text="Ready", relief=tk.SUNKEN)
@@ -1144,8 +1132,11 @@ class VisualPreviewWindow:
         return "crosshair" if getattr(self.settings, "high_contrast_overlays", False) else "arrow"
 
     def _get_scaled_grid_size(self) -> int:
-        """Return grid size adjusted by responsive spacing scale."""
-        return self._scale_spacing(getattr(self.settings, "grid_size", 1), minimum=1)
+        """Return grid size in device units (no responsive scaling)."""
+        try:
+            return max(1, int(getattr(self.settings, "grid_size", 1)))
+        except Exception:
+            return 1
 
     def _get_scaled_snap_size(self) -> int:
         """Return snap size adjusted by responsive spacing scale."""
@@ -1177,9 +1168,9 @@ class VisualPreviewWindow:
                 count += 1
         return count
 
-    def _apply_auto_zoom_fit(self):
-        """Auto-fit zoom once to the available canvas area after layout."""
-        if self._auto_fit_done or HEADLESS:
+    def _apply_auto_zoom_fit(self, force: bool = False):
+        """Auto-fit zoom to the available canvas area."""
+        if (self._auto_fit_done and not force) or HEADLESS:
             return
         try:
             if hasattr(self, "root"):
@@ -1190,7 +1181,7 @@ class VisualPreviewWindow:
             if container is None:
                 return
             # Leave a small gutter so grid/handles aren't pinned to the frame edges
-            gutter = 40
+            gutter = 8
             avail_w = max(1, getattr(container, "winfo_width", lambda: 0)() - gutter)
             avail_h = max(1, getattr(container, "winfo_height", lambda: 0)() - gutter)
             # If layout not ready yet, retry once
@@ -1213,8 +1204,26 @@ class VisualPreviewWindow:
         except Exception:
             self._auto_fit_done = True
 
+    def _schedule_auto_zoom_fit(self, reset_override: bool = False):
+        """Throttle auto-zoom fit so it runs after resize settles."""
+        if reset_override:
+            self._auto_fit_done = False
+        if not hasattr(self, "root") or not getattr(self.root, "winfo_exists", lambda: False)():
+            return
+        try:
+            if self._auto_fit_job and hasattr(self, "root"):
+                self.root.after_cancel(self._auto_fit_job)
+        except Exception:
+            pass
+        try:
+            self._auto_fit_job = self.root.after(
+                120, lambda: self._apply_auto_zoom_fit(force=True)
+            )
+        except Exception:
+            pass
+
     def _auto_size_window(self) -> None:
-        """Size the main window to fit canvas + sidebars within the screen."""
+        """Size the main window to fit canvas + sidebars and center on screen."""
         if HEADLESS or not hasattr(self, "root"):
             return
         try:
@@ -1227,7 +1236,10 @@ class VisualPreviewWindow:
             desired_h = canvas_h + 260  # canvas + toolbars/status + padding
             width = min(screen_w - 40, max(900, desired_w))
             height = min(screen_h - 60, max(650, desired_h))
-            self.root.geometry(f"{width}x{height}")
+            # Center window on screen
+            x = (screen_w - width) // 2
+            y = (screen_h - height) // 2
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
         except Exception:
             pass
 
@@ -1617,6 +1629,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         self.canvas.bind(
             "<Control-Button-5>", lambda e: self._on_ctrl_wheel_zoom(self._mk_wheel_event(e, -120))
         )
+        self.root.bind("<Control-0>", lambda e: self._on_zoom_fit())
         self.canvas.bind(self.EVT_MOUSE_LEFT_DOUBLE, self._on_double_click)
 
         # Keyboard shortcuts
@@ -1681,7 +1694,60 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         t0 = time.perf_counter()
         img = self._render_or_cache_scene(scene, force)
         self._draw_canvas(img)
+        # Performance tracking
         self._finalize_refresh(t0)
+        try:
+            self._predicted_fps, self._complexity_score = self._estimate_scene_perf(scene)
+        except Exception:
+            self._predicted_fps, self._complexity_score = None, None
+        # Update status bar with predicted performance if available
+        if hasattr(self, "status_bar") and self._predicted_fps is not None:
+            try:
+                base = self.status_bar.cget("text")
+                perf_snippet = f" | est FPS: {int(self._predicted_fps)} (complexity {self._complexity_score})"
+                # Avoid duplicating
+                if "est FPS:" in base:
+                    base = base.split(" | est FPS:")[0]
+                self.status_bar.config(text=base + perf_snippet)
+            except Exception:
+                pass
+
+    def _estimate_scene_perf(self, scene) -> Tuple[float, int]:
+        """Estimate rendering performance (rough heuristic).
+
+        Returns (estimated_fps, complexity_score).
+        Complexity is a simple weighted sum of widget features.
+        This does not measure real device speed; it offers guidance before export.
+        """
+        complexity = 0
+        for w in scene.widgets:
+            # Base cost per widget
+            complexity += 5
+            wt = getattr(w, "type", "") or getattr(w, "widget_type", "")
+            # Text length contributes
+            txt = getattr(w, "text", "")
+            if txt:
+                complexity += min(len(str(txt)) * 0.8, 20)
+            # Shapes / style extras
+            if wt in ("gauge", "progressbar", "slider"):
+                complexity += 12
+            elif wt in ("panel", "box"):
+                complexity += 4
+            elif wt in ("icon", "image"):
+                complexity += 10
+            # Borders add a bit
+            if getattr(w, "border", False):
+                complexity += 3
+            # Size scaling (larger widgets generally cost more)
+            w_area = getattr(w, "width", 0) * getattr(w, "height", 0)
+            complexity += min(w_area / 300.0, 20)
+        # Convert complexity to FPS estimate (heuristic curve)
+        if complexity <= 0:
+            return 60.0, 0
+        # Assume base 120 'cycles' budget → fps scales inversely
+        fps = max(8.0, 120.0 / (complexity / 10.0))
+        fps = min(60.0, fps)
+        return fps, int(complexity)
 
     def _refresh_headless(self) -> bool:
         """Handle headless refresh, returns True if handled."""
@@ -1849,7 +1915,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             img = self._render_scene_image(
                 scene,
                 background_color=self.settings.background_color,
-                include_grid=self.settings.grid_enabled,
+                include_grid=False,  # grid will be drawn once after padding/zoom
                 use_overlays=True,
                 highlight_selection=True,
             )
@@ -1865,6 +1931,56 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         scaled_width = int(self.designer.width * self.settings.zoom)
         scaled_height = int(self.designer.height * self.settings.zoom)
         img_scaled = img.resize((scaled_width, scaled_height), Image.NEAREST)
+
+        # If the canvas is larger than the rendered scene, pad the image so the
+        # background fills the entire visible area (prevents gray strips).
+        if hasattr(self, "canvas"):
+            try:
+                canvas_w = int(self.canvas.winfo_width())
+                canvas_h = int(self.canvas.winfo_height())
+                target_w = max(scaled_width, canvas_w)
+                target_h = max(scaled_height, canvas_h)
+                if target_w > scaled_width or target_h > scaled_height:
+                    bg_hex = getattr(self.settings, "background_color", color_hex("shadow"))
+                    try:
+                        base_color = hex_to_rgb(bg_hex)
+                    except Exception:
+                        base_color = (0, 0, 0)
+                    if img_scaled.mode == "RGBA":
+                        base_color = tuple(list(base_color) + [255])[:4]
+                    padded = Image.new(img_scaled.mode, (target_w, target_h), base_color)
+                    padded.paste(img_scaled, (0, 0))
+                    img_scaled = padded
+                    scaled_width, scaled_height = target_w, target_h
+            except Exception:
+                pass
+
+        # Draw a single grid over the final image, scaled to current zoom.
+        if getattr(self.settings, "grid_enabled", False):
+            try:
+                draw = ImageDraw.Draw(img_scaled)
+                base_step = max(1, int(getattr(self.settings, "grid_size", 1)))
+                zoom = max(0.01, float(self.settings.zoom))
+                step = max(1, int(round(base_step * zoom)))
+                dynamic_pad_scene = int(min(self.designer.width, self.designer.height) * 0.02)
+                padding_scene = max(
+                    getattr(self.settings, "grid_padding_min_px", 0),
+                    int(base_step * getattr(self.settings, "grid_padding_pct", 0)),
+                    dynamic_pad_scene,
+                )
+                padding = int(round(padding_scene * zoom))
+                grid_color = (
+                    self.settings.grid_color_light
+                    if getattr(self.settings, "high_contrast_overlays", False)
+                    else self.settings.grid_color_dark
+                )
+                for x in range(padding, scaled_width - padding, step):
+                    draw.line([(x, padding), (x, scaled_height - padding)], fill=grid_color, width=1)
+                for y in range(padding, scaled_height - padding, step):
+                    draw.line([(padding, y), (scaled_width - padding, y)], fill=grid_color, width=1)
+            except Exception:
+                pass
+
         self.photo = ImageTk.PhotoImage(img_scaled)
         if not hasattr(self, "canvas"):
             return
@@ -2731,6 +2847,70 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
 
         return widget_x, widget_y
 
+    def _hit_slider_track(self, widget: WidgetConfig, wx: int, wy: int) -> bool:
+        """Return True if point is on the slider track/thumb area (avoid hijacking border drags)."""
+        if getattr(widget, "type", None) != WidgetType.SLIDER.value:
+            return False
+        track_y = widget.y + widget.height // 2
+        band = max(2, widget.height // 3)
+        if abs(wy - track_y) > band:
+            return False
+        return widget.x + 1 <= wx <= widget.x + widget.width - 2
+
+    def _slider_value_from_x(self, widget: WidgetConfig, wx: int) -> int:
+        """Convert an x coord on the slider track into a clamped value."""
+        span = max(1, widget.width - 4)
+        rel = max(0, min(span, wx - widget.x - 2))
+        value_range = max(0, widget.max_value - widget.min_value)
+        if value_range == 0:
+            return int(widget.min_value)
+        ratio = rel / span
+        return int(round(widget.min_value + ratio * value_range))
+
+    def _apply_slider_value(self, widget: WidgetConfig, wx: int) -> None:
+        """Set slider value from x-pos, refreshing only when it changes."""
+        new_value = self._slider_value_from_x(widget, wx)
+        if new_value == getattr(widget, "value", None):
+            return
+        widget.value = new_value
+        self._slider_value_changed = True
+        self._invalidate_cache()
+        self.refresh()
+
+    def _start_slider_drag(self, widget_idx: int, widget: WidgetConfig, wx: int) -> None:
+        """Begin slider value drag without moving the widget itself."""
+        self._slider_drag_idx = widget_idx
+        self._slider_value_changed = False
+        self.dragging = False
+        self.resize_handle = None
+        self.drag_start = None
+        self.drag_offset = None
+        self.drag_origin = None
+        self._apply_slider_value(widget, wx)
+
+    def _update_slider_drag(self, event) -> None:
+        """Update slider value while dragging its thumb."""
+        if self._slider_drag_idx is None:
+            return
+        scene = self.designer.scenes.get(self.designer.current_scene)
+        if not scene or not (0 <= self._slider_drag_idx < len(scene.widgets)):
+            return
+        widget = scene.widgets[self._slider_drag_idx]
+        wx, _ = self._canvas_to_widget_coords(event.x, event.y)
+        self._apply_slider_value(widget, wx)
+
+    def _end_slider_drag(self) -> None:
+        """Finish slider drag, saving undo state if needed."""
+        if self._slider_drag_idx is None:
+            return
+        if self._slider_value_changed:
+            try:
+                self.designer._save_state()
+            except Exception:
+                pass
+        self._slider_drag_idx = None
+        self._slider_value_changed = False
+
     def _find_widget_at(self, x: int, y: int) -> Optional[int]:
         """Find widget at canvas coordinates"""
         if not self.designer.current_scene:
@@ -2842,12 +3022,18 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                     self.selected_widgets = [widget_idx]
                 self.selected_widget_idx = widget_idx
 
+            widget = scene.widgets[widget_idx]
+            wx, wy = self._canvas_to_widget_coords(event.x, event.y)
+            # If clicking the slider track, adjust value instead of moving the widget
+            if widget.type == WidgetType.SLIDER.value and self._hit_slider_track(widget, wx, wy):
+                self._start_slider_drag(widget_idx, widget, wx)
+                self._update_status_bar()
+                return
+
             self.dragging = True
             self.drag_start = (event.x, event.y)
 
             # Calculate offset for smooth dragging
-            widget = scene.widgets[widget_idx]
-            wx, wy = self._canvas_to_widget_coords(event.x, event.y)
             self.drag_offset = (wx - widget.x, wy - widget.y)
             self.drag_origin = (widget.x, widget.y)
 
@@ -2950,6 +3136,9 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             self._drag_pan(event)
             return
         if self._try_box_select_drag(event):
+            return
+        if self._slider_drag_idx is not None:
+            self._update_slider_drag(event)
             return
         if not self.dragging or self.selected_widget_idx is None:
             return
@@ -3056,6 +3245,8 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         if self._pan_dragging:
             self._pan_dragging = False
             return
+        if self._slider_drag_idx is not None:
+            self._end_slider_drag()
 
         if self._finish_box_select(event):
             return
@@ -3629,9 +3820,15 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             # Zoom around canvas center by default for combobox changes
             cx = getattr(self.canvas, "winfo_width", lambda: 0)() // 2
             cy = getattr(self.canvas, "winfo_height", lambda: 0)() // 2
-            self._apply_zoom_at(cx, cy, new_zoom)
+            self._auto_fit_done = False
+            self._apply_zoom_at(cx, cy, new_zoom, user_override=True)
         except ValueError:
             pass
+
+    def _on_zoom_fit(self):
+        """Force auto-fit zoom to fill available canvas area."""
+        self._auto_fit_done = False
+        self._apply_auto_zoom_fit(force=True)
 
     def _on_grid_padding_change(self):
         """Handle change to grid padding spinboxes (percentage & minimum px)."""
@@ -3672,9 +3869,10 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         # Determine zoom step
         step = 1.1 if event.delta > 0 else (1 / 1.1)
         new_zoom = max(self._zoom_min, min(self._zoom_max, self.settings.zoom * step))
-        self._apply_zoom_at(event.x, event.y, new_zoom)
+        self._auto_fit_done = False
+        self._apply_zoom_at(event.x, event.y, new_zoom, user_override=True)
 
-    def _apply_zoom_at(self, win_x: int, win_y: int, new_zoom: float):
+    def _apply_zoom_at(self, win_x: int, win_y: int, new_zoom: float, user_override: bool = False):
         """Apply zoom keeping the world point under (win_x, win_y) fixed on screen."""
         try:
             # Current absolute canvas coordinates under cursor
@@ -3703,6 +3901,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         try:
             self.canvas.xview_moveto(0 if scaled_w <= 0 else left / scaled_w)
             self.canvas.yview_moveto(0 if scaled_h <= 0 else top / scaled_h)
+            self.canvas.configure(scrollregion=(0, 0, scaled_w, scaled_h))
         except Exception:
             pass
         # Sync combobox text
@@ -4935,6 +5134,35 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
     def run(self):
         """Run the preview window"""
         self.root.mainloop()
+
+    def _push_stub(self):
+        """Stub for pushing current scene to device (placeholder)."""
+        scene = self._get_active_scene()
+        if not scene:
+            try:
+                messagebox.showwarning("Push", "No active scene to push")
+            except Exception:
+                pass
+            return
+        try:
+            payload = json.dumps(scene.to_dict()) if hasattr(scene, "to_dict") else json.dumps(
+                {"widgets": [getattr(w, "__dict__", {}) for w in scene.widgets]}
+            )
+            path = os.path.join(tempfile.gettempdir(), "esp32os_push_payload.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(payload)
+            try:
+                messagebox.showinfo(
+                    "Push",
+                    f"Payload written to {path}\n(This is a stub – replace with network/WebSocket push)",
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            try:
+                messagebox.showerror("Push Failed", f"Could not prepare payload: {e}")
+            except Exception:
+                pass
 
     def _schedule_tick(self):
         # ~60 FPS
