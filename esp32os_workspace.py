@@ -261,10 +261,19 @@ class ESP32Workspace:
             return
 
         try:
-            cmd = [sys.executable, "ui_designer_pro.py"]
+            designer_script = Path(__file__).parent / "tools" / "launch_designer.py"
+            if not designer_script.exists():
+                raise FileNotFoundError(f"Missing launcher script: {designer_script}")
+
+            cmd = [sys.executable, str(designer_script)]
             last_project = self.config.get("last_project")
             if isinstance(last_project, str) and last_project:
-                cmd.extend(["--load", last_project])
+                cmd.extend(["--json", last_project])
+            else:
+                # Respect configured canvas size for new scenes
+                w = int(self.config.get("designer_width", 128))
+                h = int(self.config.get("designer_height", 64))
+                cmd.extend(["--width", str(w), "--height", str(h)])
 
             self.designer_process = subprocess.Popen(cmd, cwd=os.getcwd())
             self.update_status("UI Designer spuštěn")
