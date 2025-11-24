@@ -29,6 +29,7 @@ from preview.rendering import (
     hex_to_rgb,
 )
 from preview.settings import PreviewSettings
+from preview.diagnostics import layout_warnings
 from ui_animations import AnimationDesigner
 
 # Import all component creators
@@ -37,54 +38,54 @@ try:
     from ui_components_library_ascii import (
         AnimationEditorWindow,
         ComponentPaletteWindow,
-        TemplateManagerWindow,
         IconPaletteWindow,
+        TemplateManagerWindow,
         create_alert_dialog_ascii,
-        create_confirm_dialog_ascii,
-        create_input_dialog_ascii,
-        create_tab_bar_ascii,
-        create_vertical_menu_ascii,
         create_breadcrumb_ascii,
-        create_stat_card_ascii,
-        create_progress_card_ascii,
-        create_status_indicator_ascii,
         create_button_group_ascii,
-        create_toggle_switch_ascii,
-        create_radio_group_ascii,
-        create_header_footer_layout_ascii,
-        create_sidebar_layout_ascii,
-        create_grid_layout_ascii,
-        create_slider_ascii,
-        create_checkbox_ascii,
-        create_notification_ascii,
         create_chart_ascii,
+        create_checkbox_ascii,
+        create_confirm_dialog_ascii,
+        create_grid_layout_ascii,
+        create_header_footer_layout_ascii,
+        create_input_dialog_ascii,
+        create_notification_ascii,
+        create_progress_card_ascii,
+        create_radio_group_ascii,
+        create_sidebar_layout_ascii,
+        create_slider_ascii,
+        create_stat_card_ascii,
+        create_status_indicator_ascii,
+        create_tab_bar_ascii,
+        create_toggle_switch_ascii,
+        create_vertical_menu_ascii,
     )
 except Exception:
     try:
         from tools.ui_components_library_ascii import (
             AnimationEditorWindow,
             ComponentPaletteWindow,
-            TemplateManagerWindow,
             IconPaletteWindow,
+            TemplateManagerWindow,
             create_alert_dialog_ascii,
-            create_confirm_dialog_ascii,
-            create_input_dialog_ascii,
-            create_tab_bar_ascii,
-            create_vertical_menu_ascii,
             create_breadcrumb_ascii,
-            create_stat_card_ascii,
-            create_progress_card_ascii,
-            create_status_indicator_ascii,
             create_button_group_ascii,
-            create_toggle_switch_ascii,
-            create_radio_group_ascii,
-            create_header_footer_layout_ascii,
-            create_sidebar_layout_ascii,
-            create_grid_layout_ascii,
-            create_slider_ascii,
-            create_checkbox_ascii,
-            create_notification_ascii,
             create_chart_ascii,
+            create_checkbox_ascii,
+            create_confirm_dialog_ascii,
+            create_grid_layout_ascii,
+            create_header_footer_layout_ascii,
+            create_input_dialog_ascii,
+            create_notification_ascii,
+            create_progress_card_ascii,
+            create_radio_group_ascii,
+            create_sidebar_layout_ascii,
+            create_slider_ascii,
+            create_stat_card_ascii,
+            create_status_indicator_ascii,
+            create_tab_bar_ascii,
+            create_toggle_switch_ascii,
+            create_vertical_menu_ascii,
         )
     except Exception:
         # Fallback stubs to avoid NameError; minimal no-op implementations
@@ -1951,112 +1952,8 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
 
     # ---------------- Layout Analysis -----------------
     def _layout_warnings(self):
-        """Return list of layout warning strings for current scene."""
         scene = self._get_active_scene()
-        if not scene:
-            return ["No active scene"]
-        warnings = []
-        widgets = scene.widgets
-        count = len(widgets)
-        # Bounds checks
-        for idx, w in enumerate(widgets):  # O(n)
-            x2 = w.x + w.width
-            y2 = w.y + w.height
-            if w.width <= 0 or w.height <= 0:
-                warnings.append(f"Widget #{idx} has non-positive size ({w.width}x{w.height})")
-            if w.x < 0 or w.y < 0:
-                warnings.append(f"Widget #{idx} positioned with negative origin ({w.x},{w.y})")
-            if x2 > self.designer.width or y2 > self.designer.height:
-                warnings.append(
-                    (
-                        f"Widget #{idx} overflows display "
-                        f"({x2}>{self.designer.width} or {y2}>{self.designer.height})"
-                    )
-                )
-        # Overlap detection
-        if count <= 120:
-            # Original O(n^2) path for small scenes
-            for i in range(count):
-                a = widgets[i]
-                ax2 = a.x + a.width
-                ay2 = a.y + a.height
-                for j in range(i + 1, count):
-                    b = widgets[j]
-                    bx2 = b.x + b.width
-                    by2 = b.y + b.height
-                    overlap_w = min(ax2, bx2) - max(a.x, b.x)
-                    overlap_h = min(ay2, by2) - max(a.y, b.y)
-                    if overlap_w > 0 and overlap_h > 0:
-                        area = overlap_w * overlap_h
-                        if area > 0:
-                            warnings.append(
-                                (
-                                    f"Widgets #{i} and #{j} overlap "
-                                    f"({overlap_w}x{overlap_h} = {area} px)"
-                                )
-                            )
-        else:
-            # Spatial grid index to reduce comparisons
-            cell_size = max(8, int(min(self.designer.width, self.designer.height) / 20))
-            cols = max(1, (self.designer.width // cell_size) + 1)
-            rows = max(1, (self.designer.height // cell_size) + 1)
-            grid: Dict[Tuple[int, int], List[int]] = {}
-            for idx, w in enumerate(widgets):
-                # Determine covered cell range
-                c0 = max(0, w.x // cell_size)
-                c1 = max(0, (w.x + w.width) // cell_size)
-                r0 = max(0, w.y // cell_size)
-                r1 = max(0, (w.y + w.height) // cell_size)
-                for cy in range(r0, r1 + 1):
-                    if cy >= rows:
-                        break
-                    for cx in range(c0, c1 + 1):
-                        if cx >= cols:
-                            break
-                        grid.setdefault((cx, cy), []).append(idx)
-            seen_pairs = set()
-            for cell_indices in grid.values():
-                if len(cell_indices) < 2:
-                    continue
-                for i_pos in range(len(cell_indices)):
-                    i = cell_indices[i_pos]
-                    a = widgets[i]
-                    ax2 = a.x + a.width
-                    ay2 = a.y + a.height
-                    for j_pos in range(i_pos + 1, len(cell_indices)):
-                        j = cell_indices[j_pos]
-                        if i == j:
-                            continue
-                        pair = (min(i, j), max(i, j))
-                        if pair in seen_pairs:
-                            continue
-                        seen_pairs.add(pair)
-                        b = widgets[j]
-                        bx2 = b.x + b.width
-                        by2 = b.y + b.height
-                        overlap_w = min(ax2, bx2) - max(a.x, b.x)
-                        overlap_h = min(ay2, by2) - max(a.y, b.y)
-                        if overlap_w > 0 and overlap_h > 0:
-                            area = overlap_w * overlap_h
-                            if area > 0:
-                                warnings.append(
-                                    (
-                                        f"Widgets #{pair[0]} and #{pair[1]} overlap "
-                                        f"({overlap_w}x{overlap_h} = {area} px)"
-                                    )
-                                )
-        # Edge padding guidance
-        pad_min = 2
-        for idx, w in enumerate(widgets):
-            if w.x < pad_min:
-                warnings.append(f"Widget #{idx} very close to left edge (<{pad_min}px)")
-            if w.y < pad_min:
-                warnings.append(f"Widget #{idx} very close to top edge (<{pad_min}px)")
-            if w.x + w.width > self.designer.width - pad_min:
-                warnings.append(f"Widget #{idx} very close to right edge (<{pad_min}px)")
-            if w.y + w.height > self.designer.height - pad_min:
-                warnings.append(f"Widget #{idx} very close to bottom edge (<{pad_min}px)")
-        return warnings or ["No layout issues detected"]
+        return layout_warnings(scene, self.designer.width, self.designer.height)
 
     def _show_layout_warnings(self):
         """Display layout warnings in a popup dialog."""
