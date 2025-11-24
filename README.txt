@@ -1,65 +1,35 @@
-╔══════════════════════════════════════════════════════════════╗
-║                        ESP32 OS                              ║
-║               UI Designer & Simulator Suite                  ║
-╚══════════════════════════════════════════════════════════════╝
-
-HLAVNÍ APLIKACE:
-═══════════════════════════════════════════════════════════════
-
-  ui_designer_pro.exe     - Hlavní UI Designer (pokud existuje)
-  ui_designer.py          - UI Designer (Python verze)
-  ui_designer_preview.py  - UI Designer s live preview
-  modern_ui.py            - Moderní UI toolkit
+ESP32 OS UI TOOLKIT (ČISTÁ PYTHON VERZE)
+Minimalistický UI Designer + nástroje pro export na ESP32 (bez demo scén & webového frontendu).
 
 RYCHLÝ START:
-═══════════════════════════════════════════════════════════════
+python esp32os_workspace.py
+	Spustí prostředí (Designer + případný simulátor pokud je k dispozici).
 
-  1. Spustit UI Designer:
-     python ui_designer_pro.py
-     
-  2. Spustit simulátor:
-     python scripts/sim_run.py --rpc-port 8765
-     
-  3. Spustit všechny servery:
-     powershell scripts/start_servers.ps1
+KLÍČOVÉ MODULY:
+- ui_designer.py / ui_designer_pro.py – hlavní designer
+- ui_models.py – datové struktury (WidgetConfig, SceneConfig…)
+- design_tokens.py – barvy, typografie, spacing
+- ui_themes.py – systém témat
+- ui_components.py – základní komponenty
+- tools/ui_export_c_header.py – export UI do C hlavičky pro firmware
 
-SLOŽKY:
-═══════════════════════════════════════════════════════════════
+TESTY:
+Spusť kompletní testy:
+python -m pytest test/
 
-  /scripts    - Spouštěcí skripty (run, start, launch)
-  /tests      - Pytest testy (419 testů)
-  /tools      - Pomocné nástroje (export, profiler, analytics)
-  /docs       - Dokumentace (README, guides, roadmaps)
-  /examples   - Demo soubory a ukázky
-  /build      - Build konfigurace a výstupy
-  
-  /src        - ESP32 C/C++ zdrojové kódy
-  /components - ESP32 komponenty
-  /web        - Web designer frontend
-  /assets     - Ikony, fonty, témata
+EXPORT NA ESP32:
+python tools/ui_export_c_header.py vstup.json -o ui.h
 
-PLATFORMIO (ESP32):
-═══════════════════════════════════════════════════════════════
+DEPENDENCE (doporučeno):
+pip install pillow reportlab watchdog
 
-  platformio.ini - PlatformIO konfigurace
-  /src          - Hlavní ESP32 kód
-  /components   - Hardware komponenty
-  /.pio         - PlatformIO build cache
+CO UŽ NENÍ SOUČÁSTÍ:
+- examples/ (demo scény, ukázky)
+- web_designer_frontend/ (browser / Tauri verze)
+- PyInstaller build artefakty (.exe) – generují se lokálně, nejsou verzovány
 
-KONFIGURACE:
-═══════════════════════════════════════════════════════════════
+POZNÁMKY:
+- JSON může mít "scenes" jako dict nebo list (automaticky sjednoceno).
+- Widget ID z JSON se mapuje na _widget_id interně.
 
-  .sim_config.json        - Konfigurace simulátoru
-  sdkconfig.esp32-*       - ESP32 SDK konfigurace
-  build/requirements.txt  - Python dependencies
-
-DOKUMENTACE:
-═══════════════════════════════════════════════════════════════
-
-  docs/README.md          - Hlavní dokumentace
-  docs/QUICKSTART.md      - Rychlý úvod
-  docs/SIMULATOR_README.md - Návod pro simulátor
-  docs/PROJECT_ROADMAP.md - Plán projektu
-
-═══════════════════════════════════════════════════════════════
-Pro více informací viz docs/README.md
+Tento README byl zjednodušen: zaměřeno pouze na Python část a export.
