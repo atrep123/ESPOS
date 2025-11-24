@@ -1977,6 +1977,11 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         if not scene:
             return
         zoom = getattr(self.settings, "zoom", 1.0)
+        # Clear previous overlay shapes (use tagged items)
+        try:
+            self.canvas.delete("diag_overlay")
+        except Exception:
+            pass
         # Bounding boxes
         try:
             for idx, w in enumerate(scene.widgets):
@@ -1991,6 +1996,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                     y2,
                     outline=color_hex("legacy_dracula_cyan"),
                     width=1,
+                    tags=("diag_overlay",),
                 )
                 if idx == self.selected_widget_idx:
                     self.canvas.create_rectangle(
@@ -2000,6 +2006,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                         y2,
                         outline=color_hex("legacy_green"),
                         width=2,
+                        tags=("diag_overlay",),
                     )
         except Exception:
             pass
@@ -2018,6 +2025,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                     y0 + spark_h,
                     fill=color_hex("shadow"),
                     outline=color_hex("legacy_gray8"),
+                    tags=("diag_overlay",),
                 )
                 max_fps = max(self._fps_history) if self._fps_history else 60.0
                 min_fps = min(self._fps_history) if self._fps_history else 0.0
@@ -2036,6 +2044,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                         b[0],
                         b[1],
                         fill=color_hex("legacy_dracula_pink"),
+                        tags=("diag_overlay",),
                     )
                 # Current FPS label
                 try:
@@ -2046,6 +2055,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                         text=f"FPS {inst:.1f}",
                         fill=color_hex("text_primary"),
                         font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
+                        tags=("diag_overlay",),
                     )
                 except Exception:
                     pass
