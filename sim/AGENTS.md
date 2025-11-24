@@ -24,8 +24,8 @@ Tento soubor platí pro `sim/` – C ASCII simulátor a Python moduly v `sim/mod
 
 ## Python scaffolding (`sim/modules/*`)
 
-- `sim/modules/renderer.py` a `sim/modules/servers.py` jsou *scaffolding* pro budoucí refaktor `sim_run.py`.
-- Při práci s nimi:
+- `sim/modules/renderer.py` je *scaffolding* pro budoucí refaktor `sim_run.py`.
+- Při práci s ním:
   - udrž API jednoduché (`start()`, `stop()`, konstruktor s `port`/`width`/`height`),
   - neměň signatury, dokud není potřeba refaktor v `sim_run.py`.
 
