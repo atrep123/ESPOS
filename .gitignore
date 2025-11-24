@@ -12,6 +12,12 @@ __pycache__/
 .venv/
 .env/
 
+# PyInstaller build artifacts
+build/
+dist/
+dist-pyibuild/
+*.spec
+
 # IDE/editor
 .idea/
 
