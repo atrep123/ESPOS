@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 import time
+import tracemalloc
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -195,6 +196,12 @@ class VisualPreviewWindow:
         self._show_mini_help: bool = False
         self._onboarding_toast_tag = "onboarding_toast"
         self._show_perf_overlay: bool = bool(self._settings_cache.get("perf_overlay", False))
+        # Diagnostics state
+        self._diagnostics_enabled: bool = False
+        self._fps_history: List[float] = []
+        self._fps_history_max: int = 60  # keep last 60 frames (~1s at 60fps)
+        self._memory_peak: Optional[int] = None
+        self._diagnostics_last_draw_ts: float = 0.0
 
         # Quick insert components (for Ctrl+1-9 shortcuts)
         self.quick_insert_components = [
@@ -657,6 +664,12 @@ class VisualPreviewWindow:
             toolbar,
             text="🔎 Layout",
             command=self._show_layout_warnings,
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Button(
+            toolbar,
+            text="🩺 Diag",
+            command=self._toggle_diagnostics,
         ).pack(side=tk.LEFT, padx=5)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
@@ -1693,9 +1706,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         self.root.bind("<F10>", lambda e: self._toggle_mini_help())
         # Perf overlay toggle
         self.root.bind("<F9>", lambda e: self._toggle_perf_overlay())
-        # Space = hand pan
-        self.root.bind("<KeyPress-space>", self._on_space_down)
-        self.root.bind("<KeyRelease-space>", self._on_space_up)
+        # (Space hand pan bindings already registered earlier; avoid duplicates)
 
     def refresh(self, force=False):
         """Refresh the preview with caching"""
@@ -1721,19 +1732,54 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         except Exception:
             self._predicted_fps, self._complexity_score = None, None
         # Update status bar with predicted performance if available
-        if hasattr(self, "status_bar") and self._predicted_fps is not None:
+        # Diagnostics augmentation
+        if self._diagnostics_enabled:
+            # Record instantaneous FPS (based on render ms) for history
             try:
-                base = self.status_bar.cget("text")
-                perf_snippet = (
-                    f" | est FPS: {int(self._predicted_fps)} "
-                    f"(complexity {self._complexity_score})"
-                )
-                # Avoid duplicating
-                if "est FPS:" in base:
-                    base = base.split(" | est FPS:")[0]
-                self.status_bar.config(text=base + perf_snippet)
+                if self._last_render_ms > 0:
+                    inst_fps = 1000.0 / self._last_render_ms
+                    self._fps_history.append(inst_fps)
+                    if len(self._fps_history) > self._fps_history_max:
+                        self._fps_history = self._fps_history[-self._fps_history_max:]
             except Exception:
                 pass
+            # Memory stats (tracemalloc started when enabling diagnostics)
+            current_mem_mb, peak_mem_mb = self._get_memory_usage()
+            self._memory_peak = peak_mem_mb
+            # Throttle overlay redraw to reduce overhead
+            now = time.time()
+            if now - self._diagnostics_last_draw_ts > 0.25:  # 250ms
+                try:
+                    self._draw_diagnostics_overlay()
+                except Exception:
+                    pass
+                self._diagnostics_last_draw_ts = now
+            # Build segmented status text
+            if hasattr(self, "status_bar"):
+                try:
+                    avg_fps = sum(self._fps_history) / len(self._fps_history) if self._fps_history else 0.0
+                    scene_name = getattr(scene, "name", self.designer.current_scene)
+                    status_txt = (
+                        f"Scene: {scene_name} | Widgets: {len(scene.widgets)} | Complexity: {self._complexity_score} | "
+                        f"est FPS: {int(self._predicted_fps) if self._predicted_fps else '--'} (avg {avg_fps:.1f}) | "
+                        f"Mem: {current_mem_mb:.1f}MB (peak {peak_mem_mb:.1f})"
+                    )
+                    self.status_bar.config(text=status_txt)
+                except Exception:
+                    pass
+        else:
+            if hasattr(self, "status_bar") and self._predicted_fps is not None:
+                try:
+                    base = self.status_bar.cget("text")
+                    perf_snippet = (
+                        f" | est FPS: {int(self._predicted_fps)} "
+                        f"(complexity {self._complexity_score})"
+                    )
+                    if "est FPS:" in base:
+                        base = base.split(" | est FPS:")[0]
+                    self.status_bar.config(text=base + perf_snippet)
+                except Exception:
+                    pass
         # Optional perf log export
         if os.environ.get("ESP32OS_PERF_LOG") == "1":
             try:
@@ -1897,6 +1943,124 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                 messagebox.showerror("Layout Analysis Failed", str(e))
             except Exception:
                 pass
+
+    # ---------------- Additional Diagnostics -----------------
+    def _toggle_diagnostics(self):
+        """Enable/disable diagnostics overlay and enhanced status bar info."""
+        self._diagnostics_enabled = not self._diagnostics_enabled
+        if self._diagnostics_enabled:
+            # Start tracemalloc once
+            if not tracemalloc.is_tracing():
+                try:
+                    tracemalloc.start()
+                except Exception:
+                    pass
+            self._fps_history.clear()
+            self._diagnostics_last_draw_ts = 0.0
+        else:
+            # Optional: stop tracing to reduce overhead
+            if tracemalloc.is_tracing():
+                try:
+                    tracemalloc.stop()
+                except Exception:
+                    pass
+        try:
+            self.refresh(force=True)
+        except Exception:
+            pass
+
+    def _draw_diagnostics_overlay(self):
+        """Draw bounding boxes for all widgets and a simple FPS sparkline."""
+        if HEADLESS or not hasattr(self, "canvas"):
+            return
+        scene = self._get_active_scene()
+        if not scene:
+            return
+        zoom = getattr(self.settings, "zoom", 1.0)
+        # Bounding boxes
+        try:
+            for idx, w in enumerate(scene.widgets):
+                x1 = int(w.x * zoom)
+                y1 = int(w.y * zoom)
+                x2 = int((w.x + w.width) * zoom)
+                y2 = int((w.y + w.height) * zoom)
+                self.canvas.create_rectangle(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    outline=color_hex("legacy_dracula_cyan"),
+                    width=1,
+                )
+                if idx == self.selected_widget_idx:
+                    self.canvas.create_rectangle(
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        outline=color_hex("legacy_green"),
+                        width=2,
+                    )
+        except Exception:
+            pass
+        # FPS sparkline (bottom-left corner)
+        try:
+            if self._fps_history:
+                spark_w = 100
+                spark_h = 28
+                pad = 4
+                x0 = 10
+                y0 = int(self.designer.height * zoom) - spark_h - 10
+                self.canvas.create_rectangle(
+                    x0,
+                    y0,
+                    x0 + spark_w,
+                    y0 + spark_h,
+                    fill=color_hex("shadow"),
+                    outline=color_hex("legacy_gray8"),
+                )
+                max_fps = max(self._fps_history) if self._fps_history else 60.0
+                min_fps = min(self._fps_history) if self._fps_history else 0.0
+                span = max(1.0, max_fps - min_fps)
+                pts = []
+                hist = self._fps_history[-spark_w:]
+                for i, v in enumerate(hist):
+                    norm = (v - min_fps) / span
+                    px = x0 + pad + i
+                    py = (y0 + spark_h - pad) - int(norm * (spark_h - 2 * pad))
+                    pts.append((px, py))
+                for a, b in zip(pts, pts[1:]):
+                    self.canvas.create_line(
+                        a[0],
+                        a[1],
+                        b[0],
+                        b[1],
+                        fill=color_hex("legacy_dracula_pink"),
+                    )
+                # Current FPS label
+                try:
+                    inst = self._fps_history[-1]
+                    self.canvas.create_text(
+                        x0 + spark_w // 2,
+                        y0 - 2,
+                        text=f"FPS {inst:.1f}",
+                        fill=color_hex("text_primary"),
+                        font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _get_memory_usage(self) -> Tuple[float, float]:
+        """Return (current_mb, peak_mb) using tracemalloc (safe fallbacks)."""
+        try:
+            if not tracemalloc.is_tracing():
+                return 0.0, 0.0
+            current, peak = tracemalloc.get_traced_memory()
+            return current / (1024 * 1024), peak / (1024 * 1024)
+        except Exception:
+            return 0.0, 0.0
 
     def _refresh_headless(self) -> bool:
         """Handle headless refresh, returns True if handled."""

@@ -3,7 +3,7 @@
 ESP32 OS - Quick Launcher
 Spouštěč pro 3 hlavní aplikace
 """
-import os
+import subprocess
 import sys
 
 
@@ -19,19 +19,19 @@ def print_menu():
     print("\n" + "="*50)
 
 def run_designer():
-    """Spustí UI Designer"""
+    """Spustí UI Designer (non-blocking)"""
     print("\n🎨 Spouštím UI Designer...")
-    os.system(f"{sys.executable} run_designer.py")
+    subprocess.Popen([sys.executable, "run_designer.py"])
 
 def run_simulator():
-    """Spustí Simulator GUI"""
+    """Spustí Simulator GUI (non-blocking)"""
     print("\n📺 Spouštím Simulator...")
-    os.system(f"{sys.executable} run_simulator_gui.py")
+    subprocess.Popen([sys.executable, "run_simulator_gui.py"])
 
 def run_workspace():
-    """Spustí Workspace"""
+    """Spustí Workspace (non-blocking)"""
     print("\n🏢 Spouštím Workspace...")
-    os.system(f"{sys.executable} esp32os_workspace.py")
+    subprocess.Popen([sys.executable, "esp32os_workspace.py"])
 
 def main():
     """Main menu loop"""
