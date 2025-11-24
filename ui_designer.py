@@ -3363,21 +3363,21 @@ if __name__ == "__main__":
         btn.state = "default"
         # Tag animation and set preview context for export consistency
         btn.animations.append("bounce")
-        # Use provided out paths or default under examples/demo_*
+        # Use provided out paths or default under output/demo_*
         out_json = (
             args.out_json
-            if args.out_json != "examples/guided_scene.json"
-            else "examples/demo_scene.json"
+            if args.out_json != "output/guided_scene.json"
+            else "output/demo_scene.json"
         )
         out_html = (
             args.out_html
-            if args.out_html != "examples/guided_scene.html"
-            else "examples/demo_scene.html"
+            if args.out_html != "output/guided_scene.html"
+            else "output/demo_scene.html"
         )
         out_png = (
             args.out_png
-            if args.out_png != "examples/guided_scene.png"
-            else "examples/demo_scene.png"
+            if args.out_png != "output/guided_scene.png"
+            else "output/demo_scene.png"
         )
         Path(os.path.dirname(out_json)).mkdir(parents=True, exist_ok=True)
         # Save triggers preflight + auto-export

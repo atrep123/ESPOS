@@ -2,7 +2,7 @@
 """
 UI Exporter: Produce demo JSON/HTML/PNG and C headers/sources for firmware
 - Generates a small demo scene (or uses presets)
-- Writes examples/ui_demo.* by default
+- Writes output/ui_demo.* by default
 - Writes src/ui_design.h and src/ui_design.c for firmware integration
 """
 
@@ -258,7 +258,7 @@ def build_demo_and_export():
     # PNG
     exported = export_png_from_scene(d, os.path.join(out_dir, "ui_demo.png"), bg="#000000")
     if exported:
-        print("[ok] PNG exported: examples/ui_demo.png")
+        print("[ok] PNG exported: output/ui_demo.png")
 
     # C export
     export_c(d, base_name=args.base_name)

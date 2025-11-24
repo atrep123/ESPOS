@@ -5,7 +5,7 @@ Headless snapshot generator for UI Designer scenes.
 Renders PNG and/or ASCII snapshots without opening Tk windows.
 
 Usage:
-    python tools/snapshot_runner.py --scene examples/demo_scene.json --out-dir reports/snapshots --png --ascii
+    python tools/snapshot_runner.py --scene output/demo_scene.json --out-dir reports/snapshots --png --ascii
 """
 from __future__ import annotations
 

@@ -19,6 +19,9 @@ dist-pyibuild/
 build-pyibuild/
 *.spec
 
+# Tool output directory
+output/
+
 # IDE/editor
 .idea/
 

@@ -3,7 +3,7 @@
 Run snapshot_runner for selected scenes and diff against baseline.
 
 Usage:
-    python tools/run_snapshot_parity.py --scenes examples/demo_scene.json examples/ui_demo.json
+    python tools/run_snapshot_parity.py --scenes output/demo_scene.json output/ui_demo.json
 """
 from __future__ import annotations
 

@@ -11,10 +11,10 @@ Provádí základní kontroly:
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
 import tempfile
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
@@ -79,7 +79,7 @@ def check_preview_headless() -> CheckResult:
     if not script.exists():
         return CheckResult("ui_designer_preview headless", False, "ui_designer_preview.py not found")
     if not demo_json.exists():
-        return CheckResult("ui_designer_preview headless", False, "examples/demo_scene.json not found")
+        return CheckResult("ui_designer_preview headless", False, "output/demo_scene.json not found")
     with tempfile.TemporaryDirectory() as td:
         out_png = Path(td) / "preview.png"
         out_html = Path(td) / "preview.html"
@@ -138,8 +138,9 @@ def _find_free_tcp_port() -> int:
 
 def check_sim_rpc_get_state(timeout_sec: float = 5.0) -> CheckResult:
     """Spustí sim_run.py s RPC a ověří RPC get_state přes StateInspector."""
-    from state_inspector import StateInspector  # type: ignore[import-not-found]
     import time
+
+    from state_inspector import StateInspector  # type: ignore[import-not-found]
 
     script = ROOT / "sim_run.py"
     if not script.exists():
