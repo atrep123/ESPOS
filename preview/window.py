@@ -25,11 +25,12 @@ from PIL import Image, ImageDraw
 if TK_AVAILABLE:
     from PIL import ImageTk
 
+from preview.diagnostics import layout_warnings
+from preview.overlay import draw_perf_overlay, draw_diagnostics_overlay
 from preview.rendering import (
     hex_to_rgb,
 )
 from preview.settings import PreviewSettings
-from preview.diagnostics import layout_warnings
 from ui_animations import AnimationDesigner
 
 # Import all component creators
@@ -519,60 +520,19 @@ class VisualPreviewWindow:
             pass
 
     def _draw_perf_overlay(self):
-        """Draw a compact perf HUD with render time vs budget."""
-        try:
-            budget = getattr(self.settings, "performance_budget_ms", 16.7)
-            warn = getattr(self.settings, "performance_warn_ms", 25.0)
-            ms = self._last_render_ms
-            w = self._scale_spacing(160, minimum=120)
-            h = self._scale_spacing(48, minimum=36)
-            pad = self._scale_spacing(8, minimum=6)
-            x0 = self._scale_spacing(12, minimum=8)
-            y0 = self._scale_spacing(12, minimum=8)
-            x1 = x0 + w
-            y1 = y0 + h
-            self.canvas.create_rectangle(
-                x0,
-                y0,
-                x1,
-                y1,
-                fill=color_hex("shadow"),
-                outline=color_hex("legacy_gray8"),
-                stipple="gray25",
-            )
-            # Bar
-            bar_width = w - 2 * pad
-            bar_height = self._scale_spacing(12, minimum=10)
-            bx0 = x0 + pad
-            by0 = y0 + pad
-            bx1 = bx0 + bar_width
-            by1 = by0 + bar_height
-            self.canvas.create_rectangle(bx0, by0, bx1, by1, outline=color_hex("legacy_gray8"))
-            if bar_width > 0:
-                frac = min(1.5, ms / max(1e-6, budget))
-                fill_w = max(1, int(bar_width * frac / 1.5))
-                if ms > warn:
-                    fill_color = color_hex("legacy_dracula_red")
-                elif ms > budget:
-                    fill_color = color_hex("legacy_orange")
-                else:
-                    fill_color = color_hex("legacy_green")
-                self.canvas.create_rectangle(
-                    bx0, by0, bx0 + fill_w, by1, fill=fill_color, outline=""
-                )
-            # Text
-            txt = f"{ms:.1f} ms (budget {budget:.1f} / warn {warn:.1f})"
-            self.canvas.create_text(
-                x0 + pad,
-                by1 + pad,
-                anchor=tk.NW,
-                text=txt,
-                fill=color_hex("text_primary"),
-                font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
-            )
-        except Exception:
-            pass
-        # Kick animation timer
+        """Delegate perf overlay drawing to overlay module (tagged)."""
+        budget = getattr(self.settings, "performance_budget_ms", 16.7)
+        warn = getattr(self.settings, "performance_warn_ms", 25.0)
+        ms = self._last_render_ms
+        draw_perf_overlay(
+            self.canvas,
+            ms,
+            budget,
+            warn,
+            lambda v, minimum=0: self._scale_spacing(v, minimum=minimum),
+            lambda v, minimum=1: self._scale_font_size(v, minimum=minimum),
+            color_hex,
+        )
         self._schedule_tick()
 
     def _setup_ui(self):
@@ -1993,97 +1953,23 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             pass
 
     def _draw_diagnostics_overlay(self):
-        """Draw bounding boxes for all widgets and a simple FPS sparkline."""
+        """Delegate diagnostics overlay drawing to overlay module."""
         if HEADLESS or not hasattr(self, "canvas"):
             return
         scene = self._get_active_scene()
         if not scene:
             return
         zoom = getattr(self.settings, "zoom", 1.0)
-        # Clear previous overlay shapes (use tagged items)
-        try:
-            self.canvas.delete("diag_overlay")
-        except Exception:
-            pass
-        # Bounding boxes
-        try:
-            for idx, w in enumerate(scene.widgets):
-                x1 = int(w.x * zoom)
-                y1 = int(w.y * zoom)
-                x2 = int((w.x + w.width) * zoom)
-                y2 = int((w.y + w.height) * zoom)
-                self.canvas.create_rectangle(
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    outline=color_hex("legacy_dracula_cyan"),
-                    width=1,
-                    tags=("diag_overlay",),
-                )
-                if idx == self.selected_widget_idx:
-                    self.canvas.create_rectangle(
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        outline=color_hex("legacy_green"),
-                        width=2,
-                        tags=("diag_overlay",),
-                    )
-        except Exception:
-            pass
-        # FPS sparkline (bottom-left corner)
-        try:
-            if self._fps_history:
-                spark_w = 100
-                spark_h = 28
-                pad = 4
-                x0 = 10
-                y0 = int(self.designer.height * zoom) - spark_h - 10
-                self.canvas.create_rectangle(
-                    x0,
-                    y0,
-                    x0 + spark_w,
-                    y0 + spark_h,
-                    fill=color_hex("shadow"),
-                    outline=color_hex("legacy_gray8"),
-                    tags=("diag_overlay",),
-                )
-                max_fps = max(self._fps_history) if self._fps_history else 60.0
-                min_fps = min(self._fps_history) if self._fps_history else 0.0
-                span = max(1.0, max_fps - min_fps)
-                pts = []
-                hist = self._fps_history[-spark_w:]
-                for i, v in enumerate(hist):
-                    norm = (v - min_fps) / span
-                    px = x0 + pad + i
-                    py = (y0 + spark_h - pad) - int(norm * (spark_h - 2 * pad))
-                    pts.append((px, py))
-                for a, b in zip(pts, pts[1:]):
-                    self.canvas.create_line(
-                        a[0],
-                        a[1],
-                        b[0],
-                        b[1],
-                        fill=color_hex("legacy_dracula_pink"),
-                        tags=("diag_overlay",),
-                    )
-                # Current FPS label
-                try:
-                    inst = self._fps_history[-1]
-                    self.canvas.create_text(
-                        x0 + spark_w // 2,
-                        y0 - 2,
-                        text=f"FPS {inst:.1f}",
-                        fill=color_hex("text_primary"),
-                        font=("TkDefaultFont", self._scale_font_size(9, minimum=8)),
-                        tags=("diag_overlay",),
-                    )
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        draw_diagnostics_overlay(
+            self.canvas,
+            scene.widgets,
+            zoom,
+            self.selected_widget_idx,
+            self._fps_history,
+            self.designer.height,
+            lambda v, minimum=1: self._scale_font_size(v, minimum=minimum),
+            color_hex,
+        )
 
     def _get_memory_usage(self) -> Tuple[float, float]:
         """Return (current_mb, peak_mb) using tracemalloc (safe fallbacks)."""
