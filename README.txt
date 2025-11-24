@@ -1,35 +1,58 @@
-ESP32 OS UI TOOLKIT (ČISTÁ PYTHON VERZE)
-Minimalistický UI Designer + nástroje pro export na ESP32 (bez demo scén & webového frontendu).
+ESP32 OS UI TOOLKIT
+===================
 
-RYCHLÝ START:
-python esp32os_workspace.py
-	Spustí prostředí (Designer + případný simulátor pokud je k dispozici).
+Visual UI Designer + Simulator + Export Tools pro ESP32
 
-KLÍČOVÉ MODULY:
-- ui_designer.py / ui_designer_pro.py – hlavní designer
-- ui_models.py – datové struktury (WidgetConfig, SceneConfig…)
-- design_tokens.py – barvy, typografie, spacing
-- ui_themes.py – systém témat
-- ui_components.py – základní komponenty
-- tools/ui_export_c_header.py – export UI do C hlavičky pro firmware
+🚀 HLAVNÍ APLIKACE
+==================
 
-TESTY:
-Spusť kompletní testy:
-python -m pytest test/
+1. UI DESIGNER (Drag & Drop Editor)
+   python run_designer.py
+   
+   - Vizuální editor s drag & drop
+   - Dark mode interface
+   - Real-time preview
+   - Export do JSON/HTML/PNG/C
 
-EXPORT NA ESP32:
-python tools/ui_export_c_header.py vstup.json -o ui.h
+2. SIMULATOR (Visual Display)
+   python run_simulator_gui.py
+   
+   - Vizuální okno s ESP32 displejem
+   - Live preview z designeru
+   - Dark mode interface
+   - 128×64 nebo 320×240
 
-DEPENDENCE (doporučeno):
-pip install pillow reportlab watchdog
+3. WORKSPACE (Unified Launcher)
+   python esp32os_workspace.py
+   
+   - Spustí obě aplikace najednou
+   - Správa projektů
+   - Unified dark theme
 
-CO UŽ NENÍ SOUČÁSTÍ:
-- examples/ (demo scény, ukázky)
-- web_designer_frontend/ (browser / Tauri verze)
-- PyInstaller build artefakty (.exe) – generují se lokálně, nejsou verzovány
+📦 ZÁVISLOSTI
+=============
 
-POZNÁMKY:
-- JSON může mít "scenes" jako dict nebo list (automaticky sjednoceno).
-- Widget ID z JSON se mapuje na _widget_id interně.
+pip install pillow
 
-Tento README byl zjednodušen: zaměřeno pouze na Python část a export.
+⚙️ EXPORT DO C
+==============
+
+python tools/ui_export_c_header.py design.json -o ui.h
+
+Vygeneruje C hlavičku pro ESP32 firmware.
+
+🎨 DALŠÍ NÁSTROJE
+=================
+
+- ui_designer_pro.py - Rozšířená verze s animacemi
+- design_tokens.py - Barvy a styling
+- ui_models.py - Datové struktury
+
+📁 STRUKTURA
+============
+
+/preview/          - GUI preview komponenty
+/tools/            - Export a utility skripty
+/src/              - ESP32 firmware (C)
+/components/       - ESP32 komponenty
+platformio.ini     - ESP32 build konfigurace

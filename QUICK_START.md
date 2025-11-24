@@ -1,156 +1,202 @@
-# Rychlý start
+# ESP32 OS UI Toolkit - Quick Start
 
-## Nejrychlejší cesta k funkčnímu UI Designeru
+## 🚀 Rychlé spuštění (3 možnosti)
 
-### 1. Spusť Workspace (doporučeno)
+### 1. Interaktivní launcher (nejjednodušší)
+```powershell
+python launcher.py
+```
+Zobrazí menu:
+- **1** = UI Designer
+- **2** = Simulator GUI  
+- **3** = Workspace (oboje)
+- **0** = Konec
 
-```bash
+### 2. Jednotlivé aplikace
+
+**UI Designer** (vizuální editor):
+```powershell
+python run_designer.py
+```
+
+**Simulator GUI** (okno s displejem):
+```powershell
+python run_simulator_gui.py
+```
+
+**Workspace** (Designer + Simulator dohromady):
+```powershell
 python esp32os_workspace.py
 ```
 
-**Co to dělá:**
+### 3. Pokročilé (původní nástroje)
 
-- Otevře jednoduchou aplikaci s tlačítky
-- Klikni na „🔗 Oba“ – spustí Designer i Simulátor vedle sebe
-- „⟳ Restart“ rychle oba procesy ukončí a znovu spustí (čisté prostředí)
-- „■ Stop“ vše korektně ukončí
-- Vytvoříš UI v Designeru a okamžitě ho vidíš v Simulátoru
+Designer s vlastním rozlišením:
+```powershell
+python ui_designer_pro.py --width 320 --height 240
+```
 
-### 2. Nebo spusť ručně
-
-```bash
-# Designer
-python ui_designer_pro.py
-
-# Simulátor (v druhém terminálu)
+Terminálový simulátor:
+```powershell
 python scripts/sim_run.py --rpc-port 8765
 ```
 
-## První spuštění (jednou)
+## 📦 Instalace (jednou)
 
-```bash
-# Přesune testovací soubory do složky test/
-python cleanup_project.py
+```powershell
+pip install pillow
 ```
 
-## Základní příkazy
-
-### Testování
-
-```bash
-# Všechny testy
-python -m pytest test/
-
-# Jen rychlé testy
-python -m pytest test/ -m "not slow"
+**Volitelné** (pro PDF export a hot-reload):
+```powershell
+pip install reportlab watchdog
 ```
 
-### Formátování kódu
+## 💡 Typický workflow
 
-```bash
-# Automatické formátování
-black .
+1. **Spusť Designer**
+   ```powershell
+   python run_designer.py
+   ```
 
-# Kontrola chyb
-ruff check .
+2. **Vytvoř UI**
+   - Přidej widgety z levého panelu (Label, Button, Checkbox...)
+   - Přetáhni na pozici (drag & drop)
+   - Změň velikost za úchyty
+   - Nastav vlastnosti (text, barvy...) double-clickem
 
-# Oprava chyb automaticky
-ruff check --fix .
+3. **Ulož projekt**
+   - `Ctrl+S` → uloží jako JSON
+
+4. **Exportuj do C**
+   ```powershell
+   python tools/ui_export_c_header.py muj_design.json -o output/ui.h
+   ```
+
+5. **Přidej do firmware**
+   - Zkopíruj `output/ui.h` do `src/`
+   - Include v `main.c`
+   - Build: PlatformIO → Upload
+
+## 🎨 Ovládání UI Designeru
+
+| Akce | Klávesa/Myš |
+|------|-------------|
+| Přesun widgetu | Drag myší |
+| Změna velikosti | Drag handle (rohy/okraje) |
+| Editace vlastností | Double-click |
+| Uložit | Ctrl+S |
+| Smazat | Delete |
+| Posun po pixelech | Šipky ←↑→↓ |
+| Export menu | File → Export |
+
+## 📺 3 hlavní aplikace
+
+### 🎨 UI Designer (`run_designer.py`)
+**Účel**: Vizuální drag & drop editor  
+**Funkce**:
+- Palette widgetů (label, button, slider...)
+- Properties panel
+- Grid & snap
+- Export: JSON, PNG, HTML, C header
+
+### 📟 Simulator GUI (`run_simulator_gui.py`)
+**Účel**: Okno s vizualizací ESP32 displeje  
+**Funkce**:
+- Live preview scény (128×64 nebo 320×240)
+- Dark mode interface
+- Reset/Pause tlačítka
+- Škálované 4× pro lepší viditelnost
+
+### 🏢 Workspace (`esp32os_workspace.py`)
+**Účel**: Spustí oboje najednou  
+**Funkce**:
+- Unified launcher
+- Správa portů (RPC 8765)
+- Auto-start nastavení
+- Historie projektů (`.esp32os_workspace.json`)
+
+## 📁 Struktura projektu
+
 ```
-
-### (Volitelné) starší build EXE
-
-Projekt teď běží čistě v Pythonu (doporučeno). Pokud chceš experimentovat s buildem:
-
-```bash
-pyinstaller build/ui_designer_pro.spec --clean
-```
-
-## Struktura projektu (kam co patří)
-
-```text
 ESPOS/
-  ui_designer_pro.py        – hlavní aplikace (tady začni)
-  ui_designer.py            – jádro editoru
-  design_tokens.py          – barvy, spacing, fonty
-  ui_themes.py              – témata
-  ui_components.py          – komponenty (tlačítka, dialogy…)
-  ui_animations.py          – animace
-
-  scripts/                  – spouštěcí skripty
-    sim_run.py              – simulátor
-
-  tools/                    – pomocné nástroje
-    ui_export_c_header.py   – export do C kódu
-
-  test_*.py                 – testy
-  examples/                 – ukázkové soubory
-  assets/                   – ikony, fonty
-  build/                    – build konfigurace (PyInstaller spec)
+├── launcher.py              # Quick menu (START HERE)
+├── run_designer.py          # UI Designer starter
+├── run_simulator_gui.py     # Simulator GUI starter
+├── esp32os_workspace.py     # Workspace (oboje)
+├── requirements.txt         # Závislosti
+│
+├── preview/
+│   └── window.py           # Designer GUI (dark theme)
+│
+├── tools/
+│   └── ui_export_c_header.py  # C export tool
+│
+├── src/                     # ESP32 firmware (C/C++)
+├── output/                  # Exporty (JSON, PNG, H...)
+└── assets/                  # Ikony, fonty
 ```
 
-## Co dělat když…
+## 🎨 Dark Mode
 
-### …chci přidat nový widget typ
+Všechny 3 aplikace mají dark theme automaticky:
+- Pozadí: `#2b2b2b`
+- Text: `#ffffff`
+- Aktivní prvky: `#007ACC` (modrá)
+- Pole: `#1a1a1a` (tmavší)
 
-1. Otevři `ui_designer.py`
-2. Přidej do `WidgetType` enum (řádek ~127)
-3. Přidej vykreslování do `render_*` funkcí
+## ❓ Řešení problémů
 
-### …chci změnit barvy/spacing
+### Okno se neotevře
+1. Zkontroluj Python 3.x s tkinter:
+   ```powershell
+   python -m tkinter
+   ```
+2. Použij `Alt+Tab` pro přepnutí oken
+3. Zkontroluj Task Manager
 
-1. Otevři `design_tokens.py`
-2. Uprav `ColorTokens` nebo `SpacingTokens`
-
-### …jsem pokazil něco a testy nejdou
-
-```bash
-# Zjisti, co je rozbité
-python -m pytest -v --tb=short --maxfail=5
-
-# Vrátit změny v gitu
-git status
-git checkout -- <soubor>
+### Import error: PIL/Pillow
+```powershell
+pip install pillow
 ```
 
-### …chci novou funkcionalitu
+### Simulátor se nespustí
+- Port 8765 obsazený? Změň v Workspace → Nastavení
+- Zkontroluj, že `scripts/sim_run.py` existuje
 
-1. Napiš test v `test_*.py`
-2. Implementuj v příslušném souboru
-3. Spusť testy: `python -m pytest`
+### Designer je prázdný
+- Počkej 2-3 sekundy na načtení
+- Přidej widget z levého panelu
+- Zkus `File → New` pro čistý projekt
 
-### …chci upravit mřížku (grid) v Preview
+## 🔧 Pokročilé
 
-V okně Preview (ovladače „Pad %“ a „Min px“ na horní liště) nastavíš okrajovou mezeru mřížky.
-Hodnoty se ukládají do dočasného nastavení a přežijí další spuštění.
-
-- `Pad %` – procento velikosti kroku mřížky použité jako odsazení od okraje.
-- `Min px` – minimální počet pixelů odsazení (přebije malé procento).
-
-Při vysokém kontrastu (HC UI) se mřížka přepne na světlejší barvu.
-
-## Debug režim
-
-```python
-# V ui_designer_pro.py na začátku přidej:
-import os
-os.environ["ESP32OS_DEBUG"] = "1"
+### Konfigurace Workspace
+`.esp32os_workspace.json`:
+```json
+{
+  "designer_width": 128,
+  "designer_height": 64,
+  "simulator_port": 8765,
+  "auto_start_simulator": true,
+  "recent_projects": ["projekt1.json", ...]
+}
 ```
 
-## Časté problémy
+### Export parametry
+```powershell
+# PNG s vlastní škálou
+python tools/ui_export_c_header.py design.json --png-scale 8 -o ui.h
 
-### Import errors při testech
+# Jen PNG bez C
+python tools/ui_export_c_header.py design.json --png-only
+```
 
-✔ Ošetřeno v `conftest.py` (přidává scripts/ a tools/ do cesty).
-
-### PyInstaller build selhává
-
-✔ Zkontroluj `build/ui_designer_pro.spec` – musí obsahovat všechny moduly.
-
-### Tkinter nefunguje
-
-✔ Nastav `ESP32OS_HEADLESS=1` pro testování bez GUI.
+### Grid nastavení
+V Preview okně:
+- **Pad %** – mezera kolem mřížky (%)
+- **Min px** – minimální mezera (px)
 
 ---
 
-**Tip:** Když si nevíš rady, podívej se do složky `docs/` nebo spusť testy – často ukazují, jak věci používat.
+**Tip**: Začni s `python launcher.py` → zvol **1** pro Designer → vytvoř pár widgetů → `Ctrl+S` pro uložení!

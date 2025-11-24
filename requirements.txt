@@ -1,0 +1,11 @@
+# ESP32 OS UI Toolkit - Dependencies
+
+# Required (core functionality)
+pillow>=10.0.0          # Image processing for PNG export and GUI
+
+# Optional (enhanced features)
+reportlab>=4.0.0        # PDF export (optional)
+watchdog>=3.0.0         # File watching for auto-reload (optional)
+
+# Note: tkinter is included with Python standard library
+# Note: pygame is only needed for simulator gamepad support (optional)

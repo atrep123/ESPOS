@@ -20,15 +20,13 @@ TK_AVAILABLE = tk is not None
 HEADLESS = os.environ.get("ESP32OS_HEADLESS") == "1" or os.environ.get("PYTEST_CURRENT_TEST") is not None
 
 from PIL import Image, ImageDraw
+
 if TK_AVAILABLE:
     from PIL import ImageTk
 
-from ui_animations import AnimationDesigner
-from preview.settings import PreviewSettings
 from preview.rendering import *
-from preview.widget_renderer import WidgetRenderer
-from preview.event_handlers import EventHandlers
-from preview.overlays import OverlayRenderer
+from preview.settings import PreviewSettings
+from ui_animations import AnimationDesigner
 
 # Import all component creators
 try:
@@ -415,6 +413,57 @@ class VisualPreviewWindow:
         self.root = tk.Tk()
         self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
         self.root.configure(bg=color_hex("legacy_gray4"))
+        
+        # Configure dark theme for ttk widgets
+        style = ttk.Style()
+        style.theme_use('clam')  # Use clam theme as base for dark customization
+        
+        # Dark color scheme
+        style.configure(".", background=color_hex("legacy_gray4"), 
+                       foreground=color_hex("text_primary"),
+                       fieldbackground=color_hex("legacy_gray5"),
+                       bordercolor=color_hex("legacy_gray8"),
+                       darkcolor=color_hex("legacy_gray5"),
+                       lightcolor=color_hex("legacy_gray6"))
+        
+        # Button styling
+        style.configure("TButton", background=color_hex("legacy_gray6"),
+                       foreground=color_hex("text_primary"),
+                       borderwidth=1,
+                       relief="flat")
+        style.map("TButton", background=[("active", color_hex("primary"))])
+        
+        # Entry/Combobox
+        style.configure("TEntry", fieldbackground=color_hex("legacy_gray5"),
+                       foreground=color_hex("text_primary"))
+        style.configure("TCombobox", fieldbackground=color_hex("legacy_gray5"),
+                       foreground=color_hex("text_primary"),
+                       arrowcolor=color_hex("text_primary"))
+        
+        # Frame/LabelFrame
+        style.configure("TFrame", background=color_hex("legacy_gray4"))
+        style.configure("TLabelframe", background=color_hex("legacy_gray4"),
+                       foreground=color_hex("text_primary"))
+        style.configure("TLabelframe.Label", background=color_hex("legacy_gray4"),
+                       foreground=color_hex("text_primary"))
+        
+        # Label
+        style.configure("TLabel", background=color_hex("legacy_gray4"),
+                       foreground=color_hex("text_primary"))
+        
+        # Checkbutton
+        style.configure("TCheckbutton", background=color_hex("legacy_gray4"),
+                       foreground=color_hex("text_primary"))
+        
+        # Notebook (tabs)
+        style.configure("TNotebook", background=color_hex("legacy_gray4"),
+                       borderwidth=0)
+        style.configure("TNotebook.Tab", background=color_hex("legacy_gray6"),
+                       foreground=color_hex("text_secondary"),
+                       padding=[10, 5])
+        style.map("TNotebook.Tab", 
+                 background=[("selected", color_hex("legacy_gray4"))],
+                 foreground=[("selected", color_hex("text_primary"))])
 
         # Setup UI
         self._apply_theme(self._preview_theme)
