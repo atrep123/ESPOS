@@ -120,7 +120,8 @@ class VisualPreviewWindow:
         self.settings = PreviewSettings()
         self.anim = AnimationDesigner()
         # UX helpers
-        self._show_hints: bool = True
+        # On-canvas usage hints (disabled by default to keep canvas clear)
+        self._show_hints: bool = False
         self._show_guides: bool = True
         self._responsive_tier: str = "medium"
         # Perf metrics
@@ -1188,8 +1189,10 @@ class VisualPreviewWindow:
                 container = getattr(self.canvas, "master", None)
             if container is None:
                 return
-            avail_w = max(1, getattr(container, "winfo_width", lambda: 0)())
-            avail_h = max(1, getattr(container, "winfo_height", lambda: 0)())
+            # Leave a small gutter so grid/handles aren't pinned to the frame edges
+            gutter = 40
+            avail_w = max(1, getattr(container, "winfo_width", lambda: 0)() - gutter)
+            avail_h = max(1, getattr(container, "winfo_height", lambda: 0)() - gutter)
             # If layout not ready yet, retry once
             if avail_w < 20 or avail_h < 20:
                 if hasattr(self, "root"):
@@ -1916,7 +1919,13 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             else self.settings.grid_color_dark
         )
         # Configurable padding
-        padding = max(self.settings.grid_padding_min_px, int(step * self.settings.grid_padding_pct))
+        # Make padding adapt to canvas size so the grid has breathing room on all sides.
+        dynamic_pad = int(min(width, height) * 0.02)
+        padding = max(
+            self.settings.grid_padding_min_px,
+            int(step * self.settings.grid_padding_pct),
+            dynamic_pad,
+        )
         # Draw vertical lines with padding
         for x in range(padding, width - padding, step):
             draw.line([(x, padding), (x, height - padding)], fill=grid_color, width=1)
@@ -4981,6 +4990,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         draw = ImageDraw.Draw(img)
 
         if include_grid:
+            # Draw grid before widgets so overlays/text remain legible
             self._draw_grid(draw, img_width, img_height)
 
         for _idx, widget, overlay, is_sel in self._iter_visible_widgets(scene):
