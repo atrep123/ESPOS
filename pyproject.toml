@@ -1,0 +1,55 @@
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+extend-exclude = '''
+/(
+    build
+  | dist
+  | generated
+  | __pycache__
+  | \.mypy_cache
+  | \.pio
+  | \.venv
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+extend-exclude = [
+    "build",
+    "dist",
+    "generated",
+    "__pycache__",
+    ".mypy_cache",
+    ".pio",
+    ".venv",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+strict_equality = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+exclude = "(build|dist|generated|\\.pio|\\.venv|__pycache__)"
+
+[tool.pytest.ini_options]
+markers = [
+    "timeout(seconds): mark tests with a timeout value (used by ESP32 hardware bridge tests)",
+    "visual: marks tests as requiring graphical display (deselect with '-m \"not visual\"')",
+]
+filterwarnings = [
+    "ignore::pytest.PytestExperimentalApiWarning",
+    "ignore::pytest.PytestCollectionWarning",
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+timeout = 300
+timeout_method = "thread"

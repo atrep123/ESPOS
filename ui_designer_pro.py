@@ -11,7 +11,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from ui_designer import UIDesigner, WidgetType, BorderStyle, WidgetConfig
+from ui_designer import UIDesigner
+from ui_models import WidgetConfig, WidgetType, BorderStyle
 from ui_themes import ThemeManager, Theme
 from ui_components import ComponentLibrary, ComponentTemplate
 from ui_animations import AnimationDesigner, Animation
