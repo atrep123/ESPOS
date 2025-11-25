@@ -5,24 +5,39 @@ XBMP Icon Deduplication for C Export
 Converts icon data to XBM format and deduplicates identical bitmaps.
 Reduces code size by 30-50% when multiple widgets share same icons.
 
+Supports Floyd-Steinberg and Atkinson dithering for high-quality 1bpp conversion.
+
 Usage:
     from tools.xbmp_dedup import XBMPManager
     
     xbmp = XBMPManager()
     bitmap_ref = xbmp.add_icon(icon_data, width, height)
+    # Or with PIL Image:
+    bitmap_ref = xbmp.add_icon_from_pil(image, dither="floyd-steinberg")
     c_code = xbmp.generate_c_code()
 """
 
 import hashlib
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PIL import Image as PILImage  # type: ignore[import-not-found]
 
 
 class XBMPManager:
     """Manage XBM bitmap deduplication for icon widgets."""
     
-    def __init__(self):
+    def __init__(self, default_dither: str = "floyd-steinberg"):
+        """
+        Initialize XBMPManager.
+        
+        Args:
+            default_dither: Default dithering method
+                ("floyd-steinberg", "atkinson", "ordered", "threshold")
+        """
         self.bitmaps: Dict[str, Tuple[int, int, List[int]]] = {}  # hash -> (width, height, data)
         self.bitmap_order: List[str] = []  # Preserve insertion order
+        self.default_dither = default_dither
     
     def add_icon(self, data: List[int], width: int, height: int) -> str:
         """
@@ -82,6 +97,51 @@ class XBMPManager:
             "unique_bitmaps": len(self.bitmaps),
             "total_bytes": total_bytes
         }
+    
+    def add_icon_from_pil(self, image, dither: str | None = None) -> str:
+        """
+        Add icon from PIL Image with dithering.
+        
+        Args:
+            image: PIL Image object
+            dither: Dithering method (None = use default)
+            
+        Returns:
+            Reference name (e.g., "icon_bitmap_abc12345")
+        """
+        try:
+            from tools.image_dithering import image_to_xbm, rgb_to_grayscale
+        except ImportError:
+            raise ImportError("image_dithering module required for PIL support")
+        
+        # Convert to grayscale pixel array
+        width, height = image.size
+        pixels = []
+        
+        if image.mode == "L":  # Already grayscale
+            for y in range(height):
+                row = []
+                for x in range(width):
+                    row.append(image.getpixel((x, y)))
+                pixels.append(row)
+        else:  # RGB or RGBA
+            for y in range(height):
+                row = []
+                for x in range(width):
+                    px = image.getpixel((x, y))
+                    if isinstance(px, int):  # Single channel
+                        row.append(px)
+                    else:  # Tuple (RGB or RGBA)
+                        r, g, b = px[:3]
+                        row.append(rgb_to_grayscale(r, g, b))
+                pixels.append(row)
+        
+        # Apply dithering and convert to XBM
+        method = dither or self.default_dither
+        _, _, bitmap_data = image_to_xbm(pixels, width, height, method)
+        
+        # Add to manager
+        return self.add_icon(list(bitmap_data), width, height)
 
 
 def icon_char_to_bitmap(char: str, size: int = 16) -> List[int]:
