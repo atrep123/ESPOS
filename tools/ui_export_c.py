@@ -13,6 +13,13 @@ from typing import Tuple
 
 from ui_designer import UIDesigner, WidgetType
 
+# XBMP icon deduplication
+try:
+    from tools.xbmp_dedup import XBMPManager, icon_char_to_bitmap
+    XBMP_AVAILABLE = True
+except ImportError:
+    XBMP_AVAILABLE = False
+
 # Template engine for C code generation
 try:
     from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -262,6 +269,23 @@ def export_c_templated(designer: UIDesigner, base_name: str = "ui_design"):
     str_pool, get_str_ref = _build_string_pool()
     widget_data = _build_widget_data_list(scene, get_str_ref)
     
+    # Process icon widgets if XBMP available
+    icon_bitmaps = ""
+    if XBMP_AVAILABLE:
+        xbmp = XBMPManager()
+        icon_count = 0
+        for w in scene.widgets:
+            if w.type == "icon" and w.icon_char:
+                bitmap_data = icon_char_to_bitmap(w.icon_char, 16)
+                xbmp.add_icon(bitmap_data, 16, 16)
+                icon_count += 1
+        
+        if icon_count > 0:
+            icon_bitmaps = xbmp.generate_c_code()
+            stats = xbmp.get_stats()
+            print(f"  Icons: {icon_count} total, {stats['unique_bitmaps']} unique "
+                  f"({stats['total_bytes']} bytes)")
+    
     # Prepare template context
     context = {
         "base_name": base_name,
@@ -271,7 +295,8 @@ def export_c_templated(designer: UIDesigner, base_name: str = "ui_design"):
         "widget_count": len(scene.widgets),
         "widget_types": [(name, i) for i, (name,) in enumerate(types)],
         "string_pool": str_pool,
-        "widgets": widget_data
+        "widgets": widget_data,
+        "icon_bitmaps": icon_bitmaps
     }
     
     # Render templates
