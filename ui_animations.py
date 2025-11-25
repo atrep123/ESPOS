@@ -331,11 +331,11 @@ class AnimationDesigner:
             if animation_name in self.active_animations:
                 self.active_animations.remove(animation_name)
 
-    def update_animations(self, delta_time: float) -> Dict[str, Dict[str, Any]]:
+    def update_animations(self) -> Dict[str, Dict[str, Any]]:
         """Update all active animations and return current values"""
         results = {}
 
-        for anim_name in list(self.active_animations):
+        for anim_name in self.active_animations:
             anim = self.animations[anim_name]
 
             if not anim.is_playing or anim.start_time is None:
@@ -372,49 +372,33 @@ class AnimationDesigner:
 
         return results
 
-    def _calculate_animation_values(self, anim: Animation, progress: float) -> Dict[str, Any]:
-        """Calculate current animation values based on progress"""
-        if not anim.keyframes:
-            # Simple start/end animation
-            if anim.start_value is not None and anim.end_value is not None:
-                if isinstance(anim.start_value, (int, float)):
-                    value = anim.start_value + (anim.end_value - anim.start_value) * progress
-                    return {anim.type: value}
+    def _interpolate_simple_animation(self, anim: Animation, progress: float) -> Dict[str, Any]:
+        """Interpolate simple start/end animation."""
+        if anim.start_value is None or anim.end_value is None:
             return {}
+        if isinstance(anim.start_value, (int, float)):
+            value = anim.start_value + (anim.end_value - anim.start_value) * progress
+            return {anim.type: value}
+        return {}
 
-        # Keyframe-based animation
-        # Find surrounding keyframes
-        prev_kf = None
-        next_kf = None
+    def _find_surrounding_keyframes(self, keyframes: list, progress: float) -> tuple:
+        """Find keyframes surrounding the given progress point."""
+        prev_kf = keyframes[0]
+        next_kf = keyframes[-1]
 
-        for i, kf in enumerate(anim.keyframes):
+        for kf in keyframes:
             if kf.time <= progress:
                 prev_kf = kf
-            if kf.time >= progress and next_kf is None:
+            elif kf.time > progress and next_kf == keyframes[-1]:
                 next_kf = kf
                 break
 
-        if prev_kf is None:
-            prev_kf = anim.keyframes[0]
-        if next_kf is None:
-            next_kf = anim.keyframes[-1]
+        return prev_kf, next_kf
 
-        # Interpolate between keyframes
-        if prev_kf == next_kf:
-            return prev_kf.properties.copy()
-
-        # Calculate local progress between keyframes
-        kf_duration = next_kf.time - prev_kf.time
-        if kf_duration == 0:
-            local_progress = 1.0
-        else:
-            local_progress = (progress - prev_kf.time) / kf_duration
-
-        # Apply keyframe easing
-        easing_func = AnimationEasing.get_easing(next_kf.easing)
-        eased_local = easing_func(local_progress)
-
-        # Interpolate properties
+    def _interpolate_keyframe_properties(
+        self, prev_kf, next_kf, eased_progress: float
+    ) -> Dict[str, Any]:
+        """Interpolate properties between two keyframes."""
         result = {}
         for key in prev_kf.properties:
             if key in next_kf.properties:
@@ -422,11 +406,34 @@ class AnimationDesigner:
                 end = next_kf.properties[key]
 
                 if isinstance(start, (int, float)) and isinstance(end, (int, float)):
-                    result[key] = start + (end - start) * eased_local
+                    result[key] = start + (end - start) * eased_progress
                 else:
-                    result[key] = end if eased_local > 0.5 else start
+                    result[key] = end if eased_progress > 0.5 else start
 
         return result
+
+    def _calculate_animation_values(self, anim: Animation, progress: float) -> Dict[str, Any]:
+        """Calculate current animation values based on progress"""
+        if not anim.keyframes:
+            return self._interpolate_simple_animation(anim, progress)
+
+        # Keyframe-based animation
+        prev_kf, next_kf = self._find_surrounding_keyframes(anim.keyframes, progress)
+
+        # If same keyframe, return its properties
+        if prev_kf == next_kf:
+            return prev_kf.properties.copy()
+
+        # Calculate local progress between keyframes
+        kf_duration = next_kf.time - prev_kf.time
+        local_progress = 1.0 if kf_duration == 0 else (progress - prev_kf.time) / kf_duration
+
+        # Apply keyframe easing
+        easing_func = AnimationEasing.get_easing(next_kf.easing)
+        eased_local = easing_func(local_progress)
+
+        # Interpolate properties
+        return self._interpolate_keyframe_properties(prev_kf, next_kf, eased_local)
 
     def apply_transition(self, from_scene: str, to_scene: str, transition_name: str = "Fade"):
         """Apply transition between scenes"""
@@ -462,7 +469,7 @@ class AnimationDesigner:
         self.register_animation(anim)
         return anim
 
-    def preview_animation(self, animation_name: str, frames: int = 10) -> str:
+    def preview_animation(self, animation_name: str) -> str:
         """Generate ASCII preview of animation timeline"""
         anim = self.animations.get(animation_name)
         if not anim:
@@ -558,7 +565,7 @@ def main():
     designer.play_animation("Bounce")
 
     for i in range(10):
-        values = designer.update_animations(0.05)  # 50ms frame
+        values = designer.update_animations()  # Update all animations
         if "Bounce" in values:
             print(f"  Frame {i}: {values['Bounce']}")
         time.sleep(0.05)

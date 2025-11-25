@@ -1,0 +1,13 @@
+{
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "stubPath": "./PIL-stubs",
+  "exclude": [
+    "**/__pycache__",
+    "**/.mypy_cache",
+    "**/.pio",
+    "**/build",
+    "**/dist",
+    "**/generated"
+  ]
+}
