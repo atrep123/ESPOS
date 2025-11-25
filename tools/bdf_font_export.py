@@ -11,8 +11,9 @@ Usage:
     c_code = export_font_to_c("font.bdf", charset="ASCII")
 """
 
-from tools.bdf_font import BDFFont, BDFGlyph
-from typing import List, Optional, Set
+from typing import Optional, Set
+
+from tools.bdf_font import BDFFont
 
 
 def export_font_to_c(

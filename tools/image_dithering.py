@@ -6,8 +6,8 @@ Inspired by Lopaka's image processing capabilities. Provides high-quality
 conversion from grayscale/RGB images to 1-bit monochrome using dithering.
 """
 
-from typing import Tuple, Optional
 import sys
+from typing import Tuple
 
 
 def floyd_steinberg_dither(

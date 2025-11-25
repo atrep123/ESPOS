@@ -2,6 +2,7 @@
 """Test dithering integration with XBMP manager."""
 
 from PIL import Image
+
 from tools.xbmp_dedup import XBMPManager
 
 
@@ -71,12 +72,12 @@ def test_mixed_images():
         xbmp.add_icon_from_pil(images[1]),  # Image 1 again
     ]
     
-    print(f"Added 5 images (3 unique):")
+    print("Added 5 images (3 unique):")
     for i, ref in enumerate(refs):
         print(f"  Image {i}: {ref}")
     
     stats = xbmp.get_stats()
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     print(f"  Unique bitmaps: {stats['unique_bitmaps']} (expected 3)")
     print(f"  Total refs: {len(refs)} (expected 5)")
     print(f"  Deduplication: {len(refs) - stats['unique_bitmaps']} duplicates saved")

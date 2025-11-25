@@ -9,8 +9,8 @@ Tests:
 - Font subsetting
 """
 
-from tools.bdf_font import BDFFont, create_simple_font
-from tools.bdf_font_export import export_font_to_c, export_font_subset
+from tools.bdf_font import create_simple_font
+from tools.bdf_font_export import export_font_subset, export_font_to_c
 
 
 def test_font_parsing():

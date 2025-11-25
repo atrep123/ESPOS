@@ -18,10 +18,10 @@ Usage:
 """
 
 import hashlib
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 if TYPE_CHECKING:
-    from PIL import Image as PILImage  # type: ignore[import-not-found]
+    pass  # type: ignore[import-not-found]
 
 
 class XBMPManager:
