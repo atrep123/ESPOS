@@ -1208,6 +1208,9 @@ if TK_AVAILABLE:
             ttk.Button(btn_row, text="Export C", command=self._export_c_header).pack(
                 side=tk.LEFT, padx=4
             )
+            ttk.Button(btn_row, text="Export Bitmap", command=self._export_bitmap).pack(
+                side=tk.LEFT, padx=4
+            )
 
         # ---------------- Data / filtering -----------------
         def _refresh_list(self):
@@ -1299,6 +1302,87 @@ if TK_AVAILABLE:
                 messagebox.showinfo("Export", f"C header saved: {path}")
             except Exception as e:
                 messagebox.showerror("Export Failed", f"{e}")
+        
+        def _export_bitmap(self):
+            """Export selected icon as bitmap using image_tools (if PNG available)."""
+            icon = self._get_selected_icon()
+            if not icon:
+                return
+            
+            from tkinter import filedialog, messagebox
+            
+            # Try to find PNG icon asset
+            from pathlib import Path
+            icon_paths = [
+                Path("assets/icons") / f"{icon['symbol']}.png",
+                Path("ui/icons") / f"{icon['symbol']}.png",
+                Path("assets/material_icons/24px") / f"{icon['symbol']}.png",
+            ]
+            
+            icon_file = None
+            for path in icon_paths:
+                if path.exists():
+                    icon_file = path
+                    break
+            
+            if not icon_file:
+                messagebox.showwarning(
+                    "No Bitmap Asset",
+                    f"No PNG file found for '{icon['name']}'.\n\n"
+                    f"Searched:\n" + "\n".join(str(p) for p in icon_paths) + "\n\n"
+                    "Using ASCII fallback export instead.",
+                    parent=self
+                )
+                self._export_c_header()
+                return
+            
+            # Use image_tools for bitmap export
+            try:
+                from ui_designer_image_tools import IconBitmapExporter
+                
+                size_choice = messagebox.askquestion(
+                    "Icon Size",
+                    f"Export {icon['name']} as 16x16 or 24x24?\n\n"
+                    "Yes = 16x16 (compact)\n"
+                    "No = 24x24 (detailed)",
+                    parent=self
+                )
+                size = 16 if size_choice == "yes" else 24
+                
+                output_path = filedialog.asksaveasfilename(
+                    defaultextension=".h",
+                    filetypes=[("Header", "*.h"), ("All", "*.*")],
+                    initialfile=f"icon_{icon['symbol']}_{size}x{size}.h",
+                    parent=self
+                )
+                
+                if not output_path:
+                    return
+                
+                exporter = IconBitmapExporter()
+                exporter.add_icon_from_file(str(icon_file), icon['symbol'], size)
+                exporter.export_to_header(output_path)
+                
+                messagebox.showinfo(
+                    "Bitmap Export Complete",
+                    f"Icon: {icon['name']}\n"
+                    f"Size: {size}x{size} px\n"
+                    f"File: {Path(output_path).name}\n\n"
+                    f"Dithering: Floyd-Steinberg\n"
+                    f"Format: XBM (1bpp)",
+                    parent=self
+                )
+            
+            except ImportError:
+                messagebox.showerror(
+                    "Missing Dependency",
+                    "PIL/Pillow required for bitmap export.\n\n"
+                    "Install: pip install Pillow",
+                    parent=self
+                )
+            except Exception as e:
+                messagebox.showerror("Export Failed", f"{e}", parent=self)
+
 else:
     ComponentPaletteWindow = None  # type: ignore
     IconPaletteWindow = None  # type: ignore

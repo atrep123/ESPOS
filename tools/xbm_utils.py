@@ -8,8 +8,7 @@ Provides rotate, scale, invert, and pixelate operations.
 Inspired by Lopaka's bitmap manipulation capabilities.
 """
 
-from typing import Tuple, List
-import math
+from typing import Tuple
 
 
 def xbm_invert(bitmap: bytes, width: int, height: int) -> bytes:

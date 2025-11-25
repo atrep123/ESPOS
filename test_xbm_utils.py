@@ -2,8 +2,13 @@
 """Test XBM utilities with various patterns."""
 
 from tools.xbm_utils import (
-    xbm_invert, xbm_rotate_90, xbm_scale, xbm_pixelate,
-    xbm_resize_canvas, xbm_to_ascii, _set_pixel
+    _set_pixel,
+    xbm_invert,
+    xbm_pixelate,
+    xbm_resize_canvas,
+    xbm_rotate_90,
+    xbm_scale,
+    xbm_to_ascii,
 )
 
 
