@@ -136,7 +136,7 @@ from ui_designer import UIDesigner, WidgetConfig, WidgetType
 
 DATA_DISPLAY = "Data Display"
 COMBO_SELECTED = "<<ComboboxSelected>>"
-REFRESH_LABEL = "🔄 Refresh"
+REFRESH_LABEL = "Refresh"
 PROFILER_DISABLED_MSG = "Profiler not enabled"
 FILETYPE_ALL = "All files"
 FILETYPE_ALL_PAIR = (FILETYPE_ALL, "*.*")
@@ -165,7 +165,7 @@ class PreviewSettings:
     grid_enabled: bool = True
     grid_size: int = 8
     snap_enabled: bool = True
-    snap_size: int = 4
+    snap_size: int = 8  # align with main preview
     show_bounds: bool = True
     show_handles: bool = True
     background_color: str = color_hex("shadow")
@@ -174,7 +174,7 @@ class PreviewSettings:
     nudge_shift_distance: int = 8  # Shift+arrow nudge distance (px)
     # Alignment guides
     snap_to_widgets: bool = True  # Snap to other widget edges
-    snap_distance: int = 4  # Snap tolerance in pixels
+    snap_distance: int = 8  # Snap tolerance in pixels (aligned with snap_size)
     show_alignment_guides: bool = True  # Show alignment guide lines
     # Debug overlay
     show_debug_overlay: bool = False
@@ -187,8 +187,8 @@ class PreviewSettings:
     performance_budget_ms: float = 16.7  # Target frame time (~60 FPS)
     performance_warn_ms: float = 25.0  # Soft warning threshold
     # Grid aesthetics
-    grid_padding_pct: float = 0.10  # Percent of step used as edge padding
-    grid_padding_min_px: int = 2  # Minimum pixel padding regardless of step
+    grid_padding_pct: float = 0.0  # No inset; grid from origin
+    grid_padding_min_px: int = 0  # Match main preview defaults
     grid_color_dark: Tuple[int, int, int] = (36, 36, 36)  # Slightly softer than old (40,40,40)
     grid_color_light: Tuple[int, int, int] = (50, 50, 50)  # For high contrast overlays
 
@@ -242,23 +242,23 @@ class AnimationEditorWindow:
         anim_combo.pack(side=tk.LEFT, padx=5)
         anim_combo.bind(COMBO_SELECTED, self._on_anim_selected)
 
-        ttk.Button(toolbar, text="➕ New", command=self._create_new_animation).pack(
+        ttk.Button(toolbar, text="New", command=self._create_new_animation).pack(
             side=tk.LEFT, padx=2
         )
-        ttk.Button(toolbar, text="🗑️ Delete", command=self._delete_animation).pack(
+        ttk.Button(toolbar, text="Delete", command=self._delete_animation).pack(
             side=tk.LEFT, padx=2
         )
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
 
         # Playback controls
-        ttk.Button(toolbar, text="▶", width=3, command=self._play_preview).pack(
+        ttk.Button(toolbar, text="Play", width=4, command=self._play_preview).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⏸", width=3, command=self._pause_preview).pack(
+        ttk.Button(toolbar, text="Pause", width=4, command=self._pause_preview).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⏹", width=3, command=self._stop_preview).pack(
+        ttk.Button(toolbar, text="Stop", width=4, command=self._stop_preview).pack(
             side=tk.LEFT, padx=1
         )
 
@@ -326,7 +326,7 @@ class AnimationEditorWindow:
         )
 
         # Export button
-        ttk.Button(props_frame, text="📤 Export to C", command=self._export_to_c).grid(
+        ttk.Button(props_frame, text="Export to C", command=self._export_to_c).grid(
             row=6, column=0, columnspan=2, pady=5
         )
 
@@ -341,10 +341,10 @@ class AnimationEditorWindow:
         timeline_ctrl.pack(side=tk.TOP, fill=tk.X, pady=5)
 
         ttk.Label(timeline_ctrl, text="Keyframes:").pack(side=tk.LEFT, padx=5)
-        ttk.Button(timeline_ctrl, text="➕ Add", command=self._add_keyframe).pack(
+        ttk.Button(timeline_ctrl, text="Add", command=self._add_keyframe).pack(
             side=tk.LEFT, padx=2
         )
-        ttk.Button(timeline_ctrl, text="🗑️ Delete", command=self._delete_keyframe).pack(
+        ttk.Button(timeline_ctrl, text="Delete", command=self._delete_keyframe).pack(
             side=tk.LEFT, padx=2
         )
 
@@ -478,7 +478,7 @@ class AnimationEditorWindow:
             self.timeline_canvas.create_text(
                 canvas_width // 2,
                 timeline_y + 80,
-                text="No keyframes yet. Click '➕ Add' to create one.",
+                text="No keyframes yet. Click 'Add' to create one.",
                 fill="gray",
                 font=("Arial", 10),
             )
@@ -891,10 +891,10 @@ if TK_AVAILABLE:
                 text="Add ButtonGroup",
                 command=lambda: self._insert_component("ButtonGroup"),
             ).pack(side=tk.LEFT, padx=4)
-            ttk.Button(btn_row, text="★ Favorite", command=self._favorite_selected).pack(
+            ttk.Button(btn_row, text="Favorite", command=self._favorite_selected).pack(
                 side=tk.LEFT, padx=4
             )
-            ttk.Button(btn_row, text="☆ Unfavorite", command=self._unfavorite_selected).pack(
+            ttk.Button(btn_row, text="Unfavorite", command=self._unfavorite_selected).pack(
                 side=tk.LEFT, padx=4
             )
             ttk.Button(

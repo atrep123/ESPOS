@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from textwrap import dedent
 
-from ui_icons import MATERIAL_ICONS, get_all_categories
+try:
+    from ui_icons import MATERIAL_ICONS, get_all_categories
+except Exception:  # Fall back to tools namespace when running from repo root
+    from tools.ui_icons import MATERIAL_ICONS, get_all_categories
 
 try:
     import tkinter as tk  # type: ignore

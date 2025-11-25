@@ -19,9 +19,10 @@ class Preferences:
     
     # Grid & Snap
     grid_enabled: bool = True
-    grid_size: int = 10
+    grid_size: int = 8
     snap_enabled: bool = True
-    snap_threshold: int = 5
+    snap_size: int = 8
+    snap_threshold: int = 8
     
     # Canvas
     canvas_width: int = 320
@@ -179,13 +180,29 @@ class PreferencesDialog:
         row3.pack(fill=tk.X, padx=10, pady=5)
         ttk.Label(row3, text="Grid size:").pack(side=tk.LEFT)
         self.grid_size_var = tk.IntVar(value=self.prefs.grid_size)
-        ttk.Spinbox(row3, from_=5, to=50, textvariable=self.grid_size_var,
+        ttk.Spinbox(row3, from_=1, to=64, textvariable=self.grid_size_var,
                    width=10).pack(side=tk.LEFT, padx=10)
         ttk.Label(row3, text="px").pack(side=tk.LEFT)
-        
+
         self.snap_enabled_var = tk.BooleanVar(value=self.prefs.snap_enabled)
         ttk.Checkbutton(grid_frame, text="Snap to grid",
                        variable=self.snap_enabled_var).pack(anchor=tk.W, padx=10, pady=5)
+
+        row_snap = ttk.Frame(grid_frame)
+        row_snap.pack(fill=tk.X, padx=10, pady=5)
+        ttk.Label(row_snap, text="Snap step:").pack(side=tk.LEFT)
+        self.snap_size_var = tk.IntVar(value=self.prefs.snap_size)
+        ttk.Spinbox(row_snap, from_=1, to=64, textvariable=self.snap_size_var,
+                   width=10).pack(side=tk.LEFT, padx=10)
+        ttk.Label(row_snap, text="px").pack(side=tk.LEFT)
+
+        row_tol = ttk.Frame(grid_frame)
+        row_tol.pack(fill=tk.X, padx=10, pady=5)
+        ttk.Label(row_tol, text="Snap tolerance:").pack(side=tk.LEFT)
+        self.snap_threshold_var = tk.IntVar(value=self.prefs.snap_threshold)
+        ttk.Spinbox(row_tol, from_=0, to=32, textvariable=self.snap_threshold_var,
+                   width=10).pack(side=tk.LEFT, padx=10)
+        ttk.Label(row_tol, text="px").pack(side=tk.LEFT)
         
         # Visual aids
         aids_frame = ttk.LabelFrame(frame, text="Visual Aids")
@@ -349,7 +366,7 @@ and pooling for best performance."""
                        variable=self.debug_mode_var).pack(anchor=tk.W, padx=10, pady=5)
         
         # Warning
-        warning_text = """⚠️ Debug mode may impact performance.
+        warning_text = """WARNING: Debug mode may impact performance.
 Only enable for troubleshooting."""
         
         ttk.Label(frame, text=warning_text, foreground=self.colors.warning,
@@ -429,7 +446,8 @@ Only enable for troubleshooting."""
             grid_enabled=self.grid_enabled_var.get(),
             grid_size=self.grid_size_var.get(),
             snap_enabled=self.snap_enabled_var.get(),
-            snap_threshold=self.prefs.snap_threshold,  # Not in UI yet
+            snap_size=self.snap_size_var.get(),
+            snap_threshold=self.snap_threshold_var.get(),
             canvas_width=self.canvas_width_var.get(),
             canvas_height=self.canvas_height_var.get(),
             show_rulers=self.show_rulers_var.get(),

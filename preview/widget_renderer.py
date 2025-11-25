@@ -20,7 +20,7 @@ class WidgetRenderer:
     """Mixin class for widget rendering methods."""
 
     # These will be provided by VisualPreviewWindow
-    settings: any
+    settings: Any
 
     def _get_color(self, color_name: str) -> Tuple[int, int, int]:
         """Convert color name to RGB tuple."""
@@ -42,7 +42,10 @@ class WidgetRenderer:
     def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
         """Convert hex color to RGB tuple."""
         hex_color = hex_color.lstrip("#")
-        return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return (r, g, b)
 
     def _clamp_rect_y_order(self, y0: int, y1: int) -> Tuple[int, int]:
         """Ensure y0 <= y1 for PIL rectangle drawing."""
@@ -57,7 +60,7 @@ class WidgetRenderer:
     ) -> None:
         """Draw a widget via helper stages (geometry, background, border, content)."""
         x, y, w, h = self._compute_widget_geometry(widget, overlay)
-        fg_color, bg_color = self._resolve_widget_colors(widget, selected)
+        fg_color, bg_color = self._resolve_widget_colors(widget)
         self._paint_widget_background(draw, x, y, w, h, bg_color)
         if widget.border:
             self._paint_widget_border(draw, x, y, w, h, widget, selected, fg_color)
@@ -68,7 +71,7 @@ class WidgetRenderer:
     ) -> Tuple[int, int, int, int]:
         """Compute final widget position and size with optional overlay transforms."""
         x, y = widget.x, widget.y
-        w, h = widget.width, widget.height
+        w, h = widget.width or 1, widget.height or 1
         if overlay:
             try:
                 if "x" in overlay:
@@ -88,12 +91,11 @@ class WidgetRenderer:
                     y = cy - h // 2
             except Exception:
                 pass
-        return int(x), int(y), int(w), int(h)
+        return x, y, w, h
 
     def _resolve_widget_colors(
         self,
         widget: "WidgetConfig",
-        selected: bool,  # noqa: ARG002
     ) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
         """Determine foreground and background colors for widget."""
         fg_color = self._get_color(widget.color_fg)
@@ -307,3 +309,41 @@ class WidgetRenderer:
         y_bottom = y + h - 2
         y0, y1 = self._clamp_rect_y_order(y_top, y_bottom)
         draw.rectangle([x0, y0, x1, y1], fill=fg_color, outline=fg_color)
+
+    def _draw_text(
+        self,
+        draw: ImageDraw.ImageDraw,
+        text: str,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        color: Tuple[int, int, int],
+        align: str = "left",
+        valign: str = "top",
+    ) -> None:
+        """Draw text with alignment (simple placeholder - no font rendering)."""
+        # Simple 1px horizontal line as text placeholder
+        # Actual text rendering requires font metrics from Pillow
+        try:
+            cy = y + h // 2
+            if align == "center":
+                x_start = x + 2
+                x_end = x + w - 2
+            elif align == "right":
+                x_start = x + w - min(20, w - 4)
+                x_end = x + w - 2
+            else:  # left
+                x_start = x + 2
+                x_end = x + min(20, w - 4)
+
+            if valign == "middle":
+                y_line = cy
+            elif valign == "bottom":
+                y_line = y + h - 4
+            else:  # top
+                y_line = y + 4
+
+            draw.line([(x_start, y_line), (x_end, y_line)], fill=color, width=1)
+        except Exception:
+            pass

@@ -34,7 +34,7 @@ from ui_models import (
 MSG_INVALID_INDEX = "Invalid index"
 MSG_NO_SCENE = "No scene loaded"
 MSG_INDEX_INTEGER = "Index must be integer"
-MSG_FAILED = "❌ Failed"
+MSG_FAILED = "Failed"
 MSG_UNKNOWN_ANIM = "Unknown animation name"
 
 PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), "ui_designer_preview.py")
@@ -58,9 +58,9 @@ class UIDesigner:
         # Templates
         self.templates: Dict[str, WidgetConfig] = self._create_default_templates()
 
-        # Grid settings
+        # Grid settings (align with preview defaults)
         self.grid_enabled = True
-        self.grid_size = 4
+        self.grid_size = 8
         self.snap_to_grid = True
         # Magnetic snapping settings
         self.snap_edges = True
@@ -90,14 +90,6 @@ class UIDesigner:
                 "accent": color_hex("theme_default_accent"),
                 "danger": color_hex("theme_default_danger"),
             },
-            "light": {
-                "bg": color_hex("theme_light_bg"),
-                "text": color_hex("theme_light_text"),
-                "primary": color_hex("theme_light_primary"),
-                "secondary": color_hex("theme_light_secondary"),
-                "accent": color_hex("theme_light_accent"),
-                "danger": color_hex("theme_light_danger"),
-            },
             "dark": {
                 "bg": color_hex("theme_dark_bg"),
                 "text": color_hex("theme_dark_text"),
@@ -105,22 +97,6 @@ class UIDesigner:
                 "secondary": color_hex("theme_dark_secondary"),
                 "accent": color_hex("theme_dark_accent"),
                 "danger": color_hex("theme_dark_danger"),
-            },
-            "hc": {
-                "bg": color_hex("theme_hc_bg"),
-                "text": color_hex("theme_hc_text"),
-                "primary": color_hex("theme_hc_primary"),
-                "secondary": color_hex("theme_hc_secondary"),
-                "accent": color_hex("theme_hc_accent"),
-                "danger": color_hex("theme_hc_danger"),
-            },
-            "cyber": {
-                "bg": color_hex("theme_cyber_bg"),
-                "text": color_hex("theme_cyber_text"),
-                "primary": color_hex("theme_cyber_primary"),
-                "secondary": color_hex("theme_cyber_secondary"),
-                "accent": color_hex("theme_cyber_accent"),
-                "danger": color_hex("theme_cyber_danger"),
             },
         }
         self.theme_contrast_min = 4.5
@@ -653,7 +629,7 @@ class UIDesigner:
         self._save_state()
         scene_name = scene_name or self.current_scene
         if not scene_name or scene_name not in self.scenes:
-            print(f"⚠️ Scene '{scene_name or ''}' not found; widget not added.")
+            print(f"WARNING: Scene '{scene_name or ''}' not found; widget not added.")
             return
         # Snap to grid and magnetic snap against existing widgets
         sx, sy = self.snap_position(new_widget.x, new_widget.y)
@@ -736,7 +712,7 @@ class UIDesigner:
     ):
         """Add widget from template with custom properties"""
         if template_name not in self.templates:
-            print(f"❌ Template '{template_name}' not found")
+            print(f"Template '{template_name}' not found")
             return
 
         widget = self._clone_template_with_overrides(template_name, x, y, kwargs)
@@ -1414,10 +1390,10 @@ class UIDesigner:
     </style>
 </head>
 <body>
-    <h1>🎨 {scene.name}</h1>
+    <h1>{scene.name}</h1>
     <div class="preview">{preview}</div>
     <div class="info">
-        <p>Size: {scene.width} × {scene.height}</p>
+        <p>Size: {scene.width} x {scene.height}</p>
         <p>Widgets: {len(scene.widgets)}</p>
         <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     </div>
@@ -1453,7 +1429,7 @@ class UIDesigner:
             for y in range(0, scene.height, self.grid_size):
                 for x in range(0, scene.width, self.grid_size):
                     if x < scene.width and y < scene.height:
-                        canvas[y][x] = "·"
+                        canvas[y][x] = "."
         return canvas
 
     def _draw_widgets(self, canvas: List[List[str]], scene: SceneConfig) -> None:
@@ -1474,12 +1450,12 @@ class UIDesigner:
                 x = g["x"]
                 for y in range(max(0, g["y1"]), min(scene.height, g["y2"] + 1)):
                     if 0 <= x < scene.width:
-                        canvas[y][x] = "┆"
+                        canvas[y][x] = "|"
             elif g.get("type") == "h":
                 y = g["y"]
                 for x in range(max(0, g["x1"]), min(scene.width, g["x2"] + 1)):
                     if 0 <= y < scene.height:
-                        canvas[y][x] = "┄"
+                        canvas[y][x] = "-"
 
     def _render_widget_to_canvas(
         self, canvas: List[List[str]], widget: WidgetConfig, idx: int, width: int, height: int
@@ -1616,11 +1592,11 @@ class UIDesigner:
     def _get_border_chars(self, style: str) -> Dict[str, str]:
         """Get border characters for style"""
         styles = {
-            "single": {"h": "─", "v": "│", "tl": "┌", "tr": "┐", "bl": "└", "br": "┘"},
-            "double": {"h": "═", "v": "║", "tl": "╔", "tr": "╗", "bl": "╚", "br": "╝"},
-            "rounded": {"h": "─", "v": "│", "tl": "╭", "tr": "╮", "bl": "╰", "br": "╯"},
-            "bold": {"h": "━", "v": "┃", "tl": "┏", "tr": "┓", "bl": "┗", "br": "┛"},
-            "dashed": {"h": "┄", "v": "┆", "tl": "┌", "tr": "┐", "bl": "└", "br": "┘"},
+            "single": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+            "double": {"h": "=", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+            "rounded": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+            "bold": {"h": "#", "v": "#", "tl": "#", "tr": "#", "bl": "#", "br": "#"},
+            "dashed": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
         }
         return styles.get(style, styles["single"])
 
@@ -1679,7 +1655,7 @@ class UIDesigner:
             for i in range(inner_w):
                 x = x0 + i
                 if 0 <= x < width:
-                    canvas[bar_y][x] = "█" if i < progress else "░"
+                    canvas[bar_y][x] = "#" if i < progress else "."
 
     def _draw_gauge(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
         """Draw gauge (simple bar)"""
@@ -1690,7 +1666,7 @@ class UIDesigner:
         for i in range(inner_h):
             y = gauge_y_start - i
             if 0 <= y < height and 0 <= gauge_x < width:
-                canvas[y][gauge_x] = "█" if i < progress else "░"
+                canvas[y][gauge_x] = "#" if i < progress else "."
 
     def _draw_checkbox(
         self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int
@@ -1700,7 +1676,7 @@ class UIDesigner:
         check_x = widget.x + (1 if widget.border else 0) + 1
 
         if 0 <= check_y < height and 0 <= check_x < width:
-            canvas[check_y][check_x] = "☑" if widget.checked else "☐"
+            canvas[check_y][check_x] = "X" if widget.checked else " "
 
         # Draw label if text exists
         if widget.text and 0 <= check_y < height:
@@ -1719,7 +1695,7 @@ class UIDesigner:
             for i in range(inner_w):
                 x = x0 + i
                 if 0 <= x < width:
-                    canvas[slider_y][x] = "▓" if i == slider_pos else "─"
+                    canvas[slider_y][x] = "#" if i == slider_pos else "-"
 
     def _draw_chart(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
         """Draw simple chart"""
@@ -1733,7 +1709,7 @@ class UIDesigner:
             for j in range(bar_h):
                 y = y0 + inner_h - 1 - j
                 if 0 <= y < height and 0 <= x < width:
-                    canvas[y][x] = "▌"
+                    canvas[y][x] = "#"
 
 
 def _preflight_scene(scene: SceneConfig) -> Dict[str, Any]:
@@ -1884,17 +1860,17 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
     """
     designer = UIDesigner(128, 64)
 
-    print("╔═══════════════════════════════════════════════════════════╗")
-    print("║   ESP32 UI Designer - Advanced CLI Mode                  ║")
-    print("╚═══════════════════════════════════════════════════════════╝")
+    print("=============================================================")
+    print("   ESP32 UI Designer - Advanced CLI Mode")
+    print("=============================================================")
     print()
-    print("📐 Scene Management:")
+    print("Scene Management:")
     print("  new <name>              - Create new scene")
     print("  list                    - List widgets in current scene")
     print("  scenes                  - List all scenes")
     print("  switch <name>           - Switch to scene")
     print()
-    print("🎨 Widget Operations:")
+    print("Widget Operations:")
     print("  add <type> <x> <y> <w> <h> [text]    - Add widget")
     print("  template <name> <x> <y>              - Add from template")
     print("  clone <idx> [offset_x] [offset_y]    - Clone widget")
@@ -1906,7 +1882,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
     print("  select <idx>                         - Select widget for context")
     print("  edit <idx> <prop> <value>            - Edit property")
     print()
-    print("🎯 Advanced Features:")
+    print("Advanced Features:")
     print("  undo                    - Undo last operation")
     print("  redo                    - Redo operation")
     print("  grid <on|off>           - Toggle grid")
@@ -1935,7 +1911,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
     print("  anim play <idx> <name> <steps> [delay]  - Play animation frames (delay ms)")
     print("  context [idx]           - Show contextual help and quick actions")
     print()
-    print("💾 File Operations:")
+    print("File Operations:")
     print("  save <file>             - Save to JSON")
     print("  load <file>             - Load from JSON")
     print("  export <file>           - Export Python code")
@@ -1945,7 +1921,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
     print("  rollback <name>         - Restore the scene from a checkpoint")
     print("  diff <A> [B]            - Diff checkpoints A and B (or A vs current)")
     print()
-    print("👥 Groups:")
+    print("Groups:")
     print("  group create <name> <idx...>   - Create a group")
     print("  group add <name> <idx...>      - Add widgets to group")
     print("  group remove <name> <idx...>   - Remove widgets from group")
@@ -1954,24 +1930,24 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
     print("  group lock <name> <on|off|toggle>    - Lock/unlock all members")
     print("  group visible <name> <on|off|toggle> - Show/hide all members")
     print()
-    print("🔁 Symbols:")
+    print("Symbols:")
     print("  symbol save <name> <idx...>    - Save selection as a symbol")
     print("  symbol list                    - List saved symbols")
     print("  symbol place <name> <x> <y>    - Place a symbol instance")
     print()
-    print("🎨 Themes & WCAG:")
+    print("Themes & WCAG:")
     print("  theme list                    - List theme presets")
     print("  theme set <name>              - Set scene theme and bg color")
     print("  theme bind <idx> <fg|bg> <role> - Bind widget color to role")
     print("  theme apply                   - Apply bound theme roles to widgets")
     print("  contrast [min]                - Audit contrast (optionally set min, e.g., 4.5)")
     print()
-    print("❓ Help & Info:")
+    print("Help & Info:")
     print("  help [command]          - Show help")
     print("  widgets                 - List available widget types")
     print("  quit                    - Exit")
     print()
-    print("💡 Widget types: label, box, button, gauge, progressbar,")
+    print("Widget types: label, box, button, gauge, progressbar,")
     print("   checkbox, radiobutton, slider, textbox, panel, icon, chart")
     print()
 
@@ -2012,11 +1988,11 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     print("Usage: new <scene_name>")
                     continue
                 designer.create_scene(parts[1])
-                print(f"✓ Created scene: {parts[1]}")
+                print(f"[OK] Created scene: {parts[1]}")
 
             elif action == "scenes":
                 if designer.scenes:
-                    print("\n📋 Available scenes:")
+                    print("\nList Available scenes:")
                     for name in designer.scenes:
                         marker = " (current)" if name == designer.current_scene else ""
                         print(f"  - {name}{marker}")
@@ -2029,9 +2005,9 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     continue
                 if parts[1] in designer.scenes:
                     designer.current_scene = parts[1]
-                    print(f"✓ Switched to scene: {parts[1]}")
+                    print(f"[OK] Switched to scene: {parts[1]}")
                 else:
-                    print(f"❌ Scene '{parts[1]}' not found")
+                    print(f"[FAIL] Scene '{parts[1]}' not found")
 
             # Widget Operations
             elif action == "add":
@@ -2048,14 +2024,14 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     text=" ".join(parts[6:]) if len(parts) > 6 else "",
                 )
                 designer.add_widget(widget)
-                print(f"✓ Added {widget.type} widget")
+                print(f"[OK] Added {widget.type} widget")
 
             elif action == "template":
                 if len(parts) < 5:
                     print("Usage: template <name> <id> <x> <y>")
                     continue
                 designer.add_widget_from_template(parts[1], parts[2], int(parts[3]), int(parts[4]))
-                print(f"✓ Added widget '{parts[2]}' from template: {parts[1]}")
+                print(f"[OK] Added widget '{parts[2]}' from template: {parts[1]}")
 
             elif action == "clone":
                 if len(parts) < 2:
@@ -2064,7 +2040,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 offset_x = int(parts[2]) if len(parts) > 2 else 10
                 offset_y = int(parts[3]) if len(parts) > 3 else 10
                 designer.clone_widget(int(parts[1]), offset_x, offset_y)
-                print("✓ Widget cloned")
+                print("[OK] Widget cloned")
 
             elif action == "duplicate":
                 if len(parts) < 2:
@@ -2073,28 +2049,28 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 _offset_x = int(parts[2]) if len(parts) > 2 else 10
                 _offset_y = int(parts[3]) if len(parts) > 3 else 10
                 designer.clone_widget(int(parts[1]), _offset_x, _offset_y)
-                print("✓ Widget duplicated")
+                print("[OK] Widget duplicated")
 
             elif action == "move":
                 if len(parts) < 4:
                     print("Usage: move <idx> <dx> <dy>")
                     continue
                 designer.move_widget(int(parts[1]), int(parts[2]), int(parts[3]))
-                print("✓ Widget moved")
+                print("[OK] Widget moved")
 
             elif action == "resize":
                 if len(parts) < 4:
                     print("Usage: resize <idx> <dw> <dh>")
                     continue
                 designer.resize_widget(int(parts[1]), int(parts[2]), int(parts[3]))
-                print("✓ Widget resized")
+                print("[OK] Widget resized")
 
             elif action == "delete":
                 if len(parts) < 2:
                     print("Usage: delete <idx>")
                     continue
                 designer.delete_widget(int(parts[1]))
-                print("✓ Widget deleted")
+                print("[OK] Widget deleted")
 
             elif action == "lock":
                 if len(parts) < 3:
@@ -2114,8 +2090,8 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         else:
                             print("Usage: lock <idx> <on|off|toggle>")
                             continue
-                        state = "🔒" if scene.widgets[_idx].locked else "🔓"
-                        print(f"✓ Widget {_idx} {state}")
+                        state = "[LOCK]" if scene.widgets[_idx].locked else "[UNLOCK]"
+                        print(f"[OK] Widget {_idx} {state}")
 
             elif action == "select":
                 if len(parts) < 2:
@@ -2130,7 +2106,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     scene = designer.scenes[designer.current_scene]
                     if 0 <= _idx < len(scene.widgets):
                         designer.selected_widget = _idx
-                        print(f"✓ Selected widget [{_idx}] {scene.widgets[_idx].type}")
+                        print(f"[OK] Selected widget [{_idx}] {scene.widgets[_idx].type}")
                     else:
                         print(MSG_INVALID_INDEX)
 
@@ -2169,50 +2145,50 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         else:
                             setattr(widget, _prop, _value)
 
-                        print(f"✓ Updated {_prop} = {_value}")
+                        print(f"[OK] Updated {_prop} = {_value}")
 
             # Advanced Features
             elif action == "undo":
                 if designer.undo():
-                    print("✓ Undone")
+                    print("[OK] Undone")
                 else:
-                    print("❌ Nothing to undo")
+                    print("[FAIL] Nothing to undo")
 
             elif action == "redo":
                 if designer.redo():
-                    print("✓ Redone")
+                    print("[OK] Redone")
                 else:
-                    print("❌ Nothing to redo")
+                    print("[FAIL] Nothing to redo")
 
             elif action == "grid":
                 if len(parts) < 2:
                     print(f"Grid is {'enabled' if designer.grid_enabled else 'disabled'}")
                 elif parts[1].lower() in ["on", "true", "1"]:
                     designer.grid_enabled = True
-                    print("✓ Grid enabled")
+                    print("[OK] Grid enabled")
                 else:
                     designer.grid_enabled = False
-                    print("✓ Grid disabled")
+                    print("[OK] Grid disabled")
 
             elif action == "snap":
                 if len(parts) < 2:
                     print(f"Snap to grid is {'enabled' if designer.snap_to_grid else 'disabled'}")
                 elif parts[1].lower() in ["on", "true", "1"]:
                     designer.snap_to_grid = True
-                    print("✓ Snap to grid enabled")
+                    print("[OK] Snap to grid enabled")
                 else:
                     designer.snap_to_grid = False
-                    print("✓ Snap to grid disabled")
+                    print("[OK] Snap to grid disabled")
 
             elif action == "guides":
                 if len(parts) < 2:
                     print(f"Guides overlay is {'on' if designer.show_guides else 'off'}")
                 elif parts[1].lower() in ["on", "true", "1"]:
                     designer.show_guides = True
-                    print("✓ Guides enabled")
+                    print("[OK] Guides enabled")
                 else:
                     designer.show_guides = False
-                    print("✓ Guides disabled")
+                    print("[OK] Guides disabled")
 
             elif action == "snaptol":
                 if len(parts) < 2:
@@ -2220,7 +2196,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 else:
                     try:
                         designer.snap_tolerance = max(0, int(parts[1]))
-                        print(f"✓ Snap tolerance set to {designer.snap_tolerance} px")
+                        print(f"[OK] Snap tolerance set to {designer.snap_tolerance} px")
                     except Exception:
                         print("Usage: snaptol <pixels>")
 
@@ -2232,17 +2208,17 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     val = parts[1].lower()
                     if val in ["pixel", "strict"]:
                         designer.snap_fluid = False
-                        print("✓ Snap mode: pixel (grid-first)")
+                        print("[OK] Snap mode: pixel (grid-first)")
                     elif val in ["fluid", "magnetic"]:
                         designer.snap_fluid = True
-                        print("✓ Snap mode: fluid (magnetic-first)")
+                        print("[OK] Snap mode: fluid (magnetic-first)")
                     else:
                         print("Usage: snapmode <pixel|fluid>")
 
             elif action == "list":
                 if designer.current_scene:
                     scene = designer.scenes[designer.current_scene]
-                    print(f"\n📋 Scene: {scene.name} ({scene.width}x{scene.height})")
+                    print(f"\nList Scene: {scene.name} ({scene.width}x{scene.height})")
                     print(f"Widgets: {len(scene.widgets)}\n")
                     for i, w in enumerate(scene.widgets):
                         border_info = f" border={w.border_style}" if w.border else ""
@@ -2251,7 +2227,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                             if w.type in ["gauge", "progressbar", "slider"]
                             else ""
                         )
-                        lock_info = " 🔒" if getattr(w, "locked", False) else ""
+                        lock_info = " [LOCK]" if getattr(w, "locked", False) else ""
                         print(
                             f"  [{i}] {w.type:12s} pos=({w.x:3d},{w.y:3d}) size={w.width:3d}x{w.height:3d}{border_info}{value_info}{lock_info}"
                         )
@@ -2266,13 +2242,13 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 print()
 
             elif action == "templates":
-                print("\n📦 Available templates:")
+                print("\nTemplates Available templates:")
                 for name, template in designer.templates.items():
                     print(f"  {name:20s} - {template.type} {template.width}x{template.height}")
                 print()
 
             elif action == "widgets":
-                print("\n🎨 Available widget types:")
+                print("\nDesign Available widget types:")
                 for wtype in WidgetType:
                     print(f"  - {wtype.value}")
                 print()
@@ -2284,7 +2260,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     continue
                 sub = parts[1].lower()
                 if sub == "list":
-                    print("\n🎨 Themes:")
+                    print("\nDesign Themes:")
                     for name, roles in sorted(designer.themes.items()):
                         print(
                             f"  - {name:8s} bg={roles.get('bg')} text={roles.get('text')} primary={roles.get('primary')}"
@@ -2302,7 +2278,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         sc = designer.scenes[designer.current_scene]
                         sc.theme = name
                         sc.bg_color = designer.themes[name].get("bg", sc.bg_color)
-                        print(f"✓ Theme set: {name}")
+                        print(f"[OK] Theme set: {name}")
                 elif sub == "bind":
                     if len(parts) < 5:
                         print("Usage: theme bind <idx> <fg|bg> <role>")
@@ -2324,7 +2300,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                             else:
                                 print("Use fg or bg")
                                 continue
-                            print("✓ Theme role bound")
+                            print("[OK] Theme role bound")
                 elif sub == "apply":
                     if designer.current_scene and designer.current_scene in designer.scenes:
                         _sc = designer.scenes[designer.current_scene]
@@ -2335,7 +2311,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                             if _w.theme_bg_role:
                                 _w.color_bg = _roles.get(_w.theme_bg_role, _w.color_bg)
                         # Apply bg to preview HTML via scene.bg_color; ASCII unaffected
-                        print("✓ Theme applied to bound widgets")
+                        print("[OK] Theme applied to bound widgets")
                 else:
                     print("Unknown theme subcommand")
 
@@ -2370,14 +2346,14 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                                         _w.color_fg = _candidate
                                         print(f"       -> adjusted fg to {_candidate}")
                     if _issues == 0:
-                        print(f"✓ All text meets contrast >= {_min_ratio}")
+                        print(f"[OK] All text meets contrast >= {_min_ratio}")
                     else:
-                        print(f"⚠️  {_issues} items below contrast {_min_ratio}")
+                        print(f"[WARN] {_issues} items below contrast {_min_ratio}")
 
             elif action == "tree":
                 if designer.current_scene and designer.current_scene in designer.scenes:
                     scene = designer.scenes[designer.current_scene]
-                    print(f"\n🌲 Tree for scene: {scene.name}")
+                    print(f"\nTree Tree for scene: {scene.name}")
                     if designer.groups:
                         print("\nGroups:")
                         for gname, members in designer.list_groups():
@@ -2393,7 +2369,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                             if i in mem:
                                 tags.append(gname)
                         tag_str = f" groups={','.join(tags)}" if tags else ""
-                        lock_info = " 🔒" if getattr(w, "locked", False) else ""
+                        lock_info = " [LOCK]" if getattr(w, "locked", False) else ""
                         vis_info = " (hidden)" if not getattr(w, "visible", True) else ""
                         print(
                             f"  [{i}] {w.type} at ({w.x},{w.y}) {w.width}x{w.height}{tag_str}{lock_info}{vis_info}"
@@ -2425,7 +2401,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     print("No snapshots found")
                     continue
                 if len(parts) == 1 or parts[1] == "list":
-                    print("\n📦 Snapshots:")
+                    print("\nTemplates Snapshots:")
                     for i, p in enumerate(snaps):
                         print(f"  [{i}] {p.name}")
                     print()
@@ -2460,14 +2436,14 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                                 _pw = len(_prev.get("widgets", []))
                                 _cw = len(_state.get("widgets", []))
                                 print(
-                                    f"✓ Restored snapshot {snaps[_idx].name} (widgets: {_pw} -> {_cw})"
+                                    f"[OK] Restored snapshot {snaps[_idx].name} (widgets: {_pw} -> {_cw})"
                                 )
                             except Exception:
-                                print(f"✓ Restored snapshot {snaps[_idx].name}")
+                                print(f"[OK] Restored snapshot {snaps[_idx].name}")
                         else:
-                            print(f"✓ Restored snapshot {snaps[_idx].name}")
+                            print(f"[OK] Restored snapshot {snaps[_idx].name}")
                     except Exception as e:
-                        print(f"❌ Failed to restore: {e}")
+                        print(f"[FAIL] Failed to restore: {e}")
                 else:
                     print("Invalid index")
 
@@ -2491,7 +2467,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     if not _groups:
                         print("No groups")
                     else:
-                        print("\n👥 Groups:")
+                        print("\nGroups:")
                         for _name, _members in _groups:
                             print(f"  - {_name:20s} [{', '.join(map(str, _members))}]")
                         print()
@@ -2512,12 +2488,12 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         _ok = designer.add_to_group(_name, _idxs)
                     else:
                         _ok = designer.remove_from_group(_name, _idxs)
-                    print("✓ Done" if _ok else MSG_FAILED)
+                    print("[OK] Done" if _ok else MSG_FAILED)
                 elif sub == "delete":
                     if len(parts) < 3:
                         print("Usage: group delete <name>")
                         continue
-                    print("✓ Deleted" if designer.delete_group(parts[2]) else MSG_FAILED)
+                    print("[OK] Deleted" if designer.delete_group(parts[2]) else MSG_FAILED)
                 elif sub in ["lock", "visible"]:
                     if len(parts) < 4:
                         print(f"Usage: group {sub} <name> <on|off|toggle>")
@@ -2528,7 +2504,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         _ok = designer.group_set_lock(_name, _mode)
                     else:
                         _ok = designer.group_set_visible(_name, _mode)
-                    print("✓ Done" if _ok else MSG_FAILED)
+                    print("[OK] Done" if _ok else MSG_FAILED)
                 else:
                     print("Unknown group subcommand")
 
@@ -2542,7 +2518,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     if not designer.symbols:
                         print("No symbols")
                     else:
-                        print("\n🔁 Symbols:")
+                        print("\nRepeat Symbols:")
                         for _name, _spec in sorted(designer.symbols.items()):
                             _w, _h = _spec.get("size", (0, 0))
                             print(
@@ -2561,7 +2537,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         print("Indices must be integers")
                         continue
                     _ok = designer.save_symbol(_name, _idxs)
-                    print("✓ Saved" if _ok else "❌ Failed to save symbol")
+                    print("[OK] Saved" if _ok else "[FAIL] Failed to save symbol")
                 elif _sub == "place":
                     if len(parts) < 5:
                         print("Usage: symbol place <name> <x> <y>")
@@ -2574,7 +2550,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         print("x/y must be integers")
                         continue
                     _ok = designer.place_symbol(_name, _x, _y)
-                    print("✓ Placed" if _ok else "❌ Failed to place symbol")
+                    print("[OK] Placed" if _ok else "[FAIL] Failed to place symbol")
                 else:
                     print("Unknown symbol subcommand")
 
@@ -2584,16 +2560,16 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     continue
                 _ok = designer.create_checkpoint(parts[1])
                 if _ok:
-                    print(f"✓ Checkpoint created: {parts[1]}")
+                    print(f"[OK] Checkpoint created: {parts[1]}")
                 else:
-                    print("❌ Failed to create checkpoint (no scene loaded?)")
+                    print("[FAIL] Failed to create checkpoint (no scene loaded[OK])")
 
             elif action == "checkpoints":
                 cps = designer.list_checkpoints()
                 if not cps:
                     print("No checkpoints")
                 else:
-                    print("\n🗂️  Checkpoints:")
+                    print("\nCheckpoints:")
                     for name, ts in cps:
                         print(f"  - {name:20s} {ts}")
                     print()
@@ -2603,9 +2579,9 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     print("Usage: rollback <name>")
                     continue
                 if designer.rollback_checkpoint(parts[1]):
-                    print(f"✓ Rolled back to checkpoint: {parts[1]}")
+                    print(f"[OK] Rolled back to checkpoint: {parts[1]}")
                 else:
-                    print("❌ Failed to rollback (unknown checkpoint?)")
+                    print("[FAIL] Failed to rollback (unknown checkpoint[OK])")
 
             elif action == "diff":
                 if len(parts) < 2:
@@ -2631,7 +2607,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 _d = designer._diff_states(_a, _b)
                 _ca = _d["widgets"]["count"]["a"]
                 _cb = _d["widgets"]["count"]["b"]
-                print("\n🔍 Diff:")
+                print("\nSearch Diff:")
                 print(f"  Scene A: {_d['scene']['a']}  size={_d['size']['a']}  widgets={_ca}")
                 print(f"  Scene B: {_d['scene']['b']}  size={_d['size']['b']}  widgets={_cb}")
                 if _d["widgets"]["added"]:
@@ -2656,7 +2632,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     continue
                 _spacing = int(parts[2]) if len(parts) > 2 else 4
                 designer.auto_layout(parts[1], _spacing)
-                print(f"✓ Applied {parts[1]} layout")
+                print(f"[OK] Applied {parts[1]} layout")
 
             elif action == "align":
                 if len(parts) < 3:
@@ -2664,7 +2640,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     continue
                 _indices = [int(_x) for _x in parts[2:]]
                 designer.align_widgets(parts[1], _indices)
-                print(f"✓ Aligned {len(_indices)} widgets ({parts[1]})")
+                print(f"[OK] Aligned {len(_indices)} widgets ({parts[1]})")
 
             elif action == "distribute":
                 if len(parts) < 4:
@@ -2672,7 +2648,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     continue
                 _indices = [int(_x) for _x in parts[2:]]
                 designer.distribute_widgets(parts[1], _indices)
-                print(f"✓ Distributed {len(_indices)} widgets ({parts[1]})")
+                print(f"[OK] Distributed {len(_indices)} widgets ({parts[1]})")
 
             elif action == "gridcols":
                 if len(parts) < 2:
@@ -2682,7 +2658,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         _n = int(parts[1])
                         designer.set_grid_columns(_n)
                         print(
-                            f"✓ Grid columns set to {designer.grid_columns} (grid size {designer.grid_size})"
+                            f"[OK] Grid columns set to {designer.grid_columns} (grid size {designer.grid_size})"
                         )
                     except Exception:
                         print("Usage: gridcols <4|8|12>")
@@ -2699,7 +2675,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         _sc = designer.scenes[designer.current_scene]
                         _sc.width = _w
                         _sc.height = _h
-                        print(f"✓ Breakpoint applied: {_w}x{_h}")
+                        print(f"[OK] Breakpoint applied: {_w}x{_h}")
                 except Exception:
                     print("Usage: bp <WxH>")
 
@@ -2710,10 +2686,10 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 _sub = parts[1].lower()
                 if _sub == "base":
                     designer.set_responsive_base()
-                    print("✓ Responsive base recorded")
+                    print("[OK] Responsive base recorded")
                 elif _sub == "apply":
                     designer.apply_responsive()
-                    print("✓ Responsive constraints applied")
+                    print("[OK] Responsive constraints applied")
                 else:
                     print("Usage: resp <base|apply>")
 
@@ -2747,7 +2723,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                             _k, _v = _kv.split("=", 1)
                             _cur[_k] = _v
                     _w.state_overrides[_name] = _cur
-                    print(f"✓ State '{_name}' overrides defined for widget {_idx}")
+                    print(f"[OK] State '{_name}' overrides defined for widget {_idx}")
                 elif _sub == "set":
                     if len(parts) < 4:
                         print("Usage: state set <idx> <name>")
@@ -2762,7 +2738,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         print(MSG_INVALID_INDEX)
                         continue
                     _scene.widgets[_idx].state = _name
-                    print(f"✓ Widget {_idx} state set to '{_name}'")
+                    print(f"[OK] Widget {_idx} state set to '{_name}'")
                 elif _sub == "list":
                     if len(parts) < 3:
                         print("Usage: state list <idx>")
@@ -2798,7 +2774,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     _w = _scene.widgets[_idx]
                     if _name in (_w.state_overrides or {}):
                         del _w.state_overrides[_name]
-                        print(f"✓ Removed state '{_name}' from widget {_idx}")
+                        print(f"[OK] Removed state '{_name}' from widget {_idx}")
                     else:
                         print("No such state override")
                 else:
@@ -2811,7 +2787,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                 _sub = parts[1].lower()
                 _builtins = ["bounce", "slideinleft", "pulse", "fadein"]
                 if _sub == "list":
-                    print("\n🎞️  Animations:")
+                    print("\nAnimations:")
                     for _n in _builtins:
                         print(f"  - {_n}")
                     print()
@@ -2839,7 +2815,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     _w = _scene.widgets[_idx]
                     if _name not in (_w.animations or []):
                         _w.animations.append(_name)
-                    print(f"✓ Animation '{_name}' tagged on widget {_idx}")
+                    print(f"[OK] Animation '{_name}' tagged on widget {_idx}")
                 elif _sub == "clear":
                     if len(parts) < 4:
                         print("Usage: anim clear <idx> <name>")
@@ -2856,7 +2832,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     _w = _scene.widgets[_idx]
                     if _name in (_w.animations or []):
                         _w.animations = [_a for _a in (_w.animations or []) if _a != _name]
-                        print(f"✓ Animation '{_name}' removed from widget {_idx}")
+                        print(f"[OK] Animation '{_name}' removed from widget {_idx}")
                     else:
                         print("Animation not tagged on widget")
                 elif _sub == "preview":
@@ -2914,7 +2890,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                             print(designer.preview_ascii())
                             time.sleep(max(0, _delay_ms) / 1000.0)
                     except KeyboardInterrupt:
-                        print("\n⏹️  Animation stopped")
+                        print("\nStop: Animation stopped")
                     finally:
                         designer.anim_context = None
                 else:
@@ -2943,18 +2919,18 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         continue
                     _w = _scene.widgets[_target_idx]
                     _info = get_widget_help(_w)
-                    print(f"\n🧩 Context: [{_target_idx}] {_w.type}")
+                    print(f"\nContext Context: [{_target_idx}] {_w.type}")
                     print(
                         f"   Size: {_w.width}x{_w.height} at ({_w.x},{_w.y})  Style: {_w.style}  Align: {_w.align}"
                     )
                     if getattr(_w, "text", ""):
                         print(f"   Text: '{_w.text}'")
                     if getattr(_w, "locked", False):
-                        print(f"   State: 🔒 locked (use: lock {_target_idx} off)")
-                    print(f"\n📖 About: {_info.get('description','N/A')}")
+                        print(f"   State: [LOCK] locked (use: lock {_target_idx} off)")
+                    print(f"\nAbout About: {_info.get('description','N/A')}")
                     _tips = _info.get("tips", [])
                     if _tips:
-                        print("🔧 Tips:")
+                        print("Tips Tips:")
                         for _t in _tips:
                             print(f"   - {_t}")
                     _qa = [
@@ -2963,7 +2939,7 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                         f"distribute horizontal {_target_idx} <idx2> [idx3...]",
                         f"lock {_target_idx} toggle",
                     ]
-                    print("\n⚡ Quick actions:")
+                    print("\nFast Quick actions:")
                     for _a in _qa:
                         print(f"   > {_a}")
                     print()
@@ -2979,13 +2955,13 @@ def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - 
                     )
 
             else:
-                print(f"❌ Unknown command: {action}. Type 'help' for commands.")
+                print(f"[FAIL] Unknown command: {action}. Type 'help' for commands.")
 
         except KeyboardInterrupt:
-            print("\n\n👋 Exiting...")
+            print("\n\nBye Exiting...")
             break
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[FAIL] Error: {e}")
 
 
 def show_command_help(command: str):
@@ -3194,14 +3170,14 @@ if __name__ == "__main__":
 
         live_script = Path(__file__).parent / "ui_designer_live.py"
         if not live_script.exists():
-            print(f"❌ Live preview script not found: {live_script}")
+            print(f"[FAIL] Live preview script not found: {live_script}")
             sys.exit(1)
         try:
             subprocess.run(
                 [sys.executable, str(live_script), "--json", args.live_preview], check=True
             )
         except KeyboardInterrupt:
-            print("\n✓ Live preview stopped")
+            print("\n[OK] Live preview stopped")
         sys.exit(0)
 
     # C header export mode
@@ -3211,26 +3187,26 @@ if __name__ == "__main__":
 
         export_script = Path(__file__).parent / "ui_export_c_header.py"
         if not export_script.exists():
-            print(f"❌ C export script not found: {export_script}")
+            print(f"[FAIL] C export script not found: {export_script}")
             sys.exit(1)
         try:
             subprocess.run(
                 [sys.executable, str(export_script), json_file, "-o", header_file], check=True
             )
         except Exception as e:
-            print(f"❌ C export failed: {e}")
+            print(f"[FAIL] C export failed: {e}")
             sys.exit(1)
         sys.exit(0)
 
     if args.web:
-        print("🌐 Web interface not yet implemented")
+        print("Web interface not yet implemented")
         print("   Use CLI mode for now")
         sys.exit(0)
 
     if args.guided:
         # Minimal guided flow
         d = UIDesigner(128, 64)
-        print("\n🧭 Guided mode: Choose a preset [dashboard/menu/dialog]")
+        print("\nGuide Guided mode: Choose a preset [dashboard/menu/dialog]")
         preset = args.preset or input("Preset (dashboard): ").strip().lower() or "dashboard"
         scene_name = input("Scene name (Home): ").strip() or "Home"
         try:
@@ -3286,7 +3262,7 @@ if __name__ == "__main__":
                 y=14,
                 width=w - 20,
                 height=8,
-                text="Confirm action?",
+                text="Confirm action[OK]",
                 align="center",
             )
             d.add_widget(WidgetType.BUTTON, x=w // 2 - 44, y=h - 18, width=40, height=12, text="OK")
@@ -3325,7 +3301,7 @@ if __name__ == "__main__":
         except Exception:
             pass
         print(
-            f"\n✅ Guided scene created and exported:\n  JSON: {out_json}\n  HTML: {out_html}\n  PNG:  {out_png}"
+            f"\n[OK] Guided scene created and exported:\n  JSON: {out_json}\n  HTML: {out_html}\n  PNG:  {out_png}"
         )
         sys.exit(0)
 
@@ -3406,7 +3382,7 @@ if __name__ == "__main__":
         except Exception:
             pass
         print(
-            f"\n✅ Demo scene created and exported:\n  JSON: {out_json}\n  HTML: {out_html}\n  PNG:  {out_png}"
+            f"\n[OK] Demo scene created and exported:\n  JSON: {out_json}\n  HTML: {out_html}\n  PNG:  {out_png}"
         )
         sys.exit(0)
 
@@ -3420,7 +3396,7 @@ if __name__ == "__main__":
             create_cli_interface(commands=lines)
             sys.exit(0)
         except Exception as e:
-            print(f"❌ Failed to run script file: {e}")
+            print(f"[FAIL] Failed to run script file: {e}")
             sys.exit(1)
 
     create_cli_interface()

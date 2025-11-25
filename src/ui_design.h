@@ -1,12 +1,16 @@
+/* Auto-generated header file for demo */
 #ifndef UI_DESIGN_H
 #define UI_DESIGN_H
 #include <stdint.h>
-    #define UI_ENABLE_CONSTRAINTS 1
-    #define UI_ENABLE_ANIMATIONS  1
+
+#define UI_ENABLE_CONSTRAINTS 1
+#define UI_ENABLE_ANIMATIONS  1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* Widget type enumeration */
 typedef enum {
     UIW_LABEL = 0,
     UIW_BOX = 1,
@@ -22,8 +26,7 @@ typedef enum {
     UIW_CHART = 11,
 } UiWidgetType;
 
-
-
+/* Widget structure */
 typedef struct {
     uint8_t  type;      // UiWidgetType
     uint16_t x, y;
@@ -33,9 +36,10 @@ typedef struct {
     int16_t  value, min_value, max_value;
     const char* text;
     const char* constraints_json; // optional constraints metadata
-    const char* animations_csv;   // optional animations list (semicolon-separated)
+    const char* animations_csv;   // optional animations list
 } UiWidget;
 
+/* Scene structure */
 typedef struct {
     const char* name;
     uint16_t width, height;
@@ -43,10 +47,11 @@ typedef struct {
     const UiWidget* widgets;
 } UiScene;
 
-extern const UiWidget UI_WIDGETS_DEMO[];
-extern const UiScene  UI_SCENE_DEMO;
+/* Exported scene */
+extern const UiScene ui_design;
 
 #ifdef __cplusplus
 }
 #endif
-#endif // UI_DESIGN_H
+
+#endif /* UI_DESIGN_H */

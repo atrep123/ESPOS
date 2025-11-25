@@ -26,7 +26,7 @@ if TK_AVAILABLE:
     from PIL import ImageTk
 
 from preview.diagnostics import layout_warnings
-from preview.overlay import draw_perf_overlay, draw_diagnostics_overlay
+from preview.overlay import draw_diagnostics_overlay, draw_perf_overlay
 from preview.rendering import (
     hex_to_rgb,
 )
@@ -66,7 +66,6 @@ except Exception:
         from tools.ui_components_library_ascii import (
             AnimationEditorWindow,
             ComponentPaletteWindow,
-            IconPaletteWindow,
             TemplateManagerWindow,
             create_alert_dialog_ascii,
             create_breadcrumb_ascii,
@@ -88,12 +87,27 @@ except Exception:
             create_toggle_switch_ascii,
             create_vertical_menu_ascii,
         )
+        try:
+            from tools.ui_icons_palette_window import IconPaletteWindow
+        except Exception:
+            IconPaletteWindow = None  # type: ignore
     except Exception:
         # Fallback stubs to avoid NameError; minimal no-op implementations
         class _StubWin:  # type: ignore
             def __init__(self, *a, **kw):
                 pass
-        AnimationEditorWindow = ComponentPaletteWindow = TemplateManagerWindow = IconPaletteWindow = _StubWin  # type: ignore
+            def winfo_exists(self): return False
+            def lift(self): return None
+            def focus_force(self): return None
+            def destroy(self): return None
+        if "AnimationEditorWindow" not in locals():
+            AnimationEditorWindow = _StubWin  # type: ignore
+        if "ComponentPaletteWindow" not in locals():
+            ComponentPaletteWindow = _StubWin  # type: ignore
+        if "TemplateManagerWindow" not in locals():
+            TemplateManagerWindow = _StubWin  # type: ignore
+        if "IconPaletteWindow" not in locals() or IconPaletteWindow is None:
+            IconPaletteWindow = _StubWin  # type: ignore
         def _stub_list(): return []
         def create_alert_dialog_ascii(): return _stub_list()
         def create_confirm_dialog_ascii(): return _stub_list()
@@ -160,7 +174,7 @@ except Exception:
 # Constants
 DATA_DISPLAY = "Data Display"
 COMBO_SELECTED = "<<ComboboxSelected>>"
-REFRESH_LABEL = "🔄 Refresh"
+REFRESH_LABEL = "Refresh"
 FILETYPE_ALL_PAIR = ("All Files", "*.*")
 PROFILER_DISABLED_MSG = "Profiler not enabled"
 EXPORT_ERROR_TITLE = "Export Error"
@@ -240,11 +254,16 @@ class VisualPreviewWindow:
         self._favorite_components: List[str] = list(
             self._settings_cache.get("favorite_components", [])
         )
-        self._preview_theme: str = str(self._settings_cache.get("preview_theme", "default"))
+        # Force dark theme as default and persisted preference
+        self._preview_theme: str = "dark"
+        self._settings_cache["preview_theme"] = self._preview_theme
         self._last_export_theme: str = str(self._settings_cache.get("last_export_theme", "current"))
         self._component_filter_default: str = str(
             self._settings_cache.get("component_filter_default", "all")
         )
+        # Force snap disabled and no widget snapping to avoid unexpected jumps
+        self.settings.snap_enabled = False
+        self.settings.snap_to_widgets = False
         # Persisted grid padding preferences
         try:
             self.settings.grid_padding_pct = float(
@@ -501,14 +520,29 @@ class VisualPreviewWindow:
         # GUI mode below
         # Create main window
         self.root = tk.Tk()
-        self.root.title(f"UI Designer Preview - {designer.width}×{designer.height}")
+        self.root.title(f"UI Designer Preview - {designer.width}x{designer.height}")
         self.root.configure(bg=color_hex("legacy_gray4"))
+        # Make sure window is visible on screen and not hidden behind editors
+        try:
+            self.root.geometry("1200x800+100+100")
+            self.root.lift()
+            self.root.attributes("-topmost", True)
+            # Drop topmost after a short delay to avoid sticking above all apps
+            self.root.after(300, lambda: self.root.attributes("-topmost", False))
+        except Exception:
+            pass
 
         # Setup UI with theme (theme will configure all ttk styles)
         self._apply_theme(self._preview_theme)
         self._setup_ui()
+        try:
+            self._init_panes_layout()
+        except Exception:
+            pass
         self._setup_bindings()
         self._auto_size_window()
+        # Auto-fit view on first paint so scene is fully visible without manual zoom
+        self._pending_fit = True
 
         # Initial render
         self.refresh()
@@ -535,6 +569,23 @@ class VisualPreviewWindow:
         )
         self._schedule_tick()
 
+    def _init_panes_layout(self):
+        """Ensure panes start with visible canvas/panels."""
+        if not hasattr(self, "panes"):
+            return
+        try:
+            self.panes.update_idletasks()
+            total = self.panes.winfo_width()
+            if total <= 0:
+                total = int(self.root.winfo_screenwidth() * 0.8)
+            left = 220
+            right = 320
+            mid = max(left + 300, total - right)
+            self.panes.sash_place(0, left, 0)
+            self.panes.sash_place(1, mid, 0)
+        except Exception:
+            pass
+
     def _setup_ui(self):
         """Setup UI components"""
         # Main container
@@ -548,8 +599,8 @@ class VisualPreviewWindow:
         # Main content area with resizable panes
         content_frame = ttk.Frame(main_frame)
         content_frame.pack(fill=tk.BOTH, expand=True)
-        panes = ttk.PanedWindow(content_frame, orient=tk.HORIZONTAL)
-        panes.pack(fill=tk.BOTH, expand=True)
+        self.panes = ttk.PanedWindow(content_frame, orient=tk.HORIZONTAL)
+        self.panes.pack(fill=tk.BOTH, expand=True)
 
         # Zoom controls
         ttk.Label(toolbar, text="Zoom:").pack(side=tk.LEFT, padx=5)
@@ -631,23 +682,23 @@ class VisualPreviewWindow:
 
         # Alignment tools
         ttk.Label(toolbar, text="Align:").pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="⬅", width=3, command=lambda: self._align_widgets("left")).pack(
+        ttk.Button(toolbar, text="<", width=3, command=lambda: self._align_widgets("left")).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⬆", width=3, command=lambda: self._align_widgets("top")).pack(
+        ttk.Button(toolbar, text="^", width=3, command=lambda: self._align_widgets("top")).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⬇", width=3, command=lambda: self._align_widgets("bottom")).pack(
+        ttk.Button(toolbar, text="v", width=3, command=lambda: self._align_widgets("bottom")).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="➡", width=3, command=lambda: self._align_widgets("right")).pack(
+        ttk.Button(toolbar, text=">", width=3, command=lambda: self._align_widgets("right")).pack(
             side=tk.LEFT, padx=1
         )
         ttk.Button(
-            toolbar, text="↔", width=3, command=lambda: self._align_widgets("center_h")
+            toolbar, text="< >", width=3, command=lambda: self._align_widgets("center_h")
         ).pack(side=tk.LEFT, padx=1)
         ttk.Button(
-            toolbar, text="↕", width=3, command=lambda: self._align_widgets("center_v")
+            toolbar, text="^ v", width=3, command=lambda: self._align_widgets("center_v")
         ).pack(side=tk.LEFT, padx=1)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
@@ -664,45 +715,45 @@ class VisualPreviewWindow:
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
 
         # Export buttons
-        ttk.Button(toolbar, text="📷 Export PNG", command=self._export_png).pack(
+        ttk.Button(toolbar, text="Export PNG", command=self._export_png).pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(toolbar, text="🖼️ Export SVG", command=self._export_svg).pack(
+        ttk.Button(toolbar, text="Export SVG", command=self._export_svg).pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(toolbar, text="💾 Export JSON", command=self._export_json).pack(
+        ttk.Button(toolbar, text="Export JSON", command=self._export_json).pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(toolbar, text="📝 Export C", command=self._export_c).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="📄 Export WidgetConfig", command=self._export_widgetconfig).pack(
+        ttk.Button(toolbar, text="Export C", command=self._export_c).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="Export WidgetConfig", command=self._export_widgetconfig).pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(toolbar, text="👁️ Live ASCII Preview", command=self._show_ascii_tab).pack(
+        ttk.Button(toolbar, text="Live ASCII Preview", command=self._show_ascii_tab).pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(toolbar, text="❓ Help", command=self._show_quick_help).pack(
+        ttk.Button(toolbar, text="Help", command=self._show_quick_help).pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(toolbar, text="⚡ Profiler", command=self._toggle_profiler).pack(
+        ttk.Button(toolbar, text="Profiler", command=self._toggle_profiler).pack(
             side=tk.LEFT, padx=5
         )
 
         ttk.Button(toolbar, text=REFRESH_LABEL, command=self.refresh).pack(side=tk.LEFT, padx=5)
         ttk.Button(
             toolbar,
-            text="📸 Shot",
+            text="Shot",
             command=self._screenshot_canvas
         ).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="🚀 Push", command=self._push_stub).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="Push", command=self._push_stub).pack(side=tk.LEFT, padx=5)
         ttk.Button(
             toolbar,
-            text="🔎 Layout",
+            text="Layout",
             command=self._show_layout_warnings,
         ).pack(side=tk.LEFT, padx=5)
 
         ttk.Button(
             toolbar,
-            text="🩺 Diag",
+            text="Diag",
             command=self._toggle_diagnostics,
         ).pack(side=tk.LEFT, padx=5)
 
@@ -716,22 +767,22 @@ class VisualPreviewWindow:
             self.selected_anim = self.anim.list_animations()[0]
         self.anim_combo.pack(side=tk.LEFT)
         self.anim_combo.bind(COMBO_SELECTED, self._on_anim_change)
-        ttk.Button(toolbar, text="▶", width=3, command=self._on_anim_play).pack(
+        ttk.Button(toolbar, text="Play", width=4, command=self._on_anim_play).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⏸", width=3, command=self._on_anim_pause).pack(
+        ttk.Button(toolbar, text="Pause", width=4, command=self._on_anim_pause).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⏹", width=3, command=self._on_anim_stop).pack(
+        ttk.Button(toolbar, text="Stop", width=4, command=self._on_anim_stop).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="✏", width=3, command=self._open_animation_editor).pack(
+        ttk.Button(toolbar, text="Edit", width=4, command=self._open_animation_editor).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="⤴", width=3, command=self._on_anim_step).pack(
+        ttk.Button(toolbar, text="Step", width=4, command=self._on_anim_step).pack(
             side=tk.LEFT, padx=1
         )
-        ttk.Button(toolbar, text="½x", width=3, command=self._on_anim_speed_down).pack(
+        ttk.Button(toolbar, text="0.5x", width=4, command=self._on_anim_speed_down).pack(
             side=tk.LEFT, padx=1
         )
         ttk.Button(toolbar, text="2x", width=3, command=self._on_anim_speed_up).pack(
@@ -742,14 +793,14 @@ class VisualPreviewWindow:
         )
 
         # Background color
-        ttk.Button(toolbar, text="🎨 BG Color", command=self._choose_bg_color).pack(
+        ttk.Button(toolbar, text="BG Color", command=self._choose_bg_color).pack(
             side=tk.LEFT, padx=5
         )
         ttk.Label(toolbar, text="Theme:").pack(side=tk.LEFT, padx=(8, 2))
-        self._theme_var = tk.StringVar(value=self._preview_theme)
-        theme_options = ["default", "light", "dark", "nord", "dracula", "hc", "cyber"]
+        self._theme_var = tk.StringVar(value="dark")
+        theme_options = ["dark"]
         self._theme_combo = ttk.Combobox(
-            toolbar, values=theme_options, width=10, textvariable=self._theme_var
+            toolbar, values=theme_options, width=10, textvariable=self._theme_var, state="readonly"
         )
         self._theme_combo.pack(side=tk.LEFT, padx=2)
         self._theme_combo.bind(
@@ -757,7 +808,7 @@ class VisualPreviewWindow:
         )
 
         # Left-side palette (widget add shortcuts)
-        palette = ttk.Frame(panes)
+        palette = ttk.Frame(self.panes)
 
         ttk.Label(palette, text="Add Widgets").pack(anchor=tk.W)
         ttk.Separator(palette, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=4)
@@ -765,28 +816,28 @@ class VisualPreviewWindow:
         def add_btn(text, cb):
             ttk.Button(palette, text=text, command=cb).pack(fill=tk.X, pady=2)
 
-        add_btn("➕ Label", lambda: self._palette_add("label"))
-        add_btn("➕ Button", lambda: self._palette_add("button"))
-        add_btn("➕ Box", lambda: self._palette_add("box"))
-        add_btn("➕ Panel", lambda: self._palette_add("panel"))
-        add_btn("➕ Progress", lambda: self._palette_add("progressbar"))
-        add_btn("➕ Gauge", lambda: self._palette_add("gauge"))
-        add_btn("➕ Checkbox", lambda: self._palette_add("checkbox"))
-        add_btn("➕ Slider", lambda: self._palette_add("slider"))
+        add_btn("Add Label", lambda: self._palette_add("label"))
+        add_btn("Add Button", lambda: self._palette_add("button"))
+        add_btn("Add Box", lambda: self._palette_add("box"))
+        add_btn("Add Panel", lambda: self._palette_add("panel"))
+        add_btn("Add Progress", lambda: self._palette_add("progressbar"))
+        add_btn("Add Gauge", lambda: self._palette_add("gauge"))
+        add_btn("Add Checkbox", lambda: self._palette_add("checkbox"))
+        add_btn("Add Slider", lambda: self._palette_add("slider"))
 
         ttk.Separator(palette, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=8)
-        ttk.Button(palette, text="📦 Components", command=self._open_component_palette).pack(
+        ttk.Button(palette, text="Components", command=self._open_component_palette).pack(
             fill=tk.X, pady=2
         )
-        ttk.Button(palette, text="📑 Templates", command=self._open_template_manager).pack(
+        ttk.Button(palette, text="Templates", command=self._open_template_manager).pack(
             fill=tk.X, pady=2
         )
-        ttk.Button(palette, text="🎨 Icons", command=self._open_icon_palette).pack(
+        ttk.Button(palette, text="Icons", command=self._open_icon_palette).pack(
             fill=tk.X, pady=2
         )
 
         # Canvas frame with scrollbars (center area)
-        canvas_frame = ttk.Frame(panes)
+        canvas_frame = ttk.Frame(self.panes)
         canvas_frame.pack_propagate(False)
         self._canvas_frame = canvas_frame
 
@@ -794,11 +845,12 @@ class VisualPreviewWindow:
         canvas_width = int(self.designer.width * self.settings.zoom)
         canvas_height = int(self.designer.height * self.settings.zoom)
 
+        canvas_bg = color_hex("legacy_gray2")
         self.canvas = tk.Canvas(
             canvas_frame,
             width=canvas_width,
             height=canvas_height,
-            bg=color_hex("surface"),
+            bg=canvas_bg,
             highlightthickness=1,
             highlightbackground=color_hex("legacy_gray8"),
         )
@@ -818,7 +870,7 @@ class VisualPreviewWindow:
         canvas_frame.bind("<Configure>", lambda e: self._schedule_auto_zoom_fit(reset_override=True))
 
         # Right-side panel with tabs (Properties, ASCII)
-        right_panel = ttk.Frame(panes)
+        right_panel = ttk.Frame(self.panes)
 
         self.right_tabs = ttk.Notebook(right_panel)
         self.right_tabs.pack(fill=tk.BOTH, expand=True)
@@ -897,19 +949,19 @@ class VisualPreviewWindow:
         self.batch_dw_var = tk.StringVar(value="0")
         self.batch_dh_var = tk.StringVar(value="0")
 
-        ttk.Label(batch_frame, text="ΔX").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(batch_frame, text="dX").grid(row=0, column=0, sticky=tk.W, pady=2)
         ttk.Entry(batch_frame, width=6, textvariable=self.batch_dx_var).grid(
             row=0, column=1, sticky=tk.W, padx=4
         )
-        ttk.Label(batch_frame, text="ΔY").grid(row=0, column=2, sticky=tk.W, pady=2)
+        ttk.Label(batch_frame, text="dY").grid(row=0, column=2, sticky=tk.W, pady=2)
         ttk.Entry(batch_frame, width=6, textvariable=self.batch_dy_var).grid(
             row=0, column=3, sticky=tk.W, padx=4
         )
-        ttk.Label(batch_frame, text="ΔW").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(batch_frame, text="dW").grid(row=1, column=0, sticky=tk.W, pady=2)
         ttk.Entry(batch_frame, width=6, textvariable=self.batch_dw_var).grid(
             row=1, column=1, sticky=tk.W, padx=4
         )
-        ttk.Label(batch_frame, text="ΔH").grid(row=1, column=2, sticky=tk.W, pady=2)
+        ttk.Label(batch_frame, text="dH").grid(row=1, column=2, sticky=tk.W, pady=2)
         ttk.Entry(batch_frame, width=6, textvariable=self.batch_dh_var).grid(
             row=1, column=3, sticky=tk.W, padx=4
         )
@@ -936,7 +988,7 @@ class VisualPreviewWindow:
         # Placeholders; actual actions wired in _show_ascii_tab
         self._ascii_refresh_btn = ttk.Button(ascii_toolbar, text=REFRESH_LABEL)
         self._ascii_refresh_btn.pack(side=tk.LEFT, padx=5)
-        self._ascii_copy_btn = ttk.Button(ascii_toolbar, text="💾 Copy to Clipboard")
+        self._ascii_copy_btn = ttk.Button(ascii_toolbar, text="Copy to Clipboard")
         self._ascii_copy_btn.pack(side=tk.LEFT, padx=5)
 
         ascii_frame = ttk.Frame(ascii_container)
@@ -977,13 +1029,13 @@ class VisualPreviewWindow:
         added = False
         try:
             # Use conservative options for broader Tk compatibility
-            panes.add(palette)
-            panes.add(canvas_frame)
-            panes.add(right_panel)
+            self.panes.add(palette)
+            self.panes.add(canvas_frame)
+            self.panes.add(right_panel)
             try:
-                panes.paneconfig(palette, weight=0)
-                panes.paneconfig(canvas_frame, weight=3)
-                panes.paneconfig(right_panel, weight=1)
+                self.panes.paneconfig(palette, weight=0)
+                self.panes.paneconfig(canvas_frame, weight=3)
+                self.panes.paneconfig(right_panel, weight=1)
             except Exception:
                 pass
             added = True
@@ -1003,7 +1055,7 @@ class VisualPreviewWindow:
         self._apply_status_font()
 
     def _center_coords(self, w: int, h: int) -> Tuple[int, int]:
-        """Compute top-left coords to center a widget of size w×h."""
+        """Compute top-left coords to center a widget of size w x h."""
         cx = max(0, (self.designer.width - w) // 2)
         cy = max(0, (self.designer.height - h) // 2)
         return cx, cy
@@ -1165,6 +1217,42 @@ class VisualPreviewWindow:
                     self._theme_var.set(theme)
                 except Exception:
                     pass
+            # Apply dark palette to Tk/ttk where possible
+            try:
+                style = ttk.Style(self.root)
+                # Prefer a neutral theme to avoid OS light defaults
+                try:
+                    style.theme_use("clam")
+                except Exception:
+                    pass
+                fg = color_hex("text_primary")
+                bg_tab = bg
+                style.configure(".", background=bg, foreground=fg)
+                for name in [
+                    "TFrame",
+                    "TLabel",
+                    "TButton",
+                    "TCheckbutton",
+                    "TCombobox",
+                    "TEntry",
+                    "TSpinbox",
+                    "TNotebook",
+                    "TNotebook.Tab",
+                ]:
+                    style.configure(name, background=bg, foreground=fg, fieldbackground=bg)
+                style.map(
+                    "TNotebook.Tab",
+                    background=[("selected", bg_tab), ("!selected", bg_tab)],
+                    foreground=[("selected", fg), ("!selected", fg)],
+                )
+                if hasattr(self, "canvas"):
+                    self.canvas.configure(bg=bg, highlightbackground=color_hex("legacy_gray8"))
+                if hasattr(self, "_canvas_frame"):
+                    self._canvas_frame.configure(style="TFrame")
+                if hasattr(self, "right_tabs"):
+                    self.right_tabs.configure(style="TNotebook")
+            except Exception:
+                pass
 
     def _on_theme_change(self, theme_name: str):
         """Handle theme dropdown change."""
@@ -1393,15 +1481,15 @@ class VisualPreviewWindow:
                 self._profiler = PerformanceProfiler(history_size=1000)
                 self._profiler_enabled = True
                 self._show_profiler_panel()
-                print("⚡ Performance profiler enabled")
+                print("Profiler enabled")
             else:
                 self._profiler_enabled = False
                 if hasattr(self, "_profiler_window") and self._profiler_window:
                     self._profiler_window.destroy()
                     self._profiler_window = None
-                print("⚡ Performance profiler disabled")
+                print("Profiler disabled")
         except Exception as e:
-            print(f"⚠ Profiler toggle error: {e}")
+            print(f"Profiler toggle error: {e}")
 
     def _show_profiler_panel(self):
         """Show profiler panel with live metrics and controls."""
@@ -1414,26 +1502,26 @@ class VisualPreviewWindow:
                 return
 
             window = tk.Toplevel(self.root)
-            window.title("⚡ Performance Profiler")
+            window.title("Performance Profiler")
             window.geometry("500x600")
             window.configure(bg=color_hex("legacy_gray4"))
             self._profiler_window = window
 
             header = ttk.Frame(window)
             header.pack(fill=tk.X, padx=10, pady=10)
-            ttk.Label(header, text="⚡ Performance Profiler", font=("Arial", 14, "bold")).pack(
+            ttk.Label(header, text="Performance Profiler", font=("Arial", 14, "bold")).pack(
                 side=tk.LEFT
             )
 
             btn_frame = ttk.Frame(header)
             btn_frame.pack(side=tk.RIGHT)
-            ttk.Button(btn_frame, text="📊 Export HTML", command=self._export_profiler_html).pack(
+            ttk.Button(btn_frame, text="Export HTML", command=self._export_profiler_html).pack(
                 side=tk.LEFT, padx=2
             )
-            ttk.Button(btn_frame, text="💾 Export CSV", command=self._export_profiler_csv).pack(
+            ttk.Button(btn_frame, text="Export CSV", command=self._export_profiler_csv).pack(
                 side=tk.LEFT, padx=2
             )
-            ttk.Button(btn_frame, text="📄 Export JSON", command=self._export_profiler_json).pack(
+            ttk.Button(btn_frame, text="Export JSON", command=self._export_profiler_json).pack(
                 side=tk.LEFT, padx=2
             )
 
@@ -1481,7 +1569,7 @@ class VisualPreviewWindow:
             self._update_profiler_panel()
 
         except Exception as e:
-            print(f"⚠ Profiler panel error: {e}")
+            print(f"Profiler panel error: {e}")
 
     def _update_profiler_panel(self):
         """Update profiler panel with latest metrics."""
@@ -1521,14 +1609,14 @@ class VisualPreviewWindow:
                     self._profiler_rec_text.config(state=tk.NORMAL)
                     self._profiler_rec_text.delete("1.0", tk.END)
                     for rec in recommendations:
-                        self._profiler_rec_text.insert(tk.END, f"• {rec}\n")
+                        self._profiler_rec_text.insert(tk.END, f"- {rec}\n")
                     self._profiler_rec_text.config(state=tk.DISABLED)
 
             if self._profiler_window:
                 self._profiler_window.after(100, self._update_profiler_panel)
 
         except Exception as e:
-            print(f"⚠ Profiler update error: {e}")
+            print(f"Profiler update error: {e}")
 
     def _export_profiler_html(self):
         """Export profiler report to HTML."""
@@ -1872,7 +1960,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         # Convert complexity to FPS estimate (heuristic curve)
         if complexity <= 0:
             return 60.0, 0
-        # Assume base 120 'cycles' budget → fps scales inversely
+        # Assume base 120 'cycles' budget -> fps scales inversely
         fps = max(8.0, 120.0 / (complexity / 10.0))
         fps = min(60.0, fps)
         return fps, int(complexity)
@@ -2270,20 +2358,21 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             if getattr(self.settings, "high_contrast_overlays", False)
             else self.settings.grid_color_dark
         )
-        # Configurable padding
-        # Make padding adapt to canvas size so the grid has breathing room on all sides.
-        dynamic_pad = int(min(width, height) * 0.02)
+        # Configurable padding; default is zero to align with snap/grid origin.
         padding = max(
             self.settings.grid_padding_min_px,
             int(step * self.settings.grid_padding_pct),
-            dynamic_pad,
         )
+        x_start = padding
+        x_end = max(padding, width - padding)
+        y_start = padding
+        y_end = max(padding, height - padding)
         # Draw vertical lines with padding
-        for x in range(padding, width - padding, step):
-            draw.line([(x, padding), (x, height - padding)], fill=grid_color, width=1)
+        for x in range(x_start, x_end, step):
+            draw.line([(x, y_start), (x, y_end)], fill=grid_color, width=1)
         # Draw horizontal lines with padding
-        for y in range(padding, height - padding, step):
-            draw.line([(padding, y), (width - padding, y)], fill=grid_color, width=1)
+        for y in range(y_start, y_end, step):
+            draw.line([(x_start, y), (x_end, y)], fill=grid_color, width=1)
 
     def _update_status_bar(self):
         """Update status bar with current state and contextual hints."""
@@ -2303,18 +2392,18 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             f"Tier:{getattr(self, '_responsive_tier', 'medium')}",
         ]
         if hasattr(self, "_anim_speed_multiplier"):
-            state = "▶" if self.playing else "⏸"
+            state = "PLAY" if self.playing else "PAUSE"
             parts.append(f"Anim {state} {self._anim_speed_multiplier:.2f}x")
 
         # Selection info
         if self.selected_widget_idx is not None and self.selected_widget_idx < len(scene.widgets):
             w = scene.widgets[self.selected_widget_idx]
-            parts.append(f"Selected: {w.type} ({w.x},{w.y}) {w.width}×{w.height}")
+            parts.append(f"Selected: {w.type} ({w.x},{w.y}) {w.width}x{w.height}")
 
         # Multi-selection count
         if len(self.selected_widgets) > 1:
             parts.append(
-                f"{len(self.selected_widgets)} selected (Align Alt+Arrows • Distribute Alt+H/V)"
+                f"{len(self.selected_widgets)} selected (Align Alt+Arrows | Distribute Alt+H/V)"
             )
         if (
             self.dragging
@@ -2323,26 +2412,26 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             and self.selected_widget_idx < len(scene.widgets)
         ):
             w = scene.widgets[self.selected_widget_idx]
-            parts.append(f"Resizing {self.resize_handle.upper()} → {w.width}x{w.height}")
+            parts.append(f"Resizing {self.resize_handle.upper()} -> {w.width}x{w.height}")
         if self._pending_component:
             parts.append(
                 f"Placing: {self._pending_component.get('name', 'widget')} (click to place)"
             )
         if self.box_select_start and self.box_select_rect:
-            parts.append(f"Box-select: {self._box_select_count} hit • Align/Distribute ready")
+            parts.append(f"Box-select: {self._box_select_count} hit | Align/Distribute ready")
 
         # Editor toggles (compact)
         toggles = []
 
         def _toggle(label: str, enabled: bool) -> str:
-            return f"{'●' if enabled else '○'}{label}"
+            return f"{('ON' if enabled else 'OFF')}:{label}"
 
         toggles.append(_toggle("Grid", self.settings.grid_enabled))
         toggles.append(_toggle("Snap", self.settings.snap_enabled))
         toggles.append(_toggle("Guides", self.settings.show_alignment_guides))
         toggles.append(_toggle("Handles", self.settings.show_handles))
         if getattr(self, "_show_mini_help", False):
-            toggles.append("●Help")
+            toggles.append("ON:Help")
         if self.settings.auto_reload_json:
             toggles.append("AutoReload:on")
         parts.append(" ".join(toggles))
@@ -2350,7 +2439,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         # Live hints based on mode
         hint = self._get_context_hint()
         if hint:
-            parts.append(f"💡 {hint}")
+            parts.append(f"HINT: {hint}")
         if self._pending_component:
             parts.append(
                 "Hint: click to place, Esc/right-click to cancel, Enter to confirm at cursor"
@@ -2360,11 +2449,11 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         status_color = None
         if getattr(self.settings, "performance_budget_enabled", False):
             if getattr(self, "_perf_soft_warn", False):
-                parts.append(f"⚠ Perf WARN {self._last_render_ms:.1f}ms")
+                parts.append(f"Perf WARN {self._last_render_ms:.1f}ms")
                 status_color = color_hex("legacy_orange")
             elif getattr(self, "_perf_over_budget", False):
                 parts.append(
-                    f"‼ Perf {self._last_render_ms:.1f}>{self.settings.performance_budget_ms:.1f}ms"
+                    f"Perf {self._last_render_ms:.1f}>{self.settings.performance_budget_ms:.1f}ms"
                 )
                 status_color = color_hex("legacy_dracula_red")
 
@@ -2373,7 +2462,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
 
         # Profiler live snippet
         if getattr(self, "_profiler_enabled", False):
-            parts.append(f"⚡ {self._last_fps:.1f} FPS {self._last_render_ms:.1f}ms")
+            parts.append(f"FPS {self._last_fps:.1f} {self._last_render_ms:.1f}ms")
         if status_color is None:
             status_color = (
                 color_hex("theme_hc_text")
@@ -2407,13 +2496,13 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                 if last is not None and mtime > last:
                     # Update mtime first to avoid repeat reloads
                     self.designer._json_watch_mtime = mtime
-                    print(f"🔄 JSON file changed, reloading: {os.path.basename(path)}")
+                    print(f"JSON file changed, reloading: {os.path.basename(path)}")
                     try:
                         self.designer.load_from_json(path)
                         self._cache_valid = False
                         self.refresh(force=True)
                     except Exception as e:
-                        print(f"⚠️ Auto-reload failed: {e}")
+                        print(f"Auto-reload failed: {e}")
             except Exception:
                 pass
         # Reschedule if still enabled
@@ -2426,31 +2515,31 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         """Get contextual hint based on current state."""
         # Panning mode
         if self._pan_enabled:
-            return "Pan: Space+Drag to move • Ctrl+Wheel zoom • Release Space to exit"
+            return "Pan: Space+Drag to move | Ctrl+Wheel zoom | Release Space to exit"
 
         # Dragging/resizing
         if self.dragging:
             if self.resize_handle:
-                return "Resize: Drag handle • Shift=constrain axis • Arrows nudge"
+                return "Resize: Drag handle | Shift=constrain axis | Arrows nudge"
             else:
-                return "Move: Drag to reposition • Shift=axis lock • Ctrl+D duplicate"
+                return "Move: Drag to reposition | Shift=axis lock | Ctrl+D duplicate"
 
         # Multi-selection
         if len(self.selected_widgets) > 1:
             return (
-                "Multi-select: Shift+Click add • Ctrl+A select all • "
-                "Align Alt+Arrows • Distribute Alt+H/V"
+                "Multi-select: Shift+Click add | Ctrl+A select all | "
+                "Align Alt+Arrows | Distribute Alt+H/V"
             )
 
         # Single selection with handles visible
         if self.selected_widget_idx is not None and self.settings.show_handles:
-            return "Edit: Drag handles to resize • Arrows nudge (Shift=grid) • Delete to remove"
+            return "Edit: Drag handles to resize | Arrows nudge (Shift=grid) | Delete to remove"
 
         # No selection
         if self.selected_widget_idx is None:
             return (
-                "Ready: Click to select • Right-click for menu • "
-                "Ctrl+Shift+A search • Toolbar Export (PNG/SVG/JSON)"
+                "Ready: Click to select | Right-click for menu | "
+                "Ctrl+Shift+A search | Toolbar Export (PNG/SVG/JSON)"
             )
 
         return ""
@@ -3418,7 +3507,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         )
         try:
             self._box_select_count = self._count_box_select(x1, y1, x2, y2)
-            label_text = f"{self._box_select_count} in box • Align/Distribute ready"
+            label_text = f"{self._box_select_count} in box | Align/Distribute ready"
             label_x = min(x1, x2) + self._scale_spacing(8, minimum=4)
             label_y = min(y1, y2) - self._scale_spacing(18, minimum=10)
             if label_y < 0:
@@ -3453,6 +3542,22 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                 widget.width = new_width
         if "e" in self.resize_handle:
             widget.width = max(4, wx - widget.x)
+        # Apply snap/grid rounding for resize to keep dimensions aligned
+        if self.settings.snap_enabled:
+            snap = self._get_scaled_snap_size()
+            widget.x = round(widget.x / snap) * snap
+            widget.y = round(widget.y / snap) * snap
+            widget.width = max(4, round(widget.width / snap) * snap)
+            widget.height = max(4, round(widget.height / snap) * snap)
+        elif self.settings.grid_enabled:
+            grid = self._get_scaled_grid_size()
+            widget.x = (widget.x // grid) * grid
+            widget.y = (widget.y // grid) * grid
+            widget.width = max(4, (widget.width // grid) * grid)
+            widget.height = max(4, (widget.height // grid) * grid)
+        # Clamp to canvas
+        widget.x = max(0, min(widget.x, self.designer.width - widget.width))
+        widget.y = max(0, min(widget.y, self.designer.height - widget.height))
 
     def _move_active_widget(self, widget, event):
         wx, wy = self._canvas_to_widget_coords(event.x, event.y)
@@ -3471,8 +3576,9 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             snap = self._get_scaled_snap_size()
             new_x = round(new_x / snap) * snap
             new_y = round(new_y / snap) * snap
-        if self.settings.snap_to_widgets:
-            new_x, new_y = self._apply_widget_snapping(widget, new_x, new_y)
+            if self.settings.snap_to_widgets:
+                new_x, new_y = self._apply_widget_snapping(widget, new_x, new_y)
+        # When snap is off, respect free-move without mutating snap_to_widgets permanently
         widget.x = max(0, min(new_x, self.designer.width - widget.width))
         widget.y = max(0, min(new_y, self.designer.height - widget.height))
 
@@ -4070,7 +4176,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         """Handle change to grid padding spinboxes (percentage & minimum px)."""
         try:
             raw_pct = float(getattr(self, "_grid_pad_var", tk.DoubleVar(value=0)).get())
-            pct = max(0.0, min(0.5, raw_pct / 100.0))  # clamp 0–50% => 0.0–0.5
+            pct = max(0.0, min(0.5, raw_pct / 100.0))  # clamp 0-50% => 0.0-0.5
             min_px = int(getattr(self, "_grid_pad_min_var", tk.IntVar(value=0)).get())
             min_px = max(0, min_px)
             self.settings.grid_padding_pct = pct
@@ -4170,6 +4276,8 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
     def _on_snap_toggle(self):
         """Toggle snap"""
         self.settings.snap_enabled = self.snap_var.get()
+        # Keep widget-to-widget snapping in sync with main snap toggle
+        self.settings.snap_to_widgets = self.settings.snap_enabled
         self.refresh()
 
     def _on_hints_toggle(self):
@@ -4240,10 +4348,10 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             pad = self._scale_spacing(8, minimum=6)
             font_size = self._scale_font_size(10, minimum=9)
             lines = [
-                "Tip: Zapni Grid/Snap v toolbaru pro přesné umístění.",
-                "Ctrl+Shift+A otevře rychlé přidání komponenty.",
-                "F1/F10 = mini help, HC UI = vysoký kontrast.",
-                "Klikni na toast pro skrytí (už se nezobrazí).",
+                "Tip: Enable Grid/Snap in toolbar for precise placement.",
+                "Ctrl+Shift+A opens quick add component.",
+                "F1/F10 = mini help, HC UI = high contrast.",
+                "Click the toast to hide (will not show again).",
             ]
             width = max(len(ln) for ln in lines) * self._scale_spacing(6, minimum=5)
             x0 = self._scale_spacing(16, minimum=10)
@@ -4545,7 +4653,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         # Header
         header = ttk.Frame(dialog)
         header.pack(fill=tk.X, padx=20, pady=10)
-        ttk.Label(header, text="🖼️ Enhanced SVG Export", font=("Arial", 14, "bold")).pack()
+        ttk.Label(header, text="Enhanced SVG Export", font=("Arial", 14, "bold")).pack()
         ttk.Label(
             header,
             text="Professional-quality vector export with advanced features",
@@ -4565,9 +4673,9 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         preset_var = tk.StringVar(value="web")
 
         presets = [
-            ("web", "🌐 Web Optimized", "Smaller file size, gradients enabled"),
-            ("print", "🖨️ Print Quality", "Full features for printing"),
-            ("hifi", "💎 High Fidelity", "Maximum quality, all features"),
+            ("web", "Web Optimized", "Smaller file size, gradients enabled"),
+            ("print", "Print Quality", "Full features for printing"),
+            ("hifi", "High Fidelity", "Maximum quality, all features"),
         ]
 
         for value, label, desc in presets:
@@ -4737,7 +4845,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         ).pack(side=tk.LEFT, padx=5)
         ttk.Button(
             toolbar,
-            text="💾 Copy to Clipboard",
+            text="Copy to Clipboard",
             command=lambda: self._copy_ascii_to_clipboard(text_widget),
         ).pack(side=tk.LEFT, padx=5)
 
@@ -4777,6 +4885,13 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
 
         # Render ASCII UI
         self._refresh_ascii_preview(text_widget, scene)
+        # Auto-fit after initial render to avoid manual stretching
+        if getattr(self, "_pending_fit", False):
+            try:
+                self._on_zoom_fit()
+            except Exception:
+                pass
+            self._pending_fit = False
 
     def _show_ascii_tab(self):
         """Show the inline ASCII Preview tab and refresh its content."""
@@ -4843,13 +4958,13 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         for line in ascii_lines:
             for char in line:
                 tag = None
-                if char in "┌┐└┘─│":
+                if char in "+-|":
                     tag = "border"
-                elif char == "▓":
+                elif char == "#":
                     tag = "fill_button"
-                elif char == "░":
+                elif char == ".":
                     tag = "fill_box"
-                elif char == "◆":
+                elif char == "*":
                     tag = "fill_icon"
                 elif char.isalnum():
                     tag = "text_label"
@@ -5049,7 +5164,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
             menu = tk.Menu(self.canvas, tearoff=0)
             if self.selected_widget_idx is not None:
                 menu.add_command(
-                    label="Properties…",
+                    label="Properties...",
                     command=lambda: self._edit_widget_properties(self.selected_widget_idx),
                 )
                 menu.add_command(label="Duplicate", command=lambda: self._on_duplicate(None))
@@ -5108,17 +5223,17 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                     is_left = x == w.x
                     is_right = x == w.x + w.width - 1
                     if is_top and is_left:
-                        buf[y][x] = "┌"
+                        buf[y][x] = "+"
                     elif is_top and is_right:
-                        buf[y][x] = "┐"
+                        buf[y][x] = "+"
                     elif is_bottom and is_left:
-                        buf[y][x] = "└"
+                        buf[y][x] = "+"
                     elif is_bottom and is_right:
-                        buf[y][x] = "┘"
+                        buf[y][x] = "+"
                     elif is_top or is_bottom:
-                        buf[y][x] = "─"
+                        buf[y][x] = "-"
                     elif is_left or is_right:
-                        buf[y][x] = "│"
+                        buf[y][x] = "|"
                     else:
                         buf[y][x] = fill_char
                 else:
@@ -5141,15 +5256,15 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
     def _get_widget_fill_char(self, widget):
         """Get fill character based on widget type"""
         type_chars = {
-            "button": "▓",
+            "button": "#",
             "label": " ",
-            "box": "░",
-            "icon": "◆",
-            "checkbox": "☐",
-            "slider": "═",
-            "progress": "▬",
+            "box": ".",
+            "icon": "*",
+            "checkbox": "x",
+            "slider": "=",
+            "progress": "=",
         }
-        return type_chars.get(widget.type, "█")
+        return type_chars.get(widget.type, "#")
 
     def _on_save(self, event):
         """Save design"""
@@ -5395,7 +5510,7 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
                     "Push",
                     (
                         f"Payload written to {path}\n"
-                        "(This is a stub – replace with network/WebSocket push)"
+                        "(This is a stub - replace with network/WebSocket push)"
                     ),
                 )
             except Exception:
@@ -5458,6 +5573,13 @@ Tip: Full shortcut list in Help > Keyboard Shortcuts"""
         bg_color = self._hex_to_rgb(bg_hex)
         img = Image.new("RGB", (img_width, img_height), bg_color)
         draw = ImageDraw.Draw(img)
+
+        # Draw a clear display boundary
+        try:
+            outline_color = self._hex_to_rgb(color_hex("legacy_orange_bright"))
+        except Exception:
+            outline_color = (220, 150, 0)
+        draw.rectangle([(0, 0), (img_width - 1, img_height - 1)], outline=outline_color, width=2)
 
         if include_grid:
             # Draw grid before widgets so overlays/text remain legible

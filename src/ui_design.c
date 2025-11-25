@@ -1,19 +1,76 @@
-#include <stddef.h>
+/* Auto-generated implementation for demo */
 #include "ui_design.h"
 
-static const char TXT_0[] = "UI Demo";
-static const char TXT_1[] = "OK";
-static const char TXT_2[] = "Enable";
 
-const UiWidget UI_WIDGETS_DEMO[] = {
-    { 0, 0, 0, 124, 10, 0, 0, 0, 0, 100, TXT_0, NULL, NULL },
-    { 1, 0, 12, 124, 46, 1, 0, 0, 0, 100, NULL, NULL, NULL },
-    { 2, 8, 20, 40, 12, 1, 0, 0, 0, 100, TXT_1, NULL, NULL },
-    { 4, 8, 36, 108, 8, 1, 0, 70, 0, 100, NULL, NULL, NULL },
-    { 5, 56, 24, 60, 10, 0, 1, 0, 0, 100, TXT_2, NULL, NULL },
+/* String pool */
+static const char str_0[] = "UI Demo";
+static const char str_1[] = "OK";
+static const char str_2[] = "Enable";
+
+/* Widget definitions */
+static const UiWidget widgets[] = {
+    { // [0] label "UI Demo"
+        .type = UIW_LABEL,
+        .x = 0, .y = 0,
+        .width = 124, .height = 10,
+        .border = 0,
+        .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .text = str_0,
+        .constraints_json = NULL,
+        .animations_csv = NULL
+    },
+    { // [1] box ""
+        .type = UIW_BOX,
+        .x = 0, .y = 8,
+        .width = 124, .height = 46,
+        .border = 1,
+        .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .text = NULL,
+        .constraints_json = NULL,
+        .animations_csv = NULL
+    },
+    { // [2] button "OK"
+        .type = UIW_BUTTON,
+        .x = 8, .y = 16,
+        .width = 40, .height = 12,
+        .border = 1,
+        .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .text = str_1,
+        .constraints_json = NULL,
+        .animations_csv = NULL
+    },
+    { // [3] progressbar ""
+        .type = UIW_PROGRESSBAR,
+        .x = 8, .y = 32,
+        .width = 108, .height = 8,
+        .border = 1,
+        .checked = 0,
+        .value = 70, .min_value = 0, .max_value = 100,
+        .text = NULL,
+        .constraints_json = NULL,
+        .animations_csv = NULL
+    },
+    { // [4] checkbox "Enable"
+        .type = UIW_CHECKBOX,
+        .x = 56, .y = 26,
+        .width = 60, .height = 10,
+        .border = 0,
+        .checked = 1,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .text = str_2,
+        .constraints_json = NULL,
+        .animations_csv = NULL
+    },
 };
 
-
-const UiScene UI_SCENE_DEMO = {
-    "demo", 128, 64, (uint16_t)(sizeof(UI_WIDGETS_DEMO)/sizeof(UI_WIDGETS_DEMO[0])), UI_WIDGETS_DEMO
+/* Scene definition */
+const UiScene ui_design = {
+    .name = "demo",
+    .width = 128,
+    .height = 64,
+    .widget_count = 5,
+    .widgets = widgets
 };

@@ -7,7 +7,8 @@ Functions here must avoid any tkinter dependencies; operate purely
 on model objects (scene, widgets).
 """
 from __future__ import annotations
-from typing import List, Dict, Tuple
+
+from typing import Dict, List, Tuple
 
 # Type hints are kept loose to avoid tight coupling; widgets are expected
 # to expose x, y, width, height attributes and scene.widgets is a list.

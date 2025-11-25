@@ -6,7 +6,8 @@ performance tuning.
 All functions are pure w.r.t. inputs; they only mutate the passed canvas.
 """
 from __future__ import annotations
-from typing import List, Sequence, Optional, Callable
+
+from typing import Callable, Optional, Sequence
 
 __all__ = ["draw_perf_overlay", "draw_diagnostics_overlay"]
 
