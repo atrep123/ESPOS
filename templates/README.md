@@ -5,14 +5,18 @@ This directory contains Jinja2 templates for generating clean, maintainable C co
 ## Templates
 
 ### `ui_design.h.j2`
+
 Header file template containing:
+
 - Widget type enumeration (`UiWidgetType`)
 - Widget structure definition (`UiWidget`)
 - Scene structure definition (`UiScene`)
 - Exported scene declaration
 
 ### `ui_design.c.j2`
+
 Implementation file template containing:
+
 - String pool (deduplicated strings)
 - Widget array definitions
 - Scene definition with metadata
@@ -20,7 +24,9 @@ Implementation file template containing:
 ## Features
 
 ### String Pool Deduplication
+
 Identical strings are stored only once, reducing code size by 30-50%:
+
 ```c
 /* String pool */
 static const char str_0[] = "UI Demo";
@@ -29,6 +35,7 @@ static const char str_2[] = "Enable";
 ```
 
 ### Clean, Readable Output
+
 - Auto-generated comments
 - Structured sections
 - Designated initializers (.field = value)
@@ -44,7 +51,8 @@ python -m tools.ui_export_c --preset esp32_oled_128x64_1bpp
 ```
 
 Output:
-```
+
+```text
 [C Export] Template-based export -> src\ui_design.h, src\ui_design.c
   Scene: demo (128x64)
   Widgets: 5
@@ -54,6 +62,7 @@ Output:
 ## Customization
 
 Templates can be modified to:
+
 - Support different embedded platforms
 - Add custom metadata fields
 - Change naming conventions
@@ -63,11 +72,13 @@ Templates can be modified to:
 ## Template Variables
 
 **Header template (`ui_design.h.j2`):**
+
 - `base_name` - Output filename base
 - `scene_name` - Scene identifier
 - `widget_types` - List of (name, id) tuples
 
 **Implementation template (`ui_design.c.j2`):**
+
 - `base_name` - Output filename base
 - `scene_name` - Scene identifier
 - `scene_width`, `scene_height` - Dimensions
