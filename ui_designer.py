@@ -6,14 +6,25 @@ Drag-and-drop widget editor with live preview and code generation
 
 import copy
 import json
+import logging
 import os
 import sys
 from dataclasses import asdict
 from datetime import datetime
+from functools import lru_cache
 from html import escape
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, TypedDict, Union, cast
 
+
+class WidgetValidationError(Exception):
+    """Raised when widget or scene data fails validation."""
+
+
+class SceneLoadError(Exception):
+    """Raised when a scene JSON cannot be loaded or parsed."""
+
+from constants import BACKUP_DIR, GRID_SIZE_MEDIUM
 from design_tokens import color_hex
 from ui_models import (
     BorderStyle,  # noqa: F401 - re-exported
@@ -21,6 +32,7 @@ from ui_models import (
     Constraints,
     Scene,  # noqa: F401 - re-exported
     SceneConfig,
+    SceneConfigDict,
     WidgetConfig,
     WidgetType,
     _coerce_bool_flag,
@@ -39,9 +51,84 @@ MSG_UNKNOWN_ANIM = "Unknown animation name"
 
 PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), "ui_designer_preview.py")
 
+# Hardware profiles for common ESP32 displays
+class HardwareProfile(TypedDict):
+    label: str
+    width: int
+    height: int
+    color_depth: int
+    max_fb_kb: float
+    max_flash_kb: float
+
+
+HARDWARE_PROFILES: Dict[str, HardwareProfile] = {
+    "oled_128x64": {
+        "label": "OLED 128x64 (1bpp)",
+        "width": 128,
+        "height": 64,
+        "color_depth": 1,
+        "max_fb_kb": 2.0,
+        "max_flash_kb": 32.0,
+    },
+    "tft_320x240": {
+        "label": "TFT 320x240 (16bpp)",
+        "width": 320,
+        "height": 240,
+        "color_depth": 16,
+        "max_fb_kb": 200.0,
+        "max_flash_kb": 256.0,
+    },
+    "tft_480x320": {
+        "label": "TFT 480x320 (16bpp)",
+        "width": 480,
+        "height": 320,
+        "color_depth": 16,
+        "max_fb_kb": 320.0,
+        "max_flash_kb": 512.0,
+    },
+}
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_int(value: Optional[int]) -> int:
+    return int(value) if value is not None else 0
+
+
+def _clamp_int(value: Optional[int], minimum: int = 0, maximum: Optional[int] = None) -> int:
+    """Clamp potentially-optional ints to a bounded range."""
+    try:
+        v = int(value) if value is not None else minimum
+    except Exception:
+        v = minimum
+    if maximum is not None:
+        v = min(v, maximum)
+    return max(minimum, v)
+
+@lru_cache(maxsize=8)
+def _border_chars(style: str) -> Dict[str, str]:
+    """Cached lookup for border characters per style."""
+    styles = {
+        "single": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+        "double": {"h": "=", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+        "rounded": {"h": "-", "v": "|", "tl": "(", "tr": ")", "bl": "(", "br": ")"},
+        "bold": {"h": "#", "v": "#", "tl": "#", "tr": "#", "bl": "#", "br": "#"},
+        "dashed": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+    }
+    return styles.get(style, styles["single"])
+
+
+def _widget_dims(widget: WidgetConfig) -> Tuple[int, int]:
+    """Return safe (width, height) with minimum of 1."""
+    w = getattr(widget, "width", 1)
+    h = getattr(widget, "height", 1)
+    return max(1, int(w or 1)), max(1, int(h or 1))
+
 
 class UIDesigner:
     """Visual UI designer with layout editor"""
+    _last_loaded_json: ClassVar[Optional[str]] = None
+    _json_watch_mtime: ClassVar[Optional[float]] = None
 
     def __init__(self, width: int = 128, height: int = 64):
         self.width = width
@@ -49,6 +136,8 @@ class UIDesigner:
         self.scenes: Dict[str, SceneConfig] = {}
         self.current_scene: Optional[str] = None
         self.selected_widget: Optional[int] = None
+        self._last_loaded_json: Optional[str] = None
+        self._json_watch_mtime: Optional[float] = None
 
         # Undo/redo stacks
         self.undo_stack: List[str] = []  # JSON snapshots
@@ -60,7 +149,7 @@ class UIDesigner:
 
         # Grid settings (align with preview defaults)
         self.grid_enabled = True
-        self.grid_size = 8
+        self.grid_size = GRID_SIZE_MEDIUM
         self.snap_to_grid = True
         # Magnetic snapping settings
         self.snap_edges = True
@@ -69,6 +158,7 @@ class UIDesigner:
         self.snap_fluid = True  # fluid mode ignores strict grid when snapping
         self.show_guides = True
         self.last_guides: List[Dict[str, Any]] = []
+        self._update_snap_tolerance()
 
         # Named checkpoints (in-memory) for quick diff/rollback
         self.checkpoints: Dict[str, Dict[str, Any]] = {}
@@ -98,11 +188,28 @@ class UIDesigner:
                 "accent": color_hex("theme_dark_accent"),
                 "danger": color_hex("theme_dark_danger"),
             },
+            "pixel_dark": {
+                "bg": "#05060a",
+                "text": "#f4f4f4",
+                "primary": "#00ffc8",
+                "secondary": "#1b2228",
+                "accent": "#ffcc33",
+                "danger": "#ff3355",
+            },
+            "pixelhud": {
+                "bg": "#000000",
+                "text": "#ffffff",
+                "primary": "#00ffaa",
+                "secondary": "#202020",
+                "accent": "#ffff55",
+                "danger": "#ff3355",
+            },
         }
         self.theme_contrast_min = 4.5
 
         # Animation preview context
         self.anim_context: Optional[Dict[str, Any]] = None
+        self.hardware_profile: Optional[str] = None
 
     def _create_default_templates(self) -> Dict[str, WidgetConfig]:
         """Create default widget templates"""
@@ -169,6 +276,45 @@ class UIDesigner:
                 color_fg="green",
                 color_bg="black",
             ),
+            "hud_title": WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=128,
+                height=10,
+                text="CORE CONTROL",
+                align="center",
+                style="bold",
+                border=False,
+                color_fg="cyan",
+            ),
+            "hud_progress_segmented": WidgetConfig(
+                type="progressbar",
+                x=0,
+                y=0,
+                width=100,
+                height=8,
+                value=40,
+                min_value=0,
+                max_value=100,
+                border=True,
+                border_style="single",
+                color_fg="green",
+                color_bg="black",
+                style="segmented",
+            ),
+            "hud_stat_label": WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=40,
+                height=8,
+                text="PWR: 084%",
+                align="left",
+                border=False,
+                style="default",
+                color_fg="white",
+            ),
             "gauge_half": WidgetConfig(
                 type="gauge",
                 x=0,
@@ -185,39 +331,47 @@ class UIDesigner:
 
     def _save_state(self):
         """Save current state for undo"""
-        if self.current_scene and self.current_scene in self.scenes:
-            scene_obj = self.scenes[self.current_scene]
-            payload = asdict(scene_obj)
-            state = json.dumps(payload)
-            self.undo_stack.append(state)
-            if len(self.undo_stack) > self.max_undo:
-                self.undo_stack.pop(0)
-            self.redo_stack.clear()
-            # Lightweight diff summary (store alongside state for history preview)
-            try:
-                if not hasattr(self, "_history_meta"):
-                    self._history_meta = []  # parallel to undo_stack indices
-                diff_summary = {
-                    "widgets": len(payload.get("widgets", [])),
-                    "name": payload.get("name"),
-                    "ts": datetime.now().isoformat(timespec="seconds"),
-                }
-                self._history_meta.append(diff_summary)
-                if len(self._history_meta) > self.max_undo:
-                    self._history_meta.pop(0)
-            except Exception:
-                pass
-            # Autosave snapshot (undo-safe)
-            try:
-                backup_dir = Path.home() / ".esp32os" / "designer_backups"
-                backup_dir.mkdir(parents=True, exist_ok=True)
-                ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                scene_name = (self.current_scene or "scene").replace(" ", "_")
-                snap_path = backup_dir / f"{scene_name}_{ts}.json"
-                with open(snap_path, "w", encoding="utf-8") as f:
-                    f.write(state)
-            except Exception:
-                pass
+        if not (self.current_scene and self.current_scene in self.scenes):
+            return
+        scene_obj = self.scenes[self.current_scene]
+        payload = asdict(scene_obj)
+        state = json.dumps(payload)
+        self._push_undo_state(state)
+        self._record_history_meta(payload)
+        self._write_backup_snapshot(state)
+
+    def _push_undo_state(self, state: str) -> None:
+        self.undo_stack.append(state)
+        if len(self.undo_stack) > self.max_undo:
+            self.undo_stack.pop(0)
+        self.redo_stack.clear()
+
+    def _record_history_meta(self, payload: Dict[str, Any]) -> None:
+        try:
+            if not hasattr(self, "_history_meta"):
+                self._history_meta = []  # parallel to undo_stack indices
+            diff_summary = {
+                "widgets": len(payload.get("widgets", [])),
+                "name": payload.get("name"),
+                "ts": datetime.now().isoformat(timespec="seconds"),
+            }
+            self._history_meta.append(diff_summary)
+            if len(self._history_meta) > self.max_undo:
+                self._history_meta.pop(0)
+        except Exception:
+            pass
+
+    def _write_backup_snapshot(self, state: str) -> None:
+        try:
+            backup_dir = BACKUP_DIR
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            scene_name = (self.current_scene or "scene").replace(" ", "_")
+            snap_path = backup_dir / f"{scene_name}_{ts}.json"
+            with open(snap_path, "w", encoding="utf-8") as f:
+                f.write(state)
+        except Exception:
+            pass
 
     def undo(self) -> bool:
         """Undo last operation"""
@@ -303,7 +457,15 @@ class UIDesigner:
             return None
 
     def snap_position(self, x: int, y: int) -> Tuple[int, int]:
-        """Snap coordinates to grid"""
+        """Snap coordinates to the active grid if enabled.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+
+        Returns:
+            Tuple of snapped (x, y) integers.
+        """
         if self.snap_to_grid and self.grid_enabled:
             x = (x // self.grid_size) * self.grid_size
             y = (y // self.grid_size) * self.grid_size
@@ -321,18 +483,21 @@ class UIDesigner:
         bounds = self._widget_bounds(widget, x, y)
         best_dx, best_dy, best_vline, best_hline = self._find_best_snaps(widget, scene, bounds)
         x, y = self._apply_best_offset(
-            x, y, widget, scene, best_dx, best_dy, best_vline, best_hline
+            x, y, scene, best_dx, best_dy, best_vline, best_hline
         )
+        if self.snap_to_grid and not self.snap_fluid:
+            x, y = self.snap_position(x, y)
         return self._clamp_to_scene(x, y, widget, scene)
 
     def _widget_bounds(self, widget: WidgetConfig, x: int, y: int) -> Dict[str, int]:
+        w, h = _widget_dims(widget)
         return {
             "left": x,
-            "right": x + widget.width,
+            "right": x + w,
             "top": y,
-            "bottom": y + widget.height,
-            "cx": x + widget.width // 2,
-            "cy": y + widget.height // 2,
+            "bottom": y + h,
+            "cx": x + w // 2,
+            "cy": y + h // 2,
         }
 
     def _find_best_snaps(
@@ -440,7 +605,6 @@ class UIDesigner:
         self,
         x: int,
         y: int,
-        widget: WidgetConfig,
         scene: SceneConfig,
         best_dx: Optional[int],
         best_dy: Optional[int],
@@ -450,44 +614,218 @@ class UIDesigner:
         if best_dx is not None:
             x += best_dx
             if best_vline is not None:
-                vx, vy1, vy2, k = best_vline
-                self.last_guides.append(
-                    {
-                        "type": "v",
-                        "x": vx,
-                        "y1": max(0, vy1),
-                        "y2": min(scene.height - 1, vy2),
-                        "k": k,
-                    }
-                )
+                self._record_vertical_guide(best_vline, scene)
         if best_dy is not None:
             y += best_dy
             if best_hline is not None:
-                hy, hx1, hx2, k = best_hline
-                self.last_guides.append(
-                    {
-                        "type": "h",
-                        "y": hy,
-                        "x1": max(0, hx1),
-                        "x2": min(scene.width - 1, hx2),
-                        "k": k,
-                    }
-                )
+                self._record_horizontal_guide(best_hline, scene)
         return x, y
+
+    def _record_vertical_guide(self, guide: Tuple[int, int, int, str], scene: SceneConfig) -> None:
+        vx, vy1, vy2, k = guide
+        self.last_guides.append(
+            {
+                "type": "v",
+                "x": vx,
+                "y1": max(0, vy1),
+                "y2": min(scene.height - 1, vy2),
+                "k": k,
+            }
+        )
+
+    def _record_horizontal_guide(self, guide: Tuple[int, int, int, str], scene: SceneConfig) -> None:
+        hy, hx1, hx2, k = guide
+        self.last_guides.append(
+            {
+                "type": "h",
+                "y": hy,
+                "x1": max(0, _safe_int(hx1)),
+                "x2": min(scene.width - 1, _safe_int(hx2)),
+                "k": k,
+            }
+        )
 
     def _clamp_to_scene(
         self, x: int, y: int, widget: WidgetConfig, scene: SceneConfig
     ) -> Tuple[int, int]:
-        x = max(0, min(scene.width - widget.width, x))
-        y = max(0, min(scene.height - widget.height, y))
+        w, h = _widget_dims(widget)
+        x = max(0, min(scene.width - w, x))
+        y = max(0, min(scene.height - h, y))
         return x, y
 
+    def _update_snap_tolerance(self):
+        """Tighten snap tolerance based on grid size for more accurate snapping."""
+        self.snap_tolerance = max(1, min(3, self.grid_size // 2 if self.grid_size else 3))
+
+    @property
+    def snap_to_grid(self) -> bool:  # type: ignore[override]
+        return getattr(self, "_snap_to_grid", False)
+
+    @snap_to_grid.setter
+    def snap_to_grid(self, value: Any) -> None:  # type: ignore[override]
+        if value is None:
+            self._snap_to_grid = False
+            return
+        if isinstance(value, bool):
+            self._snap_to_grid = value
+            return
+        try:
+            self._snap_to_grid = bool(int(value))
+        except Exception:
+            self._snap_to_grid = bool(value)
+
     def create_scene(self, name: str) -> SceneConfig:
-        """Create new scene"""
+        """Create a new scene and register it as current.
+
+        Args:
+            name: Scene identifier.
+
+        Returns:
+            The created SceneConfig instance.
+        """
         scene = SceneConfig(name=name, width=self.width, height=self.height, widgets=[])
+        # Apply pixel HUD theme if available so new scenes start in the neon palette.
+        for candidate in ("pixelhud", "pixel_dark"):
+            if candidate in self.themes:
+                roles = self.themes[candidate]
+                scene.theme = candidate
+                scene.bg_color = roles.get("bg", scene.bg_color)
+                scene.grid_size = self.grid_size  # type: ignore[attr-defined]
+                break
         self.scenes[name] = scene
         self.current_scene = name
         return scene
+
+    # --- Hardware profiles and resource estimation ---
+    def set_hardware_profile(self, profile_key: str) -> Optional["HardwareProfile"]:
+        """Assign hardware profile (width/height/color depth) for new scenes and estimation.
+
+        Args:
+            profile_key: Key from HARDWARE_PROFILES.
+
+        Returns:
+            The applied profile dict, or None if the key is unknown.
+        """
+        if profile_key not in HARDWARE_PROFILES:
+            return None
+        profile = HARDWARE_PROFILES[profile_key]
+        self.hardware_profile = profile_key
+        self.width = profile["width"]
+        self.height = profile["height"]
+        if self.current_scene and self.current_scene in self.scenes:
+            sc = self.scenes[self.current_scene]
+            sc.width = profile["width"]
+            sc.height = profile["height"]
+        return profile
+
+    def estimate_resources(
+        self,
+        scene_name: Optional[str] = None,
+        profile: Optional[str] = None,
+        color_depth: Optional[int] = None,
+    ) -> Dict[str, float]:
+        """Estimate framebuffer RAM and a rough flash footprint for the current scene.
+
+        - framebuffer assumes color_depth bits per pixel (1bpp OLED or 16bpp TFT).
+        - flash estimate is a simple heuristic based on widget count and text length.
+
+        Args:
+            scene_name: Optional scene key; defaults to current.
+            profile: Optional hardware profile key; defaults to active profile.
+            color_depth: Optional override for bits-per-pixel.
+
+        Returns:
+            Mapping of framebuffer/flash sizes and over-limit flags; empty if no scene.
+        """
+        sc = self._resolve_scene(scene_name)
+        if not sc:
+            return {}
+        prof = self._resolve_profile_limits(profile or self.hardware_profile)
+        depth = self._resolve_color_depth(color_depth, prof)
+        area = max(1, sc.width * sc.height)
+        fb_bytes = self._framebuffer_bytes(area, depth)
+        text_bytes = self._text_bytes(sc.widgets)
+        widget_bytes = 128 * len(sc.widgets)
+        flash_bytes = widget_bytes + text_bytes
+        overlaps = self._count_overlaps(sc)
+        max_fb_kb = prof["max_fb_kb"] if prof else 0.0
+        max_flash_kb = prof["max_flash_kb"] if prof else 0.0
+        fb_over = self._over_limit(fb_bytes, max_fb_kb)
+        flash_over = self._over_limit(flash_bytes, max_flash_kb)
+        return {
+            "framebuffer_bytes": float(fb_bytes),
+            "framebuffer_kb": fb_bytes / 1024.0,
+            "flash_bytes": float(flash_bytes),
+            "flash_kb": flash_bytes / 1024.0,
+            "color_depth": float(depth),
+            "area": float(area),
+            "widgets": float(len(sc.widgets)),
+            "fb_over": float(1.0 if fb_over else 0.0),
+            "flash_over": float(1.0 if flash_over else 0.0),
+            "max_fb_kb": float(max_fb_kb),
+            "max_flash_kb": float(max_flash_kb),
+            "text_bytes": float(text_bytes),
+            "widget_bytes": float(widget_bytes),
+            "overlaps": float(overlaps),
+            "overlap_pairs": float(overlaps),
+        }
+
+    def _resolve_color_depth(self, override: Optional[int], profile: Optional[Dict[str, Any]]) -> int:
+        if override is not None:
+            return int(override)
+        if profile:
+            return int(profile.get("color_depth", 1) or 1)
+        return 1
+
+    def _framebuffer_bytes(self, area: int, depth: int) -> int:
+        if depth <= 1:
+            return (area + 7) // 8
+        return int(area * (depth / 8.0))
+
+    def _text_bytes(self, widgets: List[WidgetConfig]) -> int:
+        return sum(len(getattr(wi, "text", "") or "") for wi in widgets)
+
+    def _over_limit(self, bytes_val: int, limit_kb: float) -> bool:
+        return bool(limit_kb and (bytes_val / 1024.0) > limit_kb)
+
+    def _count_overlaps(self, sc: SceneConfig) -> int:
+        """Count how many widget pairs overlap (rough heuristic)."""
+        count = 0
+        for i, a in enumerate(sc.widgets):
+            aw, ah = _widget_dims(a)
+            ar = (a.x, a.y, a.x + aw, a.y + ah)
+            for b in sc.widgets[i + 1 :]:
+                bw, bh = _widget_dims(b)
+                br = (b.x, b.y, b.x + bw, b.y + bh)
+                if (ar[0] < br[2] and ar[2] > br[0] and ar[1] < br[3] and ar[3] > br[1]):
+                    count += 1
+        return count
+
+    def _resolve_profile_limits(self, profile_key: Optional[str]) -> Optional[HardwareProfile]:
+        if not profile_key:
+            return None
+        prof = HARDWARE_PROFILES.get(profile_key)
+        if not prof:
+            return None
+        try:
+            max_fb = float(prof.get("max_fb_kb", 0) or 0)
+        except Exception:
+            max_fb = 0.0
+        try:
+            max_flash = float(prof.get("max_flash_kb", 0) or 0)
+        except Exception:
+            max_flash = 0.0
+        return cast(
+            HardwareProfile,
+            {
+                "label": str(prof.get("label", "")),
+                "width": int(prof.get("width", 0)),
+                "height": int(prof.get("height", 0)),
+                "color_depth": int(prof.get("color_depth", 1)),
+                "max_fb_kb": max(0.0, max_fb),
+                "max_flash_kb": max(0.0, max_flash),
+            },
+        )
 
     # --- Responsive helpers ---
     def set_responsive_base(self, scene_name: Optional[str] = None):
@@ -499,25 +837,30 @@ class UIDesigner:
 
         # Store baseline into widget.constraints.b for later use
         for w in sc.widgets:
-            b = _make_baseline(
-                w.x,
-                w.y,
-                w.width,
-                w.height,
-                sc.base_width,
-                sc.base_height,
-            )
+            b = self._baseline_for_widget(w, sc)
             w.constraints = w.constraints or _empty_constraints()
             w.constraints["b"] = b
-            # Provide default anchors if absent
-            w.constraints.setdefault("ax", "left")
-            w.constraints.setdefault("ay", "top")
-            w.constraints.setdefault("sx", False)
-            w.constraints.setdefault("sy", False)
-            w.constraints.setdefault("mx", 0)
-            w.constraints.setdefault("my", 0)
-            w.constraints.setdefault("mr", 0)
-            w.constraints.setdefault("mb", 0)
+            self._set_default_constraints(w)
+
+    def _baseline_for_widget(self, widget: WidgetConfig, scene: SceneConfig) -> ConstraintBaseline:
+        return _make_baseline(
+            widget.x,
+            widget.y,
+            widget.width,
+            widget.height,
+            scene.base_width,
+            scene.base_height,
+        )
+
+    def _set_default_constraints(self, widget: WidgetConfig) -> None:
+        widget.constraints.setdefault("ax", "left")
+        widget.constraints.setdefault("ay", "top")
+        widget.constraints.setdefault("sx", False)
+        widget.constraints.setdefault("sy", False)
+        widget.constraints.setdefault("mx", 0)
+        widget.constraints.setdefault("my", 0)
+        widget.constraints.setdefault("mr", 0)
+        widget.constraints.setdefault("mb", 0)
 
     def apply_responsive(self, scene_name: Optional[str] = None):
         sc = self._resolve_scene(scene_name)
@@ -613,6 +956,28 @@ class UIDesigner:
             if self.current_scene and self.current_scene in self.scenes:
                 sc = self.scenes[self.current_scene]
                 self.grid_size = max(1, sc.width // n)
+                self._update_snap_tolerance()
+        self._update_snap_tolerance()
+
+    def enable_pixel_art_mode(self) -> None:
+        """Configure grid/snapping and theme for pixel-art HUD workflows."""
+        self.grid_enabled = True
+        self.grid_size = 8
+        self.snap_to_grid = True
+        self.snap_fluid = False
+        self.snap_tolerance = 1
+        self.set_grid_columns(8)
+        # Re-assert 8px grid after column helper adjusts it
+        self.grid_size = 8
+        self._update_snap_tolerance()
+
+        if self.current_scene and self.current_scene in self.scenes:
+            sc = self.scenes[self.current_scene]
+            if "pixel_dark" in self.themes:
+                roles = self.themes["pixel_dark"]
+                sc.theme = "pixel_dark"
+                sc.bg_color = roles.get("bg", sc.bg_color)
+            sc.grid_size = self.grid_size  # type: ignore[attr-defined]
 
     def add_widget(
         self,
@@ -708,7 +1073,7 @@ class UIDesigner:
         )
 
     def add_widget_from_template(
-        self, template_name: str, _widget_id: str, x: int, y: int, **kwargs: Any
+        self, template_name: str, x: int, y: int, **kwargs: Any
     ):
         """Add widget from template with custom properties"""
         if template_name not in self.templates:
@@ -721,7 +1086,10 @@ class UIDesigner:
     def _clone_template_with_overrides(
         self, template_name: str, x: int, y: int, overrides: Dict[str, Any]
     ) -> WidgetConfig:
-        widget = copy.deepcopy(self.templates[template_name])
+        template = self.templates.get(template_name)
+        if template is None:
+            raise KeyError(f"Template '{template_name}' not found")
+        widget = copy.deepcopy(template)
         widget.x = x
         widget.y = y
         for key, value in overrides.items():
@@ -756,6 +1124,8 @@ class UIDesigner:
             widget = scene.widgets[widget_idx]
             if getattr(widget, "locked", False):
                 return
+            # Record state only if the widget is allowed to move.
+            self._save_state()
             nx = widget.x + dx
             ny = widget.y + dy
             nx, ny = self._apply_snapping(widget, nx, ny, scene)
@@ -771,6 +1141,7 @@ class UIDesigner:
             widget = scene.widgets[widget_idx]
             if getattr(widget, "locked", False):
                 return
+            self._save_state()
             widget.width = max(1, widget.width + dw)
             widget.height = max(1, widget.height + dh)
 
@@ -782,6 +1153,7 @@ class UIDesigner:
         if 0 <= widget_idx < len(scene.widgets):
             if getattr(scene.widgets[widget_idx], "locked", False):
                 return
+            self._save_state()
             del scene.widgets[widget_idx]
             self._reindex_after_delete(widget_idx)
 
@@ -998,7 +1370,15 @@ class UIDesigner:
     def _collect_widget_changes(
         self, diff: Dict[str, Any], wa: List[Dict[str, Any]], wb: List[Dict[str, Any]], n: int
     ) -> None:
-        keys = [
+        keys = self._widget_diff_keys()
+        changed = diff["widgets"]["changed"]
+        for i in range(n):
+            changes = self._widget_diff_entry(wa[i], wb[i], keys)
+            if changes:
+                changed.append({"index": i, "changes": changes})
+
+    def _widget_diff_keys(self) -> List[str]:
+        return [
             "type",
             "x",
             "y",
@@ -1020,15 +1400,9 @@ class UIDesigner:
             "visible",
             "z_index",
         ]
-        changed = diff["widgets"]["changed"]
-        for i in range(n):
-            changes = {
-                k: {"a": wa[i].get(k), "b": wb[i].get(k)}
-                for k in keys
-                if wa[i].get(k) != wb[i].get(k)
-            }
-            if changes:
-                changed.append({"index": i, "changes": changes})
+
+    def _widget_diff_entry(self, wa: Dict[str, Any], wb: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+        return {k: {"a": wa.get(k), "b": wb.get(k)} for k in keys if wa.get(k) != wb.get(k)}
 
     def _collect_added_removed(
         self, diff: Dict[str, Any], wa: List[Dict[str, Any]], wb: List[Dict[str, Any]], n: int
@@ -1046,7 +1420,7 @@ class UIDesigner:
         return None
 
     def save_to_json(self, filename: str):
-        """Save design to JSON file"""
+        """Save design to JSON file."""
         data = {
             "width": self.width,
             "height": self.height,
@@ -1062,10 +1436,14 @@ class UIDesigner:
             },
         }
 
-        with open(filename, "w") as f:
-            json.dump(data, f, indent=2)
+        try:
+            with open(filename, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            logger.info("[OK] Design saved: %s", filename)
+        except Exception as exc:
+            logger.error("Failed to save design %s: %s", filename, exc)
+            return
 
-        print(f"[OK] Design saved: {filename}")
         # Auto: run preflight and export previews unless disabled
         try:
             if os.environ.get("ESP32OS_AUTO_EXPORT", "1") != "0":
@@ -1074,62 +1452,148 @@ class UIDesigner:
             print(f"[WARN] Auto-export skipped: {_e}")
 
     def load_from_json(self, filename: str):
-        """Load design from JSON file"""
-        data = self._read_json_file(filename)
-        self.width = data.get("width", 128)
-        self.height = data.get("height", 64)
-        self.scenes = self._build_scenes_from_data(data)
-        if self.scenes:
-            self.current_scene = list(self.scenes.keys())[0]
-        print(f"[OK] Design loaded: {filename}")
-        self._record_json_watch(filename)
+        """Load a design from disk and populate scenes.
+
+        Args:
+            filename: Path to a JSON file in UI Designer schema.
+
+        Returns:
+            None; updates internal scenes and current_scene.
+        """
+        try:
+            data = self._read_json_file(filename)
+            self.width = data.get("width", 128)
+            self.height = data.get("height", 64)
+            self.scenes = self._build_scenes_from_data(data)
+            if self.scenes:
+                self.current_scene = list(self.scenes.keys())[0]
+            logger.info("[OK] Design loaded: %s", filename)
+            self._record_json_watch(filename)
+        except SceneLoadError as exc:
+            logger.error("Load failed for %s: %s; falling back to default scene", filename, exc)
+            self.scenes.clear()
+            self.create_scene("main")
+            self.current_scene = "main"
 
     def _read_json_file(self, filename: str) -> Dict[str, Any]:
-        with open(filename, "r") as f:
-            return json.load(f)
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError as exc:
+            raise SceneLoadError(f"File not found: {filename}") from exc
+        except PermissionError as exc:
+            raise SceneLoadError(f"Permission denied reading: {filename}") from exc
+        except json.JSONDecodeError as exc:
+            raise SceneLoadError(f"Invalid JSON in: {filename}") from exc
+        except Exception as exc:
+            raise SceneLoadError(f"Failed to read JSON: {filename}") from exc
 
     def _build_scenes_from_data(self, data: Dict[str, Any]) -> Dict[str, SceneConfig]:
         scenes: Dict[str, SceneConfig] = {}
         scenes_data = data.get("scenes", {})
 
-        # Support both dict and list formats
-        if isinstance(scenes_data, list):
-            scenes_dict = {
-                scene.get("id", f"scene_{i}"): scene for i, scene in enumerate(scenes_data)
-            }
-        else:
-            scenes_dict = scenes_data
-
-        # Get default width/height from display settings
-        display = data.get("display", {})
-        default_width = display.get("width", 320)
-        default_height = display.get("height", 240)
-
+        scenes_dict = self._scenes_dict_from_data(scenes_data, data)
         for name, scene_data in scenes_dict.items():
-            # Parse widgets, converting 'id' to '_widget_id' if present
-            widgets = []
-            for w in scene_data.get("widgets", []):
-                widget_dict = dict(w)
-                if "id" in widget_dict:
-                    widget_dict["_widget_id"] = widget_dict.pop("id")
-                widgets.append(WidgetConfig(**widget_dict))
-
-            scenes[name] = SceneConfig(
-                name=scene_data.get("name", name),
-                width=scene_data.get("width", default_width),
-                height=scene_data.get("height", default_height),
-                widgets=widgets,
-                bg_color=scene_data.get("bg_color", "black"),
-            )
+            widgets = self._widgets_for_scene(data, name)
+            scenes[name] = self._build_scene_config(name, scene_data, widgets, data)
         return scenes
+
+    def _scenes_dict_from_data(
+        self, scenes_data: Union[Dict[str, Any], List[Any]], root_data: Dict[str, Any]
+    ) -> Dict[str, SceneConfigDict]:
+        if isinstance(scenes_data, list):
+            return {
+                str(scene.get("id", f"scene_{i}")): self._validate_scene_dict(scene, root_data, idx=i)
+                for i, scene in enumerate(scenes_data)
+            }
+        return {str(name): self._validate_scene_dict(scene, root_data) for name, scene in scenes_data.items()}
+
+    def _widgets_for_scene(self, data: Dict[str, Any], name: str) -> List[WidgetConfig]:
+        raw_widgets = data.get("scenes", {}).get(name, {}).get("widgets") if isinstance(data.get("scenes", {}), dict) else None
+        raw_widgets = raw_widgets if isinstance(raw_widgets, list) else []
+        widgets: List[WidgetConfig] = []
+        for w in raw_widgets:
+            widget_dict = dict(w)
+            if "id" in widget_dict:
+                widget_dict["_widget_id"] = widget_dict.pop("id")
+            widgets.append(WidgetConfig(**widget_dict))
+        return widgets
+
+    def _build_scene_config(
+        self, name: str, scene_data: SceneConfigDict, widgets: List[WidgetConfig], data: Dict[str, Any]
+    ) -> SceneConfig:
+        return SceneConfig(
+            name=scene_data["name"],
+            width=scene_data["width"],
+            height=scene_data["height"],
+            widgets=widgets,
+            bg_color=data.get("bg_color", "black"),
+            theme=scene_data["theme"],
+            hardware_profile=scene_data.get("hardware_profile"),
+            max_fb_kb=scene_data.get("max_fb_kb"),
+            max_flash_kb=scene_data.get("max_flash_kb"),
+        )
+
+    def _validate_scene_dict(
+        self, scene_data: Dict[str, Any], root_data: Dict[str, Any], idx: int = 0
+    ) -> SceneConfigDict:
+        if not isinstance(scene_data, dict):
+            raise WidgetValidationError("scene data must be a dict")
+        defaults = self._scene_defaults(root_data)
+        name = self._coerce_scene_name(scene_data, idx)
+        theme = self._coerce_scene_theme(scene_data)
+        width = self._opt_scene_int(scene_data.get("width")) or defaults["width"]
+        height = self._opt_scene_int(scene_data.get("height")) or defaults["height"]
+        hw_profile = scene_data.get("hardware_profile")
+        if hw_profile is not None and not isinstance(hw_profile, str):
+            raise WidgetValidationError("hardware_profile must be a string or None")
+
+        return {
+            "name": name,
+            "width": width,
+            "height": height,
+            "theme": theme,
+            "hardware_profile": hw_profile,
+            "max_fb_kb": self._opt_scene_int(scene_data.get("max_fb_kb")),
+            "max_flash_kb": self._opt_scene_int(scene_data.get("max_flash_kb")),
+        }
+
+    def _scene_defaults(self, root_data: Dict[str, Any]) -> Dict[str, int]:
+        display = root_data.get("display", {})
+        return {
+            "width": int(display.get("width", 320) or 320),
+            "height": int(display.get("height", 240) or 240),
+        }
+
+    def _coerce_scene_name(self, scene_data: Dict[str, Any], idx: int) -> str:
+        return str(scene_data.get("name") or scene_data.get("id") or f"scene_{idx}")
+
+    def _coerce_scene_theme(self, scene_data: Dict[str, Any]) -> str:
+        return str(scene_data.get("theme") or "default")
+
+    def _opt_scene_int(self, val: Any) -> Optional[int]:
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            raise WidgetValidationError("boolean not allowed for size fields")
+        try:
+            return int(val)
+        except Exception as exc:
+            raise WidgetValidationError("size fields must be numeric") from exc
 
     def _record_json_watch(self, filename: str) -> None:
         try:
+            mtime = os.path.getmtime(filename)
+            # Store on both instance and class for legacy callers and tests.
             self._last_loaded_json = filename
-            self._json_watch_mtime = os.path.getmtime(filename)
+            self._json_watch_mtime = mtime
+            UIDesigner._last_loaded_json = filename
+            UIDesigner._json_watch_mtime = mtime
         except Exception:
             self._last_loaded_json = None
             self._json_watch_mtime = None
+            UIDesigner._last_loaded_json = None
+            UIDesigner._json_watch_mtime = None
 
     def generate_python_code(self, scene_name: Optional[str] = None) -> str:
         """Generate Python code for scene"""
@@ -1139,7 +1603,14 @@ class UIDesigner:
 
         scene = self.scenes[scene_name]
 
-        code_lines = [
+        code_lines = []
+        code_lines.extend(self._generate_imports(scene))
+        code_lines.extend(self._generate_scene_init(scene))
+        return "\n".join(code_lines)
+
+    def _generate_imports(self, scene: SceneConfig) -> List[str]:
+        """Generate file header and imports for code export."""
+        return [
             "# Auto-generated by UI Designer",
             f"# Scene: {scene.name}",
             f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
@@ -1163,54 +1634,80 @@ class UIDesigner:
             "    align: str = 'left'",
             "",
             "",
+        ]
+
+    def _generate_widget_code(self, widget: WidgetConfig) -> List[str]:
+        """Render a single widget constructor block."""
+        lines = [
+            "        Widget(",
+            f"            type='{widget.type}',",
+            f"            x={widget.x},",
+            f"            y={widget.y},",
+            f"            width={widget.width},",
+            f"            height={widget.height},",
+        ]
+        if widget.text:
+            lines.append(f"            text='{widget.text}',")
+        if widget.style != "default":
+            lines.append(f"            style='{widget.style}',")
+        if widget.color_fg != "white":
+            lines.append(f"            color_fg='{widget.color_fg}',")
+        if widget.color_bg != "black":
+            lines.append(f"            color_bg='{widget.color_bg}',")
+        if not widget.border:
+            lines.append(f"            border={widget.border},")
+        if widget.align != "left":
+            lines.append(f"            align='{widget.align}',")
+        lines.append("        ),")
+        return lines
+
+    def _generate_scene_init(self, scene: SceneConfig) -> List[str]:
+        """Generate scene factory function and main guard."""
+        lines = [
             f"def create_{scene.name.lower()}_scene() -> List[Widget]:",
             f'    """Create {scene.name} scene widgets"""',
             "    return [",
         ]
-
         for widget in scene.widgets:
-            code_lines.append("        Widget(")
-            code_lines.append(f"            type='{widget.type}',")
-            code_lines.append(f"            x={widget.x},")
-            code_lines.append(f"            y={widget.y},")
-            code_lines.append(f"            width={widget.width},")
-            code_lines.append(f"            height={widget.height},")
-            if widget.text:
-                code_lines.append(f"            text='{widget.text}',")
-            if widget.style != "default":
-                code_lines.append(f"            style='{widget.style}',")
-            if widget.color_fg != "white":
-                code_lines.append(f"            color_fg='{widget.color_fg}',")
-            if widget.color_bg != "black":
-                code_lines.append(f"            color_bg='{widget.color_bg}',")
-            if not widget.border:
-                code_lines.append(f"            border={widget.border},")
-            if widget.align != "left":
-                code_lines.append(f"            align='{widget.align}',")
-            code_lines.append("        ),")
-
-        code_lines.append("    ]")
-        code_lines.append("")
-        code_lines.append("")
-        code_lines.append("if __name__ == '__main__':")
-        code_lines.append(f"    widgets = create_{scene.name.lower()}_scene()")
-        code_lines.append(f"    print(f'Created {{len(widgets)}} widgets for {scene.name} scene')")
-
-        return "\n".join(code_lines)
+            lines.extend(self._generate_widget_code(widget))
+        lines.extend(
+            [
+                "    ]",
+                "",
+                "",
+                "if __name__ == '__main__':",
+                f"    widgets = create_{scene.name.lower()}_scene()",
+                f"    print(f'Created {{len(widgets)}} widgets for {scene.name} scene')",
+            ]
+        )
+        return lines
 
     def export_code(self, filename: str, scene_name: Optional[str] = None):
-        """Export scene as Python code file"""
+        """Export a scene as a standalone Python module.
+
+        Args:
+            filename: Destination file path.
+            scene_name: Optional scene key; defaults to current.
+        """
         code = self.generate_python_code(scene_name)
-
-        with open(filename, "w") as f:
-            f.write(code)
-
-        print(f"[OK] Code exported: {filename}")
+        try:
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(code)
+            logger.info("[OK] Code exported: %s", filename)
+        except Exception as exc:
+            logger.error("Failed to export code to %s: %s", filename, exc)
+            return
 
     def auto_layout(
         self, layout_type: str = "vertical", spacing: int = 4, scene_name: Optional[str] = None
     ):
-        """Auto-arrange widgets in scene"""
+        """Auto-arrange widgets in the given scene.
+
+        Args:
+            layout_type: "vertical", "horizontal", or "grid".
+            spacing: Padding between widgets in pixels.
+            scene_name: Optional scene key; defaults to current.
+        """
         scene_name = scene_name or self.current_scene
         if not scene_name or scene_name not in self.scenes:
             return
@@ -1228,15 +1725,18 @@ class UIDesigner:
     def _layout_vertical(self, scene: SceneConfig, spacing: int) -> None:
         y_offset = spacing
         for widget in scene.widgets:
-            widget.x = (scene.width - widget.width) // 2
-            widget.y = y_offset
+            max_x = max(0, scene.width - widget.width)
+            widget.x = _clamp_int((scene.width - widget.width) // 2, 0, max_x)
+            widget.y = _clamp_int(y_offset, 0, max(0, scene.height - widget.height))
             y_offset += widget.height + spacing
 
     def _layout_horizontal(self, scene: SceneConfig, spacing: int) -> None:
         x_offset = spacing
         for widget in scene.widgets:
-            widget.x = x_offset
-            widget.y = (scene.height - widget.height) // 2
+            widget.x = _clamp_int(x_offset, 0, max(0, scene.width - widget.width))
+            widget.y = _clamp_int(
+                (scene.height - widget.height) // 2, 0, max(0, scene.height - widget.height)
+            )
             x_offset += widget.width + spacing
 
     def _layout_grid(self, scene: SceneConfig, spacing: int) -> None:
@@ -1245,8 +1745,8 @@ class UIDesigner:
         y_offset = spacing
         col = 0
         for widget in scene.widgets:
-            widget.x = x_offset
-            widget.y = y_offset
+            widget.x = _clamp_int(x_offset, 0, max(0, scene.width - widget.width))
+            widget.y = _clamp_int(y_offset, 0, max(0, scene.height - widget.height))
             col += 1
             x_offset += widget.width + spacing
             if col >= cols:
@@ -1257,7 +1757,13 @@ class UIDesigner:
     def align_widgets(
         self, alignment: str, widget_indices: List[int], scene_name: Optional[str] = None
     ):
-        """Align selected widgets"""
+        """Align selected widgets to a common edge or center.
+
+        Args:
+            alignment: One of left/right/top/bottom/center_h/center_v.
+            widget_indices: Indices to align.
+            scene_name: Optional scene key; defaults to current.
+        """
         scene = self._get_scene(scene_name)
         if not scene or not widget_indices:
             return
@@ -1265,44 +1771,61 @@ class UIDesigner:
         widgets = self._widgets_by_indices(scene, widget_indices)
         if not widgets:
             return
+
         alignment = (alignment or "").lower()
-
-        def _align_edge(ws: List[WidgetConfig], edge: str) -> None:
-            if not ws:
-                return
-            if edge == "left":
-                target = min(w.x for w in ws)
-                for w in ws:
-                    w.x = target
-            elif edge == "right":
-                target = max(w.x + w.width for w in ws)
-                for w in ws:
-                    w.x = target - w.width
-            elif edge == "top":
-                target = min(w.y for w in ws)
-                for w in ws:
-                    w.y = target
-            elif edge == "bottom":
-                target = max(w.y + w.height for w in ws)
-                for w in ws:
-                    w.y = target - w.height
-
-        align_map = {
-            "left": lambda ws: _align_edge(ws, "left"),
-            "right": lambda ws: _align_edge(ws, "right"),
-            "top": lambda ws: _align_edge(ws, "top"),
-            "bottom": lambda ws: _align_edge(ws, "bottom"),
-            "center_h": lambda ws: self._align_center(ws, axis="x"),
-            "center_v": lambda ws: self._align_center(ws, axis="y"),
-        }
-        action = align_map.get(alignment)
+        action = self._alignment_action(alignment, widgets)
         if action:
-            action(widgets)
+            action()
+
+    def _alignment_action(self, alignment: str, widgets: List[WidgetConfig]):
+        actions = {
+            "left": lambda: self._align_left(widgets),
+            "right": lambda: self._align_right(widgets),
+            "top": lambda: self._align_top(widgets),
+            "bottom": lambda: self._align_bottom(widgets),
+            "center_h": lambda: self._align_center(widgets, axis="x"),
+            "center_v": lambda: self._align_center(widgets, axis="y"),
+        }
+        return actions.get(alignment)
+
+    def _align_left(self, widgets: List[WidgetConfig]) -> None:
+        """Align widgets to leftmost edge"""
+        if widgets:
+            target = min(w.x for w in widgets)
+            for w in widgets:
+                w.x = target
+
+    def _align_right(self, widgets: List[WidgetConfig]) -> None:
+        """Align widgets to rightmost edge"""
+        if widgets:
+            target = max(w.x + w.width for w in widgets)
+            for w in widgets:
+                w.x = target - w.width
+
+    def _align_top(self, widgets: List[WidgetConfig]) -> None:
+        """Align widgets to topmost edge"""
+        if widgets:
+            target = min(w.y for w in widgets)
+            for w in widgets:
+                w.y = target
+
+    def _align_bottom(self, widgets: List[WidgetConfig]) -> None:
+        """Align widgets to bottommost edge"""
+        if widgets:
+            target = max(w.y + w.height for w in widgets)
+            for w in widgets:
+                w.y = target - w.height
 
     def distribute_widgets(
         self, direction: str, widget_indices: List[int], scene_name: Optional[str] = None
     ):
-        """Distribute widgets evenly"""
+        """Distribute widgets evenly along an axis.
+
+        Args:
+            direction: "horizontal" or "vertical".
+            widget_indices: Indices to distribute.
+            scene_name: Optional scene key; defaults to current.
+        """
         scene = self._get_scene(scene_name)
         if not scene or len(widget_indices) < 2:
             return
@@ -1317,13 +1840,23 @@ class UIDesigner:
         if not widgets:
             return
         if axis == "x":
-            avg = sum(w.x + w.width // 2 for w in widgets) // len(widgets)
+            avg = self._calculate_center(widgets, axis="x")
             for w in widgets:
-                w.x = avg - w.width // 2
+                ww, _ = _widget_dims(w)
+                w.x = _clamp_int(avg - ww // 2)
         elif axis == "y":
-            avg = sum(w.y + w.height // 2 for w in widgets) // len(widgets)
+            avg = self._calculate_center(widgets, axis="y")
             for w in widgets:
-                w.y = avg - w.height // 2
+                _, hh = _widget_dims(w)
+                w.y = _clamp_int(avg - hh // 2)
+
+    def _calculate_center(self, widgets: List[WidgetConfig], axis: str) -> int:
+        centers = (
+            [int(w.x + w.width // 2) for w in widgets]
+            if axis == "x"
+            else [int(w.y + w.height // 2) for w in widgets]
+        )
+        return sum(centers) // len(centers) if centers else 0
 
     def _widgets_by_indices(self, scene: SceneConfig, indices: List[int]) -> List[WidgetConfig]:
         return [scene.widgets[i] for i in indices if 0 <= i < len(scene.widgets)]
@@ -1332,78 +1865,96 @@ class UIDesigner:
         if not items:
             return
         key = (lambda w: w[1].x) if axis == "x" else (lambda w: w[1].y)
-        size = (lambda w: w[1].width) if axis == "x" else (lambda w: w[1].height)
+        size = (
+            (lambda w: _widget_dims(w[1])[0])
+            if axis == "x"
+            else (lambda w: _widget_dims(w[1])[1])
+        )
         items.sort(key=key)
-        start = key(items[0])
-        end = key(items[-1]) + size(items[-1])
-        total_span = sum(size(w) for w in items)
+        start = _safe_int(key(items[0])) if key(items[0]) is not None else 0
+        end = _safe_int(key(items[-1])) + max(0, int(size(items[-1]) or 0))
+        total_span = sum(max(0, int(size(w) or 0)) for w in items)
         spacing = (end - start - total_span) / max(1, (len(items) - 1))
         pos = start
         for _, widget in items:
             if axis == "x":
                 widget.x = int(pos)
-                pos += widget.width + spacing
+                pos += max(0, widget.width if widget.width else 0) + spacing
             else:
                 widget.y = int(pos)
-                pos += widget.height + spacing
+                pos += max(0, widget.height if widget.height else 0) + spacing
 
     def export_to_html(self, filename: str, scene_name: Optional[str] = None):
         """Export scene as HTML preview"""
         scene_name = scene_name or self.current_scene
         if not scene_name or scene_name not in self.scenes:
             return
-
         scene = self.scenes[scene_name]
-        preview_raw = self.preview_ascii(scene_name)
-        preview = escape(preview_raw)
-        body_bg = color_hex("legacy_gray5")
-        body_text = color_hex("legacy_green")
-        preview_bg = color_hex("shadow")
-        preview_border = color_hex("legacy_green")
-        info_color = color_hex("legacy_cyan")
-
-        html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{scene.name} - UI Design Preview</title>
-    <style>
-        body {{
-            background: {body_bg};
-            color: {body_text};
-            font-family: 'Courier New', monospace;
-            padding: 20px;
-        }}
-        .preview {{
-            background: {preview_bg};
-            border: 2px solid {preview_border};
-            padding: 20px;
-            display: inline-block;
-            white-space: pre;
-            line-height: 1.2;
-        }}
-        .info {{
-            margin-top: 20px;
-            color: {info_color};
-        }}
-    </style>
-</head>
-<body>
-    <h1>{scene.name}</h1>
-    <div class="preview">{preview}</div>
-    <div class="info">
-        <p>Size: {scene.width} x {scene.height}</p>
-        <p>Widgets: {len(scene.widgets)}</p>
-        <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-    </div>
-</body>
-</html>"""
-
+        html = self._build_html_export(scene, self.preview_ascii(scene_name))
         with open(filename, "w", encoding="utf-8") as f:
             f.write(html)
+        logger.info("[OK] HTML preview exported: %s", filename)
 
-        print(f"[OK] HTML preview exported: {filename}")
+    def _build_html_export(self, scene: SceneConfig, preview_raw: str) -> str:
+        """Compose full HTML document for a scene preview."""
+        preview = escape(preview_raw)
+        colors = self._html_colors()
+        return "\n".join(
+            [
+                "<!DOCTYPE html>",
+                '<html lang="en">',
+                "<head>",
+                '    <meta charset=\"UTF-8\">',
+                '    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">',
+                f"    <title>{scene.name} - UI Design Preview</title>",
+                "    <style>",
+                *self._html_styles(colors),
+                "    </style>",
+                "</head>",
+                "<body>",
+                f"    <h1>{scene.name}</h1>",
+                f"    <div class=\"preview\">{preview}</div>",
+                "    <div class=\"info\">",
+                f"        <p>Size: {scene.width} x {scene.height}</p>",
+                f"        <p>Widgets: {len(scene.widgets)}</p>",
+                f"        <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
+                "    </div>",
+                "</body>",
+                "</html>",
+            ]
+        )
+
+    def _html_colors(self) -> Dict[str, str]:
+        return {
+            "body_bg": color_hex("legacy_gray5"),
+            "body_text": color_hex("legacy_green"),
+            "preview_bg": color_hex("shadow"),
+            "preview_border": color_hex("legacy_green"),
+            "info_color": color_hex("legacy_cyan"),
+        }
+
+    def _html_styles(self, colors: Dict[str, str]) -> List[str]:
+        """Return inline CSS lines for export HTML."""
+        return [
+            "        body {",
+            f"            background: {colors['body_bg']};",
+            f"            color: {colors['body_text']};",
+            "            font-family: 'Courier New', monospace;",
+            "            padding: 20px;",
+            "        }",
+            "        .preview {",
+            f"            background: {colors['preview_bg']};",
+            f"            border: 2px solid {colors['preview_border']};",
+            "            padding: 20px;",
+            "            display: inline-block;",
+            "            white-space: pre;",
+            "            line-height: 1.2;",
+            "        }",
+            "        .info {",
+            "            margin-top: 20px;",
+            f"            color: {colors['info_color']};",
+            "        }",
+        ]
 
     def preview_ascii(self, scene_name: Optional[str] = None, show_grid: bool = False) -> str:
         """Generate ASCII preview of scene with enhanced rendering"""
@@ -1445,17 +1996,46 @@ class UIDesigner:
     def _draw_guides(self, canvas: List[List[str]], scene: SceneConfig) -> None:
         if not (self.show_guides and self.last_guides):
             return
-        for g in self.last_guides:
-            if g.get("type") == "v":
-                x = g["x"]
-                for y in range(max(0, g["y1"]), min(scene.height, g["y2"] + 1)):
-                    if 0 <= x < scene.width:
-                        canvas[y][x] = "|"
-            elif g.get("type") == "h":
-                y = g["y"]
-                for x in range(max(0, g["x1"]), min(scene.width, g["x2"] + 1)):
-                    if 0 <= y < scene.height:
-                        canvas[y][x] = "-"
+        v_guides = [g for g in self.last_guides if g.get("type") == "v" and g.get("k") != "C"]
+        h_guides = [g for g in self.last_guides if g.get("type") == "h" and g.get("k") != "C"]
+        center_guides = [g for g in self.last_guides if g.get("k") == "C"]
+        self._draw_vertical_guides(canvas, scene, v_guides)
+        self._draw_horizontal_guides(canvas, scene, h_guides)
+        self._draw_center_guides(canvas, scene, center_guides)
+
+    def _draw_vertical_guides(self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]) -> None:
+        if not guides:
+            return
+        for g in guides:
+            x = g.get("x")
+            if x is None or not (0 <= x < scene.width):
+                continue
+            y1 = max(0, g.get("y1", 0))
+            y2 = min(scene.height, g.get("y2", scene.height - 1) + 1)
+            for y in range(y1, y2):
+                canvas[y][x] = "|"
+
+    def _draw_horizontal_guides(self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]) -> None:
+        if not guides:
+            return
+        for g in guides:
+            y = g.get("y")
+            if y is None or not (0 <= y < scene.height):
+                continue
+            x1 = max(0, g.get("x1", 0))
+            x2 = min(scene.width, g.get("x2", scene.width - 1) + 1)
+            for x in range(x1, x2):
+                canvas[y][x] = "-"
+
+    def _draw_center_guides(self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]) -> None:
+        if not guides:
+            return
+        for g in guides:
+            orient = g.get("type")
+            if orient == "v":
+                self._draw_vertical_guides(canvas, scene, [g])
+            elif orient == "h":
+                self._draw_horizontal_guides(canvas, scene, [g])
 
     def _render_widget_to_canvas(
         self, canvas: List[List[str]], widget: WidgetConfig, idx: int, width: int, height: int
@@ -1476,12 +2056,23 @@ class UIDesigner:
             "checkbox": self._draw_checkbox,
             "slider": self._draw_slider,
             "chart": self._draw_chart,
+            "icon": self._draw_icon,
         }
         handler = handlers.get(widget.type)
         if handler:
             handler(canvas, widget, width, height)
         elif widget.text:
             self._draw_text(canvas, widget, width, height)
+
+    def _draw_icon(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
+        """Render icon glyph (single char) centered in its box."""
+        glyph = (widget.icon_char or widget.text or "?")[:4]
+        if not glyph:
+            return
+        text_y = widget.y + widget.height // 2
+        text_x = widget.x + (widget.width - len(glyph)) // 2
+        if 0 <= text_y < height:
+            self._write_text_line(canvas, text_y, text_x, glyph, width)
 
     def _draw_widget_index(
         self, canvas: List[List[str]], widget: WidgetConfig, idx: int, width: int, height: int
@@ -1500,31 +2091,87 @@ class UIDesigner:
         width: int,
         height: int,
     ) -> None:
-        """Draw widget border with bounds checks."""
-        x0, y0 = widget.x, widget.y
-        x1 = widget.x + widget.width - 1
-        y1 = widget.y + widget.height - 1
-        # Top/bottom
-        for x in range(max(0, x0), min(x1 + 1, width)):
+        """Draw widget border with bounds checks (pixel-perfect, single stroke)."""
+        w_span = max(1, int(getattr(widget, "width", 1) or 1))
+        h_span = max(1, int(getattr(widget, "height", 1) or 1))
+        x0 = int(getattr(widget, "x", 0) or 0)
+        y0 = int(getattr(widget, "y", 0) or 0)
+        x1 = x0 + w_span - 1
+        y1 = y0 + h_span - 1
+
+        # Clamp to canvas to avoid out-of-bounds when widgets are partially visible
+        x0 = max(0, x0)
+        y0 = max(0, y0)
+        x1 = max(x0, min(width - 1, x1))
+        y1 = max(y0, min(height - 1, y1))
+        if x0 > x1 or y0 > y1:
+            return
+
+        # Draw edges while leaving corners for explicit corner glyphs
+        self._draw_border_horizontal(
+            canvas, x0, x1, y0, y1, border_chars["h"], width, height, skip_corners=True
+        )
+        self._draw_border_vertical(
+            canvas, x0, x1, y0, y1, border_chars["v"], width, height, skip_corners=True
+        )
+        self._draw_border_corners(canvas, x0, x1, y0, y1, border_chars, width, height)
+
+    def _draw_border_horizontal(
+        self,
+        canvas: List[List[str]],
+        x0: int,
+        x1: int,
+        y0: int,
+        y1: int,
+        char: str,
+        width: int,
+        height: int,
+        skip_corners: bool = False,
+    ) -> None:
+        """Draw top and bottom border lines"""
+        start_x = x0 + (1 if skip_corners else 0)
+        end_x = x1 - (1 if skip_corners else 0)
+        for x in range(max(0, start_x), min(end_x + 1, width)):
             if 0 <= y0 < height:
-                canvas[y0][x] = border_chars["h"]
+                canvas[y0][x] = char
             if 0 <= y1 < height:
-                canvas[y1][x] = border_chars["h"]
-        # Left/right
-        for y in range(max(0, y0), min(y1 + 1, height)):
+                canvas[y1][x] = char
+
+    def _draw_border_vertical(
+        self,
+        canvas: List[List[str]],
+        x0: int,
+        x1: int,
+        y0: int,
+        y1: int,
+        char: str,
+        width: int,
+        height: int,
+        skip_corners: bool = False,
+    ) -> None:
+        """Draw left and right border lines"""
+        start_y = y0 + (1 if skip_corners else 0)
+        end_y = y1 - (1 if skip_corners else 0)
+        for y in range(max(0, start_y), min(end_y + 1, height)):
             if 0 <= x0 < width:
-                canvas[y][x0] = border_chars["v"]
+                canvas[y][x0] = char
             if 0 <= x1 < width:
-                canvas[y][x1] = border_chars["v"]
-        # Corners
-        if 0 <= y0 < height and 0 <= x0 < width:
-            canvas[y0][x0] = border_chars["tl"]
-        if 0 <= y0 < height and 0 <= x1 < width:
-            canvas[y0][x1] = border_chars["tr"]
-        if 0 <= y1 < height and 0 <= x0 < width:
-            canvas[y1][x0] = border_chars["bl"]
-        if 0 <= y1 < height and 0 <= x1 < width:
-            canvas[y1][x1] = border_chars["br"]
+                canvas[y][x1] = char
+
+    def _draw_border_corners(
+        self, canvas: List[List[str]], x0: int, x1: int, y0: int, y1: int,
+        border_chars: Dict[str, str], width: int, height: int
+    ) -> None:
+        """Draw border corner characters"""
+        corners = [
+            (y0, x0, "tl"),  # top-left
+            (y0, x1, "tr"),  # top-right
+            (y1, x0, "bl"),  # bottom-left
+            (y1, x1, "br"),  # bottom-right
+        ]
+        for y, x, key in corners:
+            if 0 <= y < height and 0 <= x < width:
+                canvas[y][x] = border_chars[key]
 
     def _write_text_line(
         self, canvas: List[List[str]], y: int, x_start: int, text: str, width: int
@@ -1562,39 +2209,48 @@ class UIDesigner:
         t = int(ctx.get("t", 0))
         steps = max(1, int(ctx.get("steps", 10)))
         try:
-            if name == "bounce":
-                import math
-
-                amp = max(1, min(3, scene.height // 10))
-                dy = int(round(amp * math.sin(2 * math.pi * (t % steps) / steps)))
-                widget.y = max(0, min(scene.height - widget.height, widget.y + dy))
-            elif name == "slideinleft":
-                # from -width .. to current x
-                start = -widget.width
-                end = widget.x
-                pos = start + (end - start) * (t % steps) / steps
-                widget.x = max(-widget.width, min(scene.width - 1, int(pos)))
-            elif name == "pulse":
-                # Toggle border style for visual emphasis
-                if (t % 2) == 0:
-                    widget.border_style = "bold"
-                else:
-                    widget.border_style = "single"
-            elif name == "fadein":
-                # Simulate by switching style
-                if (t % 2) == 0:
-                    widget.style = "highlight"
-                else:
-                    widget.style = "default"
+            self._apply_animation_step(name, widget, scene, t, steps)
         except Exception:
             pass
+
+    def _apply_animation_step(
+        self, name: str, widget: WidgetConfig, scene: SceneConfig, t: int, steps: int
+    ) -> None:
+        handlers = {
+            "bounce": lambda: self._anim_bounce(widget, scene, t, steps),
+            "slideinleft": lambda: self._anim_slide_in_left(widget, scene, t, steps),
+            "pulse": lambda: self._anim_pulse(widget, t),
+            "fadein": lambda: self._anim_fade_in(widget, t),
+        }
+        handler = handlers.get(name)
+        if handler:
+            handler()
+
+    def _anim_bounce(self, widget: WidgetConfig, scene: SceneConfig, t: int, steps: int) -> None:
+        import math
+
+        amp = max(1, min(3, scene.height // 10))
+        dy = int(round(amp * math.sin(2 * math.pi * (t % steps) / steps)))
+        widget.y = max(0, min(scene.height - widget.height, widget.y + dy))
+
+    def _anim_slide_in_left(self, widget: WidgetConfig, scene: SceneConfig, t: int, steps: int) -> None:
+        start = -widget.width
+        end = widget.x
+        pos = start + (end - start) * (t % steps) / steps
+        widget.x = max(-widget.width, min(scene.width - 1, int(pos)))
+
+    def _anim_pulse(self, widget: WidgetConfig, t: int) -> None:
+        widget.border_style = "bold" if (t % 2) == 0 else "single"
+
+    def _anim_fade_in(self, widget: WidgetConfig, t: int) -> None:
+        widget.style = "highlight" if (t % 2) == 0 else "default"
 
     def _get_border_chars(self, style: str) -> Dict[str, str]:
         """Get border characters for style"""
         styles = {
             "single": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
-            "double": {"h": "=", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
-            "rounded": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+            "double": {"h": "=", "v": "║", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
+            "rounded": {"h": "-", "v": "|", "tl": "(", "tr": ")", "bl": "(", "br": ")"},
             "bold": {"h": "#", "v": "#", "tl": "#", "tr": "#", "bl": "#", "br": "#"},
             "dashed": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
         }
@@ -1649,13 +2305,59 @@ class UIDesigner:
     ):
         """Draw progress bar"""
         x0, _y0, inner_w, _inner_h = self._inner_box(widget)
-        progress = self._calc_progress_value(widget.value, widget.max_value, inner_w)
+        fill_ratio = self._calc_fill_ratio(widget)
+        progress = int(fill_ratio * max(0, inner_w))
         bar_y = widget.y + widget.height // 2
-        if 0 <= bar_y < height:
-            for i in range(inner_w):
-                x = x0 + i
-                if 0 <= x < width:
-                    canvas[bar_y][x] = "#" if i < progress else "."
+
+        if not (0 <= bar_y < height):
+            return
+
+        style = (widget.style or "default").lower()
+        if style == "segmented":
+            self._draw_segmented_bar(canvas, x0, bar_y, inner_w, fill_ratio, width)
+        else:
+            self._draw_simple_bar(canvas, x0, bar_y, inner_w, progress, width)
+
+    def _calc_fill_ratio(self, widget: WidgetConfig) -> float:
+        """Calculate fill ratio for progress bar"""
+        denom = max(1, widget.max_value - widget.min_value)
+        return max(0.0, min(1.0, (widget.value - widget.min_value) / denom))
+
+    def _draw_segmented_bar(
+        self, canvas: List[List[str]], x0: int, bar_y: int, inner_w: int,
+        fill_ratio: float, width: int
+    ) -> None:
+        """Draw segmented progress bar"""
+        segment = 3
+        gap = 1
+        span = segment + gap
+        total_segments = max(1, inner_w // span)
+        filled_segments = int(fill_ratio * total_segments)
+
+        for i in range(inner_w):
+            x = x0 + i
+            if not (0 <= x < width):
+                continue
+
+            in_segment = (i % span) < segment
+            current_segment = i // span
+
+            if current_segment < filled_segments and in_segment:
+                canvas[bar_y][x] = "#"
+            elif in_segment:
+                canvas[bar_y][x] = "."
+            else:
+                canvas[bar_y][x] = " "
+
+    def _draw_simple_bar(
+        self, canvas: List[List[str]], x0: int, bar_y: int, inner_w: int,
+        progress: int, width: int
+    ) -> None:
+        """Draw simple progress bar"""
+        for i in range(inner_w):
+            x = x0 + i
+            if 0 <= x < width:
+                canvas[bar_y][x] = "#" if i < progress else "."
 
     def _draw_gauge(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
         """Draw gauge (simple bar)"""
@@ -1736,6 +2438,7 @@ def _preflight_widget_checks(
         _check_size(i, w, issues)
         _check_offcanvas(i, w, scene, issues, hints)
         _check_min_size_and_text(i, w, warnings)
+        _check_pixel_grid(i, w, scene, warnings, hints)
     return issues, warnings, hints
 
 
@@ -1776,6 +2479,16 @@ def _check_min_size_and_text(idx: int, w: WidgetConfig, warnings: List[str]) -> 
         and not (w.text or "").strip()
     ):
         warnings.append(f"[{idx}] {w.type}: empty text")
+
+
+def _check_pixel_grid(
+    idx: int, w: WidgetConfig, scene: SceneConfig, warnings: List[str], hints: List[str]
+) -> None:
+    grid = getattr(scene, "grid_size", 8)
+    if w.x % grid or w.y % grid:
+        hints.append(f"[{idx}] {w.type}: position not aligned to {grid}px grid")
+    if (w.width % 2) or (w.height % 2):
+        warnings.append(f"[{idx}] {w.type}: odd size {w.width}x{w.height} may look fuzzy")
 
 
 def _preflight_overlap_checks(scene: SceneConfig, warnings: List[str]) -> List[str]:
@@ -3206,8 +3919,12 @@ if __name__ == "__main__":
     if args.guided:
         # Minimal guided flow
         d = UIDesigner(128, 64)
-        print("\nGuide Guided mode: Choose a preset [dashboard/menu/dialog]")
-        preset = args.preset or input("Preset (dashboard): ").strip().lower() or "dashboard"
+        print("\nGuide Guided mode: Choose a preset [dashboard/menu/dialog/pixelhud]")
+        preset = (
+            args.preset
+            or input("Preset (dashboard/menu/dialog/pixelhud): ").strip().lower()
+            or "dashboard"
+        )
         scene_name = input("Scene name (Home): ").strip() or "Home"
         try:
             w = int(input("Width (128): ") or "128")
@@ -3254,6 +3971,44 @@ if __name__ == "__main__":
                     WidgetType.BUTTON, x=(w - 60) // 2, y=y, width=60, height=12, text=label
                 )
                 y += 14
+        elif preset == "pixelhud":
+            d.enable_pixel_art_mode()
+            sc = d.scenes[d.current_scene]
+            w, h = sc.width, sc.height
+            d.add_widget(
+                WidgetType.LABEL,
+                x=0,
+                y=0,
+                width=w,
+                height=10,
+                text=scene_name.upper(),
+                border=False,
+                align="center",
+                style="bold",
+                color_fg="cyan",
+            )
+            d.add_widget(
+                WidgetType.LABEL,
+                x=4,
+                y=14,
+                width=60,
+                height=8,
+                text="PWR: 084%",
+                border=False,
+                align="left",
+                color_fg="white",
+            )
+            d.add_widget(
+                WidgetType.PROGRESSBAR,
+                x=4,
+                y=h - 14,
+                width=w - 8,
+                height=8,
+                value=60,
+                border=True,
+                border_style="single",
+                style="segmented",
+            )
         else:  # dialog
             d.add_widget(WidgetType.PANEL, x=6, y=10, width=w - 12, height=h - 20)
             d.add_widget(

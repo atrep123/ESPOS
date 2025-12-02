@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional, TypedDict
 
+from constants import DEFAULT_WIDGET_SIZE
+
 
 def _empty_int_list() -> List[int]:
     """Typed default factory for chart data."""
@@ -81,9 +83,43 @@ def _empty_constraints() -> Constraints:
     return {}
 
 
-def _make_baseline(x: int, y: int, width: int, height: int, bw: int, bh: int) -> ConstraintBaseline:
+class SceneConfigDict(TypedDict):
+    width: int
+    height: int
+    name: str
+    theme: str
+    hardware_profile: Optional[str]
+    max_fb_kb: Optional[int]
+    max_flash_kb: Optional[int]
+
+
+def _coerce_int(value: Optional[int]) -> int:
+    """Coerce Optional[int] to int with 0 fallback."""
+    try:
+        return int(value) if value is not None else 0
+    except Exception:
+        return 0
+
+
+def _make_baseline(
+    x: int,
+    y: int,
+    width: Optional[int],
+    height: Optional[int],
+    bw: Optional[int],
+    bh: Optional[int],
+) -> ConstraintBaseline:
     """Helper to build a typed ConstraintBaseline dict."""
-    return {'x': x, 'y': y, 'width': width, 'height': height, 'bw': bw, 'bh': bh}
+    width = width if width else 0
+    height = height if height else 0
+    return {
+        'x': _coerce_int(x),
+        'y': _coerce_int(y),
+        'width': _coerce_int(width),
+        'height': _coerce_int(height),
+        'bw': _coerce_int(bw),
+        'bh': _coerce_int(bh),
+    }
 
 
 class ResponsiveRule(TypedDict, total=False):
@@ -251,20 +287,8 @@ class WidgetConfig:
             pass
 
     def _apply_dimension_defaults(self) -> None:
-        try:
-            t = (getattr(self, 'type', '') or '').lower()
-            if self.width is None:
-                self.width = self._default_width(t)
-            if self.height is None:
-                self.height = self._default_height(t)
-        except Exception:
-            try:
-                if self.width is None:
-                    self.width = 8
-                if self.height is None:
-                    self.height = 3
-            except Exception:
-                pass
+        self.width = self._sanitize_dimension(self.width, default=DEFAULT_WIDGET_SIZE)
+        self.height = self._sanitize_dimension(self.height, default=DEFAULT_WIDGET_SIZE)
 
     def _default_width(self, widget_type: str) -> int:
         if widget_type == 'label':
@@ -286,6 +310,31 @@ class WidgetConfig:
             return 6
         return 3
 
+    def _sanitize_dimension(self, value: Optional[int], default: int = DEFAULT_WIDGET_SIZE) -> int:
+        try:
+            if value is None:
+                return default
+            coerced = int(value)
+            return max(1, coerced)
+        except Exception:
+            return default
+
+    @property
+    def width(self) -> int:  # type: ignore[override]
+        return getattr(self, "_width", DEFAULT_WIDGET_SIZE)
+
+    @width.setter
+    def width(self, value: Optional[int]) -> None:  # type: ignore[override]
+        self._width = self._sanitize_dimension(value, default=DEFAULT_WIDGET_SIZE)
+
+    @property
+    def height(self) -> int:  # type: ignore[override]
+        return getattr(self, "_height", DEFAULT_WIDGET_SIZE)
+
+    @height.setter
+    def height(self, value: Optional[int]) -> None:  # type: ignore[override]
+        self._height = self._sanitize_dimension(value, default=DEFAULT_WIDGET_SIZE)
+
 
 @dataclass
 class SceneConfig:
@@ -302,6 +351,9 @@ class SceneConfig:
     # Theme metadata
     theme: str = "default"
     contrast_lock: bool = True
+    hardware_profile: Optional[str] = None
+    max_fb_kb: Optional[int] = None
+    max_flash_kb: Optional[int] = None
 
 
 class Scene:
