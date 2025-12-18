@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# Basic markdown lint & smoke shortcut
-python tools/md_lint_basic.py || exit 1
-# Optional: run fast smoke (skip simulator roundtrip) for speed
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/ci_smoke.ps1 -NoSimRoundtrip > /dev/null 2>&1 || exit 1

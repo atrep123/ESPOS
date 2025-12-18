@@ -17,9 +17,13 @@
 #include "services/store/store.h"
 #include "services/metrics/metrics.h"
 #include "services/ui/ui.h"
-#include "ui_demo.h"
+#include "services/ui_app/ui_app.h"
 
 static const char *TAG = "ESP32OS";
+
+#ifndef ENABLE_SPIFFS_STARTUP_TEST
+#define ENABLE_SPIFFS_STARTUP_TEST 0
+#endif
 
 static void init_spiffs(void)
 {
@@ -55,6 +59,7 @@ static void init_spiffs(void)
     }
 }
 
+#if ENABLE_SPIFFS_STARTUP_TEST
 static void test_spiffs(void)
 {
     ESP_LOGI(TAG, "Opening file");
@@ -95,6 +100,7 @@ static void test_spiffs(void)
         ESP_LOGI(TAG, "File size: %ld bytes", st.st_size);
     }
 }
+#endif /* ENABLE_SPIFFS_STARTUP_TEST */
 
 void app_main(void)
 {
@@ -105,30 +111,23 @@ void app_main(void)
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "store_init failed: %d", err);
     } else {
-        ESP_LOGI(TAG, "Loaded config: schema=%" PRIu32 " bg_rgb=0x%08" PRIX32,
-                 conf.schema, conf.bg_rgb);
+        ESP_LOGI(TAG, "Loaded config: schema=%" PRIu32 " bg_rgb=0x%08" PRIX32 " contrast=%u invert=%u col_off=%u",
+                 conf.schema,
+                 conf.bg_rgb,
+                 (unsigned)conf.display_contrast,
+                 (unsigned)conf.display_invert,
+                 (unsigned)conf.display_col_offset);
     }
 
     init_spiffs();
 
-    #ifndef ENABLE_SPIFFS_STARTUP_TEST
-    #define ENABLE_SPIFFS_STARTUP_TEST 0
-    #endif
     #if ENABLE_SPIFFS_STARTUP_TEST
     test_spiffs();
     #else
     ESP_LOGI(TAG, "SPIFFS startup test disabled (ENABLE_SPIFFS_STARTUP_TEST=0)");
     #endif
 
-    /* Initialise I2C bus and send a minimal
-     * placeholder init sequence to the SSD1363 panel.
-     * Safe even if the display is not wired yet, but
-     * will log an error if I2C pins are still -1.
-     */
-    (void)ssd1363_init_panel();
-
-    /* Start simple UI demo render loop (dirty-rect updates). */
-    ui_demo_start();
+    /* UI service initializes the SSD1363 panel (I2C + init sequence + rendering). */
 
     bus_init();
     kernel_start_ticker();
@@ -136,9 +135,9 @@ void app_main(void)
     rpc_start();
     metrics_start();
 
-    /* TODO: initialize your ST7789 panel here and pass handle instead of NULL. */
-    esp_lcd_panel_handle_t panel = NULL;
-    ui_start(panel);
+    /* Start runtime UI service (SSD1363). */
+    ui_start();
+    ui_app_start();
 
     ESP_LOGI(TAG, "=== System Ready ===");
 

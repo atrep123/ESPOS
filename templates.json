@@ -1,0 +1,421 @@
+[
+  {
+    "metadata": {
+      "name": "Analytics Dashboard",
+      "category": "Dashboards",
+      "description": "Widgets arranged for analytics overview",
+      "author": "User",
+      "tags": [
+        "dashboard",
+        "analytics",
+        "metrics"
+      ]
+    },
+    "scene": {
+      "name": "dashboard",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 4,
+          "y": 2,
+          "width": 40,
+          "height": 3,
+          "text": "Dashboard"
+        },
+        {
+          "type": "box",
+          "x": 2,
+          "y": 6,
+          "width": 60,
+          "height": 20,
+          "border": true
+        },
+        {
+          "type": "chart",
+          "x": 4,
+          "y": 8,
+          "width": 56,
+          "height": 16,
+          "data_points": [
+            10,
+            20,
+            30
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "Settings Form",
+      "category": "Forms",
+      "description": "Simple settings form with labels and inputs",
+      "author": "User",
+      "tags": [
+        "form",
+        "settings"
+      ]
+    },
+    "scene": {
+      "name": "form",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 2,
+          "y": 2,
+          "width": 20,
+          "height": 1,
+          "text": "Username"
+        },
+        {
+          "type": "textbox",
+          "x": 24,
+          "y": 2,
+          "width": 30,
+          "height": 1,
+          "text": ""
+        },
+        {
+          "type": "label",
+          "x": 2,
+          "y": 5,
+          "width": 20,
+          "height": 1,
+          "text": "Email"
+        },
+        {
+          "type": "textbox",
+          "x": 24,
+          "y": 5,
+          "width": 30,
+          "height": 1,
+          "text": ""
+        },
+        {
+          "type": "button",
+          "x": 2,
+          "y": 8,
+          "width": 12,
+          "height": 2,
+          "text": "Save"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "Confirm Dialog",
+      "category": "Dialogs",
+      "description": "Confirmation dialog with actions",
+      "author": "User",
+      "tags": [
+        "dialog",
+        "confirm"
+      ]
+    },
+    "scene": {
+      "name": "dialog",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 2,
+          "y": 2,
+          "width": 40,
+          "height": 10,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 4,
+          "y": 4,
+          "width": 36,
+          "height": 2,
+          "text": "Are you sure?"
+        },
+        {
+          "type": "button",
+          "x": 6,
+          "y": 8,
+          "width": 10,
+          "height": 2,
+          "text": "OK"
+        },
+        {
+          "type": "button",
+          "x": 20,
+          "y": 8,
+          "width": 10,
+          "height": 2,
+          "text": "Cancel"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "Pixel HUD 128x64",
+      "category": "Dashboards",
+      "description": "Compact HUD layout with status bar and segmented progress",
+      "author": "User",
+      "tags": [
+        "hud",
+        "pixel",
+        "128x64"
+      ]
+    },
+    "scene": {
+      "name": "pixel_hud",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 0,
+          "y": 0,
+          "width": 128,
+          "height": 12,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 2,
+          "y": 2,
+          "width": 50,
+          "height": 8,
+          "text": "CORE",
+          "border": false
+        },
+        {
+          "type": "label",
+          "x": 80,
+          "y": 2,
+          "width": 46,
+          "height": 8,
+          "text": "12:34",
+          "align": "right",
+          "border": false
+        },
+        {
+          "type": "progressbar",
+          "x": 2,
+          "y": 18,
+          "width": 124,
+          "height": 6,
+          "value": 60,
+          "border": true,
+          "style": "segmented"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "Navigation Menu",
+      "category": "Navigation",
+      "description": "Vertical navigation with active item",
+      "author": "User",
+      "tags": [
+        "nav",
+        "menu"
+      ]
+    },
+    "scene": {
+      "name": "nav",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 0,
+          "y": 0,
+          "width": 40,
+          "height": 64,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 4,
+          "y": 4,
+          "width": 32,
+          "height": 8,
+          "text": "MENU",
+          "border": false
+        },
+        {
+          "type": "button",
+          "x": 4,
+          "y": 16,
+          "width": 32,
+          "height": 10,
+          "text": "Home",
+          "border": true
+        },
+        {
+          "type": "button",
+          "x": 4,
+          "y": 28,
+          "width": 32,
+          "height": 10,
+          "text": "Stats",
+          "border": true
+        },
+        {
+          "type": "button",
+          "x": 4,
+          "y": 40,
+          "width": 32,
+          "height": 10,
+          "text": "Settings",
+          "border": true
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "Data Cards",
+      "category": "Dashboards",
+      "description": "Three metric cards side by side",
+      "author": "User",
+      "tags": [
+        "cards",
+        "data",
+        "metrics"
+      ]
+    },
+    "scene": {
+      "name": "cards",
+      "widgets": [
+        {
+          "type": "box",
+          "x": 4,
+          "y": 6,
+          "width": 40,
+          "height": 20,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 6,
+          "y": 8,
+          "width": 36,
+          "height": 8,
+          "text": "CPU",
+          "border": false
+        },
+        {
+          "type": "gauge",
+          "x": 8,
+          "y": 14,
+          "width": 32,
+          "height": 10,
+          "value": 64
+        },
+        {
+          "type": "box",
+          "x": 50,
+          "y": 6,
+          "width": 40,
+          "height": 20,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 52,
+          "y": 8,
+          "width": 36,
+          "height": 8,
+          "text": "NET",
+          "border": false
+        },
+        {
+          "type": "progressbar",
+          "x": 52,
+          "y": 16,
+          "width": 32,
+          "height": 8,
+          "value": 45
+        },
+        {
+          "type": "box",
+          "x": 96,
+          "y": 6,
+          "width": 40,
+          "height": 20,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 98,
+          "y": 8,
+          "width": 36,
+          "height": 8,
+          "text": "MEM",
+          "border": false
+        },
+        {
+          "type": "chart",
+          "x": 98,
+          "y": 16,
+          "width": 36,
+          "height": 8,
+          "data_points": [
+            5,
+            10,
+            6,
+            12
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "Status Bar",
+      "category": "Layouts",
+      "description": "Bottom status bar with three fields",
+      "author": "User",
+      "tags": [
+        "status",
+        "bar"
+      ]
+    },
+    "scene": {
+      "name": "status",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 0,
+          "y": 54,
+          "width": 128,
+          "height": 10,
+          "border": true
+        },
+        {
+          "type": "label",
+          "x": 4,
+          "y": 56,
+          "width": 40,
+          "height": 8,
+          "text": "PWR 82%",
+          "border": false
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 56,
+          "width": 36,
+          "height": 8,
+          "text": "WIFI OK",
+          "border": false
+        },
+        {
+          "type": "label",
+          "x": 90,
+          "y": 56,
+          "width": 34,
+          "height": 8,
+          "text": "12:34",
+          "border": false,
+          "align": "right"
+        }
+      ]
+    }
+  }
+]

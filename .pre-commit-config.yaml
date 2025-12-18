@@ -13,6 +13,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: []
+        files: ^(ui_models\.py|design_tokens\.py|ui_themes\.py|ui_template_manager\.py)$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:

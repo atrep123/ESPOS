@@ -85,9 +85,9 @@ void ui_icon_set_mode(enum display_blit_mode mode)
     }
 }
 
+#if HAVE_ICONS
 static void render_icon_grid(display_t *d, uint8_t size_px, enum display_blit_mode mode)
 {
-#if HAVE_ICONS
     if (!d || !d->buf) {
         return;
     }
@@ -104,12 +104,8 @@ static void render_icon_grid(display_t *d, uint8_t size_px, enum display_blit_mo
             display_blit_icon_mode(d, ic, gx, gy, mode);
         }
     }
-#else
-    (void)d;
-    (void)size_px;
-    (void)mode;
-#endif
 }
+#endif
 
 void ui_icon_bench(display_t *d, uint32_t count, uint8_t size_px, enum display_blit_mode mode, char *out_json, size_t out_len)
 {

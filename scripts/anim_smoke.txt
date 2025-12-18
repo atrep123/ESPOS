@@ -1,5 +1,0 @@
-# Create a scene and a button, then play a short bounce animation
-new Smoke
-add button 10 10 40 12 "Hi"
-list
-anim play 0 bounce 2 10

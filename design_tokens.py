@@ -18,7 +18,7 @@ Usage:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Tuple
 
 
@@ -114,10 +114,10 @@ class ElevationTokens:
     level_4: int = 4  # Tooltip/overlay (maximum shadow)
     
     # Shadow blur radius per level (px)
-    shadow_blur: Dict[int, int] = None
+    shadow_blur: Dict[int, int] = field(init=False)
     
     # ASCII shading characters per level
-    ascii_shading: Dict[int, str] = None
+    ascii_shading: Dict[int, str] = field(init=False)
     
     def __post_init__(self):
         # Shadow blur mapping
@@ -317,7 +317,7 @@ _LEGACY_HEX = {
     "legacy_gray7": "#999999",
     "legacy_gray21": "#f0f0f0",
     "legacy_gray23": "#191a21",
-    # Nord/Dracula palettes used in ui_themes
+    # Legacy Nord/Dracula palettes
     "legacy_nord_cyan": "#88c0d0",
     "legacy_nord_slate": "#4c566a",
     "legacy_nord_purple": "#bd93f9",
@@ -343,9 +343,6 @@ _LEGACY_HEX = {
     "legacy_pink_hot": "#ff2e88",
     "legacy_green_base": "#008800",
     "legacy_green_soft": "#66cc88",
-    "legacy_green_midbright": "#00dd33",
-    "legacy_green_dark": "#008000",
-    "legacy_green_deep": "#006600",
     "legacy_red": "#ff0000",
     "legacy_red_bright": "#ff4444",
     "legacy_red_dark": "#b30000",
@@ -358,8 +355,6 @@ _LEGACY_HEX = {
     "legacy_navy_dark": "#101820",
     "legacy_navy_base": "#0b1220",
     # Bright utility reds/blues for theme fallbacks
-    "legacy_red": "#ff0000",
-    "legacy_red_bright": "#ff4444",
     "legacy_blue_bright": "#66b3ff",
     "legacy_blue_material": "#2196f3",
     "legacy_gold": "#d4af37",
@@ -456,16 +451,16 @@ def apply_tokens(target: Any, mapping: Mapping[str, str]) -> Any:
     Unknown fields or token names are ignored to keep the helper safe for
     incremental migrations.
     """
-    for field, token_name in mapping.items():
+    for target_field, token_name in mapping.items():
         try:
             value = resolve_token(token_name)
         except KeyError:
             continue
         if isinstance(target, dict):
-            target[field] = value
-        elif hasattr(target, field):
+            target[target_field] = value
+        elif hasattr(target, target_field):
             try:
-                setattr(target, field, value)
+                setattr(target, target_field, value)
             except Exception:
                 continue
     return target
@@ -544,6 +539,6 @@ if __name__ == "__main__":
     
     # Demo helper functions
     print("\n=== Helper Functions ===")
-    print(f"Primary → terminal color: '{rgb_to_terminal_color_name(tokens.colors.primary)}'")
-    print(f"Error → terminal color: '{rgb_to_terminal_color_name(tokens.colors.error)}'")
+    print(f"Primary -> terminal color: '{rgb_to_terminal_color_name(tokens.colors.primary)}'")
+    print(f"Error -> terminal color: '{rgb_to_terminal_color_name(tokens.colors.error)}'")
     print(f"Get semantic 'success': {get_semantic_color('success')}")

@@ -3,6 +3,7 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+.vscode/settings.json
 
 # Python caches and virtual environments
 __pycache__/
@@ -47,7 +48,11 @@ src-tauri/target/
 
 # Logs
 simulator.log
+sim_ports.json
 reports/ci_smoke_*.log
+
+# Local designer preferences
+designer_prefs.json
 
 # Generated test outputs
 test_export.html
@@ -57,6 +62,10 @@ test_integration.png
 test_scene.html
 test_scene.png
 *.live.html
+
+# Generated UI exports (C headers)
+ui_scene_generated*.h
+ui_scene_generated*.c
 
 # Snapshot outputs
 reports/snapshots/

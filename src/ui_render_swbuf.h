@@ -2,12 +2,16 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "display_config.h"
 #include "ui_render.h"
 
 /*
- * Simple packed 1bpp software framebuffer and UiDrawOps adapter.
+ * Simple software framebuffer and UiDrawOps adapter.
  *
- * Memory layout: rows packed MSB-first, stride = (width + 7) / 8 bytes.
+ * Memory layout depends on DISPLAY_COLOR_BITS:
+ *   - 1bpp: rows packed MSB-first, stride = (width + 7) / 8 bytes.
+ *   - 4bpp: 2 pixels per byte (hi nibble = even x, lo nibble = odd x),
+ *           stride = (width + 1) / 2 bytes.
  */
 typedef struct UiSwBuf {
     int width;
@@ -19,16 +23,37 @@ typedef struct UiSwBuf {
     int d_x0, d_y0, d_x1, d_y1; /* inclusive/exclusive bounds */
 } UiSwBuf;
 
-/* Initialize packed 1bpp buffer on caller-provided memory */
+/* Compile-time helpers for buffer sizing. */
+#if DISPLAY_COLOR_BITS == 4
+#define UI_SWBUF_STRIDE_BYTES(width_px) (((width_px) + 1) / 2)
+#else
+#define UI_SWBUF_STRIDE_BYTES(width_px) (((width_px) + 7) / 8)
+#endif
+#define UI_SWBUF_BYTES(width_px, height_px) (UI_SWBUF_STRIDE_BYTES(width_px) * (height_px))
+
+/* Initialize buffer on caller-provided memory */
 void ui_swbuf_init(UiSwBuf *b, void *mem, int width, int height);
 void ui_swbuf_clear(UiSwBuf *b, uint8_t color);
 
-/* Drawing primitives operating on packed 1bpp buffer */
+/* Drawing primitives operating on the buffer (color: 0/1 for 1bpp, 0..15 for 4bpp). */
 void ui_swbuf_fill_rect(void *ctx, int x, int y, int w, int h, uint8_t color);
 void ui_swbuf_hline(void *ctx, int x, int y, int w, uint8_t color);
 void ui_swbuf_vline(void *ctx, int x, int y, int h, uint8_t color);
 void ui_swbuf_rect(void *ctx, int x, int y, int w, int h, uint8_t color);
 void ui_swbuf_text(void *ctx, int x, int y, const char *text, uint8_t color);
+
+/* Blit a monochrome (1bpp) mask bitmap into the buffer (MSB-first). */
+void ui_swbuf_blit_mono(
+    void *ctx,
+    int x,
+    int y,
+    int w,
+    int h,
+    int stride_bytes,
+    const uint8_t *data,
+    uint8_t color,
+    uint8_t mode
+);
 
 /* Populate UiDrawOps with software buffer implementations */
 void ui_swbuf_make_ops(UiSwBuf *b, UiDrawOps *ops);

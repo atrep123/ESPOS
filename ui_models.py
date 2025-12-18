@@ -113,12 +113,12 @@ def _make_baseline(
     width = width if width else 0
     height = height if height else 0
     return {
-        'x': _coerce_int(x),
-        'y': _coerce_int(y),
-        'width': _coerce_int(width),
-        'height': _coerce_int(height),
-        'bw': _coerce_int(bw),
-        'bh': _coerce_int(bh),
+        "x": _coerce_int(x),
+        "y": _coerce_int(y),
+        "width": _coerce_int(width),
+        "height": _coerce_int(height),
+        "bw": _coerce_int(bw),
+        "bh": _coerce_int(bh),
     }
 
 
@@ -131,7 +131,7 @@ class ResponsiveRule(TypedDict, total=False):
     else_apply: Dict[str, Any]
 
 
-def _empty_responsive_rules() -> List['ResponsiveRule']:
+def _empty_responsive_rules() -> List["ResponsiveRule"]:
     """Typed default factory for responsive rules."""
     return []
 
@@ -182,6 +182,10 @@ class WidgetConfig:
     align: str = "left"  # left, center, right
     valign: str = "middle"  # top, middle, bottom
 
+    # Text layout
+    text_overflow: str = "ellipsis"  # ellipsis, wrap, clip, auto
+    max_lines: Optional[int] = None  # only used for wrap/auto; None = auto-fit by height
+
     # Extended properties
     value: int = 0  # For gauge, slider, progressbar
     min_value: int = 0
@@ -202,6 +206,8 @@ class WidgetConfig:
     constraints: Constraints = field(default_factory=_empty_constraints)
     responsive_rules: List[ResponsiveRule] = field(default_factory=_empty_responsive_rules)
     animations: List[str] = field(default_factory=_empty_str_list)
+    # Firmware/runtime metadata (exported as `constraints_json` in C headers).
+    runtime: str = ""
     # Editing safeguards
     locked: bool = False
     # Theme role bindings (used when applying themes)
@@ -227,22 +233,44 @@ class WidgetConfig:
         self._normalize_type()
         self._apply_color_aliases()
         self._apply_style_aliases()
+        self._apply_text_defaults()
         self._apply_dimension_defaults()
+
+    def _apply_text_defaults(self) -> None:
+        try:
+            ov = str(getattr(self, "text_overflow", "") or "").strip().lower()
+            if not ov:
+                ov = "ellipsis"
+            if ov not in {"ellipsis", "wrap", "clip", "auto"}:
+                ov = "ellipsis"
+            self.text_overflow = ov
+        except Exception:
+            self.text_overflow = "ellipsis"
+
+        try:
+            ml = getattr(self, "max_lines", None)
+            if ml is None or ml == "":
+                self.max_lines = None
+                return
+            ml_i = int(ml)
+            self.max_lines = ml_i if ml_i > 0 else None
+        except Exception:
+            self.max_lines = None
 
     def _normalize_type(self) -> None:
         try:
             from enum import Enum as _Enum
 
-            t = getattr(self, 'type', None)
+            t = getattr(self, "type", None)
             if isinstance(t, _Enum):
-                self.type = getattr(t, 'value', str(t))  # type: ignore[assignment]
+                self.type = str(getattr(t, "value", t))
                 return
         except Exception:
             pass
         try:
-            t = getattr(self, 'type', None)
-            if hasattr(t, 'value'):
-                self.type = t.value  # type: ignore[assignment]
+            t = getattr(self, "type", None)
+            if t is not None and hasattr(t, "value"):
+                self.type = str(getattr(t, "value"))
         except Exception:
             pass
 
@@ -258,10 +286,10 @@ class WidgetConfig:
 
     def _apply_color_aliases(self) -> None:
         alias_map = (
-            ('bg_color', 'color_bg'),
-            ('text_color', 'color_fg'),
-            ('color', 'color_fg'),
-            ('border_color', 'color_fg'),
+            ("bg_color", "color_bg"),
+            ("text_color", "color_fg"),
+            ("color", "color_fg"),
+            ("border_color", "color_fg"),
         )
         for source, target in alias_map:
             try:
@@ -282,7 +310,7 @@ class WidgetConfig:
             pass
         try:
             if bool(self.bold):
-                self.style = 'bold'
+                self.style = "bold"
         except Exception:
             pass
 
@@ -291,22 +319,22 @@ class WidgetConfig:
         self.height = self._sanitize_dimension(self.height, default=DEFAULT_WIDGET_SIZE)
 
     def _default_width(self, widget_type: str) -> int:
-        if widget_type == 'label':
-            pad = int(getattr(self, 'padding_x', 1) or 0)
-            border_pad = 2 if bool(getattr(self, 'border', True)) else 0
-            return max(1, min(120, len(getattr(self, 'text', '') or '') + 2 + pad * 2 + border_pad))
-        if widget_type == 'button':
-            return max(4, len(getattr(self, 'text', '') or '') + 4)
-        if widget_type in ('panel', 'box', 'textbox'):
+        if widget_type == "label":
+            pad = int(getattr(self, "padding_x", 1) or 0)
+            border_pad = 2 if bool(getattr(self, "border", True)) else 0
+            return max(1, min(120, len(getattr(self, "text", "") or "") + 2 + pad * 2 + border_pad))
+        if widget_type == "button":
+            return max(4, len(getattr(self, "text", "") or "") + 4)
+        if widget_type in ("panel", "box", "textbox"):
             return 10
         return 8
 
     def _default_height(self, widget_type: str) -> int:
-        if widget_type == 'label':
-            return 3 if bool(getattr(self, 'border', True)) else 1
-        if widget_type in ('button', 'checkbox', 'radiobutton'):
+        if widget_type == "label":
+            return 3 if bool(getattr(self, "border", True)) else 1
+        if widget_type in ("button", "checkbox", "radiobutton"):
             return 3
-        if widget_type in ('panel', 'box', 'textbox'):
+        if widget_type in ("panel", "box", "textbox"):
             return 6
         return 3
 
@@ -319,20 +347,20 @@ class WidgetConfig:
         except Exception:
             return default
 
-    @property
-    def width(self) -> int:  # type: ignore[override]
+    @property  # type: ignore[no-redef]
+    def width(self) -> int:  # noqa: F811
         return getattr(self, "_width", DEFAULT_WIDGET_SIZE)
 
     @width.setter
-    def width(self, value: Optional[int]) -> None:  # type: ignore[override]
+    def width(self, value: Optional[int]) -> None:
         self._width = self._sanitize_dimension(value, default=DEFAULT_WIDGET_SIZE)
 
-    @property
-    def height(self) -> int:  # type: ignore[override]
+    @property  # type: ignore[no-redef]
+    def height(self) -> int:  # noqa: F811
         return getattr(self, "_height", DEFAULT_WIDGET_SIZE)
 
     @height.setter
-    def height(self, value: Optional[int]) -> None:  # type: ignore[override]
+    def height(self, value: Optional[int]) -> None:
         self._height = self._sanitize_dimension(value, default=DEFAULT_WIDGET_SIZE)
 
 

@@ -16,14 +16,6 @@ from html import escape
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, TypedDict, Union, cast
 
-
-class WidgetValidationError(Exception):
-    """Raised when widget or scene data fails validation."""
-
-
-class SceneLoadError(Exception):
-    """Raised when a scene JSON cannot be loaded or parsed."""
-
 from constants import BACKUP_DIR, GRID_SIZE_MEDIUM
 from design_tokens import color_hex
 from ui_models import (
@@ -42,6 +34,14 @@ from ui_models import (
     _normalize_int_list,
 )
 
+
+class WidgetValidationError(Exception):
+    """Raised when widget or scene data fails validation."""
+
+
+class SceneLoadError(Exception):
+    """Raised when a scene JSON cannot be loaded or parsed."""
+
 # CLI message constants
 MSG_INVALID_INDEX = "Invalid index"
 MSG_NO_SCENE = "No scene loaded"
@@ -49,7 +49,6 @@ MSG_INDEX_INTEGER = "Index must be integer"
 MSG_FAILED = "Failed"
 MSG_UNKNOWN_ANIM = "Unknown animation name"
 
-PREVIEW_SCRIPT = os.path.join(os.path.dirname(__file__), "ui_designer_preview.py")
 
 # Hardware profiles for common ESP32 displays
 class HardwareProfile(TypedDict):
@@ -69,6 +68,30 @@ HARDWARE_PROFILES: Dict[str, HardwareProfile] = {
         "color_depth": 1,
         "max_fb_kb": 2.0,
         "max_flash_kb": 32.0,
+    },
+    "esp32os_256x128_gray4": {
+        "label": "ESP32 OS 256x128 (4bpp Gray)",
+        "width": 256,
+        "height": 128,
+        "color_depth": 4,
+        "max_fb_kb": 32.0,
+        "max_flash_kb": 256.0,
+    },
+    "esp32os_240x128_mono": {
+        "label": "ESP32 OS 240x128 (1bpp)",
+        "width": 240,
+        "height": 128,
+        "color_depth": 1,
+        "max_fb_kb": 8.0,
+        "max_flash_kb": 256.0,
+    },
+    "esp32os_240x128_rgb565": {
+        "label": "ESP32 OS 240x128 (16bpp RGB565)",
+        "width": 240,
+        "height": 128,
+        "color_depth": 16,
+        "max_fb_kb": 128.0,
+        "max_flash_kb": 512.0,
     },
     "tft_320x240": {
         "label": "TFT 320x240 (16bpp)",
@@ -105,6 +128,7 @@ def _clamp_int(value: Optional[int], minimum: int = 0, maximum: Optional[int] = 
         v = min(v, maximum)
     return max(minimum, v)
 
+
 @lru_cache(maxsize=8)
 def _border_chars(style: str) -> Dict[str, str]:
     """Cached lookup for border characters per style."""
@@ -127,6 +151,7 @@ def _widget_dims(widget: WidgetConfig) -> Tuple[int, int]:
 
 class UIDesigner:
     """Visual UI designer with layout editor"""
+
     _last_loaded_json: ClassVar[Optional[str]] = None
     _json_watch_mtime: ClassVar[Optional[float]] = None
 
@@ -482,9 +507,7 @@ class UIDesigner:
             x, y = self.snap_position(x, y)
         bounds = self._widget_bounds(widget, x, y)
         best_dx, best_dy, best_vline, best_hline = self._find_best_snaps(widget, scene, bounds)
-        x, y = self._apply_best_offset(
-            x, y, scene, best_dx, best_dy, best_vline, best_hline
-        )
+        x, y = self._apply_best_offset(x, y, scene, best_dx, best_dy, best_vline, best_hline)
         if self.snap_to_grid and not self.snap_fluid:
             x, y = self.snap_position(x, y)
         return self._clamp_to_scene(x, y, widget, scene)
@@ -633,7 +656,9 @@ class UIDesigner:
             }
         )
 
-    def _record_horizontal_guide(self, guide: Tuple[int, int, int, str], scene: SceneConfig) -> None:
+    def _record_horizontal_guide(
+        self, guide: Tuple[int, int, int, str], scene: SceneConfig
+    ) -> None:
         hy, hx1, hx2, k = guide
         self.last_guides.append(
             {
@@ -723,7 +748,7 @@ class UIDesigner:
         scene_name: Optional[str] = None,
         profile: Optional[str] = None,
         color_depth: Optional[int] = None,
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Any]:
         """Estimate framebuffer RAM and a rough flash footprint for the current scene.
 
         - framebuffer assumes color_depth bits per pixel (1bpp OLED or 16bpp TFT).
@@ -752,6 +777,7 @@ class UIDesigner:
         max_flash_kb = prof["max_flash_kb"] if prof else 0.0
         fb_over = self._over_limit(fb_bytes, max_fb_kb)
         flash_over = self._over_limit(flash_bytes, max_flash_kb)
+        # Include profile key for tests expecting the active profile identifier.
         return {
             "framebuffer_bytes": float(fb_bytes),
             "framebuffer_kb": fb_bytes / 1024.0,
@@ -768,9 +794,12 @@ class UIDesigner:
             "widget_bytes": float(widget_bytes),
             "overlaps": float(overlaps),
             "overlap_pairs": float(overlaps),
+            "profile": str(profile or self.hardware_profile or ""),
         }
 
-    def _resolve_color_depth(self, override: Optional[int], profile: Optional[Dict[str, Any]]) -> int:
+    def _resolve_color_depth(
+        self, override: Optional[int], profile: Optional[HardwareProfile]
+    ) -> int:
         if override is not None:
             return int(override)
         if profile:
@@ -797,7 +826,7 @@ class UIDesigner:
             for b in sc.widgets[i + 1 :]:
                 bw, bh = _widget_dims(b)
                 br = (b.x, b.y, b.x + bw, b.y + bh)
-                if (ar[0] < br[2] and ar[2] > br[0] and ar[1] < br[3] and ar[3] > br[1]):
+                if ar[0] < br[2] and ar[2] > br[0] and ar[1] < br[3] and ar[3] > br[1]:
                     count += 1
         return count
 
@@ -1072,9 +1101,7 @@ class UIDesigner:
             margin_y=int(kw.get("margin_y", 0)),
         )
 
-    def add_widget_from_template(
-        self, template_name: str, x: int, y: int, **kwargs: Any
-    ):
+    def add_widget_from_template(self, template_name: str, x: int, y: int, **kwargs: Any):
         """Add widget from template with custom properties"""
         if template_name not in self.templates:
             print(f"Template '{template_name}' not found")
@@ -1401,7 +1428,9 @@ class UIDesigner:
             "z_index",
         ]
 
-    def _widget_diff_entry(self, wa: Dict[str, Any], wb: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+    def _widget_diff_entry(
+        self, wa: Dict[str, Any], wb: Dict[str, Any], keys: List[str]
+    ) -> Dict[str, Any]:
         return {k: {"a": wa.get(k), "b": wb.get(k)} for k in keys if wa.get(k) != wb.get(k)}
 
     def _collect_added_removed(
@@ -1419,11 +1448,49 @@ class UIDesigner:
             return self.scenes[key]
         return None
 
+    def _coerce_groups(self, raw: Any) -> Dict[str, List[int]]:
+        """Coerce group data loaded from JSON into a safe in-memory form."""
+        if not isinstance(raw, dict):
+            return {}
+        if not self.current_scene or self.current_scene not in self.scenes:
+            return {}
+        max_idx = len(self.scenes[self.current_scene].widgets) - 1
+        out: Dict[str, List[int]] = {}
+        for name, members in raw.items():
+            try:
+                gname = str(name)
+            except Exception:
+                continue
+            if not isinstance(members, list):
+                continue
+            cleaned: List[int] = []
+            for m in members:
+                try:
+                    idx = int(m)
+                except Exception:
+                    continue
+                if 0 <= idx <= max_idx:
+                    cleaned.append(idx)
+            if cleaned:
+                out[gname] = sorted(set(cleaned))
+        return out
+
+    def _groups_payload_for_save(self) -> Dict[str, Dict[str, List[int]]]:
+        """Return groups in a JSON-friendly form (stored per scene name)."""
+        if not self.current_scene or self.current_scene not in self.scenes:
+            return {}
+        # Ensure indices are valid for current widget list.
+        groups = self._coerce_groups(self.groups)
+        if not groups:
+            return {}
+        return {str(self.current_scene): groups}
+
     def save_to_json(self, filename: str):
         """Save design to JSON file."""
         data = {
             "width": self.width,
             "height": self.height,
+            "groups": self._groups_payload_for_save(),
             "scenes": {
                 name: {
                     "name": scene.name,
@@ -1444,7 +1511,7 @@ class UIDesigner:
             logger.error("Failed to save design %s: %s", filename, exc)
             return
 
-        # Auto: run preflight and export previews unless disabled
+        # Auto: run preflight unless disabled
         try:
             if os.environ.get("ESP32OS_AUTO_EXPORT", "1") != "0":
                 _auto_preflight_and_export(self, filename)
@@ -1467,6 +1534,14 @@ class UIDesigner:
             self.scenes = self._build_scenes_from_data(data)
             if self.scenes:
                 self.current_scene = list(self.scenes.keys())[0]
+            raw_groups = data.get("groups")
+            if isinstance(raw_groups, dict) and raw_groups and all(
+                isinstance(v, dict) for v in raw_groups.values()
+            ):
+                scene_groups = raw_groups.get(self.current_scene, {})
+                self.groups = self._coerce_groups(scene_groups)
+            else:
+                self.groups = self._coerce_groups(raw_groups)
             logger.info("[OK] Design loaded: %s", filename)
             self._record_json_watch(filename)
         except SceneLoadError as exc:
@@ -1503,13 +1578,22 @@ class UIDesigner:
     ) -> Dict[str, SceneConfigDict]:
         if isinstance(scenes_data, list):
             return {
-                str(scene.get("id", f"scene_{i}")): self._validate_scene_dict(scene, root_data, idx=i)
+                str(scene.get("id", f"scene_{i}")): self._validate_scene_dict(
+                    scene, root_data, idx=i
+                )
                 for i, scene in enumerate(scenes_data)
             }
-        return {str(name): self._validate_scene_dict(scene, root_data) for name, scene in scenes_data.items()}
+        return {
+            str(name): self._validate_scene_dict(scene, root_data)
+            for name, scene in scenes_data.items()
+        }
 
     def _widgets_for_scene(self, data: Dict[str, Any], name: str) -> List[WidgetConfig]:
-        raw_widgets = data.get("scenes", {}).get(name, {}).get("widgets") if isinstance(data.get("scenes", {}), dict) else None
+        raw_widgets = (
+            data.get("scenes", {}).get(name, {}).get("widgets")
+            if isinstance(data.get("scenes", {}), dict)
+            else None
+        )
         raw_widgets = raw_widgets if isinstance(raw_widgets, list) else []
         widgets: List[WidgetConfig] = []
         for w in raw_widgets:
@@ -1520,7 +1604,11 @@ class UIDesigner:
         return widgets
 
     def _build_scene_config(
-        self, name: str, scene_data: SceneConfigDict, widgets: List[WidgetConfig], data: Dict[str, Any]
+        self,
+        name: str,
+        scene_data: SceneConfigDict,
+        widgets: List[WidgetConfig],
+        data: Dict[str, Any],
     ) -> SceneConfig:
         return SceneConfig(
             name=scene_data["name"],
@@ -1866,9 +1954,7 @@ class UIDesigner:
             return
         key = (lambda w: w[1].x) if axis == "x" else (lambda w: w[1].y)
         size = (
-            (lambda w: _widget_dims(w[1])[0])
-            if axis == "x"
-            else (lambda w: _widget_dims(w[1])[1])
+            (lambda w: _widget_dims(w[1])[0]) if axis == "x" else (lambda w: _widget_dims(w[1])[1])
         )
         items.sort(key=key)
         start = _safe_int(key(items[0])) if key(items[0]) is not None else 0
@@ -1904,8 +1990,8 @@ class UIDesigner:
                 "<!DOCTYPE html>",
                 '<html lang="en">',
                 "<head>",
-                '    <meta charset=\"UTF-8\">',
-                '    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">',
+                '    <meta charset="UTF-8">',
+                '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
                 f"    <title>{scene.name} - UI Design Preview</title>",
                 "    <style>",
                 *self._html_styles(colors),
@@ -1913,8 +1999,8 @@ class UIDesigner:
                 "</head>",
                 "<body>",
                 f"    <h1>{scene.name}</h1>",
-                f"    <div class=\"preview\">{preview}</div>",
-                "    <div class=\"info\">",
+                f'    <div class="preview">{preview}</div>',
+                '    <div class="info">',
                 f"        <p>Size: {scene.width} x {scene.height}</p>",
                 f"        <p>Widgets: {len(scene.widgets)}</p>",
                 f"        <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
@@ -2003,7 +2089,9 @@ class UIDesigner:
         self._draw_horizontal_guides(canvas, scene, h_guides)
         self._draw_center_guides(canvas, scene, center_guides)
 
-    def _draw_vertical_guides(self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]) -> None:
+    def _draw_vertical_guides(
+        self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]
+    ) -> None:
         if not guides:
             return
         for g in guides:
@@ -2015,7 +2103,9 @@ class UIDesigner:
             for y in range(y1, y2):
                 canvas[y][x] = "|"
 
-    def _draw_horizontal_guides(self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]) -> None:
+    def _draw_horizontal_guides(
+        self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]
+    ) -> None:
         if not guides:
             return
         for g in guides:
@@ -2027,7 +2117,9 @@ class UIDesigner:
             for x in range(x1, x2):
                 canvas[y][x] = "-"
 
-    def _draw_center_guides(self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]) -> None:
+    def _draw_center_guides(
+        self, canvas: List[List[str]], scene: SceneConfig, guides: List[Dict[str, Any]]
+    ) -> None:
         if not guides:
             return
         for g in guides:
@@ -2066,11 +2158,27 @@ class UIDesigner:
 
     def _draw_icon(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
         """Render icon glyph (single char) centered in its box."""
-        glyph = (widget.icon_char or widget.text or "?")[:4]
+        glyph = str(getattr(widget, "icon_char", "") or getattr(widget, "text", "") or "?").replace("\n", " ").strip()
         if not glyph:
             return
-        text_y = widget.y + widget.height // 2
-        text_x = widget.x + (widget.width - len(glyph)) // 2
+
+        pad_x = int(getattr(widget, "padding_x", 0) or 0)
+        pad_y = int(getattr(widget, "padding_y", 0) or 0)
+        border_pad = 1 if bool(getattr(widget, "border", True)) else 0
+
+        x0 = int(widget.x) + border_pad + pad_x
+        y0 = int(widget.y) + border_pad + pad_y
+        x1 = int(widget.x) + int(widget.width) - border_pad - pad_x - 1
+        y1 = int(widget.y) + int(widget.height) - border_pad - pad_y - 1
+
+        inner_w = x1 - x0 + 1
+        inner_h = y1 - y0 + 1
+        if inner_w <= 0 or inner_h <= 0:
+            return
+
+        glyph = glyph[: max(1, min(4, inner_w))]
+        text_y = y0 + (inner_h // 2)
+        text_x = x0 + max(0, (inner_w - len(glyph)) // 2)
         if 0 <= text_y < height:
             self._write_text_line(canvas, text_y, text_x, glyph, width)
 
@@ -2159,8 +2267,15 @@ class UIDesigner:
                 canvas[y][x1] = char
 
     def _draw_border_corners(
-        self, canvas: List[List[str]], x0: int, x1: int, y0: int, y1: int,
-        border_chars: Dict[str, str], width: int, height: int
+        self,
+        canvas: List[List[str]],
+        x0: int,
+        x1: int,
+        y0: int,
+        y1: int,
+        border_chars: Dict[str, str],
+        width: int,
+        height: int,
     ) -> None:
         """Draw border corner characters"""
         corners = [
@@ -2183,6 +2298,17 @@ class UIDesigner:
             x = x_start + i
             if 0 <= x < width:
                 canvas[y][x] = ch
+
+    def _ellipsize_text(self, text: str, max_len: int, ellipsis: str = "...") -> str:
+        s = str(text or "")
+        max_len = int(max_len)
+        if max_len <= 0 or not s:
+            return ""
+        if len(s) <= max_len:
+            return s
+        if max_len <= len(ellipsis):
+            return s[:max_len]
+        return s[: max_len - len(ellipsis)] + ellipsis
 
     def _apply_state_overrides_inplace(self, widget: WidgetConfig) -> None:
         try:
@@ -2233,7 +2359,9 @@ class UIDesigner:
         dy = int(round(amp * math.sin(2 * math.pi * (t % steps) / steps)))
         widget.y = max(0, min(scene.height - widget.height, widget.y + dy))
 
-    def _anim_slide_in_left(self, widget: WidgetConfig, scene: SceneConfig, t: int, steps: int) -> None:
+    def _anim_slide_in_left(
+        self, widget: WidgetConfig, scene: SceneConfig, t: int, steps: int
+    ) -> None:
         start = -widget.width
         end = widget.x
         pos = start + (end - start) * (t % steps) / steps
@@ -2257,28 +2385,132 @@ class UIDesigner:
         return styles.get(style, styles["single"])
 
     def _draw_text(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
-        """Draw text with alignment"""
-        text_y = widget.y + widget.height // 2
-        if widget.valign == "top":
-            text_y = widget.y + (1 if widget.border else 0) + widget.padding_y
-        elif widget.valign == "bottom":
-            text_y = widget.y + widget.height - (1 if widget.border else 0) - widget.padding_y - 1
+        """Draw text with alignment, clipped to widget inner box."""
+        text_raw = str(getattr(widget, "text", "") or "")
+        if not text_raw.strip():
+            return
 
-        text_x = widget.x + widget.padding_x + (1 if widget.border else 0)
+        pad_x = int(getattr(widget, "padding_x", 0) or 0)
+        pad_y = int(getattr(widget, "padding_y", 0) or 0)
+        border_pad = 1 if bool(getattr(widget, "border", True)) else 0
 
-        if widget.align == "center":
-            text_x = widget.x + (widget.width - len(widget.text)) // 2
-        elif widget.align == "right":
-            text_x = (
-                widget.x
-                + widget.width
-                - len(widget.text)
-                - widget.padding_x
-                - (1 if widget.border else 0)
-            )
+        x0 = int(widget.x) + border_pad + pad_x
+        y0 = int(widget.y) + border_pad + pad_y
+        x1 = int(widget.x) + int(widget.width) - border_pad - pad_x - 1
+        y1 = int(widget.y) + int(widget.height) - border_pad - pad_y - 1
 
-        if 0 <= text_y < height:
-            self._write_text_line(canvas, text_y, text_x, widget.text, width)
+        inner_w = x1 - x0 + 1
+        inner_h = y1 - y0 + 1
+        if inner_w <= 0 or inner_h <= 0:
+            return
+
+        align = str(getattr(widget, "align", "left") or "left").lower()
+        valign = str(getattr(widget, "valign", "middle") or "middle").lower()
+
+        overflow = str(getattr(widget, "text_overflow", "ellipsis") or "ellipsis").strip().lower()
+        if overflow not in {"ellipsis", "wrap", "clip", "auto"}:
+            overflow = "ellipsis"
+
+        # Determine final mode.
+        use_wrap = overflow == "wrap"
+        if overflow == "auto":
+            flat = text_raw.replace("\t", " ").replace("\n", " ").strip()
+            use_wrap = inner_h >= 2 and (("\n" in text_raw) or (len(flat) > inner_w))
+
+        if use_wrap:
+            max_lines = inner_h
+            try:
+                ml = getattr(widget, "max_lines", None)
+                if ml is not None and str(ml) != "":
+                    ml_i = int(ml)
+                    if ml_i > 0:
+                        max_lines = min(max_lines, ml_i)
+            except Exception:
+                pass
+            max_lines = max(1, int(max_lines))
+
+            s = text_raw.replace("\t", " ").strip()
+            paras = [p.strip() for p in s.splitlines() if p.strip()]
+            if not paras:
+                paras = [s]
+
+            lines: List[str] = []
+            truncated = False
+
+            def _push_line(line: str) -> None:
+                nonlocal truncated
+                if len(lines) >= max_lines:
+                    truncated = True
+                    return
+                lines.append(line)
+
+            for para in paras:
+                words = para.split()
+                current = ""
+                for word in words:
+                    cand = word if not current else f"{current} {word}"
+                    if len(cand) <= inner_w:
+                        current = cand
+                        continue
+                    if current:
+                        _push_line(current)
+                        if len(lines) >= max_lines:
+                            break
+                        current = word
+                        continue
+
+                    # Single word too long: split by characters.
+                    chunk = ""
+                    for ch in word:
+                        cand2 = chunk + ch
+                        if len(cand2) <= inner_w:
+                            chunk = cand2
+                        else:
+                            if chunk:
+                                _push_line(chunk)
+                                if len(lines) >= max_lines:
+                                    break
+                            chunk = ch if len(ch) <= inner_w else ""
+                    if len(lines) >= max_lines:
+                        break
+                    current = chunk
+
+                if len(lines) >= max_lines:
+                    break
+                if current:
+                    _push_line(current)
+                if len(lines) >= max_lines:
+                    break
+
+            if truncated and lines:
+                lines[-1] = self._ellipsize_text(lines[-1], inner_w)
+        else:
+            line_text = text_raw.replace("\t", " ").replace("\n", " ").strip()
+            if overflow == "clip":
+                line = line_text[:inner_w]
+            else:
+                line = self._ellipsize_text(line_text, inner_w)
+            lines = [line]
+
+        n_lines = max(1, len(lines))
+        if valign == "top":
+            start_y = y0
+        elif valign == "bottom":
+            start_y = y1 - (n_lines - 1)
+        else:
+            start_y = y0 + max(0, (inner_h - n_lines) // 2)
+
+        for i, line in enumerate(lines[:inner_h]):
+            y = start_y + i
+            if not (0 <= y < height):
+                continue
+            if align == "center":
+                x = x0 + max(0, (inner_w - len(line)) // 2)
+            elif align == "right":
+                x = x0 + max(0, inner_w - len(line))
+            else:
+                x = x0
+            self._write_text_line(canvas, y, x, line[:inner_w], width)
 
     # Small utility helpers to reduce duplication in ASCII drawing
     def _inner_box(self, widget: WidgetConfig) -> Tuple[int, int, int, int]:
@@ -2324,8 +2556,13 @@ class UIDesigner:
         return max(0.0, min(1.0, (widget.value - widget.min_value) / denom))
 
     def _draw_segmented_bar(
-        self, canvas: List[List[str]], x0: int, bar_y: int, inner_w: int,
-        fill_ratio: float, width: int
+        self,
+        canvas: List[List[str]],
+        x0: int,
+        bar_y: int,
+        inner_w: int,
+        fill_ratio: float,
+        width: int,
     ) -> None:
         """Draw segmented progress bar"""
         segment = 3
@@ -2350,8 +2587,7 @@ class UIDesigner:
                 canvas[bar_y][x] = " "
 
     def _draw_simple_bar(
-        self, canvas: List[List[str]], x0: int, bar_y: int, inner_w: int,
-        progress: int, width: int
+        self, canvas: List[List[str]], x0: int, bar_y: int, inner_w: int, progress: int, width: int
     ) -> None:
         """Draw simple progress bar"""
         for i in range(inner_w):
@@ -2382,11 +2618,14 @@ class UIDesigner:
 
         # Draw label if text exists
         if widget.text and 0 <= check_y < height:
+            pad_x = int(getattr(widget, "padding_x", 0) or 0)
+            border_pad = 1 if bool(getattr(widget, "border", True)) else 0
             text_x = check_x + 2
-            for i, ch in enumerate(widget.text):
-                x = text_x + i
-                if 0 <= x < width:
-                    canvas[check_y][x] = ch
+            inner_right = widget.x + widget.width - border_pad - pad_x - 1
+            max_len = int(inner_right - text_x + 1)
+            if max_len > 0:
+                line = self._ellipsize_text(str(widget.text or "").replace("\n", " "), max_len)
+                self._write_text_line(canvas, check_y, text_x, line, width)
 
     def _draw_slider(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
         """Draw slider"""
@@ -2438,6 +2677,7 @@ def _preflight_widget_checks(
         _check_size(i, w, issues)
         _check_offcanvas(i, w, scene, issues, hints)
         _check_min_size_and_text(i, w, warnings)
+        _check_text_overflow(i, w, warnings)
         _check_pixel_grid(i, w, scene, warnings, hints)
     return issues, warnings, hints
 
@@ -2475,10 +2715,110 @@ def _check_min_size_and_text(idx: int, w: WidgetConfig, warnings: List[str]) -> 
     if w_type in ["checkbox", "radiobutton"] and w.height < 2:
         warnings.append(f"[{idx}] {w.type}: very small height may clip symbol")
     if (
-        w.type in ["label", "button", "textbox", "checkbox", "radiobutton"]
-        and not (w.text or "").strip()
+        w_type in {"button", "checkbox", "radiobutton"}
+        and not (getattr(w, "text", "") or "").strip()
     ):
         warnings.append(f"[{idx}] {w.type}: empty text")
+
+
+def _check_text_overflow(idx: int, w: WidgetConfig, warnings: List[str]) -> None:
+    text = str(getattr(w, "text", "") or "")
+    if not text.strip():
+        return
+
+    # Preflight is pixel-based (export uses pixel coords). Assume fixed 6x8 font cells,
+    # matching `src/ui_render.h` defaults in firmware.
+    char_w = 6
+    char_h = 8
+
+    try:
+        w_span = int(getattr(w, "width", 0) or 0)
+        h_span = int(getattr(w, "height", 0) or 0)
+    except Exception:
+        return
+
+    pad_x = int(getattr(w, "padding_x", 0) or 0)
+    pad_y = int(getattr(w, "padding_y", 0) or 0)
+    border_pad = 1 if bool(getattr(w, "border", True)) else 0
+    inner_w = w_span - 2 * border_pad - 2 * pad_x
+    inner_h = h_span - 2 * border_pad - 2 * pad_y
+    if inner_w <= 0 or inner_h <= 0:
+        warnings.append(f"[{idx}] {w.type}: no space for text (size={w_span}x{h_span})")
+        return
+
+    max_chars = inner_w // max(1, char_w)
+    max_lines_by_h = inner_h // max(1, char_h)
+    if max_chars <= 0 or max_lines_by_h <= 0:
+        warnings.append(f"[{idx}] {w.type}: no space for text (size={w_span}x{h_span})")
+        return
+
+    overflow = str(getattr(w, "text_overflow", "ellipsis") or "ellipsis").strip().lower()
+    if overflow not in {"ellipsis", "wrap", "clip", "auto"}:
+        overflow = "ellipsis"
+
+    use_wrap = overflow == "wrap"
+    if overflow == "auto":
+        flat = text.replace("\t", " ").replace("\n", " ").strip()
+        use_wrap = (max_lines_by_h >= 2) and (("\n" in text) or (len(flat) > max_chars))
+
+    if use_wrap:
+        max_lines = max_lines_by_h
+        try:
+            ml = getattr(w, "max_lines", None)
+            if ml is not None and str(ml) != "":
+                ml_i = int(ml)
+                if ml_i > 0:
+                    max_lines = min(max_lines, ml_i)
+        except Exception:
+            pass
+        max_lines = max(1, int(max_lines))
+
+        # Fast wrap check: if we still have content after filling max_lines, it's truncated.
+        remaining = text.replace("\t", " ").strip()
+        paras = [p.strip() for p in remaining.splitlines() if p.strip()]
+        if not paras:
+            paras = [remaining]
+        lines_used = 0
+        truncated = False
+        for para in paras:
+            words = para.split()
+            current = ""
+            for word in words:
+                cand = word if not current else f"{current} {word}"
+                if len(cand) <= max_chars:
+                    current = cand
+                    continue
+                if current:
+                    lines_used += 1
+                    if lines_used >= max_lines:
+                        truncated = True
+                        break
+                    current = word
+                    continue
+                # Split a single long word; each chunk consumes a line.
+                chunks = (len(word) + max(1, max_chars) - 1) // max(1, max_chars)
+                lines_used += chunks
+                if lines_used >= max_lines:
+                    truncated = True
+                    break
+                current = ""
+            if truncated:
+                break
+            if current:
+                lines_used += 1
+                if lines_used > max_lines:
+                    truncated = True
+                    break
+        if truncated:
+            warnings.append(f"[{idx}] {w.type}: text truncated (wrap)")
+        return
+
+    line = text.replace("\t", " ").replace("\n", " ").strip()
+    if len(line) > max_chars:
+        if overflow == "clip":
+            warnings.append(f"[{idx}] {w.type}: text clipped to {max_chars} chars")
+        else:
+            warnings.append(f"[{idx}] {w.type}: text truncated (ellipsis) to {max_chars} chars")
 
 
 def _check_pixel_grid(
@@ -2503,15 +2843,26 @@ def _preflight_overlap_checks(scene: SceneConfig, warnings: List[str]) -> List[s
     n = len(scene.widgets)
     for i in range(n):
         for j in range(i + 1, n):
-            if overlap(scene.widgets[i], scene.widgets[j]):
+            a = scene.widgets[i]
+            b = scene.widgets[j]
+            at = str(getattr(a, "type", "") or "").lower()
+            bt = str(getattr(b, "type", "") or "").lower()
+            # Overlaps with container-like widgets (panel/box) are expected (background layers).
+            if at in {"panel", "box"} or bt in {"panel", "box"}:
+                continue
+            if overlap(a, b):
                 warnings.append(
-                    f"[{i}] {scene.widgets[i].type} overlaps [{j}] {scene.widgets[j].type}"
+                    f"[{i}] {a.type} overlaps [{j}] {b.type}"
                 )
     return warnings
 
 
 def _auto_preflight_and_export(designer: "UIDesigner", json_path: str) -> None:
-    """Run preflight and generate HTML/PNG next to the JSON file."""
+    """Run preflight checks after saving JSON.
+
+    Phase 0 cleanup removed the legacy HTML/PNG auto-export hook to keep the
+    repo focused on the embedded OS UI path (Pygame designer + C header export).
+    """
     try:
         if not designer.current_scene or designer.current_scene not in designer.scenes:
             return
@@ -2520,11 +2871,6 @@ def _auto_preflight_and_export(designer: "UIDesigner", json_path: str) -> None:
         _log_preflight(result)
     except Exception as e:
         print(f"[WARN] Preflight failed: {e}")
-
-    try:
-        _run_auto_export(designer, json_path)
-    except Exception as e:
-        print(f"[WARN] Auto-export failed: {e}")
 
 
 def _log_preflight(result: Dict[str, Any]) -> None:
@@ -2541,33 +2887,10 @@ def _log_preflight(result: Dict[str, Any]) -> None:
     )
 
 
-def _run_auto_export(designer: "UIDesigner", json_path: str) -> None:
-    base, _ = os.path.splitext(json_path)
-    out_html = base + ".html"
-    out_png = base + ".png"
-    designer.export_to_html(out_html)
-    try:
-        import subprocess
-        import sys as _sys
 
-        cmd = [
-            _sys.executable,
-            PREVIEW_SCRIPT,
-            "--headless-preview",
-            "--in-json",
-            json_path,
-            "--out-png",
-            out_png,
-            "--out-html",
-            out_html,
-        ]
-        subprocess.run(cmd, check=False)
-    except Exception:
-        pass
-    print(f"[OK] Auto-export: {out_html} | {out_png}")
-
-
-def create_cli_interface(commands: Optional[List[str]] = None):  # noqa: C901 - CLI handler intentionally complex  # NOSONAR
+def create_cli_interface(
+    commands: Optional[List[str]] = None,
+):  # noqa: C901 - CLI handler intentionally complex  # NOSONAR
     """Advanced CLI interface for UI designer.
     If 'commands' is provided, runs non-interactively executing each command in order.
     """
@@ -3851,7 +4174,6 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="UI Designer CLI")
-    parser.add_argument("--web", action="store_true", help="Start web interface (not implemented)")
     parser.add_argument(
         "--guided", action="store_true", help="Run guided wizard for quick scene creation"
     )
@@ -3867,9 +4189,6 @@ if __name__ == "__main__":
     parser.add_argument("--out-html", default="examples/guided_scene.html")
     parser.add_argument("--out-png", default="examples/guided_scene.png")
     parser.add_argument(
-        "--live-preview", metavar="JSON", help="Start live preview server watching JSON file"
-    )
-    parser.add_argument(
         "--export-c-header",
         nargs=2,
         metavar=("JSON", "HEADER"),
@@ -3877,28 +4196,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Live preview mode
-    if args.live_preview:
-        import subprocess
-
-        live_script = Path(__file__).parent / "ui_designer_live.py"
-        if not live_script.exists():
-            print(f"[FAIL] Live preview script not found: {live_script}")
-            sys.exit(1)
-        try:
-            subprocess.run(
-                [sys.executable, str(live_script), "--json", args.live_preview], check=True
-            )
-        except KeyboardInterrupt:
-            print("\n[OK] Live preview stopped")
-        sys.exit(0)
-
     # C header export mode
     if args.export_c_header:
         json_file, header_file = args.export_c_header
         import subprocess
 
-        export_script = Path(__file__).parent / "ui_export_c_header.py"
+        export_script = Path(__file__).parent / "tools" / "ui_export_c_header.py"
         if not export_script.exists():
             print(f"[FAIL] C export script not found: {export_script}")
             sys.exit(1)
@@ -3909,11 +4212,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"[FAIL] C export failed: {e}")
             sys.exit(1)
-        sys.exit(0)
-
-    if args.web:
-        print("Web interface not yet implemented")
-        print("   Use CLI mode for now")
         sys.exit(0)
 
     if args.guided:
@@ -4028,36 +4326,15 @@ if __name__ == "__main__":
         # Export flow
         out_json = args.out_json
         out_html = args.out_html
-        out_png = args.out_png
         Path(os.path.dirname(out_json)).mkdir(parents=True, exist_ok=True)
-        # Save triggers preflight + auto-export by default
+        # Save triggers preflight by default
         d.save_to_json(out_json)
-        # Ensure HTML/PNG at requested paths as well
+        # Optional: write an ASCII-based HTML preview for quick inspection.
         try:
             d.export_to_html(out_html)
         except Exception:
             pass
-        try:
-            import subprocess
-            import sys as _sys
-
-            cmd = [
-                _sys.executable,
-                PREVIEW_SCRIPT,
-                "--headless-preview",
-                "--in-json",
-                out_json,
-                "--out-png",
-                out_png,
-                "--out-html",
-                out_html,
-            ]
-            subprocess.run(cmd, check=False)
-        except Exception:
-            pass
-        print(
-            f"\n[OK] Guided scene created and exported:\n  JSON: {out_json}\n  HTML: {out_html}\n  PNG:  {out_png}"
-        )
+        print(f"\n[OK] Guided scene created:\n  JSON: {out_json}\n  HTML: {out_html}")
         sys.exit(0)
 
     if args.demo:
@@ -4105,40 +4382,15 @@ if __name__ == "__main__":
             if args.out_html != "output/guided_scene.html"
             else "output/demo_scene.html"
         )
-        out_png = (
-            args.out_png
-            if args.out_png != "output/guided_scene.png"
-            else "output/demo_scene.png"
-        )
         Path(os.path.dirname(out_json)).mkdir(parents=True, exist_ok=True)
-        # Save triggers preflight + auto-export
+        # Save triggers preflight by default
         d.save_to_json(out_json)
-        # Ensure HTML/PNG at requested paths as well
+        # Optional: write an ASCII-based HTML preview for quick inspection.
         try:
             d.export_to_html(out_html)
         except Exception:
             pass
-        try:
-            import subprocess
-            import sys as _sys
-
-            cmd = [
-                _sys.executable,
-                PREVIEW_SCRIPT,
-                "--headless-preview",
-                "--in-json",
-                out_json,
-                "--out-png",
-                out_png,
-                "--out-html",
-                out_html,
-            ]
-            subprocess.run(cmd, check=False)
-        except Exception:
-            pass
-        print(
-            f"\n[OK] Demo scene created and exported:\n  JSON: {out_json}\n  HTML: {out_html}\n  PNG:  {out_png}"
-        )
+        print(f"\n[OK] Demo scene created:\n  JSON: {out_json}\n  HTML: {out_html}")
         sys.exit(0)
 
     # Scripted CLI mode

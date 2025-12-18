@@ -1,0 +1,10 @@
+# Development and CI tooling dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+coverage[toml]>=7.3.0
+pytest-timeout>=2.2.0
+mypy>=1.7.0
+ruff>=0.6.0
+pyinstaller>=6.0.0
+
+# Security tooling is installed ad-hoc in workflows (pip-audit, bandit, cyclonedx-bom, safety, pip-licenses).

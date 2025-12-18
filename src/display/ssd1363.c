@@ -7,6 +7,7 @@
 #include "esp_log.h"
 
 #include "display_config.h"
+#include <string.h>
 #include <stdbool.h>
 
 static const char *TAG = "ssd1363";
@@ -14,6 +15,124 @@ static const char *TAG = "ssd1363";
 #define I2C_TIMEOUT_MS 1000
 
 static bool s_i2c_inited = false;
+static uint8_t s_col_offset_units = SSD1363_COL_OFFSET;
+
+#define SSD1363_MAX_COL_ADDR 79U
+
+static esp_err_t ssd1363_write_cmd_args(uint8_t cmd, const uint8_t *args, size_t arg_len)
+{
+    if (args == NULL || arg_len == 0) {
+        return ssd1363_write_cmd(cmd);
+    }
+    if (arg_len > 8) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t buf[1 + 8];
+    buf[0] = cmd;
+    memcpy(buf + 1, args, arg_len);
+    return ssd1363_write_cmd_list(buf, 1 + arg_len);
+}
+
+static esp_err_t ssd1363_cmd_unlock(void)
+{
+    const uint8_t arg = 0x12; /* unlock */
+    return ssd1363_write_cmd_args(0xFD, &arg, 1);
+}
+
+#if SSD1363_I2C_SCAN_ON_BOOT
+static void ssd1363_scan_i2c(void)
+{
+    ESP_LOGI(TAG, "I2C scan (port=%d) ...", DISPLAY_I2C_PORT);
+    int found = 0;
+    int found_display = 0;
+
+    for (int addr = 1; addr < 0x7F; ++addr) {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        if (cmd == NULL) {
+            ESP_LOGE(TAG, "i2c_cmd_link_create failed during scan");
+            return;
+        }
+        esp_err_t err = i2c_master_start(cmd);
+        if (err == ESP_OK) {
+            err = i2c_master_write_byte(cmd, (addr << 1) | I2C_MASTER_WRITE, true);
+        }
+        if (err == ESP_OK) {
+            err = i2c_master_stop(cmd);
+        }
+        if (err != ESP_OK) {
+            i2c_cmd_link_delete(cmd);
+            continue;
+        }
+
+        err = i2c_master_cmd_begin(DISPLAY_I2C_PORT, cmd, pdMS_TO_TICKS(20));
+        i2c_cmd_link_delete(cmd);
+
+        if (err == ESP_OK) {
+            found += 1;
+            if (addr == DISPLAY_I2C_ADDR) {
+                found_display = 1;
+            }
+            ESP_LOGI(TAG, "I2C device @0x%02X", addr);
+        }
+    }
+
+    if (found == 0) {
+        ESP_LOGW(TAG, "I2C scan: no devices found");
+        return;
+    }
+    if (!found_display) {
+        ESP_LOGW(TAG, "I2C scan: DISPLAY_I2C_ADDR=0x%02X not found", DISPLAY_I2C_ADDR);
+    }
+}
+#endif
+
+#if SSD1363_BOOT_TEST_PATTERN
+static esp_err_t ssd1363_boot_test_pattern(void)
+{
+    ESP_LOGI(TAG, "SSD1363 boot test pattern");
+
+    esp_err_t err = ssd1363_begin_frame(0, 0, (uint16_t)(DISPLAY_WIDTH - 1), (uint16_t)(DISPLAY_HEIGHT - 1));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "begin_frame failed: %d", err);
+        return err;
+    }
+
+#if DISPLAY_COLOR_BITS == 4
+    const int row_bytes = (DISPLAY_WIDTH + 1) / 2;
+    uint8_t line[(DISPLAY_WIDTH + 1) / 2];
+    for (int y = 0; y < DISPLAY_HEIGHT; ++y) {
+        for (int bx = 0; bx < row_bytes; ++bx) {
+            uint8_t v = 0x0F;
+            if (row_bytes > 1) {
+                v = (uint8_t)((bx * 15) / (row_bytes - 1));
+            }
+            if (y & 1) {
+                v = (uint8_t)(v ^ 0x0F);
+            }
+            line[bx] = (uint8_t)((uint8_t)(v << 4) | (v & 0x0F));
+        }
+        err = ssd1363_write_data(line, (size_t)row_bytes);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "write_data failed (row=%d): %d", y, err);
+            return err;
+        }
+    }
+    return ESP_OK;
+#else
+    const int row_bytes = (DISPLAY_WIDTH + 7) / 8;
+    uint8_t line[(DISPLAY_WIDTH + 7) / 8];
+    for (int y = 0; y < DISPLAY_HEIGHT; ++y) {
+        memset(line, (y & 1) ? 0xAA : 0x55, (size_t)row_bytes);
+        err = ssd1363_write_data(line, (size_t)row_bytes);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "write_data failed (row=%d): %d", y, err);
+            return err;
+        }
+    }
+    return ESP_OK;
+#endif
+}
+#endif
 
 esp_err_t ssd1363_bus_init(void)
 {
@@ -103,21 +222,43 @@ static esp_err_t ssd1363_send_bytes(bool is_cmd, const uint8_t *data, size_t len
         return ESP_ERR_NO_MEM;
     }
 
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (DISPLAY_I2C_ADDR << 1) | I2C_MASTER_WRITE, true);
+    esp_err_t err = i2c_master_start(cmd);
+    if (err != ESP_OK) {
+        i2c_cmd_link_delete(cmd);
+        return err;
+    }
+
+    err = i2c_master_write_byte(cmd, (DISPLAY_I2C_ADDR << 1) | I2C_MASTER_WRITE, true);
+    if (err != ESP_OK) {
+        i2c_cmd_link_delete(cmd);
+        return err;
+    }
 
     /* Control byte: Co=0, D/C# = 0 for command, 1 for data.
      * This matches the typical SSD13xx I2C protocol.
      */
     uint8_t control = is_cmd ? 0x00 : 0x40;
-    i2c_master_write_byte(cmd, control, true);
+    err = i2c_master_write_byte(cmd, control, true);
+    if (err != ESP_OK) {
+        i2c_cmd_link_delete(cmd);
+        return err;
+    }
 
-    i2c_master_write(cmd, (uint8_t *)data, len, true);
-    i2c_master_stop(cmd);
+    err = i2c_master_write(cmd, (uint8_t *)data, len, true);
+    if (err != ESP_OK) {
+        i2c_cmd_link_delete(cmd);
+        return err;
+    }
 
-    esp_err_t err = i2c_master_cmd_begin(DISPLAY_I2C_PORT,
-                                         cmd,
-                                         pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+    err = i2c_master_stop(cmd);
+    if (err != ESP_OK) {
+        i2c_cmd_link_delete(cmd);
+        return err;
+    }
+
+    err = i2c_master_cmd_begin(DISPLAY_I2C_PORT,
+                               cmd,
+                               pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     i2c_cmd_link_delete(cmd);
 
     if (err != ESP_OK) {
@@ -153,49 +294,147 @@ esp_err_t ssd1363_init_panel(void)
         return err;
     }
 
-    /* Placeholder init; optional conservative default below guarded by macro. */
+#if SSD1363_I2C_SCAN_ON_BOOT
+    ssd1363_scan_i2c();
+#endif
+
+    /* Clamp runtime column offset against current DISPLAY_WIDTH. */
+    err = ssd1363_set_col_offset_units(ssd1363_get_col_offset_units());
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Default init sequence (based on U8g2's SSD1363 256x128 driver). */
 #if SSD1363_USE_DEFAULT_INIT
-    /* Oscillator/clock: divide=1, freq=8 (tunable) */
-    (void)ssd1363_set_display_clock(1, 8);
-    /* Multiplex ratio: height-1 (e.g., 127 for 128 rows) */
-    (void)ssd1363_set_multiplex_ratio((uint8_t)(DISPLAY_HEIGHT - 1));
-    /* Display offset and start line */
-    (void)ssd1363_set_display_offset(0);
-    (void)ssd1363_set_start_line(0);
-    /* Remap: device-specific bitfields; 0x00 baseline. Adjust for segment/COM scan direction. */
-    (void)ssd1363_set_remap(0x00);
-    /* Contrast, precharge, VCOMH: conservative mids */
-    (void)ssd1363_set_contrast(0x7F);
-    (void)ssd1363_set_precharge(0x22);
-    (void)ssd1363_set_vcomh(0x34);
-    /* Normal display */
-    (void)ssd1363_invert_display(false);
+    err = ssd1363_cmd_unlock();
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = ssd1363_display_off();
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Set Display Clock Divide/Oscillator Frequency (B3h, 1 byte). */
+    err = ssd1363_write_cmd_args(0xB3, (const uint8_t[]){ SSD1363_INIT_CLOCK }, 1);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Set Multiplex Ratio (CAh, 1 byte). Value is MUX-1. */
+    err = ssd1363_set_multiplex_ratio((uint8_t)(DISPLAY_HEIGHT - 1));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Display offset and start line. */
+    err = ssd1363_set_display_offset(SSD1363_INIT_DISPLAY_OFFSET);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = ssd1363_set_start_line(SSD1363_INIT_START_LINE);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Set Re-Map / Dual COM Line Mode (A0h, 2 bytes). */
+    err = ssd1363_write_cmd_args(0xA0, (const uint8_t[]){ SSD1363_INIT_REMAP_A, SSD1363_INIT_REMAP_B }, 2);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Display Enhancement A (B4h, 2 bytes). */
+    err = ssd1363_write_cmd_args(0xB4, (const uint8_t[]){ SSD1363_INIT_ENH_A0, SSD1363_INIT_ENH_A1 }, 2);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Contrast (C1h). */
+    err = ssd1363_set_contrast(SSD1363_INIT_CONTRAST);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Set voltage config: Vp pin (BAh). */
+    err = ssd1363_write_cmd_args(0xBA, (const uint8_t[]){ SSD1363_INIT_VOLTAGE_CONFIG }, 1);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Linear grayscale table (B9h). */
+    err = ssd1363_write_cmd(0xB9);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* IREF selection (ADh). */
+    err = ssd1363_write_cmd_args(0xAD, (const uint8_t[]){ SSD1363_INIT_IREF }, 1);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Phase length / precharge timing (B1h). */
+    err = ssd1363_set_precharge(SSD1363_INIT_PHASE_LENGTH);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Precharge voltage (BBh). */
+    err = ssd1363_write_cmd_args(0xBB, (const uint8_t[]){ SSD1363_INIT_PRECHARGE_VOLTAGE }, 1);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Second precharge period (B6h). */
+    err = ssd1363_write_cmd_args(0xB6, (const uint8_t[]){ SSD1363_INIT_SECOND_PRECHARGE }, 1);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* VCOMH (BEh). */
+    err = ssd1363_set_vcomh(SSD1363_INIT_VCOMH);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Normal display. */
+    err = ssd1363_invert_display(false);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* Exit partial display (A9h). */
+    err = ssd1363_write_cmd(0xA9);
+    if (err != ESP_OK) {
+        return err;
+    }
 #else
-    const uint8_t init_seq[] = {
-        0xAE, /* Display OFF */
-        /*
-         * NOTE: Add your panel's required sequence here. Typical SSD13xx bring-up includes:
-         *   - Set Display Clock Divide/Oscillator Frequency (0xB3, div|freq)
-         *   - Set Multiplex Ratio (0xA8, ratio)
-         *   - Set Display Offset (0xA2, offset)
-         *   - Set Start Line (0xA1, line)
-         *   - Set Remap/Color Depth (device specific; for SSD1363 verify command)
-         *   - Set Contrast (0xC1 or device-specific)
-         *   - Set Precharge Period (0xB1)
-         *   - Set VCOMH (0xBE)
-         *   - Normal Display Mode (0xA6) or Invert (0xA7)
-         */
-    };
-    (void)ssd1363_write_cmd_list(init_seq, sizeof(init_seq));
+    /* Minimal init for custom bring-up: unlock + display off. */
+    (void)ssd1363_cmd_unlock();
+    (void)ssd1363_display_off();
 #endif
 
     /* Set a default full-frame address window so subsequent writes cover the panel. */
-    (void)ssd1363_set_addr_window(0, DISPLAY_WIDTH - 1, 0, DISPLAY_HEIGHT - 1);
+    err = ssd1363_set_addr_window(0, DISPLAY_WIDTH - 1, 0, DISPLAY_HEIGHT - 1);
+    if (err != ESP_OK) {
+        return err;
+    }
 
     /* Finally, turn the display ON. */
-    (void)ssd1363_display_on();
+    err = ssd1363_display_on();
+    if (err != ESP_OK) {
+        return err;
+    }
 
-    ESP_LOGW(TAG, "SSD1363 init sequence is placeholder; update for your panel");
+#if SSD1363_BOOT_TEST_PATTERN
+    err = ssd1363_boot_test_pattern();
+    if (err != ESP_OK) {
+        return err;
+    }
+#endif
+
+    ESP_LOGI(TAG, "SSD1363 init OK (addr=0x%02X, col_offset=%u)", DISPLAY_I2C_ADDR, (unsigned)ssd1363_get_col_offset_units());
     return ESP_OK;
 }
 
@@ -209,9 +448,47 @@ esp_err_t ssd1363_display_off(void)
     return ssd1363_write_cmd(0xAE); /* Display OFF */
 }
 
+uint8_t ssd1363_get_col_offset_units(void)
+{
+    return s_col_offset_units;
+}
+
+esp_err_t ssd1363_set_col_offset_units(uint8_t offset_units)
+{
+#if DISPLAY_COLOR_BITS == 4
+    uint16_t cols = (uint16_t)((DISPLAY_WIDTH - 1) >> 2);
+    if (cols > SSD1363_MAX_COL_ADDR) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    uint16_t max_off = (uint16_t)(SSD1363_MAX_COL_ADDR - cols);
+    if ((uint16_t)offset_units > max_off) {
+        offset_units = (uint8_t)max_off;
+    }
+#else
+    (void)offset_units;
+    offset_units = 0;
+#endif
+    s_col_offset_units = offset_units;
+    return ESP_OK;
+}
+
 esp_err_t ssd1363_set_addr_window(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1)
 {
-    /* Common SSD13xx style addressing; verify with SSD1363 datasheet for final use. */
+    /* Common SSD13xx style addressing; verify with SSD1363 datasheet for final use.
+     *
+     * For SSD1363 in 4bpp mode, column address units are groups of 4 pixels
+     * (2 bytes per column per row). Most 256x128 panels require a horizontal
+     * column offset because the controller has 320 segments.
+     */
+#if DISPLAY_COLOR_BITS == 4
+    uint16_t col0 = (uint16_t)(ssd1363_get_col_offset_units() + (x0 >> 2));
+    uint16_t col1 = (uint16_t)(ssd1363_get_col_offset_units() + (x1 >> 2));
+    if (col0 > SSD1363_MAX_COL_ADDR || col1 > SSD1363_MAX_COL_ADDR) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    x0 = col0;
+    x1 = col1;
+#endif
     uint8_t cmds[6];
     cmds[0] = 0x15; /* Set Column Address */
     cmds[1] = (uint8_t)x0;
@@ -236,7 +513,7 @@ esp_err_t ssd1363_set_contrast(uint8_t contrast)
 
 esp_err_t ssd1363_set_multiplex_ratio(uint8_t ratio)
 {
-    uint8_t cmds[2] = { 0xA8, ratio };
+    uint8_t cmds[2] = { 0xCA, ratio };
     return ssd1363_write_cmd_list(cmds, sizeof(cmds));
 }
 
@@ -254,8 +531,10 @@ esp_err_t ssd1363_set_start_line(uint8_t line)
 
 esp_err_t ssd1363_set_remap(uint8_t config)
 {
-    /* Device-specific; many SSD13xx use 0xA0 with bitfields */
-    uint8_t cmds[2] = { 0xA0, config };
+    /* SSD1363: "Set Re-map and Dual COM Line mode" (A0h) takes 2 bytes.
+     * Keep legacy signature and send a zeroed second byte by default.
+     */
+    uint8_t cmds[3] = { 0xA0, config, 0x00 };
     return ssd1363_write_cmd_list(cmds, sizeof(cmds));
 }
 

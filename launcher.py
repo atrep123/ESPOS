@@ -1,63 +1,47 @@
 #!/usr/bin/env python3
-"""
-ESP32 OS - Quick Launcher
-Spouštěč pro 3 hlavní aplikace
-"""
+"""ESP32 OS - Quick Launcher for the Pygame UI Designer."""
+
+from __future__ import annotations
+
 import subprocess
 import sys
 
 
-def print_menu():
-    print("\n" + "="*50)
+def print_menu() -> None:
+    print("\n" + "=" * 50)
     print("  ESP32 OS UI TOOLKIT")
-    print("="*50)
-    print("\n📱 Hlavní aplikace:\n")
-    print("  1. 🎨 UI Designer     - Vizuální editor (drag & drop)")
-    print("  2. 📺 Simulator       - Vizuální display okno")
-    print("  3. 🏢 Workspace       - Unified launcher (oboje)")
-    print("\n  0. ❌ Ukončit")
-    print("\n" + "="*50)
+    print("=" * 50)
+    print("\n  Available apps:\n")
+    print("  1. UI Designer (Pygame)  - Visual editor")
+    print("\n  0. Exit")
+    print("\n" + "=" * 50)
 
-def run_designer():
-    """Spustí UI Designer (non-blocking)"""
-    print("\n🎨 Spouštím UI Designer...")
+
+def run_designer() -> None:
+    """Launch UI Designer (non-blocking)."""
+    print("\n>> Launching UI Designer (Pygame)...")
     subprocess.Popen([sys.executable, "run_designer.py"])
 
-def run_simulator():
-    """Spustí Simulator GUI (non-blocking)"""
-    print("\n📺 Spouštím Simulator...")
-    subprocess.Popen([sys.executable, "run_simulator_gui.py"])
 
-def run_workspace():
-    """Spustí Workspace (non-blocking)"""
-    print("\n🏢 Spouštím Workspace...")
-    subprocess.Popen([sys.executable, "esp32os_workspace.py"])
-
-def main():
-    """Main menu loop"""
+def main() -> None:
+    """Main menu loop."""
     while True:
         print_menu()
-        
         try:
-            choice = input("\nVyber možnost (0-3): ").strip()
-            
+            choice = input("\nChoose (0-1): ").strip()
             if choice == "1":
                 run_designer()
-            elif choice == "2":
-                run_simulator()
-            elif choice == "3":
-                run_workspace()
             elif choice == "0":
-                print("\n👋 Ukončuji...")
+                print("\n<< Bye.")
                 break
             else:
-                print("\n❌ Neplatná volba! Zadej číslo 0-3.")
-                
+                print("\nInvalid choice. Enter 0 or 1.")
         except KeyboardInterrupt:
-            print("\n\n👋 Ukončeno uživatelem.")
+            print("\n\n<< Interrupted by user.")
             break
-        except Exception as e:
-            print(f"\n❌ Chyba: {e}")
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"\nError: {exc}")
+
 
 if __name__ == "__main__":
     main()

@@ -21,12 +21,21 @@ enum display_blit_mode {
 
 static inline void display_blit_icon_mode(display_t *d, const icon_t *ic, int16_t x, int16_t y, enum display_blit_mode mode)
 {
-    (void)mode; /* All modes map to the same placeholder blit for now. */
     if (!d || !d->buf || !ic) {
         return;
     }
-    /* Simple placeholder: fill icon bounding box; swap in real glyph render when available. */
-    ui_swbuf_fill_rect(d->buf, x, y, (int)ic->width, (int)ic->height, 1);
+    /* Real 1bpp icon mask blit into the software framebuffer. */
+    ui_swbuf_blit_mono(
+        d->buf,
+        x,
+        y,
+        (int)ic->width,
+        (int)ic->height,
+        (int)ic->stride_bytes,
+        ic->data,
+        1,
+        (uint8_t)mode
+    );
 }
 
 void ui_scene_icon_demo(display_t *d);

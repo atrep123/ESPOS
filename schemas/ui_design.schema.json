@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/espos/ui_design.schema.json",
+  "title": "ESP32OS UI Design",
+  "type": "object",
+  "required": [
+    "scenes"
+  ],
+  "properties": {
+    "width": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "groups": {
+      "type": "object"
+    },
+    "scenes": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/scene"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scene"
+          }
+        }
+      ]
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "scene": {
+      "type": "object",
+      "required": [
+        "widgets"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bg_color": {
+          "$ref": "#/$defs/color"
+        },
+        "widgets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/widget"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "widget": {
+      "type": "object",
+      "required": [
+        "type",
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "label",
+            "box",
+            "button",
+            "gauge",
+            "progressbar",
+            "checkbox",
+            "radiobutton",
+            "slider",
+            "textbox",
+            "panel",
+            "icon",
+            "chart"
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "z_index": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "_widget_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string"
+        },
+        "color_fg": {
+          "$ref": "#/$defs/color"
+        },
+        "color_bg": {
+          "$ref": "#/$defs/color"
+        },
+        "border": {
+          "type": "boolean"
+        },
+        "border_style": {
+          "type": "string",
+          "enum": [
+            "none",
+            "single",
+            "double",
+            "rounded",
+            "bold",
+            "dashed"
+          ]
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "valign": {
+          "type": "string",
+          "enum": [
+            "top",
+            "middle",
+            "bottom"
+          ]
+        },
+        "text_overflow": {
+          "type": "string",
+          "enum": [
+            "ellipsis",
+            "wrap",
+            "clip",
+            "auto"
+          ]
+        },
+        "max_lines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "checked": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "integer"
+        },
+        "min_value": {
+          "type": "integer"
+        },
+        "max_value": {
+          "type": "integer"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "constraints_json": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "animations_csv": {
+          "type": "string"
+        },
+        "animations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "data_points": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "color": {
+      "type": "string",
+      "description": "Named color (black/white/...) or #RRGGBB",
+      "anyOf": [
+        {
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        {
+          "minLength": 1
+        }
+      ]
+    }
+  }
+}
+
