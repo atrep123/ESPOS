@@ -72,7 +72,9 @@ def test_palette_click_adds_widget_and_canvas_renders(tmp_path, monkeypatch):
 
     app.logical_surface.fill(PALETTE["bg"])
     app._draw_palette()
-    button_rect, _label, enabled = next(row for row in app.palette_hitboxes if row[1] == "add button")
+    button_rect, _label, enabled = next(
+        row for row in app.palette_hitboxes if row[1] == "add button"
+    )
     assert enabled
 
     app._on_mouse_down(button_rect.center)
@@ -201,7 +203,9 @@ def test_help_overlay_draws_and_can_be_disabled(tmp_path, monkeypatch):
 def test_ascii_border_pixel_perfect_single_stroke():
     designer = UIDesigner(32, 16)
     canvas = [["." for _ in range(designer.width)] for _ in range(designer.height)]
-    widget = WidgetConfig(type="box", x=4, y=4, width=8, height=6, border=True, border_style="single")
+    widget = WidgetConfig(
+        type="box", x=4, y=4, width=8, height=6, border=True, border_style="single"
+    )
     border_chars = designer._get_border_chars(widget.border_style)
 
     designer._draw_border(canvas, widget, border_chars, designer.width, designer.height)
@@ -237,13 +241,34 @@ def test_component_insert_creates_group(tmp_path, monkeypatch):
     assert any(name.startswith("comp:card:") for name in app.designer.groups)
 
 
+def test_component_insert_uses_unique_root_prefix_for_multiple_instances(tmp_path, monkeypatch):
+    app = _make_app(tmp_path, monkeypatch)
+    sc = app.state.current_scene()
+
+    app._add_component("card")
+    first_ids = [getattr(w, "_widget_id", "") for w in sc.widgets]
+    assert any(str(wid).startswith("card.") for wid in first_ids)
+
+    app._add_component("card")
+    all_ids = [
+        str(getattr(w, "_widget_id", "") or "")
+        for w in sc.widgets
+        if str(getattr(w, "_widget_id", "") or "")
+    ]
+    assert any(wid.startswith("card.") for wid in all_ids)
+    assert any(wid.startswith("card_2.") for wid in all_ids)
+    assert len(all_ids) == len(set(all_ids)), "widget ids must be unique for export/runtime"
+
+
 def test_component_os_menu_list_inserts_focusable_items(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
     sc = app.state.current_scene()
 
     app._add_component("menu_list")
     assert sc.widgets
-    assert any(w.type == "button" for w in sc.widgets), "menu list should contain focusable button items"
+    assert any(
+        w.type == "button" for w in sc.widgets
+    ), "menu list should contain focusable button items"
     assert app.designer.groups
     assert any(name.startswith("comp:menu_list:") for name in app.designer.groups)
 
@@ -275,6 +300,41 @@ def test_component_menu_scroll_comp_edit_updates_widget_text(tmp_path, monkeypat
     app.state.inspector_input_buffer = "2/10"
     assert app._inspector_commit_edit()
     assert scroll.text == "2/10"
+
+
+def test_component_menu_count_comp_edit_updates_scroll_text(tmp_path, monkeypatch):
+    app = _make_app(tmp_path, monkeypatch)
+    sc = app.state.current_scene()
+
+    app._add_component("menu")
+    scroll = next(w for w in sc.widgets if getattr(w, "_widget_id", "") == "menu.scroll")
+
+    rows, _, _ = app._compute_inspector_rows()
+    keys = [key for key, _ in rows]
+    assert "comp.count" in keys
+
+    app.state.inspector_selected_field = "comp.count"
+    app.state.inspector_input_buffer = "12"
+    assert app._inspector_commit_edit()
+    assert scroll.text == "1/12"
+
+
+def test_component_root_rename_updates_widget_ids_and_group_name(tmp_path, monkeypatch):
+    app = _make_app(tmp_path, monkeypatch)
+    sc = app.state.current_scene()
+
+    app._add_component("modal")
+    assert any(str(getattr(w, "_widget_id", "") or "") == "modal.overlay" for w in sc.widgets)
+    old_groups = set(app.designer.groups.keys())
+    assert any(g.startswith("comp:modal:") for g in old_groups)
+
+    app.state.inspector_selected_field = "comp.root"
+    app.state.inspector_input_buffer = "modal2"
+    assert app._inspector_commit_edit()
+
+    assert any(str(getattr(w, "_widget_id", "") or "") == "modal2.overlay" for w in sc.widgets)
+    assert not any(str(getattr(w, "_widget_id", "") or "").startswith("modal.") for w in sc.widgets)
+    assert any(g.startswith("comp:modal:modal2:") for g in app.designer.groups)
 
 
 def test_component_tabs_comp_edit_updates_widget_text(tmp_path, monkeypatch):
@@ -319,7 +379,9 @@ def test_component_tabs_active_tab_updates_style_keeps_component_selected(tmp_pa
     assert app._selected_group_exact() == group
 
 
-def test_component_menu_list_active_item_updates_highlight_keeps_component_selected(tmp_path, monkeypatch):
+def test_component_menu_list_active_item_updates_highlight_keeps_component_selected(
+    tmp_path, monkeypatch
+):
     app = _make_app(tmp_path, monkeypatch)
     sc = app.state.current_scene()
 
@@ -444,7 +506,9 @@ def test_group_drag_moves_all_widgets(tmp_path, monkeypatch):
     dy = sc.widgets[0].y - before[0][1]
     assert (dx, dy) != (0, 0)
     after = [(w.x, w.y) for w in sc.widgets]
-    assert [(x - bx, y - by) for (x, y), (bx, by) in zip(after, before)] == [(dx, dy)] * len(sc.widgets)
+    assert [(x - bx, y - by) for (x, y), (bx, by) in zip(after, before)] == [(dx, dy)] * len(
+        sc.widgets
+    )
 
 
 def test_ungroup_then_drag_moves_single_widget(tmp_path, monkeypatch):
@@ -655,17 +719,18 @@ def test_fit_widget_shrinks_height_for_wrap(tmp_path, monkeypatch):
     assert w is not None
 
     w.width = GRID * 6
-    w.height = GRID * 12
     w.text_overflow = "wrap"
     w.text = "one two three four five six seven eight nine ten"
 
     before_w = int(getattr(w, "width", 0) or 0)
-    before_h = int(getattr(w, "height", 0) or 0)
 
     pad = max(2, app.pixel_padding // 2)
     avail_w = max(1, int(w.width) - pad * 2)
     lines = app._wrap_text_px(w.text, max_width_px=avail_w, max_lines=9999)
     needed_h = max(1, len(lines)) * int(app.pixel_font.get_height()) + pad * 2
+    # Make sure we start above the computed content height (font metrics vary by OS/font).
+    w.height = max(GRID * 12, needed_h + GRID * 4)
+    before_h = int(getattr(w, "height", 0) or 0)
     assert needed_h < before_h
 
     app._fit_selection_to_widget()
@@ -680,9 +745,17 @@ def test_input_mode_focus_navigation_and_activation(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
     sc = app.state.current_scene()
     sc.widgets.clear()
-    sc.widgets.append(WidgetConfig(type="button", x=8, y=8, width=48, height=20, text="OK", border=True))
-    sc.widgets.append(WidgetConfig(type="checkbox", x=8, y=40, width=96, height=16, text="Option", checked=False))
-    sc.widgets.append(WidgetConfig(type="label", x=8, y=64, width=96, height=16, text="Not focusable", border=False))
+    sc.widgets.append(
+        WidgetConfig(type="button", x=8, y=8, width=48, height=20, text="OK", border=True)
+    )
+    sc.widgets.append(
+        WidgetConfig(type="checkbox", x=8, y=40, width=96, height=16, text="Option", checked=False)
+    )
+    sc.widgets.append(
+        WidgetConfig(
+            type="label", x=8, y=64, width=96, height=16, text="Not focusable", border=False
+        )
+    )
 
     app.sim_input_mode = True
     app._ensure_focus()
@@ -717,7 +790,17 @@ def test_input_mode_slider_edit_and_adjust(tmp_path, monkeypatch):
     sc = app.state.current_scene()
     sc.widgets.clear()
     sc.widgets.append(
-        WidgetConfig(type="slider", x=8, y=8, width=120, height=24, text="Vol", value=10, min_value=0, max_value=20)
+        WidgetConfig(
+            type="slider",
+            x=8,
+            y=8,
+            width=120,
+            height=24,
+            text="Vol",
+            value=10,
+            min_value=0,
+            max_value=20,
+        )
     )
 
     app.sim_input_mode = True

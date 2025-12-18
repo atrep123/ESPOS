@@ -146,7 +146,11 @@ class CyberpunkEditorApp:
         except Exception:
             self.max_auto_scale = 4
         # Keep UI scale when switching HW profile (can disable via env)
-        self.lock_profile_scale = os.getenv("ESP32OS_LOCK_PROFILE_SCALE", "1") not in ("0", "false", "False")
+        self.lock_profile_scale = os.getenv("ESP32OS_LOCK_PROFILE_SCALE", "1") not in (
+            "0",
+            "false",
+            "False",
+        )
         # Apply prefs if CLI profile not provided
         if not self.hardware_profile and self.prefs.get("profile"):
             self.hardware_profile = self.prefs["profile"]
@@ -163,7 +167,12 @@ class CyberpunkEditorApp:
         if self.live_preview_port and self.live_preview_port not in self.favorite_ports:
             self.favorite_ports.append(self.live_preview_port)
         self._load_or_default()
-        start_max = os.getenv("ESP32OS_START_MAXIMIZED", "1").strip().lower() not in ("0", "false", "no", "")
+        start_max = os.getenv("ESP32OS_START_MAXIMIZED", "1").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+            "",
+        )
         is_dummy = os.getenv("SDL_VIDEODRIVER", "").strip().lower() == "dummy"
         win_size = None
         if start_max and not is_dummy:
@@ -290,15 +299,27 @@ class CyberpunkEditorApp:
             ("Distribute H (Ctrl+Alt+H)", lambda: layout_tools.distribute_selection(self, "h")),
             ("Distribute V (Ctrl+Alt+V)", lambda: layout_tools.distribute_selection(self, "v")),
             ("Match Width (Ctrl+Alt+W)", lambda: layout_tools.match_size_selection(self, "width")),
-            ("Match Height (Ctrl+Alt+T)", lambda: layout_tools.match_size_selection(self, "height")),
-            ("Center Selection (Ctrl+Alt+C)", lambda: layout_tools.center_selection_in_scene(self, "both")),
+            (
+                "Match Height (Ctrl+Alt+T)",
+                lambda: layout_tools.match_size_selection(self, "height"),
+            ),
+            (
+                "Center Selection (Ctrl+Alt+C)",
+                lambda: layout_tools.center_selection_in_scene(self, "both"),
+            ),
         ]
         self.palette_actions += self.layout_actions
         self.profile_actions = [
             ("-- Hardware Profiles --", None),
-            ("Profile: ESP32 OS 256x128 (4bpp Gray)", lambda: self._set_profile("esp32os_256x128_gray4")),
+            (
+                "Profile: ESP32 OS 256x128 (4bpp Gray)",
+                lambda: self._set_profile("esp32os_256x128_gray4"),
+            ),
             ("Profile: ESP32 OS 240x128 (1bpp)", lambda: self._set_profile("esp32os_240x128_mono")),
-            ("Profile: ESP32 OS 240x128 (RGB565)", lambda: self._set_profile("esp32os_240x128_rgb565")),
+            (
+                "Profile: ESP32 OS 240x128 (RGB565)",
+                lambda: self._set_profile("esp32os_240x128_rgb565"),
+            ),
             ("Profile: OLED 128x64", lambda: self._set_profile("oled_128x64")),
             ("Profile: TFT 320x240", lambda: self._set_profile("tft_320x240")),
             ("Profile: TFT 480x320", lambda: self._set_profile("tft_480x320")),
@@ -489,9 +510,21 @@ class CyberpunkEditorApp:
         actions = []
         actions.append(("-- Widget Presets --", None))
         for slot in range(1, 4):
-            actions.append((f"Save preset slot {slot}", lambda slot=slot: self._save_preset_slot(slot)))
-            actions.append((f"Apply preset slot {slot}", lambda slot=slot: self._apply_preset_slot(slot, add_new=False)))
-            actions.append((f"Add preset slot {slot}", lambda slot=slot: self._apply_preset_slot(slot, add_new=True)))
+            actions.append(
+                (f"Save preset slot {slot}", lambda slot=slot: self._save_preset_slot(slot))
+            )
+            actions.append(
+                (
+                    f"Apply preset slot {slot}",
+                    lambda slot=slot: self._apply_preset_slot(slot, add_new=False),
+                )
+            )
+            actions.append(
+                (
+                    f"Add preset slot {slot}",
+                    lambda slot=slot: self._apply_preset_slot(slot, add_new=True),
+                )
+            )
         return actions
 
     def _save_preset_slot(self, slot: int):
@@ -594,7 +627,9 @@ class CyberpunkEditorApp:
         self.dirty_rects.clear()
 
         # Force a full redraw when requested (e.g., overlay toggles).
-        if bool(getattr(self, "_force_full_redraw", False)) or bool(getattr(self, "show_help_overlay", False)):
+        if bool(getattr(self, "_force_full_redraw", False)) or bool(
+            getattr(self, "show_help_overlay", False)
+        ):
             self.dirty_rects = [pygame.Rect(0, 0, self.layout.width, self.layout.height)]
             return
 
@@ -637,7 +672,14 @@ class CyberpunkEditorApp:
     def _optimized_draw_frame(self):
         """Highly optimized frame drawing with caching and dirty rect tracking."""
         # Check cache first
-        cache_key = hash((self.scale, self.state.selected_idx, len(self.state.selected), int(bool(self.show_help_overlay))))
+        cache_key = hash(
+            (
+                self.scale,
+                self.state.selected_idx,
+                len(self.state.selected),
+                int(bool(self.show_help_overlay)),
+            )
+        )
         cached = self.render_cache.get(cache_key)
 
         if cached and not self._dirty:
@@ -701,7 +743,7 @@ class CyberpunkEditorApp:
             else:
                 text_size = self.font.size(w.text)
                 w.width = max(w.width, text_size[0] + GRID)
-                w.height = max(w.height, text_size[1] + GRID//2)
+                w.height = max(w.height, text_size[1] + GRID // 2)
 
         # Auto-align to grid
         w.x = snap(w.x)
@@ -739,7 +781,7 @@ class CyberpunkEditorApp:
 
     def _find_best_position(self, widget: WidgetConfig, scene) -> Tuple[int, int]:
         """Find optimal position for widget using spatial heuristics."""
-        best_score = float('inf')
+        best_score = float("inf")
         best_pos = (GRID, GRID)
 
         # Try different positions
@@ -813,12 +855,19 @@ class CyberpunkEditorApp:
     def _load_pixel_font(self, size: int) -> pygame.font.Font:
         """Load a readable pixel-ish font with deterministic fallback."""
         env_font = os.getenv("ESP32OS_FONT")
-        candidates = [
-            env_font or "",
-            "consolas",
-            "cascadiamono",
-            "courier new",
-        ]
+        is_headless = os.getenv("SDL_VIDEODRIVER", "").strip().lower() == "dummy" or bool(
+            os.getenv("PYTEST_CURRENT_TEST")
+        )
+
+        candidates = [env_font] if env_font else []
+        # For interactive runs, prefer a familiar monospace font if present.
+        # For tests/headless, avoid system fonts to keep metrics consistent across OSes.
+        if not is_headless:
+            candidates += [
+                "consolas",
+                "cascadiamono",
+                "courier new",
+            ]
 
         for name in candidates:
             if not name:
@@ -835,10 +884,20 @@ class CyberpunkEditorApp:
             except Exception:
                 continue
 
+        if is_headless:
+            try:
+                # Pygame bundled default font is available cross-platform and keeps tests stable.
+                return pygame.font.Font(None, size)
+            except Exception:
+                pass
+
         try:
             return pygame.font.SysFont("monospace", size, bold=False)
         except Exception:
-            return pygame.font.Font(pygame.font.get_default_font(), size)
+            try:
+                return pygame.font.Font(None, size)
+            except Exception:
+                return pygame.font.Font(pygame.font.get_default_font(), size)
 
     def _render_pixel_text(
         self,
@@ -909,7 +968,9 @@ class CyberpunkEditorApp:
     def _ellipsize_text_px(self, text: str, max_width_px: int, ellipsis: str = "...") -> str:
         return drawing.ellipsize_text_px(self, text, max_width_px, ellipsis=ellipsis)
 
-    def _wrap_text_px(self, text: str, max_width_px: int, max_lines: int, ellipsis: str = "...") -> List[str]:
+    def _wrap_text_px(
+        self, text: str, max_width_px: int, max_lines: int, ellipsis: str = "..."
+    ) -> List[str]:
         return drawing.wrap_text_px(self, text, max_width_px, max_lines, ellipsis=ellipsis)
 
     def _draw_text_clipped(
@@ -1044,8 +1105,8 @@ class CyberpunkEditorApp:
         members = self._group_members(gname)
         return gname if set(members) == set(self.state.selected) else None
 
-    def _selected_component_group(self) -> Optional[Tuple[str, str, List[int]]]:
-        """Return (group_name, component_name, members) when selection is inside a component group."""
+    def _selected_component_group(self) -> Optional[Tuple[str, str, str, List[int]]]:
+        """Return (group_name, component_type, root_prefix, members) when selection is inside a component group."""
         if not self.state.selected or self.state.selected_idx is None:
             return None
         try:
@@ -1054,30 +1115,35 @@ class CyberpunkEditorApp:
             return None
         selection = [int(i) for i in (self.state.selected or [])]
         for gname in self._groups_for_index(idx):
-            comp = self._component_name_from_group(gname)
-            if not comp:
+            info = self._component_info_from_group(gname)
+            if not info:
                 continue
+            comp_type, root = info
             members = self._group_members(gname)
             if not members:
                 continue
             if all(i in members for i in selection):
-                return str(gname), str(comp), members
+                return str(gname), str(comp_type), str(root), members
         return None
 
-    def _component_name_from_group(self, group_name: str) -> Optional[str]:
+    def _component_info_from_group(self, group_name: str) -> Optional[Tuple[str, str]]:
         g = str(group_name or "")
         if not g.startswith("comp:"):
             return None
         parts = g.split(":")
-        if len(parts) >= 2 and parts[1]:
-            return parts[1]
+        # New scheme: comp:{type}:{root}:{n}
+        if len(parts) >= 4 and parts[1] and parts[2]:
+            return str(parts[1]), str(parts[2])
+        # Legacy: comp:{type}:{n} (root == type)
+        if len(parts) >= 3 and parts[1]:
+            return str(parts[1]), str(parts[1])
         return None
 
-    def _component_role_index(self, indices: List[int], component: str) -> Dict[str, int]:
+    def _component_role_index(self, indices: List[int], root_prefix: str) -> Dict[str, int]:
         """Map component role -> widget index within selection."""
         sc = self.state.current_scene()
         roles: Dict[str, int] = {}
-        prefix = f"{str(component or '')}."
+        prefix = f"{str(root_prefix or '')}."
         if prefix == ".":
             return roles
         for idx in indices:
@@ -1086,19 +1152,22 @@ class CyberpunkEditorApp:
             wid = str(getattr(sc.widgets[idx], "_widget_id", "") or "")
             if not wid.startswith(prefix):
                 continue
-            role = wid[len(prefix):].strip()
+            role = wid[len(prefix) :].strip()
             if role and role not in roles:
                 roles[role] = idx
         return roles
 
-    def _component_field_specs(self, component: str) -> Dict[str, Tuple[str, str, str]]:
+    def _component_field_specs(self, component_type: str) -> Dict[str, Tuple[str, str, str]]:
         """Define editable component-level fields for the inspector."""
-        return component_field_specs(component)
+        return component_field_specs(component_type)
 
     def _format_group_label(self, group_name: str, members: List[int]) -> str:
-        comp = self._component_name_from_group(group_name)
-        if comp:
-            return f"component: {comp} ({len(members)})"
+        info = self._component_info_from_group(group_name)
+        if info:
+            comp_type, root = info
+            if root and root != comp_type:
+                return f"component: {comp_type} ({root}) ({len(members)})"
+            return f"component: {comp_type} ({len(members)})"
         return f"group: {group_name} ({len(members)})"
 
     def _tri_state(self, values: List[bool]) -> str:
@@ -1226,6 +1295,7 @@ class CyberpunkEditorApp:
 
     def _font_settings(self) -> Tuple[int, int]:
         """Return (font_size, pixel_scale) with env overrides."""
+
         def _int_env(name: str, default: int, lo: int, hi: int) -> int:
             try:
                 val = int(os.getenv(name, default))
@@ -1343,16 +1413,50 @@ class CyberpunkEditorApp:
             pass
         kind = str(kind or "").lower()
         defaults: Dict[str, Dict[str, object]] = {
-            "label": {"width": 90, "height": 16, "border": False, "align": "left", "valign": "middle"},
-            "button": {"width": 88, "height": 24, "border_style": "rounded", "style": "bold", "align": "center", "valign": "middle"},
+            "label": {
+                "width": 90,
+                "height": 16,
+                "border": False,
+                "align": "left",
+                "valign": "middle",
+            },
+            "button": {
+                "width": 88,
+                "height": 24,
+                "border_style": "rounded",
+                "style": "bold",
+                "align": "center",
+                "valign": "middle",
+            },
             "panel": {"width": 160, "height": 96, "text": "", "border_style": "single"},
             "progressbar": {"width": 140, "height": 16, "text": "Progress", "value": 65},
-            "gauge": {"width": 64, "height": 64, "text": "Gauge", "value": 70, "align": "center", "valign": "bottom"},
+            "gauge": {
+                "width": 64,
+                "height": 64,
+                "text": "Gauge",
+                "value": 70,
+                "align": "center",
+                "valign": "bottom",
+            },
             "slider": {"width": 160, "height": 24, "text": "Slider", "value": 40},
             "checkbox": {"width": 140, "height": 16, "text": "Checkbox"},
-            "textbox": {"width": 160, "height": 24, "text": "Text", "align": "left", "valign": "middle"},
+            "textbox": {
+                "width": 160,
+                "height": 24,
+                "text": "Text",
+                "align": "left",
+                "valign": "middle",
+            },
             "chart": {"width": 200, "height": 120, "text": "Line chart", "border_style": "rounded"},
-            "icon": {"width": 24, "height": 24, "text": "", "icon_char": "@", "border": False, "align": "center", "valign": "middle"},
+            "icon": {
+                "width": 24,
+                "height": 24,
+                "text": "",
+                "icon_char": "@",
+                "border": False,
+                "align": "center",
+                "valign": "middle",
+            },
         }
         cfg = defaults.get(kind, {})
         w = WidgetConfig(
@@ -1450,7 +1554,11 @@ class CyberpunkEditorApp:
 
     def _maybe_hide_help_overlay(self):
         """Auto-hide help after timeout."""
-        if self._help_shown_once or not self.show_help_overlay or bool(getattr(self, "_help_pinned", False)):
+        if (
+            self._help_shown_once
+            or not self.show_help_overlay
+            or bool(getattr(self, "_help_pinned", False))
+        ):
             return
         now = time.time()
         if now - self._help_timer_start >= self._help_timeout_sec:
@@ -1512,12 +1620,14 @@ class CyberpunkEditorApp:
             lock_scale=lock_scale,
         )
 
+
 def main():
     json_path = DEFAULT_JSON
     if len(sys.argv) >= 2:
         json_path = Path(sys.argv[1])
     app = CyberpunkEditorApp(json_path, (480, 320))
     app.run()
+
 
 if __name__ == "__main__":
     main()

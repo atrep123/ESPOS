@@ -19,11 +19,28 @@ def _sorted_role_indices(role_idx: Dict[str, int], prefix: str) -> List[Tuple[in
         r = str(role or "")
         if not r.startswith(p):
             continue
-        suffix = r[len(p):]
+        suffix = r[len(p) :]
         if suffix.isdigit():
             out.append((int(suffix), int(idx)))
     out.sort(key=lambda t: t[0])
     return out
+
+
+def _parse_active_count(text: str) -> Optional[Tuple[int, int]]:
+    """Parse 'active/count' as (active_0_based, count)."""
+    s = str(text or "").strip()
+    if not s or "/" not in s:
+        return None
+    left, right = s.split("/", 1)
+    try:
+        a = int(left.strip())
+        b = int(right.strip())
+    except Exception:
+        return None
+    if b <= 0:
+        return 0, 0
+    a = max(1, min(a, b))
+    return a - 1, b
 
 
 def inspector_field_to_str(app, field: str, w: WidgetConfig) -> str:
@@ -37,12 +54,14 @@ def inspector_field_to_str(app, field: str, w: WidgetConfig) -> str:
     if f.startswith("comp.") and sc is not None:
         ctx = app._selected_component_group()
         if ctx:
-            _group_name, comp_name, members = ctx
+            _group_name, comp_type, root, members = ctx
             suffix = f.split(".", 1)[1]
-            spec = app._component_field_specs(comp_name).get(suffix)
+            if suffix == "root":
+                return str(root or "")
+            spec = app._component_field_specs(comp_type).get(suffix)
             if spec:
                 role, attr, kind = spec
-                role_idx = app._component_role_index(members, comp_name)
+                role_idx = app._component_role_index(members, root)
                 if kind == "menu_active":
                     items = _sorted_role_indices(role_idx, "item")
                     if not items:
@@ -74,6 +93,15 @@ def inspector_field_to_str(app, field: str, w: WidgetConfig) -> str:
                                     active = n
                                     break
                     return str(active)
+                if kind == "list_count":
+                    items = _sorted_role_indices(role_idx, "item")
+                    visible = len(items)
+                    wi = role_idx.get(role)
+                    if wi is not None and 0 <= wi < len(sc.widgets):
+                        parsed = _parse_active_count(str(getattr(sc.widgets[wi], attr, "") or ""))
+                        if parsed is not None:
+                            return str(parsed[1])
+                    return str(visible or 0)
                 wi = role_idx.get(role)
                 if wi is not None and 0 <= wi < len(sc.widgets):
                     val = getattr(sc.widgets[wi], attr, "")
@@ -156,15 +184,91 @@ def inspector_commit_edit(app) -> bool:
         if not ctx:
             app._set_status("No component selected.", ttl_sec=3.0)
             return False
-        _group_name, comp_name, members = ctx
+        group_name, comp_type, root, members = ctx
         suffix = f.split(".", 1)[1]
-        spec = app._component_field_specs(comp_name).get(suffix)
+        if suffix == "root":
+            new_root = buf.lower()
+            if not new_root or "." in new_root or " " in new_root:
+                app._set_status("root must be a simple name (no spaces/dots).", ttl_sec=4.0)
+                return False
+            if new_root == str(root or ""):
+                return _finish_ok("Root unchanged.")
+            if not all(ch.isalnum() or ch == "_" for ch in new_root):
+                app._set_status("root may contain only [a-z0-9_].", ttl_sec=4.0)
+                return False
+
+            # Build full membership by id prefix (includes locked overlay panels, etc.).
+            all_indices: List[int] = []
+            for i, ww in enumerate(getattr(sc, "widgets", []) or []):
+                wid = str(getattr(ww, "_widget_id", "") or "")
+                if wid == str(root or "") or wid.startswith(f"{root}."):
+                    all_indices.append(int(i))
+
+            used_ids = {
+                str(getattr(ww, "_widget_id", "") or "")
+                for i, ww in enumerate(getattr(sc, "widgets", []) or [])
+                if int(i) not in set(all_indices)
+            }
+            new_ids: List[str] = []
+            for i in all_indices:
+                wid = str(getattr(sc.widgets[i], "_widget_id", "") or "")
+                if not wid:
+                    continue
+                if wid == str(root or ""):
+                    cand = new_root
+                elif wid.startswith(f"{root}."):
+                    cand = f"{new_root}{wid[len(str(root or '')):]}"
+                else:
+                    continue
+                if cand in used_ids:
+                    app._set_status(f"root rename would collide with id: {cand}", ttl_sec=4.0)
+                    return False
+                new_ids.append(cand)
+
+            try:
+                app.designer._save_state()
+            except Exception:
+                pass
+
+            for i in all_indices:
+                ww = sc.widgets[i]
+                wid = str(getattr(ww, "_widget_id", "") or "")
+                if not wid:
+                    continue
+                if wid == str(root or ""):
+                    ww._widget_id = new_root
+                elif wid.startswith(f"{root}."):
+                    ww._widget_id = f"{new_root}{wid[len(str(root or '')):]}"
+
+            # Rename the component group itself to keep type/root discoverable.
+            try:
+                groups = getattr(app.designer, "groups", None)
+            except Exception:
+                groups = None
+            if isinstance(groups, dict) and group_name in groups:
+                members_copy = list(groups.get(group_name) or [])
+                groups.pop(group_name, None)
+                new_gname = app._next_group_name(f"comp:{comp_type}:{new_root}:")
+                groups[new_gname] = members_copy
+
+            # Invalidate runtime listmodel cache (simulation mode) if present.
+            try:
+                models = getattr(app, "_sim_listmodels", None)
+            except Exception:
+                models = None
+            if isinstance(models, dict):
+                models.pop(str(root or ""), None)
+                models.pop(new_root, None)
+
+            return _finish_ok(f"Renamed root: {root} -> {new_root}")
+
+        spec = app._component_field_specs(comp_type).get(suffix)
         if not spec:
             app._set_status(f"Not editable: {field}", ttl_sec=3.0)
             app._inspector_cancel_edit()
             return True
         role, attr, kind = spec
-        role_idx = app._component_role_index(members, comp_name)
+        role_idx = app._component_role_index(members, root)
         wi = role_idx.get(role)
         if wi is None or not (0 <= wi < len(sc.widgets)):
             app._set_status(f"Missing role: {role}", ttl_sec=3.0)
@@ -198,6 +302,16 @@ def inspector_commit_edit(app) -> bool:
                     continue
                 ww = sc.widgets[wi2]
                 ww.style = "highlight" if pos == active_pos else "default"
+            # Keep scroll label in sync if present (active/count).
+            try:
+                scroll_idx = role_idx.get("scroll")
+                if scroll_idx is not None and 0 <= int(scroll_idx) < len(sc.widgets):
+                    sw = sc.widgets[int(scroll_idx)]
+                    parsed = _parse_active_count(str(getattr(sw, "text", "") or ""))
+                    count = parsed[1] if parsed is not None else len(items)
+                    sw.text = f"{active_pos + 1}/{count}" if count > 0 else "0/0"
+            except Exception:
+                pass
             try:
                 active_idx = items[active_pos][1]
                 if 0 <= active_idx < len(sc.widgets):
@@ -222,7 +336,10 @@ def inspector_commit_edit(app) -> bool:
             elif 0 <= v < len(tab_nums):
                 want_num = tab_nums[v]
             else:
-                app._set_status(f"{suffix} must be 0..{len(tab_nums) - 1} or {tab_nums[0]}..{tab_nums[-1]}", ttl_sec=4.0)
+                app._set_status(
+                    f"{suffix} must be 0..{len(tab_nums) - 1} or {tab_nums[0]}..{tab_nums[-1]}",
+                    ttl_sec=4.0,
+                )
                 return False
             for n, wi2 in tabs:
                 if not (0 <= wi2 < len(sc.widgets)):
@@ -235,6 +352,35 @@ def inspector_commit_edit(app) -> bool:
                     app._set_focus(active_idx, sync_selection=False)
             except Exception:
                 pass
+            return _finish_ok(f"Updated {suffix}.")
+        if kind == "list_count":
+            try:
+                new_count = int(buf)
+            except Exception:
+                app._set_status(f"Invalid {suffix}: {buf!r}", ttl_sec=4.0)
+                return False
+            if new_count < 0:
+                app._set_status(f"{suffix} must be >= 0", ttl_sec=4.0)
+                return False
+            items = _sorted_role_indices(role_idx, "item")
+            visible = len(items)
+            parsed = _parse_active_count(str(getattr(target, attr, "") or ""))
+            active = parsed[0] if parsed is not None else 0
+            if new_count <= 0:
+                active = 0
+                target.text = "0/0"
+            else:
+                active = max(0, min(active, new_count - 1))
+                target.text = f"{active + 1}/{new_count}"
+            if visible > 0 and new_count < visible:
+                # Keep the active index visible even when list shrinks below slot count.
+                active = max(0, min(active, max(0, new_count - 1)))
+            try:
+                models = getattr(app, "_sim_listmodels", None)
+            except Exception:
+                models = None
+            if isinstance(models, dict):
+                models.pop(str(root or ""), None)
             return _finish_ok(f"Updated {suffix}.")
         if kind.startswith("choice:"):
             allowed = {x.strip().lower() for x in kind.split(":", 1)[1].split("|") if x.strip()}
@@ -403,7 +549,10 @@ def inspector_commit_edit(app) -> bool:
                 pass
             applied = 0
             for idx in selection:
-                if 0 <= idx < len(sc.widgets) and str(getattr(sc.widgets[idx], "type", "")).lower() == "chart":
+                if (
+                    0 <= idx < len(sc.widgets)
+                    and str(getattr(sc.widgets[idx], "type", "")).lower() == "chart"
+                ):
                     sc.widgets[idx].data_points = pts
                     applied += 1
             if not applied:
@@ -420,7 +569,10 @@ def inspector_commit_edit(app) -> bool:
                 pass
             applied = 0
             for idx in selection:
-                if 0 <= idx < len(sc.widgets) and str(getattr(sc.widgets[idx], "type", "")).lower() == "chart":
+                if (
+                    0 <= idx < len(sc.widgets)
+                    and str(getattr(sc.widgets[idx], "type", "")).lower() == "chart"
+                ):
                     sc.widgets[idx].style = val
                     applied += 1
             if not applied:
@@ -656,27 +808,57 @@ def compute_inspector_rows(app) -> Tuple[List[Tuple[str, str]], bool, Optional[W
                 rows.append(("y", f"y: {int(bounds.y)}"))
                 rows.append(("width", f"width: {int(bounds.width)}"))
                 rows.append(("height", f"height: {int(bounds.height)}"))
-            rows.append(("color_fg", f"color_fg: {_mixed_str([getattr(x, 'color_fg', '') for x in widgets])}"))
-            rows.append(("color_bg", f"color_bg: {_mixed_str([getattr(x, 'color_bg', '') for x in widgets])}"))
-            rows.append(("border", f"border: {app._tri_state([bool(getattr(x, 'border', True)) for x in widgets])}"))
+            rows.append(
+                (
+                    "color_fg",
+                    f"color_fg: {_mixed_str([getattr(x, 'color_fg', '') for x in widgets])}",
+                )
+            )
+            rows.append(
+                (
+                    "color_bg",
+                    f"color_bg: {_mixed_str([getattr(x, 'color_bg', '') for x in widgets])}",
+                )
+            )
+            rows.append(
+                (
+                    "border",
+                    f"border: {app._tri_state([bool(getattr(x, 'border', True)) for x in widgets])}",
+                )
+            )
             rows.append(
                 (
                     "border_style",
                     f"border_style: {_mixed_str([getattr(x, 'border_style', '') for x in widgets])}",
                 )
             )
-            rows.append(("align", f"align: {_mixed_str([getattr(x, 'align', '') for x in widgets])}"))
-            rows.append(("valign", f"valign: {_mixed_str([getattr(x, 'valign', '') for x in widgets])}"))
-            rows.append(("visible", f"visible: {app._tri_state([bool(getattr(x, 'visible', True)) for x in widgets])}"))
-            rows.append(("locked", f"locked: {app._tri_state([bool(getattr(x, 'locked', False)) for x in widgets])}"))
+            rows.append(
+                ("align", f"align: {_mixed_str([getattr(x, 'align', '') for x in widgets])}")
+            )
+            rows.append(
+                ("valign", f"valign: {_mixed_str([getattr(x, 'valign', '') for x in widgets])}")
+            )
+            rows.append(
+                (
+                    "visible",
+                    f"visible: {app._tri_state([bool(getattr(x, 'visible', True)) for x in widgets])}",
+                )
+            )
+            rows.append(
+                (
+                    "locked",
+                    f"locked: {app._tri_state([bool(getattr(x, 'locked', False)) for x in widgets])}",
+                )
+            )
 
             ctx = app._selected_component_group()
             if ctx:
-                group_name, comp_name, members = ctx
+                group_name, comp_type, root, members = ctx
                 rows.append(("group", f"group: {group_name}"))
-                rows.append(("component", f"component: {comp_name}"))
-                role_idx = app._component_role_index(members, comp_name)
-                for key_suffix, spec in app._component_field_specs(comp_name).items():
+                rows.append(("component", f"component: {comp_type}"))
+                rows.append(("comp.root", f"root: {root}"))
+                role_idx = app._component_role_index(members, root)
+                for key_suffix, spec in app._component_field_specs(comp_type).items():
                     role, _attr, _kind = spec
                     wi = role_idx.get(role)
                     if wi is None or not (0 <= wi < len(sc.widgets)):
@@ -697,7 +879,10 @@ def compute_inspector_rows(app) -> Tuple[List[Tuple[str, str]], bool, Optional[W
                 ("height", f"height: {int(getattr(w, 'height', 0))}"),
                 ("text", f"text: {getattr(w, 'text', '')}"),
                 ("text_overflow", f"text_overflow: {getattr(w, 'text_overflow', '')}"),
-                ("max_lines", f"max_lines: {'' if getattr(w, 'max_lines', None) is None else int(getattr(w, 'max_lines'))}"),
+                (
+                    "max_lines",
+                    f"max_lines: {'' if getattr(w, 'max_lines', None) is None else int(getattr(w, 'max_lines'))}",
+                ),
                 ("runtime", f"runtime: {getattr(w, 'runtime', '')}"),
                 ("color_fg", f"color_fg: {getattr(w, 'color_fg', '')}"),
                 ("color_bg", f"color_bg: {getattr(w, 'color_bg', '')}"),
@@ -706,16 +891,18 @@ def compute_inspector_rows(app) -> Tuple[List[Tuple[str, str]], bool, Optional[W
                 ("align", f"align: {getattr(w, 'align', '')}"),
                 ("valign", f"valign: {getattr(w, 'valign', '')}"),
                 ("visible", f"visible: {bool(getattr(w, 'visible', True))}"),
+                ("enabled", f"enabled: {bool(getattr(w, 'enabled', True))}"),
                 ("locked", f"locked: {bool(getattr(w, 'locked', False))}"),
                 ("z_index", f"z_index: {int(getattr(w, 'z_index', 0) or 0)}"),
             ]
             ctx = app._selected_component_group()
             if ctx:
-                group_name, comp_name, members = ctx
+                group_name, comp_type, root, members = ctx
                 rows.append(("group", f"group: {group_name}"))
-                rows.append(("component", f"component: {comp_name}"))
-                role_idx = app._component_role_index(members, comp_name)
-                for key_suffix, spec in app._component_field_specs(comp_name).items():
+                rows.append(("component", f"component: {comp_type}"))
+                rows.append(("comp.root", f"root: {root}"))
+                role_idx = app._component_role_index(members, root)
+                for key_suffix, spec in app._component_field_specs(comp_type).items():
                     role, _attr, _kind = spec
                     wi = role_idx.get(role)
                     if wi is None or not (0 <= wi < len(sc.widgets)):
@@ -727,7 +914,11 @@ def compute_inspector_rows(app) -> Tuple[List[Tuple[str, str]], bool, Optional[W
                 pts = list(getattr(w, "data_points", []) or [])
                 style = str(getattr(w, "style", "default") or "default").lower()
                 label = str(getattr(w, "text", "") or "")
-                chart_mode = style if style in {"bar", "line"} else ("bar" if "bar" in label.lower() else "line")
+                chart_mode = (
+                    style
+                    if style in {"bar", "line"}
+                    else ("bar" if "bar" in label.lower() else "line")
+                )
                 rows.append(("chart_mode", f"chart_mode: {chart_mode}"))
                 rows.append(("data_points", f"data_points: {format_int_list(pts, max_items=24)}"))
                 rows.append(("points", f"points: {len(pts)}"))

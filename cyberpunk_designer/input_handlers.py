@@ -301,7 +301,7 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
                 if 0 <= idx < len(sc.widgets):
                     app._apply_click_selection(idx, mods)
                 return
-            toggles = {"border", "visible", "locked", "checked"}
+            toggles = {"border", "visible", "enabled", "locked", "checked"}
             editable = {
                 "text",
                 "runtime",
@@ -335,7 +335,7 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
                     app.designer._save_state()
                 except Exception:
                     pass
-                default = True if key in {"border", "visible"} else False
+                default = True if key in {"border", "visible", "enabled"} else False
                 values: List[bool] = []
                 for idx in app.state.selected:
                     if not (0 <= idx < len(sc.widgets)):
@@ -474,7 +474,11 @@ def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> 
     sc = app.state.current_scene()
     if not app.state.selected:
         return
-    if any(bool(getattr(sc.widgets[i], "locked", False)) for i in app.state.selected if 0 <= i < len(sc.widgets)):
+    if any(
+        bool(getattr(sc.widgets[i], "locked", False))
+        for i in app.state.selected
+        if 0 <= i < len(sc.widgets)
+    ):
         return
 
     mx = max(0, min(int(sc.width), int(pos[0] - sr.x)))
@@ -597,10 +601,14 @@ def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     if app.layout.palette_rect.collidepoint(app.pointer_pos):
         view_h = max(0, int(app.layout.palette_rect.height) - header_h)
         max_scroll = max(0, int(app._palette_content_height()) - view_h)
-        app.state.palette_scroll = max(0, min(max_scroll, int(app.state.palette_scroll) - dy * step))
+        app.state.palette_scroll = max(
+            0, min(max_scroll, int(app.state.palette_scroll) - dy * step)
+        )
         return
     if app.layout.inspector_rect.collidepoint(app.pointer_pos):
         view_h = max(0, int(app.layout.inspector_rect.height) - header_h)
         max_scroll = max(0, int(app._inspector_content_height()) - view_h)
-        app.state.inspector_scroll = max(0, min(max_scroll, int(app.state.inspector_scroll) - dy * step))
+        app.state.inspector_scroll = max(
+            0, min(max_scroll, int(app.state.inspector_scroll) - dy * step)
+        )
         return

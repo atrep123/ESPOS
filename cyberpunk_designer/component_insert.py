@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Set
 
 from ui_designer import WidgetConfig
 
@@ -8,14 +8,40 @@ from .components import component_blueprints
 from .constants import GRID, snap
 
 
+def _existing_roots(sc) -> Set[str]:
+    roots: Set[str] = set()
+    for w in getattr(sc, "widgets", []) or []:
+        wid = str(getattr(w, "_widget_id", "") or "")
+        if not wid:
+            continue
+        root = wid.split(".", 1)[0]
+        if root:
+            roots.add(root)
+    return roots
+
+
+def _unique_root(sc, base: str) -> str:
+    base = str(base or "").strip()
+    if not base:
+        return ""
+    roots = _existing_roots(sc)
+    if base not in roots:
+        return base
+    n = 2
+    while f"{base}_{n}" in roots:
+        n += 1
+    return f"{base}_{n}"
+
+
 def add_component(app, name: str) -> None:
     """Insert a named component as a group of widgets."""
-    comp_name = str(name or "")
+    comp_type = str(name or "")
     sc = app.state.current_scene()
-    blueprints = component_blueprints(comp_name, sc)
+    blueprints = component_blueprints(comp_type, sc)
     if not blueprints:
-        app._set_status(f"Component not found: {comp_name}", ttl_sec=4.0)
+        app._set_status(f"Component not found: {comp_type}", ttl_sec=4.0)
         return
+    root = _unique_root(sc, comp_type)
 
     try:
         app.designer._save_state()
@@ -37,7 +63,7 @@ def add_component(app, name: str) -> None:
 
     origin_x = GRID
     origin_y = GRID
-    if comp_name in {"modal"}:
+    if comp_type in {"modal"}:
         origin_x = 0
         origin_y = 0
     else:
@@ -67,7 +93,7 @@ def add_component(app, name: str) -> None:
         cfg = dict(bp)
         cfg.pop("z", None)
         role = str(cfg.pop("role", "") or "")
-        widget_id = f"{comp_name}.{role}" if role else ""
+        widget_id = f"{root}.{role}" if role else ""
         try:
             w = WidgetConfig(
                 type=str(cfg.get("type", "panel")),
@@ -108,13 +134,13 @@ def add_component(app, name: str) -> None:
         new_indices.append(len(sc.widgets) - 1)
 
     if not new_indices:
-        app._set_status(f"Component failed: {comp_name}", ttl_sec=4.0)
+        app._set_status(f"Component failed: {comp_type}", ttl_sec=4.0)
         return
 
     group_members = [i for i in new_indices if not bool(getattr(sc.widgets[i], "locked", False))]
     group_name = ""
     if len(group_members) >= 2:
-        group_name = app._next_group_name(f"comp:{comp_name}:")
+        group_name = app._next_group_name(f"comp:{comp_type}:{root}:")
         try:
             if not app.designer.create_group(group_name, group_members):
                 group_name = ""
@@ -122,11 +148,14 @@ def add_component(app, name: str) -> None:
             group_name = ""
 
     app._set_selection(group_members or new_indices, anchor_idx=(group_members or new_indices)[0])
+    label = str(comp_type)
+    if root and root != comp_type:
+        label = f"{comp_type} ({root})"
     if group_name:
         app._set_status(
-            f"Inserted component: {comp_name} ({len(new_indices)} widgets) grouped as {group_name}",
+            f"Inserted component: {label} ({len(new_indices)} widgets) grouped as {group_name}",
             ttl_sec=3.0,
         )
     else:
-        app._set_status(f"Inserted component: {comp_name} ({len(new_indices)} widgets)", ttl_sec=3.0)
+        app._set_status(f"Inserted component: {label} ({len(new_indices)} widgets)", ttl_sec=3.0)
     app._mark_dirty()

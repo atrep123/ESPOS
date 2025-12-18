@@ -87,6 +87,7 @@ def component_field_specs(component: str) -> Dict[str, FieldSpec]:
         out: Dict[str, FieldSpec] = {
             "title": ("title", "text", "str"),
             "scroll": ("scroll", "text", "str"),
+            "count": ("scroll", "text", "list_count"),
             "active_item": ("panel", "text", "menu_active"),
         }
         for i in range(6):
@@ -97,6 +98,7 @@ def component_field_specs(component: str) -> Dict[str, FieldSpec]:
         out: Dict[str, FieldSpec] = {
             "title": ("title", "text", "str"),
             "scroll": ("scroll", "text", "str"),
+            "count": ("scroll", "text", "list_count"),
             "active_item": ("panel", "text", "menu_active"),
         }
         for i in range(6):
