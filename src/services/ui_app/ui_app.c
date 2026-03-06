@@ -1,14 +1,17 @@
 #include "ui_app.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "display_config.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "kernel/msgbus.h"
 #include "services/input/input.h"
+#include "services/store/store.h"
 #include "services/ui/ui.h"
 #include "services/ui/ui_bindings.h"
 
@@ -17,22 +20,282 @@ static const char *TAG = "ui_app";
 typedef enum {
     UI_APP_SCREEN_MENU = 0,
     UI_APP_SCREEN_DISPLAY_LIST = 1,
-    UI_APP_SCREEN_EDIT_CONTRAST = 2,
-    UI_APP_SCREEN_EDIT_INVERT = 3,
-    UI_APP_SCREEN_EDIT_COL_OFFSET = 4,
+    UI_APP_SCREEN_INPUTS_LIST = 2,
+    UI_APP_SCREEN_ABOUT_LIST = 3,
+    UI_APP_SCREEN_EDIT_CONTRAST = 4,
+    UI_APP_SCREEN_EDIT_COL_OFFSET = 5,
 } ui_app_screen_t;
 
 static TaskHandle_t s_ui_app_task = NULL;
 static ui_app_screen_t s_screen = UI_APP_SCREEN_MENU;
+static uint32_t s_last_free_heap = 0;
+static uint32_t s_last_min_free_heap = 0;
+static bool s_have_metrics = false;
+static uint8_t s_last_input_id = 0;
+static uint8_t s_last_input_pressed = 0;
+static bool s_have_input = false;
 
-static void ui_app_show_menu(void)
+static void ui_app_hide_all_roots(void)
 {
-    ui_cmd_set_prefix_visible("menu", true);
+    ui_cmd_set_prefix_visible("menu", false);
     ui_cmd_set_prefix_visible("list", false);
     ui_cmd_set_prefix_visible("edit", false);
     ui_cmd_set_prefix_visible("edit_contrast", false);
     ui_cmd_set_prefix_visible("edit_invert", false);
     ui_cmd_set_prefix_visible("edit_col_offset", false);
+}
+
+static void ui_app_show_list_root(const char *title)
+{
+    ui_app_hide_all_roots();
+    ui_cmd_set_prefix_visible("list", true);
+    ui_cmd_set_text("list.title", title);
+}
+
+static void ui_app_format_heap(char *out, size_t out_cap, uint32_t bytes)
+{
+    if (out == NULL || out_cap == 0) {
+        return;
+    }
+
+    if (bytes >= (1024U * 1024U)) {
+        snprintf(out, out_cap, "%" PRIu32 "M", bytes / (1024U * 1024U));
+    } else if (bytes >= 1024U) {
+        snprintf(out, out_cap, "%" PRIu32 "K", bytes / 1024U);
+    } else {
+        snprintf(out, out_cap, "%" PRIu32 "B", bytes);
+    }
+}
+
+static const char *ui_app_input_name(uint8_t id)
+{
+    switch (id) {
+        case INPUT_ID_A: return "A";
+        case INPUT_ID_B: return "B";
+        case INPUT_ID_C: return "C";
+        case INPUT_ID_UP: return "Up";
+        case INPUT_ID_DOWN: return "Down";
+        case INPUT_ID_LEFT: return "Left";
+        case INPUT_ID_RIGHT: return "Right";
+        case INPUT_ID_ENC: return "Enc";
+        case INPUT_ID_ENC_PRESS: return "Enc press";
+        case INPUT_ID_ENC_HOLD: return "Enc hold";
+        case INPUT_ID_ENC_CW: return "Enc CW";
+        case INPUT_ID_ENC_CCW: return "Enc CCW";
+        case INPUT_ID_X: return "X";
+        case INPUT_ID_Y: return "Y";
+        case INPUT_ID_SELECT: return "Select";
+        case INPUT_ID_START: return "Start";
+        case INPUT_ID_ENC2: return "Enc2";
+        case INPUT_ID_ENC2_PRESS: return "Enc2 press";
+        case INPUT_ID_ENC2_HOLD: return "Enc2 hold";
+        case INPUT_ID_ENC2_CW: return "Enc2 CW";
+        case INPUT_ID_ENC2_CCW: return "Enc2 CCW";
+        case INPUT_ID_ENC3: return "Enc3";
+        case INPUT_ID_ENC3_PRESS: return "Enc3 press";
+        case INPUT_ID_ENC3_HOLD: return "Enc3 hold";
+        case INPUT_ID_ENC3_CW: return "Enc3 CW";
+        case INPUT_ID_ENC3_CCW: return "Enc3 CCW";
+        case INPUT_ID_ENC4: return "Enc4";
+        case INPUT_ID_ENC4_PRESS: return "Enc4 press";
+        case INPUT_ID_ENC4_HOLD: return "Enc4 hold";
+        case INPUT_ID_ENC4_CW: return "Enc4 CW";
+        case INPUT_ID_ENC4_CCW: return "Enc4 CCW";
+        case INPUT_ID_ENC5: return "Enc5";
+        case INPUT_ID_ENC5_PRESS: return "Enc5 press";
+        case INPUT_ID_ENC5_HOLD: return "Enc5 hold";
+        case INPUT_ID_ENC5_CW: return "Enc5 CW";
+        case INPUT_ID_ENC5_CCW: return "Enc5 CCW";
+        default: return "Unknown";
+    }
+}
+
+static const char *ui_app_input_state(uint8_t id, uint8_t pressed)
+{
+    switch (id) {
+        case INPUT_ID_ENC_PRESS:
+        case INPUT_ID_ENC2_PRESS:
+        case INPUT_ID_ENC3_PRESS:
+        case INPUT_ID_ENC4_PRESS:
+        case INPUT_ID_ENC5_PRESS:
+            return "press";
+        case INPUT_ID_ENC_HOLD:
+        case INPUT_ID_ENC2_HOLD:
+        case INPUT_ID_ENC3_HOLD:
+        case INPUT_ID_ENC4_HOLD:
+        case INPUT_ID_ENC5_HOLD:
+            return "hold";
+        case INPUT_ID_ENC_CW:
+        case INPUT_ID_ENC2_CW:
+        case INPUT_ID_ENC3_CW:
+        case INPUT_ID_ENC4_CW:
+        case INPUT_ID_ENC5_CW:
+            return "cw";
+        case INPUT_ID_ENC_CCW:
+        case INPUT_ID_ENC2_CCW:
+        case INPUT_ID_ENC3_CCW:
+        case INPUT_ID_ENC4_CCW:
+        case INPUT_ID_ENC5_CCW:
+            return "ccw";
+        default:
+            return pressed ? "down" : "up";
+    }
+}
+
+static void ui_app_update_display_list_items(void)
+{
+    int contrast = 0;
+    int col_offset = 0;
+    bool invert = false;
+    char buf[24];
+
+    if (ui_bind_get_int("contrast", &contrast)) {
+        snprintf(buf, sizeof(buf), "%d", contrast);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 0, "Contrast", buf);
+
+    if (ui_bind_get_bool("invert", &invert)) {
+        ui_cmd_listmodel_set_item("list", 1, "Invert", invert ? "on" : "off");
+    } else {
+        ui_cmd_listmodel_set_item("list", 1, "Invert", "n/a");
+    }
+
+    if (ui_bind_get_int("col_offset", &col_offset)) {
+        snprintf(buf, sizeof(buf), "%d", col_offset);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 2, "ColOffset", buf);
+
+    ui_cmd_listmodel_set_item("list", 3, "Driver", "SSD1363");
+
+    snprintf(buf, sizeof(buf), "%ux%u", (unsigned)DISPLAY_WIDTH, (unsigned)DISPLAY_HEIGHT);
+    ui_cmd_listmodel_set_item("list", 4, "Display", buf);
+
+#if DISPLAY_COLOR_BITS == 4
+    ui_cmd_listmodel_set_item("list", 5, "Format", "gray4");
+#else
+    snprintf(buf, sizeof(buf), "%ubpp", (unsigned)DISPLAY_COLOR_BITS);
+    ui_cmd_listmodel_set_item("list", 5, "Format", buf);
+#endif
+
+    if (s_have_metrics) {
+        ui_app_format_heap(buf, sizeof(buf), s_last_free_heap);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 6, "Heap", buf);
+
+    if (s_have_metrics) {
+        ui_app_format_heap(buf, sizeof(buf), s_last_min_free_heap);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 7, "MinHeap", buf);
+
+    ui_cmd_listmodel_set_item("list", 8, "Persist", "NVS");
+    ui_cmd_listmodel_set_item("list", 9, "Reset", "defaults");
+}
+
+static void ui_app_update_inputs_list_items(void)
+{
+    ui_cmd_listmodel_set_item("list", 0, "Last", s_have_input ? ui_app_input_name(s_last_input_id) : "n/a");
+    ui_cmd_listmodel_set_item("list", 1, "State", s_have_input ? ui_app_input_state(s_last_input_id, s_last_input_pressed) : "n/a");
+    ui_cmd_listmodel_set_item("list", 2, "D-pad", "navigate");
+    ui_cmd_listmodel_set_item("list", 3, "A / press", "select");
+    ui_cmd_listmodel_set_item("list", 4, "B / hold", "back");
+    ui_cmd_listmodel_set_item("list", 5, "Encoder", "scroll");
+    ui_cmd_listmodel_set_item("list", 6, "Extras", "X Y Start");
+}
+
+static void ui_app_update_about_list_items(void)
+{
+    store_conf_t conf;
+    char buf[24];
+
+    ui_cmd_listmodel_set_item("list", 0, "Project", "ESP32OS");
+    ui_cmd_listmodel_set_item("list", 1, "Driver", "SSD1363");
+
+    snprintf(buf, sizeof(buf), "%ux%u", (unsigned)DISPLAY_WIDTH, (unsigned)DISPLAY_HEIGHT);
+    ui_cmd_listmodel_set_item("list", 2, "Display", buf);
+
+#if DISPLAY_COLOR_BITS == 4
+    ui_cmd_listmodel_set_item("list", 3, "Format", "gray4");
+#else
+    snprintf(buf, sizeof(buf), "%ubpp", (unsigned)DISPLAY_COLOR_BITS);
+    ui_cmd_listmodel_set_item("list", 3, "Format", buf);
+#endif
+
+    ui_cmd_listmodel_set_item("list", 4, "Storage", "NVS");
+    ui_cmd_listmodel_set_item("list", 5, "Bindings", "runtime");
+
+    if (store_get_conf(&conf) == ESP_OK) {
+        snprintf(buf, sizeof(buf), "%" PRIu32, conf.schema);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 6, "Schema", buf);
+
+    if (s_have_metrics) {
+        ui_app_format_heap(buf, sizeof(buf), s_last_free_heap);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 7, "Heap", buf);
+
+    if (s_have_metrics) {
+        ui_app_format_heap(buf, sizeof(buf), s_last_min_free_heap);
+    } else {
+        snprintf(buf, sizeof(buf), "n/a");
+    }
+    ui_cmd_listmodel_set_item("list", 8, "MinHeap", buf);
+}
+
+static void ui_app_show_display_list(int active_idx)
+{
+    if (active_idx < 0) {
+        active_idx = 0;
+    }
+
+    ui_app_show_list_root("Display");
+    ui_cmd_listmodel_set_len("list", 10);
+    ui_app_update_display_list_items();
+    ui_cmd_listmodel_set_active("list", active_idx);
+    s_screen = UI_APP_SCREEN_DISPLAY_LIST;
+}
+
+static void ui_app_show_inputs_list(int active_idx)
+{
+    if (active_idx < 0) {
+        active_idx = 0;
+    }
+
+    ui_app_show_list_root("Inputs");
+    ui_cmd_listmodel_set_len("list", 7);
+    ui_app_update_inputs_list_items();
+    ui_cmd_listmodel_set_active("list", active_idx);
+    s_screen = UI_APP_SCREEN_INPUTS_LIST;
+}
+
+static void ui_app_show_about_list(int active_idx)
+{
+    if (active_idx < 0) {
+        active_idx = 0;
+    }
+
+    ui_app_show_list_root("About");
+    ui_cmd_listmodel_set_len("list", 9);
+    ui_app_update_about_list_items();
+    ui_cmd_listmodel_set_active("list", active_idx);
+    s_screen = UI_APP_SCREEN_ABOUT_LIST;
+}
+
+static void ui_app_show_menu(void)
+{
+    ui_app_hide_all_roots();
+    ui_cmd_set_prefix_visible("menu", true);
 
     ui_cmd_listmodel_set_len("menu", 3);
     ui_cmd_listmodel_set_item("menu", 0, "Display", "");
@@ -43,71 +306,34 @@ static void ui_app_show_menu(void)
     s_screen = UI_APP_SCREEN_MENU;
 }
 
-static void ui_app_build_display_list(void)
+static void ui_app_show_edit(const char *title, const char *root, const char *hint)
 {
-    int contrast = 0;
-    int col_offset = 0;
-    bool invert = false;
-    (void)ui_bind_get_int("contrast", &contrast);
-    (void)ui_bind_get_int("col_offset", &col_offset);
-    (void)ui_bind_get_bool("invert", &invert);
-
-    ui_cmd_set_prefix_visible("menu", false);
-    ui_cmd_set_prefix_visible("edit", false);
-    ui_cmd_set_prefix_visible("edit_contrast", false);
-    ui_cmd_set_prefix_visible("edit_invert", false);
-    ui_cmd_set_prefix_visible("edit_col_offset", false);
-    ui_cmd_set_prefix_visible("list", true);
-
-    ui_cmd_set_text("list.title", "Display");
-    ui_cmd_listmodel_set_len("list", 12);
-
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%d", contrast);
-    ui_cmd_listmodel_set_item("list", 0, "Contrast", buf);
-    ui_cmd_listmodel_set_item("list", 1, "Invert", invert ? "on" : "off");
-    snprintf(buf, sizeof(buf), "%d", col_offset);
-    ui_cmd_listmodel_set_item("list", 2, "ColOffset", buf);
-
-    ui_cmd_listmodel_set_item("list", 3, "UI FPS", "20");
-    ui_cmd_listmodel_set_item("list", 4, "Theme", "mono");
-    ui_cmd_listmodel_set_item("list", 5, "Font", "6x8");
-    ui_cmd_listmodel_set_item("list", 6, "Network", "todo");
-    ui_cmd_listmodel_set_item("list", 7, "Bluetooth", "todo");
-    ui_cmd_listmodel_set_item("list", 8, "Sensors", "todo");
-    ui_cmd_listmodel_set_item("list", 9, "Storage", "todo");
-    ui_cmd_listmodel_set_item("list", 10, "Debug", "todo");
-    ui_cmd_listmodel_set_item("list", 11, "Reset", "todo");
-
-    ui_cmd_listmodel_set_active("list", 0);
-    s_screen = UI_APP_SCREEN_DISPLAY_LIST;
-}
-
-static void ui_app_show_edit(const char *title, const char *root)
-{
-    ui_cmd_set_prefix_visible("menu", false);
-    ui_cmd_set_prefix_visible("list", false);
-
+    ui_app_hide_all_roots();
     ui_cmd_set_prefix_visible("edit", true);
     ui_cmd_set_text("edit.title", title);
+    ui_cmd_set_text("edit.hint", (hint != NULL) ? hint : "");
 
-    ui_cmd_set_prefix_visible("edit_contrast", false);
-    ui_cmd_set_prefix_visible("edit_invert", false);
-    ui_cmd_set_prefix_visible("edit_col_offset", false);
     ui_cmd_set_prefix_visible(root, true);
+}
+
+static void ui_app_reset_display_defaults(void)
+{
+    (void)ui_bind_set_int("contrast", SSD1363_INIT_CONTRAST);
+    (void)ui_bind_set_bool("invert", false);
+    (void)ui_bind_set_int("col_offset", SSD1363_COL_OFFSET);
 }
 
 static void ui_app_handle_menu_action(uint32_t idx)
 {
     switch ((int)idx) {
         case 0:
-            ui_app_build_display_list();
+            ui_app_show_display_list(0);
             break;
         case 1:
-            ui_cmd_toast_enqueue("toast", "Inputs: TODO", 1200);
+            ui_app_show_inputs_list(0);
             break;
         case 2:
-            ui_cmd_toast_enqueue("toast", "ESP32OS (demo)", 1200);
+            ui_app_show_about_list(0);
             break;
         default:
             break;
@@ -118,7 +344,7 @@ static void ui_app_handle_display_list_action(uint32_t idx)
 {
     switch ((int)idx) {
         case 0:
-            ui_app_show_edit("Contrast", "edit_contrast");
+            ui_app_show_edit("Contrast", "edit_contrast", "Up/Down or encoder to adjust");
             s_screen = UI_APP_SCREEN_EDIT_CONTRAST;
             break;
         case 1: {
@@ -126,18 +352,28 @@ static void ui_app_handle_display_list_action(uint32_t idx)
             if (ui_bind_get_bool("invert", &cur)) {
                 (void)ui_bind_set_bool("invert", !cur);
             }
-            ui_app_build_display_list();
+            ui_app_update_display_list_items();
             ui_cmd_listmodel_set_active("list", 1);
             break;
         }
         case 2:
-            ui_app_show_edit("ColOffset", "edit_col_offset");
+            ui_app_show_edit("ColOffset", "edit_col_offset", "Up/Down or encoder to adjust");
             s_screen = UI_APP_SCREEN_EDIT_COL_OFFSET;
             break;
+        case 9:
+            ui_app_reset_display_defaults();
+            ui_app_show_display_list(9);
+            ui_cmd_toast_enqueue("toast", "Display defaults restored", 1200);
+            break;
         default:
-            ui_cmd_toast_enqueue("toast", "TODO", 900);
+            ui_cmd_toast_enqueue("toast", "Info only", 900);
             break;
     }
+}
+
+static void ui_app_handle_info_list_action(void)
+{
+    ui_cmd_toast_enqueue("toast", "Read-only", 900);
 }
 
 static void ui_app_handle_action(const msg_t *m)
@@ -158,10 +394,52 @@ static void ui_app_handle_action(const msg_t *m)
     }
 
     if (strncmp(id, "list.item", 9) == 0) {
-        if (s_screen == UI_APP_SCREEN_DISPLAY_LIST) {
-            ui_app_handle_display_list_action(m->u.ui_action.arg);
+        switch (s_screen) {
+            case UI_APP_SCREEN_DISPLAY_LIST:
+                ui_app_handle_display_list_action(m->u.ui_action.arg);
+                break;
+            case UI_APP_SCREEN_INPUTS_LIST:
+            case UI_APP_SCREEN_ABOUT_LIST:
+                ui_app_handle_info_list_action();
+                break;
+            default:
+                break;
         }
         return;
+    }
+}
+
+static void ui_app_handle_metrics(const msg_t *m)
+{
+    if (m == NULL) {
+        return;
+    }
+
+    /* Refresh live system info when a metrics sample arrives. */
+    s_last_free_heap = m->u.metrics.free_heap;
+    s_last_min_free_heap = m->u.metrics.min_free_heap;
+    s_have_metrics = true;
+
+    if (s_screen == UI_APP_SCREEN_DISPLAY_LIST) {
+        ui_app_update_display_list_items();
+    } else if (s_screen == UI_APP_SCREEN_ABOUT_LIST) {
+        ui_app_update_about_list_items();
+    }
+}
+
+static void ui_app_handle_input_telemetry(const msg_t *m)
+{
+    if (m == NULL) {
+        return;
+    }
+
+    /* Mirror the most recent input event into the read-only Inputs screen. */
+    s_last_input_id = m->u.btn.id;
+    s_last_input_pressed = m->u.btn.pressed;
+    s_have_input = true;
+
+    if (s_screen == UI_APP_SCREEN_INPUTS_LIST) {
+        ui_app_update_inputs_list_items();
     }
 }
 
@@ -191,12 +469,15 @@ static void ui_app_handle_back(const msg_t *m)
             ui_cmd_toast_hide("toast");
             break;
         case UI_APP_SCREEN_DISPLAY_LIST:
+        case UI_APP_SCREEN_INPUTS_LIST:
+        case UI_APP_SCREEN_ABOUT_LIST:
             ui_app_show_menu();
             break;
         case UI_APP_SCREEN_EDIT_CONTRAST:
-        case UI_APP_SCREEN_EDIT_INVERT:
+            ui_app_show_display_list(0);
+            break;
         case UI_APP_SCREEN_EDIT_COL_OFFSET:
-            ui_app_build_display_list();
+            ui_app_show_display_list(2);
             break;
         default:
             ui_app_show_menu();
@@ -212,6 +493,8 @@ static void ui_app_task(void *arg)
     if (q != NULL) {
         bus_subscribe(TOP_UI_ACTION, q);
         bus_subscribe(TOP_INPUT_BTN, q);
+        /* The app layer updates list content from runtime telemetry. */
+        bus_subscribe(TOP_METRICS_RET, q);
     }
 
     vTaskDelay(pdMS_TO_TICKS(150));
@@ -228,7 +511,10 @@ static void ui_app_task(void *arg)
         }
         if (m.topic == TOP_UI_ACTION) {
             ui_app_handle_action(&m);
+        } else if (m.topic == TOP_METRICS_RET) {
+            ui_app_handle_metrics(&m);
         } else if (m.topic == TOP_INPUT_BTN) {
+            ui_app_handle_input_telemetry(&m);
             ui_app_handle_back(&m);
         }
     }
