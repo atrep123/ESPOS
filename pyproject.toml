@@ -9,6 +9,7 @@ extend-exclude = '''
   | __pycache__
   | \.mypy_cache
   | \.pio
+  | \.platformio-local
   | \.venv
 )/
 '''
@@ -23,6 +24,7 @@ extend-exclude = [
     "__pycache__",
     ".mypy_cache",
     ".pio",
+    ".platformio-local",
     ".venv",
     "preview",
     "docs",
@@ -41,7 +43,7 @@ strict_equality = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unreachable = true
-exclude = "(build|dist|generated|\\.pio|\\.venv|__pycache__)"
+exclude = "(build|dist|generated|\\.pio|\\.platformio-local|\\.venv|__pycache__)"
 
 [tool.pytest.ini_options]
 markers = [
