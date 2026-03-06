@@ -41,6 +41,11 @@ pio run -e arduino_nano_esp32-nohw
 pio run -e esp32-s3-devkitm-1-nohw
 ```
 
+Poznámka:
+- PlatformIO verze jsou v repu připnuté záměrně kvůli reprodukovatelným buildům a stabilním `sdkconfig`.
+- `pio test -e native` vyžaduje host C compiler dostupný v `PATH`.
+- Na Windows může lokální policy zablokovat některé ESP-IDF toolchain binárky.
+
 ## Quick checks
 
 ```powershell
