@@ -119,6 +119,7 @@ scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -MinAbsDeltaScor
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaSortBy delta
 scripts/triage_native_policy_blockers.ps1 -Top 5 -CsvOut reports/native_policy_triage.csv
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut reports/native_policy_triage_delta.csv
+scripts/burnin_native_policy.ps1 -Rounds 1 -SkipPython -TriageCsvPath "" -TriageDeltaCsvPath reports/native_policy_triage_delta.only.csv -TriageDeltaWindow 5
 ```
 
 ```bash

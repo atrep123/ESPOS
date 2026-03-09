@@ -50,6 +50,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Burn-in umi po dobehu zapsat i triage report (`-TriageReportPath`, default `reports/native_policy_triage.md`, top pres `-TriageTop`).
 - Burn-in umi po dobehu zapsat i triage CSV (`-TriageCsvPath`, default `reports/native_policy_triage.csv`).
 - Burn-in umi zapsat i oddeleny delta CSV (`-TriageDeltaCsvPath`) pro trend-only ingest.
+- Delta-only export (`-TriageCsvPath ""` + `-TriageDeltaCsvPath ...`) vyzaduje i `-TriageDeltaWindow > 0`.
 - Burn-in umi predat i delta trend triage (`-TriageDeltaWindow N`) pro porovnani poslednich/predchozich `N` behu.
 - Burn-in umi omezit delta vystup jen na zhorseni (`-TriageOnlyWorsening`, vyzaduje `-TriageDeltaWindow > 0`).
 - Burn-in umi exportovat celou delta sadu bez Top limitu (`-TriageIncludeAllDeltaRows`, vyzaduje `-TriageDeltaWindow > 0`).
@@ -58,6 +59,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Burn-in po dobehu standardne spousti i `check_native_policy_artifacts.ps1`; lze vypnout prepinacem `-SkipArtifactCheck`.
 - Burn-in po triage kroku standardne spousti i `check_native_policy_triage_csv.ps1`; lze vypnout `-SkipTriageCsvCheck`.
 - Triage krok lze vypnout prepinacem `-SkipTriage`.
+- `-SkipTriage` nelze kombinovat s explicitnimi triage parametry (`-Triage*`, `-SkipTriageCsvCheck`) - wrapper failne hned pri argument validation.
 - Pokud ma burn-in failnout pri policy blokovani, pouzij `-FailOnPolicyBlock`.
 - Pro audit/detail per-round probe reportu zapni `-ArchiveProbeSnapshots` (vystup do `reports/native_policy_snapshots`, lze zmenit `-ProbeSnapshotDir`).
 - Retenci snapshots ridi `-MaxSnapshotFiles` (starsi probe JSON se automaticky maze).
