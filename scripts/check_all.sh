@@ -69,6 +69,11 @@ done
 
 ALLOW_NATIVE_POLICY_BLOCK="${ALLOW_NATIVE_POLICY_BLOCK:-0}"
 
+if [[ -z "$DESIGN" ]]; then
+  echo "[FAIL] Design path cannot be empty" >&2
+  exit 2
+fi
+
 PYTHON_CMD=""
 if command -v python >/dev/null 2>&1; then
   PYTHON_CMD="python"
