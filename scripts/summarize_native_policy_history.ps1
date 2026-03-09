@@ -34,6 +34,40 @@ $policyBlockedRuns = @($rows | Where-Object { $_.PolicyBlockCount -gt 0 }).Count
 $transientRuns = @($rows | Where-Object { $_.TransientPolicyBlockCount -gt 0 }).Count
 $failureRuns = @($rows | Where-Object { $_.FailureCount -gt 0 }).Count
 
+$blockedSuiteFreq = @{}
+$transientSuiteFreq = @{}
+foreach ($row in $rows) {
+  $blockedSuites = @()
+  $transientSuites = @()
+
+  if ($row.PSObject.Properties.Name -contains "BlockedSuites") {
+    $blockedSuites = @($row.BlockedSuites)
+  }
+  if ($row.PSObject.Properties.Name -contains "TransientSuites") {
+    $transientSuites = @($row.TransientSuites)
+  }
+
+  foreach ($suite in $blockedSuites) {
+      if ([string]::IsNullOrWhiteSpace([string]$suite)) {
+        continue
+      }
+      if (-not $blockedSuiteFreq.ContainsKey($suite)) {
+        $blockedSuiteFreq[$suite] = 0
+      }
+      $blockedSuiteFreq[$suite]++
+    }
+
+  foreach ($suite in $transientSuites) {
+      if ([string]::IsNullOrWhiteSpace([string]$suite)) {
+        continue
+      }
+      if (-not $transientSuiteFreq.ContainsKey($suite)) {
+        $transientSuiteFreq[$suite] = 0
+      }
+      $transientSuiteFreq[$suite]++
+    }
+}
+
 Write-Host "== Native Policy History Summary =="
 Write-Host "File: $resolvedHistoryPath"
 Write-Host "Entries: $($rows.Count)"
@@ -47,3 +81,21 @@ Write-Host "== Recent Entries (last $take) =="
 $recent |
   Select-Object ProbeTimestamp, Triggered, PolicyBlockCount, TransientPolicyBlockCount, FailureCount |
   Format-Table -AutoSize
+
+if ($blockedSuiteFreq.Count -gt 0) {
+  Write-Host ""
+  Write-Host "== Blocked Suite Frequency =="
+  $blockedSuiteFreq.GetEnumerator() |
+    Sort-Object Value -Descending |
+    ForEach-Object { [pscustomobject]@{ Suite = $_.Key; Hits = $_.Value } } |
+    Format-Table -AutoSize
+}
+
+if ($transientSuiteFreq.Count -gt 0) {
+  Write-Host ""
+  Write-Host "== Transient Suite Frequency =="
+  $transientSuiteFreq.GetEnumerator() |
+    Sort-Object Value -Descending |
+    ForEach-Object { [pscustomobject]@{ Suite = $_.Key; Hits = $_.Value } } |
+    Format-Table -AutoSize
+}

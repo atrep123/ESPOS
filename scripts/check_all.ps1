@@ -41,6 +41,9 @@ function Append-NativePolicyHistory {
 
   $report = Get-Content $probeJsonPath -Raw | ConvertFrom-Json
   $summary = $report.Summary
+  $results = @($report.Results)
+  $blockedSuites = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK" } | Select-Object -ExpandProperty Suite -Unique)
+  $transientSuites = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK_TRANSIENT" } | Select-Object -ExpandProperty Suite -Unique)
   $entry = [pscustomobject]@{
     RecordedAt = (Get-Date).ToString("o")
     ProbeTimestamp = $summary.ProbeTimestamp
@@ -48,6 +51,8 @@ function Append-NativePolicyHistory {
     PolicyBlockCount = $summary.PolicyBlockCount
     TransientPolicyBlockCount = $summary.TransientPolicyBlockCount
     FailureCount = $summary.FailureCount
+    BlockedSuites = $blockedSuites
+    TransientSuites = $transientSuites
     JsonPath = $probeJsonPath
   }
   $entry | ConvertTo-Json -Compress | Add-Content -Path $historyPath -Encoding UTF8
