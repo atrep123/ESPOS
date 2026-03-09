@@ -51,6 +51,7 @@ Poznámka:
 
 ```powershell
 scripts/check_all.ps1
+scripts/check_native_toolchain.ps1
 ```
 
 ## Repo docs
