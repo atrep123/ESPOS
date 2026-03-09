@@ -63,6 +63,7 @@ Poznámka:
 - Burn-in po dobehu automaticky vygeneruje i markdown report (`reports/native_policy_summary.md`), lze zmenit parametrem `-MarkdownSummaryPath`.
 - Burn-in po dobehu automaticky vygeneruje i CSV report (`reports/native_policy_history.csv`), lze zmenit parametrem `-CsvSummaryPath`.
 - Burn-in po dobehu automaticky vygeneruje i triage report (`reports/native_policy_triage.md`), prioritu/ranking lze upravit pres `-TriageTop`.
+- Volitelne lze zapnout i delta trend v triage (`-TriageDeltaWindow N`), ktery porovna poslednich `N` behu proti predchozim `N`.
 - Burn-in na konci automaticky spousti `check_native_policy_artifacts.ps1` (s md/csv gate podle nastaveni); vypnout lze `-SkipArtifactCheck`.
 - Triage krok lze vypnout prepinacem `-SkipTriage`.
 - Pro prisny gate (selhat pri POLICY_BLOCK) pouzij `scripts/burnin_native_policy.ps1 -Rounds 10 -FailOnPolicyBlock`.
@@ -71,6 +72,7 @@ Poznámka:
 - Pro pripravu podkladu pro IT/App Control pouzij `scripts/generate_native_policy_allowlist_request.ps1` (vystup: `reports/native_policy_allowlist_request.md`).
 - Konzistenci policy artefaktu overis jednim krokem: `scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv`.
 - Priority suites pro allow-list eskalaci vytahnes skriptem: `scripts/triage_native_policy_blockers.ps1 -Top 5`.
+- Trend zhorseni/zlepseni mezi okny ziskas pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5`.
 - Pro rychlé vypsání konkrétních whitelist targetů použij `scripts/list_native_whitelist_targets.ps1`.
 - Pro rozpad podle jednotlivých native suites (co je `PASSED` vs `POLICY_BLOCK`) použij `scripts/check_native_policy_probe.ps1`.
 - Probe podporuje retry: `scripts/check_native_policy_probe.ps1 -MaxAttemptsPerSuite 3 -DelaySeconds 2`.
@@ -88,6 +90,7 @@ scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1
 scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv
 scripts/triage_native_policy_blockers.ps1 -Top 5
+scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5
 ```
 
 ```bash

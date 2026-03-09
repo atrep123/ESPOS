@@ -10,6 +10,7 @@ param(
 	[string]$CsvSummaryPath = "reports/native_policy_history.csv",
 	[string]$TriageReportPath = "reports/native_policy_triage.md",
 	[int]$TriageTop = 5,
+	[int]$TriageDeltaWindow = 0,
 	[switch]$SkipTriage,
 	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
@@ -30,6 +31,10 @@ if ($MaxSnapshotFiles -lt 1) {
 
 if ($TriageTop -lt 1) {
 	throw "Invalid value for -TriageTop: must be >= 1"
+}
+
+if ($TriageDeltaWindow -lt 0) {
+	throw "Invalid value for -TriageDeltaWindow: must be >= 0"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -166,6 +171,10 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 		"-HistoryPath", $HistoryPath,
 		"-Top", $TriageTop
 	)
+
+	if ($TriageDeltaWindow -gt 0) {
+		$triageArgs += @("-DeltaWindow", $TriageDeltaWindow)
+	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {
 		$triageArgs += @("-MarkdownOut", $TriageReportPath)
