@@ -64,6 +64,7 @@ Poznámka:
 - Pro uchovani detailu kazdeho kola zapni archivaci snapshotu: `scripts/burnin_native_policy.ps1 -Rounds 10 -ArchiveProbeSnapshots` (default slozka `reports/native_policy_snapshots`).
 - Pocet ulozenych snapshotu lze omezit pres `-MaxSnapshotFiles` (default 50), starsi soubory se automaticky promazou.
 - Pro pripravu podkladu pro IT/App Control pouzij `scripts/generate_native_policy_allowlist_request.ps1` (vystup: `reports/native_policy_allowlist_request.md`).
+- Konzistenci policy artefaktu overis jednim krokem: `scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv`.
 - Pro rychlé vypsání konkrétních whitelist targetů použij `scripts/list_native_whitelist_targets.ps1`.
 - Pro rozpad podle jednotlivých native suites (co je `PASSED` vs `POLICY_BLOCK`) použij `scripts/check_native_policy_probe.ps1`.
 - Probe podporuje retry: `scripts/check_native_policy_probe.ps1 -MaxAttemptsPerSuite 3 -DelaySeconds 2`.
@@ -78,6 +79,7 @@ scripts/check_all_local.ps1 -Fast
 scripts/check_native_toolchain.ps1
 scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1
+scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv
 ```
 
 ```bash
