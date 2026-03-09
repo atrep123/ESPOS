@@ -414,9 +414,9 @@ def validate_data(
                         break
 
             # ── Rule 24: Edge margin (non-full-span widgets shouldn't touch edges) ──
-            if ww < sw and x > 0 and x + ww > sw - MIN_EDGE_MARGIN:
+            if ww < sw and x > 0 and x < sw and x + ww > 0 and x + ww > sw - MIN_EDGE_MARGIN:
                 issues.append(Issue("WARN", f"{wl}: right edge too close to boundary ({x + ww} > {sw - MIN_EDGE_MARGIN})"))
-            if hh < sh and y > 0 and y + hh > sh - MIN_EDGE_MARGIN:
+            if hh < sh and y > 0 and y < sh and y + hh > 0 and y + hh > sh - MIN_EDGE_MARGIN:
                 issues.append(Issue("WARN", f"{wl}: bottom edge too close to boundary ({y + hh} > {sh - MIN_EDGE_MARGIN})"))
 
             # ── Rule 25: Text widget with no text and no runtime binding ──
@@ -665,7 +665,8 @@ def validate_data(
                 vis_y2 = max(0, min(y + hh, sh))
                 vis_area = max(0, vis_x2 - vis_x1) * max(0, vis_y2 - vis_y1)
                 total_area = ww * hh
-                if total_area > 0 and vis_area < total_area * 0.25:
+                is_fully_offscreen = (x + ww <= 0) or (y + hh <= 0) or (x >= sw) or (y >= sh)
+                if total_area > 0 and vis_area < total_area * 0.25 and not is_fully_offscreen:
                     pct = int(100 * vis_area / total_area)
                     issues.append(Issue("WARN", f"{wl}: only {pct}% visible inside scene bounds"))
 
