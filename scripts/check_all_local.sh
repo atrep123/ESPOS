@@ -114,6 +114,11 @@ EOF
   esac
 done
 
+if [[ -z "$DESIGN" ]]; then
+  echo "[FAIL] Design path cannot be empty" >&2
+  exit 2
+fi
+
 if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIAGE_DELTA_CSV" -eq 1 ) ]]; then
   echo "[FAIL] --strict-triage-csv/--strict-triage-delta-csv require --strict-artifacts" >&2
   exit 2
