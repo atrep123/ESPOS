@@ -11,6 +11,15 @@ Set-StrictMode -Version Latest
 
 $allowNativePolicyBlockResolved = $AllowNativePolicyBlock -or ($env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK -eq "1")
 
+function Try-AddMsysGccToPath {
+  $msysGccDir = "C:\msys64\ucrt64\bin"
+  $msysGccExe = Join-Path $msysGccDir "gcc.exe"
+  if ((-not (Get-Command gcc -ErrorAction SilentlyContinue)) -and (Test-Path $msysGccExe)) {
+    $env:Path = "$msysGccDir;$env:Path"
+    Write-Host "[INFO] Added MSYS2 gcc path for current run: $msysGccDir"
+  }
+}
+
 function Run-Step([string]$Name, [string]$Command) {
   Write-Host ""
   Write-Host "== $Name =="
@@ -106,6 +115,7 @@ if (-not $SkipPio) {
     throw "PlatformIO CLI missing: 'pio' not found in PATH"
   }
 
+  Try-AddMsysGccToPath
   $hasGcc = $null -ne (Get-Command gcc -ErrorAction SilentlyContinue)
   if (-not $hasGcc) {
     $gccHint = "Install MSYS2/MinGW-w64 and ensure 'gcc' is in PATH. Verify with: gcc --version"

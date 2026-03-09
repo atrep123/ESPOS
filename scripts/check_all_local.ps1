@@ -8,6 +8,13 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$msysGccDir = "C:\msys64\ucrt64\bin"
+$msysGccExe = Join-Path $msysGccDir "gcc.exe"
+if ((-not (Get-Command gcc -ErrorAction SilentlyContinue)) -and (Test-Path $msysGccExe)) {
+  $env:Path = "$msysGccDir;$env:Path"
+  Write-Host "[INFO] Added MSYS2 gcc path for current run: $msysGccDir"
+}
+
 $prev = $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK
 $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK = "1"
 

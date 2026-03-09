@@ -8,6 +8,18 @@ Write-Host "== Native Toolchain Check (Windows) =="
 $hasPio = $null -ne (Get-Command pio -ErrorAction SilentlyContinue)
 $hasGcc = $null -ne (Get-Command gcc -ErrorAction SilentlyContinue)
 
+if (-not $hasGcc) {
+  $msysGccDir = "C:\msys64\ucrt64\bin"
+  $msysGccExe = Join-Path $msysGccDir "gcc.exe"
+  if (Test-Path $msysGccExe) {
+    $env:Path = "$msysGccDir;$env:Path"
+    $hasGcc = $null -ne (Get-Command gcc -ErrorAction SilentlyContinue)
+    if ($hasGcc) {
+      Write-Host "[INFO] Added MSYS2 gcc path for current run: $msysGccDir"
+    }
+  }
+}
+
 if ($hasPio) {
   Write-Host "[OK] pio found: $((Get-Command pio).Source)"
 } else {
