@@ -3,6 +3,10 @@ param()
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ($args.Count -gt 0) {
+  throw "Unexpected argument(s): $($args -join ', ')"
+}
+
 Write-Host "== Native Toolchain Check (Windows) =="
 
 $hasPio = $null -ne (Get-Command pio -ErrorAction SilentlyContinue)
