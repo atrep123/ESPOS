@@ -1,4 +1,5 @@
 import sys
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +21,7 @@ cmds = [
     "add label 130 32 122 12 \"DISPLAY\"",
     "add label 130 46 122 12 \"LS027B7DH01\"",
     "add label 130 60 122 12 \"SHARP MEMORY LCD\"",
-    "add label 4 80 248 12 \"PRIMITIVES\"",
+    "add button 4 80 248 12 \"PRIMITIVES\"",
     "add box 4 98 8 8",
     "add box 20 98 10 10",
     "add box 44 98 12 12",
@@ -45,7 +46,7 @@ cmds = [
     "new checkerboard_demo",
     "bp 256x128",
     "snap off",
-    "add label 4 2 248 12 \"CHECKERBOARD\"",
+    "add button 4 2 248 12 \"CHECKERBOARD\"",
     "add label 8 20 112 12 \"8x8 CELLS\"",
     "add label 130 20 56 12 \"4x4\"",
     "add label 194 20 56 12 \"16x16\"",
@@ -77,6 +78,18 @@ cmds = [
 create_cli_interface(cmds)
 
 OUT_PATH = ROOT / "demo_scene.json"
+VALUE_WIDGET_TYPES = {"gauge", "progressbar", "slider", "chart"}
+with OUT_PATH.open("r", encoding="utf-8") as f:
+    generated = json.load(f)
+
+for scene in generated.get("scenes", {}).values():
+    for widget in scene.get("widgets", []):
+        if widget.get("type") not in VALUE_WIDGET_TYPES:
+            widget.pop("max_value", None)
+
+with OUT_PATH.open("w", encoding="utf-8") as f:
+    json.dump(generated, f, indent=2)
+
 issues = validate_file(OUT_PATH, warnings_as_errors=False, strict_critical=True)
 errors = [issue for issue in issues if issue.level == "ERROR"]
 if errors:
