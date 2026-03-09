@@ -18,6 +18,7 @@ param(
 	[switch]$TriageOnlyWorsening,
 	[switch]$TriageIncludeAllDeltaRows,
 	[switch]$SkipTriage,
+	[switch]$SkipTriageCsvCheck,
 	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
 	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots",
@@ -56,6 +57,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $checkAll = Join-Path $PSScriptRoot "check_all.ps1"
 $summarize = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
 $triage = Join-Path $PSScriptRoot "triage_native_policy_blockers.ps1"
+$triageCsvCheck = Join-Path $PSScriptRoot "check_native_policy_triage_csv.ps1"
 $artifactCheck = Join-Path $PSScriptRoot "check_native_policy_artifacts.ps1"
 $resolvedProbeJsonPath = Join-Path $repoRoot $ProbeJsonPath
 $resolvedSnapshotDir = Join-Path $repoRoot $ProbeSnapshotDir
@@ -220,6 +222,22 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 	}
 
 	& powershell @triageArgs
+
+	if (-not $SkipTriageCsvCheck -and (Test-Path $triageCsvCheck)) {
+		$triageCheckArgs = @(
+			"-ExecutionPolicy", "Bypass",
+			"-File", $triageCsvCheck
+		)
+
+		if (-not [string]::IsNullOrWhiteSpace($TriageCsvPath)) {
+			$triageCheckArgs += @("-CombinedCsv", $TriageCsvPath)
+		}
+		if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsvPath)) {
+			$triageCheckArgs += @("-DeltaCsv", $TriageDeltaCsvPath, "-RequireDelta")
+		}
+
+		& powershell @triageCheckArgs
+	}
 }
 
 if (-not $SkipArtifactCheck -and (Test-Path $artifactCheck)) {

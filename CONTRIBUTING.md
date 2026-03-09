@@ -52,6 +52,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Burn-in umi filtrovat jen vyrazne zmeny pres `-TriageMinAbsDeltaScore N` (vyzaduje `-TriageDeltaWindow > 0`).
 - Burn-in umi menit razeni delta vystupu pres `-TriageDeltaSortBy abs-delta|delta|suite`.
 - Burn-in po dobehu standardne spousti i `check_native_policy_artifacts.ps1`; lze vypnout prepinacem `-SkipArtifactCheck`.
+- Burn-in po triage kroku standardne spousti i `check_native_policy_triage_csv.ps1`; lze vypnout `-SkipTriageCsvCheck`.
 - Triage krok lze vypnout prepinacem `-SkipTriage`.
 - Pokud ma burn-in failnout pri policy blokovani, pouzij `-FailOnPolicyBlock`.
 - Pro audit/detail per-round probe reportu zapni `-ArchiveProbeSnapshots` (vystup do `reports/native_policy_snapshots`, lze zmenit `-ProbeSnapshotDir`).
@@ -71,3 +72,4 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Razeni podle samotneho delta score pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaSortBy delta`.
 - CSV export pro dalsi automatizaci pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -CsvOut reports/native_policy_triage.csv`.
 - Oddeleny delta CSV pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut reports/native_policy_triage_delta.csv`.
+- Konzistenci triage CSV overi `scripts/check_native_policy_triage_csv.ps1 -RequireCombined` (a volitelne `-DeltaCsv ... -RequireDelta`).

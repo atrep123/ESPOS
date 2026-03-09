@@ -71,12 +71,14 @@ Poznámka:
 - Pro odfiltrovani malych zmen pouzij `-TriageMinAbsDeltaScore N` (vyzaduje `-TriageDeltaWindow > 0`).
 - Razeni delta trendu nastav pres `-TriageDeltaSortBy abs-delta|delta|suite`.
 - Burn-in na konci automaticky spousti `check_native_policy_artifacts.ps1` (s md/csv gate podle nastaveni); vypnout lze `-SkipArtifactCheck`.
+- Burn-in po triage kroku automaticky spousti i `check_native_policy_triage_csv.ps1`; vypnout lze `-SkipTriageCsvCheck`.
 - Triage krok lze vypnout prepinacem `-SkipTriage`.
 - Pro prisny gate (selhat pri POLICY_BLOCK) pouzij `scripts/burnin_native_policy.ps1 -Rounds 10 -FailOnPolicyBlock`.
 - Pro uchovani detailu kazdeho kola zapni archivaci snapshotu: `scripts/burnin_native_policy.ps1 -Rounds 10 -ArchiveProbeSnapshots` (default slozka `reports/native_policy_snapshots`).
 - Pocet ulozenych snapshotu lze omezit pres `-MaxSnapshotFiles` (default 50), starsi soubory se automaticky promazou.
 - Pro pripravu podkladu pro IT/App Control pouzij `scripts/generate_native_policy_allowlist_request.ps1` (vystup: `reports/native_policy_allowlist_request.md`).
 - Konzistenci policy artefaktu overis jednim krokem: `scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv`.
+- Konzistenci triage CSV overis jednim krokem: `scripts/check_native_policy_triage_csv.ps1 -RequireCombined` (a volitelne `-DeltaCsv ... -RequireDelta`).
 - Priority suites pro allow-list eskalaci vytahnes skriptem: `scripts/triage_native_policy_blockers.ps1 -Top 5`.
 - Trend zhorseni/zlepseni mezi okny ziskas pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5`.
 - Jen zhorseni mezi okny ziskas pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -OnlyWorsening`.
@@ -101,6 +103,7 @@ scripts/check_native_toolchain.ps1
 scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1
 scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv
+scripts/check_native_policy_triage_csv.ps1 -RequireCombined
 scripts/triage_native_policy_blockers.ps1 -Top 5
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -OnlyWorsening
