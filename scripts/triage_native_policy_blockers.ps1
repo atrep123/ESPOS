@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
   [int]$Top = 5,
@@ -71,15 +72,26 @@ if (-not [string]::IsNullOrWhiteSpace($DeltaCsvOut) -and $DeltaWindow -le 0) {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$resolvedHistoryPath = Join-Path $repoRoot $HistoryPath
-$resolvedMarkdownPath = Join-Path $repoRoot $MarkdownOut
+$resolvedHistoryPath = ""
+$resolvedMarkdownPath = ""
 $resolvedCsvPath = ""
-if (-not [string]::IsNullOrWhiteSpace($CsvOut)) {
-  $resolvedCsvPath = Join-Path $repoRoot $CsvOut
-}
 $resolvedDeltaCsvPath = ""
+
+function Resolve-RepoPath([string]$inputPath) {
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($inputPath)
+  if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+    return $expandedPath
+  }
+  return (Join-Path $repoRoot $expandedPath)
+}
+
+$resolvedHistoryPath = Resolve-RepoPath $HistoryPath
+$resolvedMarkdownPath = Resolve-RepoPath $MarkdownOut
+if (-not [string]::IsNullOrWhiteSpace($CsvOut)) {
+  $resolvedCsvPath = Resolve-RepoPath $CsvOut
+}
 if (-not [string]::IsNullOrWhiteSpace($DeltaCsvOut)) {
-  $resolvedDeltaCsvPath = Join-Path $repoRoot $DeltaCsvOut
+  $resolvedDeltaCsvPath = Resolve-RepoPath $DeltaCsvOut
 }
 
 if (-not (Test-Path $resolvedHistoryPath)) {
