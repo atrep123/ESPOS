@@ -28,6 +28,7 @@ function Run-Step-WithWin4551Retry(
   [int]$DelaySeconds = 2,
   [bool]$AllowPolicyBlockAsWarning = $false
 ) {
+  $policyHint = "On Windows hosts, allow native test executables under .pio\\build\\native or use scripts/check_all_local.ps1 tolerant mode."
   $attempt = 1
   while ($attempt -le $MaxAttempts) {
     Write-Host ""
@@ -74,10 +75,10 @@ function Run-Step-WithWin4551Retry(
 
     if ($attempt -ge $MaxAttempts) {
       if ($AllowPolicyBlockAsWarning) {
-        Write-Warning "Step '$Name' hit repeated WinError 4551 policy blocking after $MaxAttempts attempts; continuing due to AllowNativePolicyBlock"
+        Write-Warning "Step '$Name' hit repeated WinError 4551 policy blocking after $MaxAttempts attempts; continuing due to AllowNativePolicyBlock. $policyHint"
         return
       }
-      throw "Step '$Name' failed after $MaxAttempts attempts due to repeated WinError 4551 policy blocking"
+      throw "Step '$Name' failed after $MaxAttempts attempts due to repeated WinError 4551 policy blocking. $policyHint"
     }
 
     Write-Warning "Detected intermittent WinError 4551 policy block. Retrying in $DelaySeconds s..."

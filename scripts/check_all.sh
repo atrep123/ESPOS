@@ -30,6 +30,7 @@ run_pio_native_with_retry() {
   local max_attempts="${1:-4}"
   local delay_seconds="${2:-2}"
   local attempt=1
+  local policy_hint="On Windows hosts, allow native test executables under .pio/build/native or use ./scripts/check_all_local.sh tolerant mode."
 
   while [[ "$attempt" -le "$max_attempts" ]]; do
     echo
@@ -45,11 +46,11 @@ run_pio_native_with_retry() {
     if grep -Eiq "WinError[[:space:]]*4551|application control policy|policy blocked this file" "$log_file"; then
       if [[ "$attempt" -ge "$max_attempts" ]]; then
         if [[ "$ALLOW_NATIVE_POLICY_BLOCK" == "1" ]]; then
-          echo "[WARN] pio native tests hit repeated WinError 4551 policy blocking after ${max_attempts} attempts; continuing due to ALLOW_NATIVE_POLICY_BLOCK=1" >&2
+          echo "[WARN] pio native tests hit repeated WinError 4551 policy blocking after ${max_attempts} attempts; continuing due to ALLOW_NATIVE_POLICY_BLOCK=1. ${policy_hint}" >&2
           rm -f "$log_file"
           return 0
         fi
-        echo "[FAIL] pio native tests failed after ${max_attempts} attempts due to repeated WinError 4551 policy blocking" >&2
+        echo "[FAIL] pio native tests failed after ${max_attempts} attempts due to repeated WinError 4551 policy blocking. ${policy_hint}" >&2
         rm -f "$log_file"
         return 1
       fi
@@ -67,11 +68,12 @@ run_pio_native_with_retry() {
 }
 
 if ! command -v gcc >/dev/null 2>&1; then
+  GCC_HINT="Install MSYS2/MinGW-w64 and ensure 'gcc' is in PATH. Verify with: gcc --version"
   if [[ "$ALLOW_NATIVE_POLICY_BLOCK" == "1" ]]; then
-    echo "[WARN] Native test toolchain missing: 'gcc' not found in PATH; skipping native tests due to ALLOW_NATIVE_POLICY_BLOCK=1" >&2
+    echo "[WARN] Native test toolchain missing: 'gcc' not found in PATH; skipping native tests due to ALLOW_NATIVE_POLICY_BLOCK=1. ${GCC_HINT}" >&2
     SKIP_NATIVE_TESTS=1
   else
-    echo "[FAIL] Native test toolchain missing: 'gcc' not found in PATH" >&2
+    echo "[FAIL] Native test toolchain missing: 'gcc' not found in PATH. ${GCC_HINT}" >&2
     exit 127
   fi
 else
