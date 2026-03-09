@@ -620,7 +620,13 @@ def validate_data(
             # ── Rule 57: value fields on non-value widget ──
             if wt not in VALUE_TYPES and wt != "chart":
                 for vf in ("min_value", "max_value"):
-                    if vf in w and w.get(vf) != 0:
+                    vv57 = w.get(vf)
+                    # Ignore schema defaults commonly present on all widgets.
+                    if vf == "min_value" and vv57 == 0:
+                        continue
+                    if vf == "max_value" and vv57 == 100 and w.get("min_value") == 0:
+                        continue
+                    if vf in w and vv57 != 0:
                         issues.append(Issue("WARN", f"{wl}: {vf} on non-value widget '{wt}'"))
 
             # ── Rule 58: Negative dimensions ──
@@ -742,9 +748,9 @@ def validate_data(
             # ── Rule 80: margin pushes widget offscreen ──
             mx = w.get("margin_x")
             my = w.get("margin_y")
-            if _is_int(mx) and x + mx >= sw:
+            if _is_int(mx) and mx > 0 and x + mx >= sw:
                 issues.append(Issue("WARN", f"{wl}: margin_x={mx} pushes widget past scene right edge"))
-            if _is_int(my) and y + my >= sh:
+            if _is_int(my) and my > 0 and y + my >= sh:
                 issues.append(Issue("WARN", f"{wl}: margin_y={my} pushes widget past scene bottom edge"))
 
             # ── Rule 81: progressbar with text (not rendered) ──
@@ -787,7 +793,7 @@ def validate_data(
             # ── Rule 88: max_lines with non-wrap text_overflow ──
             tof88 = str(w.get("text_overflow", "") or "").lower()
             ml88 = w.get("max_lines")
-            if wt in TEXT_TYPES and _is_int(ml88) and ml88 > 0 and tof88 and tof88 not in {"wrap", "auto", ""}:
+            if wt in TEXT_TYPES and _is_int(ml88) and ml88 > 1 and tof88 and tof88 not in {"wrap", "auto", "", "ellipsis"}:
                 issues.append(Issue("WARN", f"{wl}: max_lines={ml88} but text_overflow='{tof88}' (max_lines may be ignored)"))
 
             # ── Rule 89: responsive_rules entries structure ──
@@ -923,7 +929,7 @@ def validate_data(
             # ── Rule 111: border=false but border_style not none/empty ──
             r111_border = w.get("border")
             r111_bs = str(w.get("border_style", "") or "").lower()
-            if r111_border is False and r111_bs and r111_bs not in {"none", ""}:
+            if r111_border is False and r111_bs and r111_bs not in {"none", "", "single"}:
                 issues.append(Issue("WARN", f"{wl}: border=false but border_style='{r111_bs}' (style is ignored)"))
 
             # ── Rule 112: both visible=false and enabled=false ──
