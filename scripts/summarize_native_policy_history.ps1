@@ -8,12 +8,23 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$markdownOutSpecified = $PSBoundParameters.ContainsKey("MarkdownOut")
+$csvOutSpecified = $PSBoundParameters.ContainsKey("CsvOut")
+
 if ([string]::IsNullOrWhiteSpace($HistoryPath)) {
   throw "Invalid value for -HistoryPath: cannot be empty"
 }
 
 if ($Last -lt 1) {
   throw "Invalid value for -Last: must be >= 1"
+}
+
+if ($markdownOutSpecified -and [string]::IsNullOrWhiteSpace($MarkdownOut)) {
+  throw "Invalid value for -MarkdownOut: cannot be empty when explicitly provided"
+}
+
+if ($csvOutSpecified -and [string]::IsNullOrWhiteSpace($CsvOut)) {
+  throw "Invalid value for -CsvOut: cannot be empty when explicitly provided"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
