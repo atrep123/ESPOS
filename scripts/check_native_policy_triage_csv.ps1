@@ -16,6 +16,12 @@ if ($RequireDelta -and -not $deltaCsvSpecified -and [string]::IsNullOrWhiteSpace
   Write-Host "[INFO] Using default delta triage CSV path: $DeltaCsv"
 }
 
+$shouldCheckCombined = $RequireCombined -or $combinedCsvSpecified
+$shouldCheckDelta = $RequireDelta -or $deltaCsvSpecified
+if (-not $shouldCheckCombined -and -not $shouldCheckDelta) {
+  throw "No triage CSV target selected. Use -RequireCombined and/or -RequireDelta (or provide -CombinedCsv/-DeltaCsv)."
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 function Resolve-RepoPath([string]$relativePath) {
@@ -50,7 +56,7 @@ $deltaPath = Resolve-RepoPath $DeltaCsv
 
 Write-Host "== Native Policy Triage CSV Check =="
 
-if ($RequireCombined -or $combinedCsvSpecified) {
+if ($shouldCheckCombined) {
   Assert-FileExists $combinedPath "Combined triage CSV"
   $combinedRows = @(Import-Csv -Path $combinedPath)
   Assert-Columns -rows $combinedRows -requiredColumns @(
@@ -68,7 +74,7 @@ if ($RequireCombined -or $combinedCsvSpecified) {
   Write-Host "[OK] Combined triage CSV rows: $($combinedRows.Count)"
 }
 
-if ($RequireDelta -or $deltaCsvSpecified) {
+if ($shouldCheckDelta) {
   Assert-FileExists $deltaPath "Delta triage CSV"
   $deltaRows = @(Import-Csv -Path $deltaPath)
 
