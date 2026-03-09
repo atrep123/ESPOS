@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
     [string]$OutputPath = "reports/native_policy_allowlist_request.md"
@@ -15,8 +16,17 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$resolvedProbePath = Join-Path $repoRoot $ProbeJsonPath
-$resolvedOutputPath = Join-Path $repoRoot $OutputPath
+
+function Resolve-RepoPath([string]$inputPath) {
+    $expandedPath = [Environment]::ExpandEnvironmentVariables($inputPath)
+    if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+        return $expandedPath
+    }
+    return (Join-Path $repoRoot $expandedPath)
+}
+
+$resolvedProbePath = Resolve-RepoPath $ProbeJsonPath
+$resolvedOutputPath = Resolve-RepoPath $OutputPath
 
 if (-not (Test-Path $resolvedProbePath)) {
     throw "Probe JSON not found: $resolvedProbePath"
