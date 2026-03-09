@@ -102,10 +102,12 @@ scripts/check_all.ps1
 scripts/check_all_local.ps1 -Fast
 scripts/check_all_local.ps1 -Fast -StrictArtifacts
 scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageCsv
+scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageDeltaCsv
 scripts/check_native_toolchain.ps1
 scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1
 scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv
+scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv -RequireTriageCsv -RequireTriageDeltaCsv
 scripts/check_native_policy_triage_csv.ps1 -RequireCombined
 scripts/triage_native_policy_blockers.ps1 -Top 5
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5

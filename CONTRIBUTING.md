@@ -32,7 +32,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Pokud `gcc` chybi, `scripts/check_all_local.ps1` v tolerantnim rezimu native test preskoci a vypise varovani.
 - Pokud testy padaji na `WinError 4551`, jde o host App Control policy (ne regresi firmware); pouzij tolerant workflow (`scripts/check_all_local.ps1 -Fast`) nebo povol test binarky v `.pio\\build\\native`.
 - Kdyz potrebujes po tolerant runu tvrde overit reporty, pouzij `scripts/check_all_local.ps1 -Fast -StrictArtifacts`.
-- Ve strict modu lze volitelne vyzadovat i triage CSV pres `-StrictTriageCsv` (a delta pres `-StrictTriageDeltaCsv -NativePolicyTriageDeltaCsv ...`).
+- Ve strict modu lze volitelne vyzadovat i triage CSV pres `-StrictTriageCsv` (a delta pres `-StrictTriageDeltaCsv`; pokud nezadas `-NativePolicyTriageDeltaCsv`, pouzije se default `reports/native_policy_triage_delta.only.csv`).
 - `scripts/check_all.ps1 -AllowNativePolicyBlock` po opakovanem policy failu automaticky spusti kratky probe a vypise blokovane suites.
 - Pri tom samem behu uklada JSON artefakt do `reports/native_policy_probe_auto.json` (prepsatelne parametrem `-NativePolicyProbeJson`).
 - Kdyz probe neni potreba spustit, vytvori se placeholder JSON (`Triggered=false`) pro konzistentni reporting.
@@ -67,7 +67,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Pro cileny flaky-check jedne suite pouzij napr. `scripts/check_native_policy_probe.ps1 -Suites test_ui_render_swbuf -Rounds 5 -MaxAttemptsPerSuite 3 -DelaySeconds 1`.
 - Pro CI/reporting lze vypsat JSON: `scripts/check_native_policy_probe.ps1 -JsonOut reports/native_policy_probe_latest.json`.
 - Konzistenci cele sady artefaktu (`json`, `jsonl`, `md`, `csv`) overis skript `scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv`.
-- Stejny checker umi validovat i triage CSV (`-TriageCsv ... -RequireTriageCsv`, volitelne `-TriageDeltaCsv ... -RequireTriageDeltaCsv`).
+- Stejny checker umi validovat i triage CSV (`-TriageCsv ... -RequireTriageCsv`, volitelne `-TriageDeltaCsv ... -RequireTriageDeltaCsv`; pri `-RequireTriageCsv/-RequireTriageDeltaCsv` bez cesty pouzije default report cesty).
 - Prioritizaci suites pro App Control whitelist z historie pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5`.
 - Delta trend (zlepseni/zhorseni mezi dvema okny) pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5`.
 - Jen zhorseni mezi okny pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -OnlyWorsening`.
