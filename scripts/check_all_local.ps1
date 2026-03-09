@@ -28,6 +28,11 @@ $prev = $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK
 $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK = "1"
 
 try {
+  if ($StrictTriageDeltaCsv -and [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
+    $NativePolicyTriageDeltaCsv = "reports/native_policy_triage_delta.only.csv"
+    Write-Host "[INFO] Using default delta triage CSV path: $NativePolicyTriageDeltaCsv"
+  }
+
   if (-not $SkipPio) {
     $preflight = Join-Path $PSScriptRoot "check_native_toolchain.ps1"
     if (Test-Path $preflight) {
@@ -56,36 +61,30 @@ try {
     }
 
     Write-Host "[INFO] Running strict native policy artifact check..."
-    $artifactArgs = @(
-      "-ExecutionPolicy", "Bypass",
-      "-File", $artifactCheck,
-      "-ProbeJson", $NativePolicyProbeJson,
-      "-HistoryJsonl", $NativePolicyHistoryJsonl,
-      "-SummaryMarkdown", $NativePolicySummaryMarkdown,
-      "-HistoryCsv", $NativePolicyHistoryCsv,
-      "-RequireMarkdown",
-      "-RequireCsv"
-    )
+    $artifactParams = @{
+      ProbeJson = $NativePolicyProbeJson
+      HistoryJsonl = $NativePolicyHistoryJsonl
+      SummaryMarkdown = $NativePolicySummaryMarkdown
+      HistoryCsv = $NativePolicyHistoryCsv
+      RequireMarkdown = $true
+      RequireCsv = $true
+    }
 
     if ($StrictTriageCsv) {
-      $artifactArgs += "-RequireTriageCsv"
+      $artifactParams.RequireTriageCsv = $true
     }
     if ($StrictTriageDeltaCsv) {
-      $artifactArgs += "-RequireTriageDeltaCsv"
+      $artifactParams.RequireTriageDeltaCsv = $true
     }
 
     if (-not [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
-      $artifactArgs += @("-TriageCsv", $NativePolicyTriageCsv)
+      $artifactParams.TriageCsv = $NativePolicyTriageCsv
     }
     if (-not [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
-      $artifactArgs += @("-TriageDeltaCsv", $NativePolicyTriageDeltaCsv)
+      $artifactParams.TriageDeltaCsv = $NativePolicyTriageDeltaCsv
     }
 
-    & powershell @artifactArgs
-
-    if ($LASTEXITCODE -ne 0) {
-      throw "Strict native policy artifact check failed with exit code $LASTEXITCODE"
-    }
+    & $artifactCheck @artifactParams
   }
 }
 finally {

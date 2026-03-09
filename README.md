@@ -120,6 +120,7 @@ scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut rep
 ```bash
 ./scripts/check_all_local.sh main_scene.json
 ./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv
+./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-delta-csv
 ./scripts/check_native_toolchain.sh
 ```
 

@@ -65,7 +65,7 @@ Options:
   --native-policy-summary-markdown PATH Summary markdown path (default reports/native_policy_summary.md)
   --native-policy-history-csv PATH      History CSV path (default reports/native_policy_history.csv)
   --native-policy-triage-csv PATH       Triage combined CSV path (default reports/native_policy_triage.csv)
-  --native-policy-triage-delta-csv PATH Triage delta CSV path (default empty)
+  --native-policy-triage-delta-csv PATH Triage delta CSV path (default reports/native_policy_triage_delta.only.csv when --strict-triage-delta-csv)
 EOF
       exit 0
       ;;
@@ -83,6 +83,11 @@ done
 if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIAGE_DELTA_CSV" -eq 1 ) ]]; then
   echo "[FAIL] --strict-triage-csv/--strict-triage-delta-csv require --strict-artifacts" >&2
   exit 2
+fi
+
+if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 1 && -z "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+  POLICY_TRIAGE_DELTA_CSV="reports/native_policy_triage_delta.only.csv"
+  echo "[INFO] Using default delta triage CSV path: $POLICY_TRIAGE_DELTA_CSV"
 fi
 
 # Local default: tolerate repeated native policy blocks on Windows hosts.
