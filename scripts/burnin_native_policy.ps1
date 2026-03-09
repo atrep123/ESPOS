@@ -32,6 +32,18 @@ if ($Rounds -lt 1) {
 	throw "Invalid value for -Rounds: must be >= 1"
 }
 
+if ($DelaySeconds -lt 0) {
+	throw "Invalid value for -DelaySeconds: must be >= 0"
+}
+
+if ([string]::IsNullOrWhiteSpace($HistoryPath)) {
+	throw "Invalid value for -HistoryPath: cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($ProbeJsonPath)) {
+	throw "Invalid value for -ProbeJsonPath: cannot be empty"
+}
+
 if ($MaxSnapshotFiles -lt 1) {
 	throw "Invalid value for -MaxSnapshotFiles: must be >= 1"
 }
