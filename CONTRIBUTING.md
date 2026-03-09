@@ -82,3 +82,4 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Oddeleny delta CSV pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut reports/native_policy_triage_delta.csv`.
 - Konzistenci triage CSV overi `scripts/check_native_policy_triage_csv.ps1 -RequireCombined` (a volitelne `-DeltaCsv ... -RequireDelta`).
 - Triage CSV checker vyzaduje cil (`-RequireCombined`/`-RequireDelta` nebo explicitni `-CombinedCsv`/`-DeltaCsv`); prazdne spusteni failne.
+- Triage CSV checker stejne tak failne i na explicitne prazdne cesty (`-CombinedCsv ""` / `-DeltaCsv ""`); kdyz nechces cestu zadavat, parametr vynech.

@@ -112,6 +112,7 @@ scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv
 scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv -RequireTriageCsv -RequireTriageDeltaCsv
 scripts/check_native_policy_triage_csv.ps1 -RequireCombined
 scripts/check_native_policy_triage_csv.ps1 -RequireDelta
+# Note: explicitly empty -CombinedCsv/-DeltaCsv values are rejected; omit the parameter instead.
 scripts/triage_native_policy_blockers.ps1 -Top 5
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -OnlyWorsening
