@@ -48,6 +48,46 @@ if ($TriageMinAbsDeltaScore -lt 0) {
 	throw "Invalid value for -TriageMinAbsDeltaScore: must be >= 0"
 }
 
+$triageOnlyRequiresDeltaWindow = @()
+if ($TriageOnlyWorsening) {
+	$triageOnlyRequiresDeltaWindow += "-TriageOnlyWorsening"
+}
+if ($TriageIncludeAllDeltaRows) {
+	$triageOnlyRequiresDeltaWindow += "-TriageIncludeAllDeltaRows"
+}
+if ($TriageMinAbsDeltaScore -gt 0) {
+	$triageOnlyRequiresDeltaWindow += "-TriageMinAbsDeltaScore"
+}
+if ($PSBoundParameters.ContainsKey("TriageDeltaSortBy")) {
+	$triageOnlyRequiresDeltaWindow += "-TriageDeltaSortBy"
+}
+if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsvPath)) {
+	$triageOnlyRequiresDeltaWindow += "-TriageDeltaCsvPath"
+}
+
+if ($TriageDeltaWindow -le 0 -and $triageOnlyRequiresDeltaWindow.Count -gt 0) {
+	throw "Delta triage options require -TriageDeltaWindow > 0: $($triageOnlyRequiresDeltaWindow -join ', ')"
+}
+
+if ($SkipTriage) {
+	$triageFlagsWhenSkipped = @(
+		"TriageReportPath",
+		"TriageCsvPath",
+		"TriageDeltaCsvPath",
+		"TriageTop",
+		"TriageDeltaWindow",
+		"TriageMinAbsDeltaScore",
+		"TriageDeltaSortBy",
+		"TriageOnlyWorsening",
+		"TriageIncludeAllDeltaRows",
+		"SkipTriageCsvCheck"
+	)
+	$invalidWhenSkipTriage = @($triageFlagsWhenSkipped | Where-Object { $PSBoundParameters.ContainsKey($_) })
+	if ($invalidWhenSkipTriage.Count -gt 0) {
+		throw "-SkipTriage cannot be combined with explicit triage options: $($invalidWhenSkipTriage -join ', ')"
+	}
+}
+
 $allowedDeltaSortModes = @("abs-delta", "delta", "suite")
 if (-not ($allowedDeltaSortModes -contains $TriageDeltaSortBy)) {
 	throw "Invalid value for -TriageDeltaSortBy: must be one of abs-delta, delta, suite"
