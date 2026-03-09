@@ -1,7 +1,72 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DESIGN="${1:-main_scene.json}"
+print_usage() {
+  cat <<'EOF'
+Usage: ./scripts/check_all.sh [design.json]
+       ./scripts/check_all.sh --design <design.json>
+
+Options:
+  --design <path>   Path to design JSON (default: main_scene.json)
+  -h, --help        Show this help
+EOF
+}
+
+DESIGN="main_scene.json"
+DESIGN_ARG_SET=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      print_usage
+      exit 0
+      ;;
+    --design)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --design" >&2
+        exit 2
+      fi
+      shift
+      if [[ -z "$1" ]]; then
+        echo "[FAIL] Empty value for --design is not allowed" >&2
+        exit 2
+      fi
+      if [[ "$1" == -* ]]; then
+        echo "[FAIL] Invalid value for --design: '$1'" >&2
+        exit 2
+      fi
+      DESIGN="$1"
+      DESIGN_ARG_SET=1
+      ;;
+    --design=*)
+      DESIGN="${1#--design=}"
+      if [[ -z "$DESIGN" ]]; then
+        echo "[FAIL] Empty value for --design is not allowed" >&2
+        exit 2
+      fi
+      if [[ "$DESIGN" == -* ]]; then
+        echo "[FAIL] Invalid value for --design: '$DESIGN'" >&2
+        exit 2
+      fi
+      DESIGN_ARG_SET=1
+      ;;
+    -*)
+      echo "[FAIL] Unknown option: '$1'" >&2
+      print_usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ "$DESIGN_ARG_SET" -eq 1 ]]; then
+        echo "[FAIL] Multiple design paths provided: '$DESIGN' and '$1'" >&2
+        exit 2
+      fi
+      DESIGN="$1"
+      DESIGN_ARG_SET=1
+      ;;
+  esac
+  shift
+done
+
 ALLOW_NATIVE_POLICY_BLOCK="${ALLOW_NATIVE_POLICY_BLOCK:-0}"
 
 PYTHON_CMD=""
