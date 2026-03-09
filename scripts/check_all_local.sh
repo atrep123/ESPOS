@@ -13,6 +13,8 @@ POLICY_SUMMARY_MD="reports/native_policy_summary.md"
 POLICY_HISTORY_CSV="reports/native_policy_history.csv"
 POLICY_TRIAGE_CSV=""
 POLICY_TRIAGE_DELTA_CSV=""
+TRIAGE_CSV_ARG_SET=0
+TRIAGE_DELTA_CSV_ARG_SET=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -29,27 +31,53 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --native-policy-probe-json)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --native-policy-probe-json" >&2
+        exit 2
+      fi
       POLICY_PROBE_JSON="$2"
       shift 2
       ;;
     --native-policy-history-jsonl)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --native-policy-history-jsonl" >&2
+        exit 2
+      fi
       POLICY_HISTORY_JSONL="$2"
       shift 2
       ;;
     --native-policy-summary-markdown)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --native-policy-summary-markdown" >&2
+        exit 2
+      fi
       POLICY_SUMMARY_MD="$2"
       shift 2
       ;;
     --native-policy-history-csv)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --native-policy-history-csv" >&2
+        exit 2
+      fi
       POLICY_HISTORY_CSV="$2"
       shift 2
       ;;
     --native-policy-triage-csv)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --native-policy-triage-csv" >&2
+        exit 2
+      fi
       POLICY_TRIAGE_CSV="$2"
+      TRIAGE_CSV_ARG_SET=1
       shift 2
       ;;
     --native-policy-triage-delta-csv)
+      if [[ $# -lt 2 ]]; then
+        echo "[FAIL] Missing value for --native-policy-triage-delta-csv" >&2
+        exit 2
+      fi
       POLICY_TRIAGE_DELTA_CSV="$2"
+      TRIAGE_DELTA_CSV_ARG_SET=1
       shift 2
       ;;
     --help|-h)
@@ -85,12 +113,22 @@ if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIA
   exit 2
 fi
 
-if [[ "$STRICT_TRIAGE_CSV" -eq 0 && -n "$POLICY_TRIAGE_CSV" ]]; then
+if [[ "$TRIAGE_CSV_ARG_SET" -eq 1 && -z "$POLICY_TRIAGE_CSV" ]]; then
+  echo "[FAIL] --native-policy-triage-csv was provided but is empty" >&2
+  exit 2
+fi
+
+if [[ "$TRIAGE_DELTA_CSV_ARG_SET" -eq 1 && -z "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+  echo "[FAIL] --native-policy-triage-delta-csv was provided but is empty" >&2
+  exit 2
+fi
+
+if [[ "$STRICT_TRIAGE_CSV" -eq 0 && "$TRIAGE_CSV_ARG_SET" -eq 1 ]]; then
   echo "[FAIL] --native-policy-triage-csv requires --strict-triage-csv" >&2
   exit 2
 fi
 
-if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 0 && -n "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 0 && "$TRIAGE_DELTA_CSV_ARG_SET" -eq 1 ]]; then
   echo "[FAIL] --native-policy-triage-delta-csv requires --strict-triage-delta-csv" >&2
   exit 2
 fi
