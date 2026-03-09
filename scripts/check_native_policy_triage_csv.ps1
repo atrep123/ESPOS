@@ -37,7 +37,12 @@ function Resolve-RepoPath([string]$relativePath) {
     return ""
   }
 
-  return (Join-Path $repoRoot $relativePath)
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($relativePath)
+  if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+    return $expandedPath
+  }
+
+  return (Join-Path $repoRoot $expandedPath)
 }
 
 function Assert-FileExists([string]$path, [string]$label) {
