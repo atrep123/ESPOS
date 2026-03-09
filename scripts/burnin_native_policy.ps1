@@ -10,6 +10,7 @@ param(
 	[string]$CsvSummaryPath = "reports/native_policy_history.csv",
 	[string]$TriageReportPath = "reports/native_policy_triage.md",
 	[string]$TriageCsvPath = "reports/native_policy_triage.csv",
+	[string]$TriageDeltaCsvPath = "",
 	[int]$TriageTop = 5,
 	[int]$TriageDeltaWindow = 0,
 	[int]$TriageMinAbsDeltaScore = 0,
@@ -212,6 +213,10 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageCsvPath)) {
 		$triageArgs += @("-CsvOut", $TriageCsvPath)
+	}
+
+	if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsvPath)) {
+		$triageArgs += @("-DeltaCsvOut", $TriageDeltaCsvPath)
 	}
 
 	& powershell @triageArgs

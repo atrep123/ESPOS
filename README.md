@@ -64,6 +64,7 @@ Poznámka:
 - Burn-in po dobehu automaticky vygeneruje i CSV report (`reports/native_policy_history.csv`), lze zmenit parametrem `-CsvSummaryPath`.
 - Burn-in po dobehu automaticky vygeneruje i triage report (`reports/native_policy_triage.md`), prioritu/ranking lze upravit pres `-TriageTop`.
 - Burn-in po dobehu automaticky vygeneruje i triage CSV (`reports/native_policy_triage.csv`), cestu lze zmenit pres `-TriageCsvPath`.
+- Volitelne lze generovat i samostatny delta CSV (`-TriageDeltaCsvPath`) pro cisty ingest trendu.
 - Volitelne lze zapnout i delta trend v triage (`-TriageDeltaWindow N`), ktery porovna poslednich `N` behu proti predchozim `N`.
 - Pro fokus jen na regrese lze pridat `-TriageOnlyWorsening` (vyzaduje `-TriageDeltaWindow > 0`).
 - Pro export cele delta sady (misto Top N) pouzij `-TriageIncludeAllDeltaRows` (vyzaduje `-TriageDeltaWindow > 0`).
@@ -83,6 +84,7 @@ Poznámka:
 - Jen vyrazne zmeny (napr. abs(delta) >= 2) ziskas pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -MinAbsDeltaScore 2`.
 - Razeni podle samotneho delta score ziskas pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaSortBy delta`.
 - Triage data pro dashboard exportuj pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -CsvOut reports/native_policy_triage.csv`.
+- Samostatny delta dataset exportuj pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut reports/native_policy_triage_delta.csv`.
 - Pro rychlé vypsání konkrétních whitelist targetů použij `scripts/list_native_whitelist_targets.ps1`.
 - Pro rozpad podle jednotlivých native suites (co je `PASSED` vs `POLICY_BLOCK`) použij `scripts/check_native_policy_probe.ps1`.
 - Probe podporuje retry: `scripts/check_native_policy_probe.ps1 -MaxAttemptsPerSuite 3 -DelaySeconds 2`.
@@ -106,6 +108,7 @@ scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -IncludeAllDelta
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -MinAbsDeltaScore 2
 scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaSortBy delta
 scripts/triage_native_policy_blockers.ps1 -Top 5 -CsvOut reports/native_policy_triage.csv
+scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut reports/native_policy_triage_delta.csv
 ```
 
 ```bash

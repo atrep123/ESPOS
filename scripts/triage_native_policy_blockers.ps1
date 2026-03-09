@@ -3,6 +3,7 @@ param(
   [int]$Top = 5,
   [string]$MarkdownOut = "reports/native_policy_triage.md",
   [string]$CsvOut = "reports/native_policy_triage.csv",
+  [string]$DeltaCsvOut = "",
   [int]$DeltaWindow = 0,
   [switch]$OnlyWorsening,
   [switch]$IncludeAllDeltaRows,
@@ -46,12 +47,20 @@ if ($DeltaSortBy -ne "abs-delta" -and $DeltaWindow -le 0) {
   throw "Invalid usage: -DeltaSortBy requires -DeltaWindow > 0 when set to delta or suite"
 }
 
+if (-not [string]::IsNullOrWhiteSpace($DeltaCsvOut) -and $DeltaWindow -le 0) {
+  throw "Invalid usage: -DeltaCsvOut requires -DeltaWindow > 0"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $resolvedHistoryPath = Join-Path $repoRoot $HistoryPath
 $resolvedMarkdownPath = Join-Path $repoRoot $MarkdownOut
 $resolvedCsvPath = ""
 if (-not [string]::IsNullOrWhiteSpace($CsvOut)) {
   $resolvedCsvPath = Join-Path $repoRoot $CsvOut
+}
+$resolvedDeltaCsvPath = ""
+if (-not [string]::IsNullOrWhiteSpace($DeltaCsvOut)) {
+  $resolvedDeltaCsvPath = Join-Path $repoRoot $DeltaCsvOut
 }
 
 if (-not (Test-Path $resolvedHistoryPath)) {
@@ -252,6 +261,7 @@ if ($deltaEnabled) {
   Write-Host "IncludeAllDeltaRows: $IncludeAllDeltaRows"
   Write-Host "MinAbsDeltaScore: $MinAbsDeltaScore"
   Write-Host "DeltaSortBy: $DeltaSortBy"
+  Write-Host "DeltaCsvOut: $DeltaCsvOut"
 }
 
 if ($topRanked.Count -eq 0) {
@@ -448,4 +458,56 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedCsvPath)) {
   }
 
   Write-Host "[INFO] Wrote triage CSV: $resolvedCsvPath"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($resolvedDeltaCsvPath)) {
+  $deltaCsvDir = Split-Path -Parent $resolvedDeltaCsvPath
+  if (-not [string]::IsNullOrWhiteSpace($deltaCsvDir) -and -not (Test-Path $deltaCsvDir)) {
+    New-Item -ItemType Directory -Path $deltaCsvDir -Force | Out-Null
+  }
+
+  $deltaCsvColumns = @(
+    "Rank",
+    "Suite",
+    "DeltaScore",
+    "DeltaPolicyHits",
+    "DeltaTransientHits",
+    "RecentScore",
+    "PreviousScore",
+    "DeltaWindow",
+    "OnlyWorsening",
+    "IncludeAllDeltaRows",
+    "MinAbsDeltaScore",
+    "DeltaSortBy"
+  )
+
+  $deltaCsvRows = @()
+  if ($deltaEnabled -and $deltaTop.Count -gt 0) {
+    $rank = 1
+    foreach ($entry in $deltaTop) {
+      $deltaCsvRows += [pscustomobject]@{
+        Rank = $rank
+        Suite = $entry.Suite
+        DeltaScore = $entry.DeltaScore
+        DeltaPolicyHits = $entry.DeltaPolicyHits
+        DeltaTransientHits = $entry.DeltaTransientHits
+        RecentScore = $entry.RecentScore
+        PreviousScore = $entry.PreviousScore
+        DeltaWindow = $DeltaWindow
+        OnlyWorsening = [bool]$OnlyWorsening
+        IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
+        MinAbsDeltaScore = $MinAbsDeltaScore
+        DeltaSortBy = $DeltaSortBy
+      }
+      $rank++
+    }
+  }
+
+  if ($deltaCsvRows.Count -eq 0) {
+    Set-Content -Path $resolvedDeltaCsvPath -Value ($deltaCsvColumns -join ',') -Encoding UTF8
+  } else {
+    $deltaCsvRows | Select-Object $deltaCsvColumns | Export-Csv -Path $resolvedDeltaCsvPath -NoTypeInformation -Encoding UTF8
+  }
+
+  Write-Host "[INFO] Wrote triage delta CSV: $resolvedDeltaCsvPath"
 }

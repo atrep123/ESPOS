@@ -45,6 +45,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Burn-in umi po dobehu zapsat i CSV souhrn (`-CsvSummaryPath`, default `reports/native_policy_history.csv`).
 - Burn-in umi po dobehu zapsat i triage report (`-TriageReportPath`, default `reports/native_policy_triage.md`, top pres `-TriageTop`).
 - Burn-in umi po dobehu zapsat i triage CSV (`-TriageCsvPath`, default `reports/native_policy_triage.csv`).
+- Burn-in umi zapsat i oddeleny delta CSV (`-TriageDeltaCsvPath`) pro trend-only ingest.
 - Burn-in umi predat i delta trend triage (`-TriageDeltaWindow N`) pro porovnani poslednich/predchozich `N` behu.
 - Burn-in umi omezit delta vystup jen na zhorseni (`-TriageOnlyWorsening`, vyzaduje `-TriageDeltaWindow > 0`).
 - Burn-in umi exportovat celou delta sadu bez Top limitu (`-TriageIncludeAllDeltaRows`, vyzaduje `-TriageDeltaWindow > 0`).
@@ -69,3 +70,4 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Delta filtr podle absolutni hodnoty pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -MinAbsDeltaScore 2`.
 - Razeni podle samotneho delta score pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaSortBy delta`.
 - CSV export pro dalsi automatizaci pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -CsvOut reports/native_policy_triage.csv`.
+- Oddeleny delta CSV pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut reports/native_policy_triage_delta.csv`.
