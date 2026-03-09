@@ -1,11 +1,8 @@
+[CmdletBinding(PositionalBinding = $false)]
 param()
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-
-if ($args.Count -gt 0) {
-  throw "Unexpected argument(s): $($args -join ', ')"
-}
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $nativeBuildDir = Join-Path $repoRoot ".pio\build\native"
