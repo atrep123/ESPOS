@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DESIGN="main_scene.json"
+DESIGN_ARG_SET=0
 STRICT_ARTIFACTS=0
 STRICT_TRIAGE_CSV=0
 STRICT_TRIAGE_DELTA_CSV=0
@@ -102,7 +103,12 @@ EOF
       exit 2
       ;;
     *)
+      if [[ "$DESIGN_ARG_SET" -eq 1 ]]; then
+        echo "[FAIL] Multiple design paths provided: '$DESIGN' and '$1'" >&2
+        exit 2
+      fi
       DESIGN="$1"
+      DESIGN_ARG_SET=1
       shift
       ;;
   esac
