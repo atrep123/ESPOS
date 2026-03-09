@@ -110,6 +110,7 @@ scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1
 scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv
 scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv -RequireTriageCsv -RequireTriageDeltaCsv
+# Note: check_native_policy_artifacts.ps1 also rejects explicitly empty -TriageCsv/-TriageDeltaCsv values.
 scripts/check_native_policy_triage_csv.ps1 -RequireCombined
 scripts/check_native_policy_triage_csv.ps1 -RequireDelta
 # Note: explicitly empty -CombinedCsv/-DeltaCsv values are rejected; omit the parameter instead.

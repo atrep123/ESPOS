@@ -72,6 +72,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Pro CI/reporting lze vypsat JSON: `scripts/check_native_policy_probe.ps1 -JsonOut reports/native_policy_probe_latest.json`.
 - Konzistenci cele sady artefaktu (`json`, `jsonl`, `md`, `csv`) overis skript `scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv`.
 - Stejny checker umi validovat i triage CSV (`-TriageCsv ... -RequireTriageCsv`, volitelne `-TriageDeltaCsv ... -RequireTriageDeltaCsv`; pri `-RequireTriageCsv/-RequireTriageDeltaCsv` bez cesty pouzije default report cesty).
+- Stejny checker failne na explicitne prazdne cesty (`-TriageCsv ""` / `-TriageDeltaCsv ""`); kdyz cestu nechces zadavat, parametr vynech.
 - Prioritizaci suites pro App Control whitelist z historie pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5`.
 - Delta trend (zlepseni/zhorseni mezi dvema okny) pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5`.
 - Jen zhorseni mezi okny pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -OnlyWorsening`.
