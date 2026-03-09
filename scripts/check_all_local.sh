@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --native-policy-probe-json)
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || "$2" == --* ]]; then
         echo "[FAIL] Missing value for --native-policy-probe-json" >&2
         exit 2
       fi
@@ -39,7 +39,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-history-jsonl)
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || "$2" == --* ]]; then
         echo "[FAIL] Missing value for --native-policy-history-jsonl" >&2
         exit 2
       fi
@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-summary-markdown)
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || "$2" == --* ]]; then
         echo "[FAIL] Missing value for --native-policy-summary-markdown" >&2
         exit 2
       fi
@@ -55,7 +55,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-history-csv)
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || "$2" == --* ]]; then
         echo "[FAIL] Missing value for --native-policy-history-csv" >&2
         exit 2
       fi
@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-triage-csv)
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || "$2" == --* ]]; then
         echo "[FAIL] Missing value for --native-policy-triage-csv" >&2
         exit 2
       fi
@@ -72,7 +72,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-triage-delta-csv)
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || "$2" == --* ]]; then
         echo "[FAIL] Missing value for --native-policy-triage-delta-csv" >&2
         exit 2
       fi
