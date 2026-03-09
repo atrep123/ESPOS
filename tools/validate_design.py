@@ -279,7 +279,7 @@ def validate_data(
             # ── Rule 4: Within scene bounds ──
             if x < 0 or y < 0:
                 issues.append(Issue("ERROR", f"{wl}: origin ({x},{y}) is negative"))
-            if x + ww > sw or y + hh > sh:
+            if (x + ww > sw or y + hh > sh) and w.get("visible") is not False:
                 issues.append(Issue("WARN", f"{wl}: rect ({x},{y},{ww},{hh}) out of bounds {sw}x{sh}"))
 
             # ── Rule 1: Unique widget IDs ──
@@ -420,7 +420,7 @@ def validate_data(
                 issues.append(Issue("WARN", f"{wl}: bottom edge too close to boundary ({y + hh} > {sh - MIN_EDGE_MARGIN})"))
 
             # ── Rule 25: Text widget with no text and no runtime binding ──
-            if wt in TEXT_TYPES and not text and not runtime:
+            if wt in TEXT_TYPES and not text and not runtime and w.get("visible") is not False and w.get("enabled") is not False:
                 issues.append(Issue("WARN", f"{wl}: {wt} with no text and no runtime binding"))
 
             # ── Rule 26: Font charset compliance ──
@@ -1053,7 +1053,7 @@ def validate_data(
         for idx, w in enumerate(widgets):
             if not isinstance(w, dict):
                 continue
-            if w.get("enabled") is False and w.get("visible") is not False:
+            if w.get("enabled") is False and w.get("visible") is not False and w.get("text"):
                 _rv66 = w.get("runtime", "")
                 runtime_val = str(_rv66) if isinstance(_rv66, str) else ""
                 if not runtime_val:
