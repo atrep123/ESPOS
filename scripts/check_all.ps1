@@ -25,11 +25,19 @@ $allowNativePolicyBlockResolved = $AllowNativePolicyBlock -or ($env:ESP32OS_ALLO
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $nativePolicyDiagnosticsTriggered = $false
 
+function Resolve-RepoPath([string]$inputPath) {
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($inputPath)
+  if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+    return $expandedPath
+  }
+  return (Join-Path $repoRoot $expandedPath)
+}
+
 function Get-NativePolicyProbeJsonPath {
   if ([string]::IsNullOrWhiteSpace($NativePolicyProbeJson)) {
     return ""
   }
-  return (Join-Path $repoRoot $NativePolicyProbeJson)
+  return (Resolve-RepoPath $NativePolicyProbeJson)
 }
 
 function Append-NativePolicyHistory {
@@ -42,7 +50,7 @@ function Append-NativePolicyHistory {
     return
   }
 
-  $historyPath = Join-Path $repoRoot $NativePolicyHistoryJsonl
+  $historyPath = Resolve-RepoPath $NativePolicyHistoryJsonl
   $historyDir = Split-Path -Parent $historyPath
   if (-not [string]::IsNullOrWhiteSpace($historyDir) -and -not (Test-Path $historyDir)) {
     New-Item -ItemType Directory -Path $historyDir -Force | Out-Null
@@ -73,7 +81,7 @@ function Invoke-NativePolicyCsvSmokeCheck {
     return
   }
 
-  $historyPath = Join-Path $repoRoot $NativePolicyHistoryJsonl
+  $historyPath = Resolve-RepoPath $NativePolicyHistoryJsonl
   if (-not (Test-Path $historyPath)) {
     Write-Warning "Native policy history not found for CSV smoke-check: $historyPath"
     return
@@ -85,7 +93,7 @@ function Invoke-NativePolicyCsvSmokeCheck {
     return
   }
 
-  $smokeCsvPath = Join-Path $repoRoot "reports/native_policy_history.smoke.csv"
+  $smokeCsvPath = Resolve-RepoPath "reports/native_policy_history.smoke.csv"
   Write-Host "[INFO] Running CSV smoke-check: $smokeCsvPath"
 
   $summaryParams = @{
@@ -171,7 +179,7 @@ function Write-NativePolicyProbePlaceholder {
     return
   }
 
-  $probeJsonPath = Join-Path $repoRoot $NativePolicyProbeJson
+  $probeJsonPath = Resolve-RepoPath $NativePolicyProbeJson
   $probeJsonDir = Split-Path -Parent $probeJsonPath
   if (-not [string]::IsNullOrWhiteSpace($probeJsonDir) -and -not (Test-Path $probeJsonDir)) {
     New-Item -ItemType Directory -Path $probeJsonDir -Force | Out-Null
