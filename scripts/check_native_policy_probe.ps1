@@ -2,7 +2,8 @@ param(
   [int]$MaxAttemptsPerSuite = 3,
   [int]$DelaySeconds = 2,
   [int]$Rounds = 1,
-  [string[]]$Suites = @()
+  [string[]]$Suites = @(),
+  [string]$JsonOut = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,6 +35,13 @@ if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
 
 if ($Rounds -lt 1) {
   throw "Invalid value for -Rounds: must be >= 1"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($JsonOut)) {
+  $jsonDir = Split-Path -Parent $JsonOut
+  if (-not [string]::IsNullOrWhiteSpace($jsonDir) -and -not (Test-Path $jsonDir)) {
+    New-Item -ItemType Directory -Path $jsonDir -Force | Out-Null
+  }
 }
 
 if (-not (Test-Path $testRoot)) {
@@ -134,7 +142,7 @@ $results | Format-Table -AutoSize
 if ($Rounds -gt 1 -or $Suites.Count -gt 0) {
   Write-Host ""
   Write-Host "== Aggregate By Suite =="
-  $aggregate = foreach ($suite in $testSuites) {
+  $aggregate = @(foreach ($suite in $testSuites) {
     $suiteRows = @($results | Where-Object { $_.Suite -eq $suite })
     [pscustomobject]@{
       Suite = $suite
@@ -143,13 +151,35 @@ if ($Rounds -gt 1 -or $Suites.Count -gt 0) {
       POLICY_BLOCK = @($suiteRows | Where-Object { $_.Status -eq "POLICY_BLOCK" }).Count
       FAILED = @($suiteRows | Where-Object { $_.Status -eq "FAILED" }).Count
     }
-  }
+  })
   $aggregate | Format-Table -AutoSize
 }
 
 $policyCount = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK" }).Count
 $transientPolicyCount = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK_TRANSIENT" }).Count
 $failCount = @($results | Where-Object { $_.Status -eq "FAILED" }).Count
+
+$summary = [pscustomobject]@{
+  ProbeTimestamp = (Get-Date).ToString("o")
+  RepoRoot = $repoRoot
+  MaxAttemptsPerSuite = $MaxAttemptsPerSuite
+  DelaySeconds = $DelaySeconds
+  Rounds = $Rounds
+  Suites = $testSuites
+  PolicyBlockCount = $policyCount
+  TransientPolicyBlockCount = $transientPolicyCount
+  FailureCount = $failCount
+}
+
+if (-not [string]::IsNullOrWhiteSpace($JsonOut)) {
+  $payload = [pscustomobject]@{
+    Summary = $summary
+    Results = $results
+  }
+  $payload | ConvertTo-Json -Depth 6 | Set-Content -Path $JsonOut -Encoding UTF8
+  Write-Host ""
+  Write-Host "[INFO] Wrote JSON probe report: $JsonOut"
+}
 
 if ($failCount -gt 0) {
   Write-Host ""
