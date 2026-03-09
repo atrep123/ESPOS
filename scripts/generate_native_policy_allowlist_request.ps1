@@ -6,6 +6,14 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ([string]::IsNullOrWhiteSpace($ProbeJsonPath)) {
+    throw "Invalid value for -ProbeJsonPath: cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    throw "Invalid value for -OutputPath: cannot be empty"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $resolvedProbePath = Join-Path $repoRoot $ProbeJsonPath
 $resolvedOutputPath = Join-Path $repoRoot $OutputPath
@@ -17,6 +25,10 @@ if (-not (Test-Path $resolvedProbePath)) {
 $probe = Get-Content $resolvedProbePath -Raw | ConvertFrom-Json
 $summary = $probe.Summary
 $results = @($probe.Results)
+
+if ($null -eq $summary -or $null -eq $probe.Results) {
+    throw "Probe JSON missing required fields: Summary and Results"
+}
 
 $blocked = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK" } | Select-Object -ExpandProperty Suite -Unique)
 $transient = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK_TRANSIENT" } | Select-Object -ExpandProperty Suite -Unique)
