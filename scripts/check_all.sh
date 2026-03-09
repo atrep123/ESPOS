@@ -66,6 +66,18 @@ run_pio_native_with_retry() {
   done
 }
 
+if ! command -v gcc >/dev/null 2>&1; then
+  if [[ "$ALLOW_NATIVE_POLICY_BLOCK" == "1" ]]; then
+    echo "[WARN] Native test toolchain missing: 'gcc' not found in PATH; skipping native tests due to ALLOW_NATIVE_POLICY_BLOCK=1" >&2
+    SKIP_NATIVE_TESTS=1
+  else
+    echo "[FAIL] Native test toolchain missing: 'gcc' not found in PATH" >&2
+    exit 127
+  fi
+else
+  SKIP_NATIVE_TESTS=0
+fi
+
 "$PYTHON_CMD" -m ruff check .
 "$PYTHON_CMD" -m pytest -q --ignore=output/buildprobe/tests
 
@@ -77,7 +89,9 @@ if [[ -f "tools/check_demo_scene_strict.py" ]]; then
   "$PYTHON_CMD" tools/check_demo_scene_strict.py
 fi
 
-run_pio_native_with_retry 4 2
+if [[ "$SKIP_NATIVE_TESTS" == "0" ]]; then
+  run_pio_native_with_retry 4 2
+fi
 "$PIO_CMD" run -e arduino_nano_esp32-nohw
 "$PIO_CMD" run -e esp32-s3-devkitm-1-nohw
 

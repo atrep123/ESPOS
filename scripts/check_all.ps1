@@ -100,7 +100,16 @@ if (Test-Path "tools\\check_demo_scene_strict.py") {
 }
 
 if (-not $SkipPio) {
-  Run-Step-WithWin4551Retry "pio native tests" "pio test -e native" 4 2 $allowNativePolicyBlockResolved
+  $hasGcc = $null -ne (Get-Command gcc -ErrorAction SilentlyContinue)
+  if (-not $hasGcc) {
+    if ($allowNativePolicyBlockResolved) {
+      Write-Warning "Native test toolchain missing: 'gcc' not found in PATH; skipping native tests due to AllowNativePolicyBlock"
+    } else {
+      throw "Native test toolchain missing: 'gcc' not found in PATH"
+    }
+  } else {
+    Run-Step-WithWin4551Retry "pio native tests" "pio test -e native" 4 2 $allowNativePolicyBlockResolved
+  }
   if (-not $Fast) {
     Run-Step "pio build (arduino_nano_esp32-nohw)" "pio run -e arduino_nano_esp32-nohw"
     Run-Step "pio build (esp32-s3-devkitm-1-nohw)" "pio run -e esp32-s3-devkitm-1-nohw"
