@@ -100,12 +100,18 @@ if (Test-Path "tools\\check_demo_scene_strict.py") {
 }
 
 if (-not $SkipPio) {
+  $hasPio = $null -ne (Get-Command pio -ErrorAction SilentlyContinue)
+  if (-not $hasPio) {
+    throw "PlatformIO CLI missing: 'pio' not found in PATH"
+  }
+
   $hasGcc = $null -ne (Get-Command gcc -ErrorAction SilentlyContinue)
   if (-not $hasGcc) {
+    $gccHint = "Install MSYS2/MinGW-w64 and ensure 'gcc' is in PATH. Verify with: gcc --version"
     if ($allowNativePolicyBlockResolved) {
-      Write-Warning "Native test toolchain missing: 'gcc' not found in PATH; skipping native tests due to AllowNativePolicyBlock"
+      Write-Warning "Native test toolchain missing: 'gcc' not found in PATH; skipping native tests due to AllowNativePolicyBlock. $gccHint"
     } else {
-      throw "Native test toolchain missing: 'gcc' not found in PATH"
+      throw "Native test toolchain missing: 'gcc' not found in PATH. $gccHint"
     }
   } else {
     Run-Step-WithWin4551Retry "pio native tests" "pio test -e native" 4 2 $allowNativePolicyBlockResolved
