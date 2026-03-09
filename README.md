@@ -48,6 +48,7 @@ Poznámka:
 - Rychlá cesta na Windows: `winget install -e --id MSYS2.MSYS2`, pak v MSYS2 shellu `pacman -S --needed mingw-w64-ucrt-x86_64-gcc` a přidat `C:\msys64\ucrt64\bin` do `PATH`.
 - Na Windows může lokální policy zablokovat některé ESP-IDF toolchain binárky.
 - Pokud native testy padají na `WinError 4551`, problém je host policy (App Control), ne kód testu; použij `scripts/check_all_local.ps1 -Fast` (tolerant) nebo povol běh `.pio\\build\\native` test binárek.
+- Pro rychlé vypsání konkrétních whitelist targetů použij `scripts/list_native_whitelist_targets.ps1`.
 
 ## Quick checks
 
@@ -55,6 +56,7 @@ Poznámka:
 scripts/check_all.ps1
 scripts/check_all_local.ps1 -Fast
 scripts/check_native_toolchain.ps1
+scripts/list_native_whitelist_targets.ps1
 ```
 
 ```bash
