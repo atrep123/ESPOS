@@ -85,6 +85,16 @@ if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIA
   exit 2
 fi
 
+if [[ "$STRICT_TRIAGE_CSV" -eq 0 && -n "$POLICY_TRIAGE_CSV" ]]; then
+  echo "[FAIL] --native-policy-triage-csv requires --strict-triage-csv" >&2
+  exit 2
+fi
+
+if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 0 && -n "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+  echo "[FAIL] --native-policy-triage-delta-csv requires --strict-triage-delta-csv" >&2
+  exit 2
+fi
+
 if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 1 && -z "$POLICY_TRIAGE_DELTA_CSV" ]]; then
   POLICY_TRIAGE_DELTA_CSV="reports/native_policy_triage_delta.only.csv"
   echo "[INFO] Using default delta triage CSV path: $POLICY_TRIAGE_DELTA_CSV"

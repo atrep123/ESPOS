@@ -21,6 +21,14 @@ if ((-not $StrictArtifacts) -and ($StrictTriageCsv -or $StrictTriageDeltaCsv)) {
   throw "-StrictTriageCsv/-StrictTriageDeltaCsv require -StrictArtifacts"
 }
 
+if ((-not $StrictTriageCsv) -and -not [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
+  throw "-NativePolicyTriageCsv requires -StrictTriageCsv"
+}
+
+if ((-not $StrictTriageDeltaCsv) -and -not [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
+  throw "-NativePolicyTriageDeltaCsv requires -StrictTriageDeltaCsv"
+}
+
 $msysGccDir = "C:\msys64\ucrt64\bin"
 $msysGccExe = Join-Path $msysGccDir "gcc.exe"
 if ((-not (Get-Command gcc -ErrorAction SilentlyContinue)) -and (Test-Path $msysGccExe)) {
