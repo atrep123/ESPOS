@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "$#" -gt 0 ]]; then
+  echo "Unexpected argument(s): $*" >&2
+  exit 2
+fi
+
 echo "== Native Toolchain Check =="
 
 HAS_PIO=0
