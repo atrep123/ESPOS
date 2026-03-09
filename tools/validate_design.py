@@ -415,13 +415,13 @@ def validate_data(
                         break
 
             # ── Rule 24: Edge margin (non-full-span widgets shouldn't touch edges) ──
-            if ww < sw and x > 0 and x < sw and x + ww > 0 and x + ww > sw - MIN_EDGE_MARGIN:
+            if ww < sw and x > 0 and x < sw and x + ww > 0 and x + ww <= sw and x + ww > sw - MIN_EDGE_MARGIN:
                 issues.append(Issue("WARN", f"{wl}: right edge too close to boundary ({x + ww} > {sw - MIN_EDGE_MARGIN})"))
-            if hh < sh and y > 0 and y < sh and y + hh > 0 and y + hh > sh - MIN_EDGE_MARGIN:
+            if hh < sh and y > 0 and y < sh and y + hh > 0 and y + hh <= sh and y + hh > sh - MIN_EDGE_MARGIN:
                 issues.append(Issue("WARN", f"{wl}: bottom edge too close to boundary ({y + hh} > {sh - MIN_EDGE_MARGIN})"))
 
             # ── Rule 25: Text widget with no text and no runtime binding ──
-            if wt in TEXT_TYPES and not text and not runtime and w.get("visible") is not False and w.get("enabled") is not False:
+            if wt in TEXT_TYPES and not text and not runtime and w.get("visible") is not False and w.get("enabled") is not False and not widget_id:
                 issues.append(Issue("WARN", f"{wl}: {wt} with no text and no runtime binding"))
 
             # ── Rule 26: Font charset compliance ──
@@ -525,7 +525,7 @@ def validate_data(
                 issues.append(Issue("WARN", f"{wl}: widget at ({x},{y}) fully outside scene {sw}x{sh}"))
 
             # ── Rule 42: Hidden widget with runtime binding ──
-            if w.get("visible") is False and runtime:
+            if w.get("visible") is False and runtime and not widget_id:
                 issues.append(Issue("WARN", f"{wl}: widget is hidden (visible=false) but has runtime binding"))
 
             # ── Rule 43: locked field must be bool ──
