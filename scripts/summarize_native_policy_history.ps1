@@ -1,7 +1,8 @@
 param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
   [int]$Last = 20,
-  [string]$MarkdownOut = ""
+  [string]$MarkdownOut = "",
+  [string]$CsvOut = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -180,4 +181,18 @@ if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
   Set-Content -Path $mdPath -Value $md -Encoding UTF8
   Write-Host ""
   Write-Host "[INFO] Wrote Markdown summary: $mdPath"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($CsvOut)) {
+  $csvPath = Join-Path $repoRoot $CsvOut
+  $csvDir = Split-Path -Parent $csvPath
+  if (-not [string]::IsNullOrWhiteSpace($csvDir) -and -not (Test-Path $csvDir)) {
+    New-Item -ItemType Directory -Path $csvDir -Force | Out-Null
+  }
+
+  $rows |
+    Select-Object ProbeTimestamp, Triggered, PolicyBlockCount, TransientPolicyBlockCount, FailureCount, BlockedSuites, TransientSuites, JsonPath |
+    Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+
+  Write-Host "[INFO] Wrote CSV summary: $csvPath"
 }
