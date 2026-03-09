@@ -1,6 +1,7 @@
 param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
-  [int]$Last = 20
+  [int]$Last = 20,
+  [string]$MarkdownOut = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -98,4 +99,56 @@ if ($transientSuiteFreq.Count -gt 0) {
     Sort-Object Value -Descending |
     ForEach-Object { [pscustomobject]@{ Suite = $_.Key; Hits = $_.Value } } |
     Format-Table -AutoSize
+}
+
+if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
+  $mdPath = Join-Path $repoRoot $MarkdownOut
+  $mdDir = Split-Path -Parent $mdPath
+  if (-not [string]::IsNullOrWhiteSpace($mdDir) -and -not (Test-Path $mdDir)) {
+    New-Item -ItemType Directory -Path $mdDir -Force | Out-Null
+  }
+
+  $md = @()
+  $md += "# Native Policy History Summary"
+  $md += ""
+  $md += ('- File: ' + $resolvedHistoryPath)
+  $md += "- Entries: $($rows.Count)"
+  $md += "- Triggered diagnostics: $triggeredCount"
+  $md += "- Runs with POLICY_BLOCK > 0: $policyBlockedRuns"
+  $md += "- Runs with transient blocks > 0: $transientRuns"
+  $md += "- Runs with non-policy failures > 0: $failureRuns"
+  $md += ""
+  $md += "## Recent Entries (last $take)"
+  $md += ""
+  $md += "| ProbeTimestamp | Triggered | PolicyBlockCount | TransientPolicyBlockCount | FailureCount |"
+  $md += "|---|---:|---:|---:|---:|"
+  foreach ($r in $recent) {
+    $md += "| $($r.ProbeTimestamp) | $($r.Triggered) | $($r.PolicyBlockCount) | $($r.TransientPolicyBlockCount) | $($r.FailureCount) |"
+  }
+
+  if ($blockedSuiteFreq.Count -gt 0) {
+    $md += ""
+    $md += "## Blocked Suite Frequency"
+    $md += ""
+    $md += "| Suite | Hits |"
+    $md += "|---|---:|"
+    foreach ($pair in ($blockedSuiteFreq.GetEnumerator() | Sort-Object Value -Descending)) {
+      $md += "| $($pair.Key) | $($pair.Value) |"
+    }
+  }
+
+  if ($transientSuiteFreq.Count -gt 0) {
+    $md += ""
+    $md += "## Transient Suite Frequency"
+    $md += ""
+    $md += "| Suite | Hits |"
+    $md += "|---|---:|"
+    foreach ($pair in ($transientSuiteFreq.GetEnumerator() | Sort-Object Value -Descending)) {
+      $md += "| $($pair.Key) | $($pair.Value) |"
+    }
+  }
+
+  Set-Content -Path $mdPath -Value $md -Encoding UTF8
+  Write-Host ""
+  Write-Host "[INFO] Wrote Markdown summary: $mdPath"
 }

@@ -54,6 +54,7 @@ Poznámka:
 - Po kazdem behu s `-AllowNativePolicyBlock` se navic appendne JSONL historie do `reports/native_policy_probe_history.jsonl` (lze zmenit parametrem `-NativePolicyHistoryJsonl`).
 - Rychly trend/report z historie vypises pres `scripts/summarize_native_policy_history.ps1`.
 - Summary navic ukazuje frekvenci konkretnich blokovanych/transient suites (pokud jsou v historii dostupne).
+- Pro sdileni reportu lze exportovat markdown: `scripts/summarize_native_policy_history.ps1 -Last 30 -MarkdownOut reports/native_policy_summary.md`.
 - Burn-in vice kol overis pres `scripts/burnin_native_policy.ps1 -Rounds 10 -DelaySeconds 2`.
 - Pro rychlé vypsání konkrétních whitelist targetů použij `scripts/list_native_whitelist_targets.ps1`.
 - Pro rozpad podle jednotlivých native suites (co je `PASSED` vs `POLICY_BLOCK`) použij `scripts/check_native_policy_probe.ps1`.
