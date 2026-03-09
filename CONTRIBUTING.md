@@ -44,6 +44,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Burn-in umi po dobehu rovnou zapsat markdown souhrn (`-MarkdownSummaryPath`, default `reports/native_policy_summary.md`).
 - Burn-in umi po dobehu zapsat i CSV souhrn (`-CsvSummaryPath`, default `reports/native_policy_history.csv`).
 - Burn-in umi po dobehu zapsat i triage report (`-TriageReportPath`, default `reports/native_policy_triage.md`, top pres `-TriageTop`).
+- Burn-in umi po dobehu zapsat i triage CSV (`-TriageCsvPath`, default `reports/native_policy_triage.csv`).
 - Burn-in umi predat i delta trend triage (`-TriageDeltaWindow N`) pro porovnani poslednich/predchozich `N` behu.
 - Burn-in umi omezit delta vystup jen na zhorseni (`-TriageOnlyWorsening`, vyzaduje `-TriageDeltaWindow > 0`).
 - Burn-in po dobehu standardne spousti i `check_native_policy_artifacts.ps1`; lze vypnout prepinacem `-SkipArtifactCheck`.
@@ -61,3 +62,4 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Prioritizaci suites pro App Control whitelist z historie pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5`.
 - Delta trend (zlepseni/zhorseni mezi dvema okny) pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5`.
 - Jen zhorseni mezi okny pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -OnlyWorsening`.
+- CSV export pro dalsi automatizaci pripravi `scripts/triage_native_policy_blockers.ps1 -Top 5 -CsvOut reports/native_policy_triage.csv`.

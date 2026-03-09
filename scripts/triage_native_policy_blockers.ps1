@@ -2,6 +2,7 @@ param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
   [int]$Top = 5,
   [string]$MarkdownOut = "reports/native_policy_triage.md",
+  [string]$CsvOut = "reports/native_policy_triage.csv",
   [int]$DeltaWindow = 0,
   [switch]$OnlyWorsening
 )
@@ -24,6 +25,10 @@ if ($OnlyWorsening -and $DeltaWindow -le 0) {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $resolvedHistoryPath = Join-Path $repoRoot $HistoryPath
 $resolvedMarkdownPath = Join-Path $repoRoot $MarkdownOut
+$resolvedCsvPath = ""
+if (-not [string]::IsNullOrWhiteSpace($CsvOut)) {
+  $resolvedCsvPath = Join-Path $repoRoot $CsvOut
+}
 
 if (-not (Test-Path $resolvedHistoryPath)) {
   throw "History file not found: $resolvedHistoryPath"
@@ -232,6 +237,53 @@ if (-not [string]::IsNullOrWhiteSpace($outDir) -and -not (Test-Path $outDir)) {
   New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 }
 
+$csvRows = @()
+$priorityRank = 1
+foreach ($suite in $topRanked) {
+  $csvRows += [pscustomobject]@{
+    RowType = "PriorityTop"
+    Rank = $priorityRank
+    Suite = $suite.Suite
+    Score = $suite.Score
+    PolicyHits = $suite.PolicyHits
+    PolicyRunRatePercent = $suite.PolicyRunRatePercent
+    TransientHits = $suite.TransientHits
+    TransientRunRatePercent = $suite.TransientRunRatePercent
+    DeltaScore = $null
+    DeltaPolicyHits = $null
+    DeltaTransientHits = $null
+    RecentScore = $null
+    PreviousScore = $null
+    DeltaWindow = $DeltaWindow
+    OnlyWorsening = [bool]$OnlyWorsening
+  }
+  $priorityRank++
+}
+
+if ($deltaEnabled -and $deltaTop.Count -gt 0) {
+  $deltaRank = 1
+  foreach ($entry in $deltaTop) {
+    $csvRows += [pscustomobject]@{
+      RowType = "DeltaTop"
+      Rank = $deltaRank
+      Suite = $entry.Suite
+      Score = $null
+      PolicyHits = $null
+      PolicyRunRatePercent = $null
+      TransientHits = $null
+      TransientRunRatePercent = $null
+      DeltaScore = $entry.DeltaScore
+      DeltaPolicyHits = $entry.DeltaPolicyHits
+      DeltaTransientHits = $entry.DeltaTransientHits
+      RecentScore = $entry.RecentScore
+      PreviousScore = $entry.PreviousScore
+      DeltaWindow = $DeltaWindow
+      OnlyWorsening = [bool]$OnlyWorsening
+    }
+    $deltaRank++
+  }
+}
+
 $md = @()
 $md += "# Native Policy Blocker Triage"
 $md += ""
@@ -296,3 +348,36 @@ if ($deltaEnabled) {
 Set-Content -Path $resolvedMarkdownPath -Value $md -Encoding UTF8
 Write-Host ""
 Write-Host "[INFO] Wrote triage report: $resolvedMarkdownPath"
+
+if (-not [string]::IsNullOrWhiteSpace($resolvedCsvPath)) {
+  $csvDir = Split-Path -Parent $resolvedCsvPath
+  if (-not [string]::IsNullOrWhiteSpace($csvDir) -and -not (Test-Path $csvDir)) {
+    New-Item -ItemType Directory -Path $csvDir -Force | Out-Null
+  }
+
+  $columns = @(
+    "RowType",
+    "Rank",
+    "Suite",
+    "Score",
+    "PolicyHits",
+    "PolicyRunRatePercent",
+    "TransientHits",
+    "TransientRunRatePercent",
+    "DeltaScore",
+    "DeltaPolicyHits",
+    "DeltaTransientHits",
+    "RecentScore",
+    "PreviousScore",
+    "DeltaWindow",
+    "OnlyWorsening"
+  )
+
+  if ($csvRows.Count -eq 0) {
+    Set-Content -Path $resolvedCsvPath -Value ($columns -join ',') -Encoding UTF8
+  } else {
+    $csvRows | Select-Object $columns | Export-Csv -Path $resolvedCsvPath -NoTypeInformation -Encoding UTF8
+  }
+
+  Write-Host "[INFO] Wrote triage CSV: $resolvedCsvPath"
+}
