@@ -51,10 +51,12 @@ Poznámka:
 
 ```powershell
 scripts/check_all.ps1
+scripts/check_all_local.ps1 -Fast
 scripts/check_native_toolchain.ps1
 ```
 
 ```bash
+./scripts/check_all_local.sh main_scene.json
 ./scripts/check_native_toolchain.sh
 ```
 
