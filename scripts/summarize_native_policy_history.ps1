@@ -8,6 +8,14 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ([string]::IsNullOrWhiteSpace($HistoryPath)) {
+  throw "Invalid value for -HistoryPath: cannot be empty"
+}
+
+if ($Last -lt 1) {
+  throw "Invalid value for -Last: must be >= 1"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $resolvedHistoryPath = Join-Path $repoRoot $HistoryPath
 
