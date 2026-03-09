@@ -46,13 +46,15 @@ def main() -> int:
         return 2
 
     want = sys.argv[1] if len(sys.argv) > 1 else "test"
-    if not want.strip():
+    normalized_want = want.strip().lower()
+    if not normalized_want:
         print("ERROR: Stage argument cannot be empty", file=sys.stderr)
         return 2
-    if want not in ALLOWED_STAGES:
+    if normalized_want not in ALLOWED_STAGES:
         allowed = ", ".join(sorted(ALLOWED_STAGES))
         print(f"ERROR: Unsupported stage '{want}'. Allowed: {allowed}", file=sys.stderr)
         return 2
+    want = normalized_want
 
     board_present = has_esp32s3()
     env = os.getenv("PIOENV") or ""
