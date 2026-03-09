@@ -279,7 +279,8 @@ def validate_data(
             # ── Rule 4: Within scene bounds ──
             if x < 0 or y < 0:
                 issues.append(Issue("ERROR", f"{wl}: origin ({x},{y}) is negative"))
-            if (x + ww > sw or y + hh > sh) and w.get("visible") is not False:
+            intersects_scene = (x < sw) and (y < sh) and (x + ww > 0) and (y + hh > 0)
+            if (x + ww > sw or y + hh > sh) and intersects_scene and w.get("visible") is not False:
                 issues.append(Issue("WARN", f"{wl}: rect ({x},{y},{ww},{hh}) out of bounds {sw}x{sh}"))
 
             # ── Rule 1: Unique widget IDs ──
@@ -706,7 +707,7 @@ def validate_data(
             text_val = str(_tv) if isinstance(_tv, str) else ""
             _rv = w.get("runtime", "")
             runtime_val = str(_rv) if isinstance(_rv, str) else ""
-            if wt in TEXT_TYPES and text_val.strip() and runtime_val.strip():
+            if wt in TEXT_TYPES and text_val.strip() and runtime_val.strip() and w.get("visible") is not False:
                 issues.append(Issue("WARN", f"{wl}: has both text='{text_val}' and runtime='{runtime_val}' (runtime may override text)"))
 
             # ── Rule 73: icon widget too small for icon_char ──
