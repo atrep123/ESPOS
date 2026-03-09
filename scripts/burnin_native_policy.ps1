@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
 	[int]$Rounds = 10,
 	[int]$DelaySeconds = 0,
@@ -106,13 +107,22 @@ if (-not ($allowedDeltaSortModes -contains $TriageDeltaSortBy)) {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+
+function Resolve-RepoPath([string]$inputPath) {
+	$expandedPath = [Environment]::ExpandEnvironmentVariables($inputPath)
+	if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+		return $expandedPath
+	}
+	return (Join-Path $repoRoot $expandedPath)
+}
+
 $checkAll = Join-Path $PSScriptRoot "check_all.ps1"
 $summarize = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
 $triage = Join-Path $PSScriptRoot "triage_native_policy_blockers.ps1"
 $triageCsvCheck = Join-Path $PSScriptRoot "check_native_policy_triage_csv.ps1"
 $artifactCheck = Join-Path $PSScriptRoot "check_native_policy_artifacts.ps1"
-$resolvedProbeJsonPath = Join-Path $repoRoot $ProbeJsonPath
-$resolvedSnapshotDir = Join-Path $repoRoot $ProbeSnapshotDir
+$resolvedProbeJsonPath = Resolve-RepoPath $ProbeJsonPath
+$resolvedSnapshotDir = Resolve-RepoPath $ProbeSnapshotDir
 
 if ($ArchiveProbeSnapshots -and -not (Test-Path $resolvedSnapshotDir)) {
 	New-Item -ItemType Directory -Path $resolvedSnapshotDir -Force | Out-Null
