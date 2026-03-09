@@ -11,7 +11,7 @@ POLICY_PROBE_JSON="reports/native_policy_probe_auto.json"
 POLICY_HISTORY_JSONL="reports/native_policy_probe_history.jsonl"
 POLICY_SUMMARY_MD="reports/native_policy_summary.md"
 POLICY_HISTORY_CSV="reports/native_policy_history.csv"
-POLICY_TRIAGE_CSV="reports/native_policy_triage.csv"
+POLICY_TRIAGE_CSV=""
 POLICY_TRIAGE_DELTA_CSV=""
 
 while [[ $# -gt 0 ]]; do
@@ -64,7 +64,7 @@ Options:
   --native-policy-history-jsonl PATH    History JSONL path (default reports/native_policy_probe_history.jsonl)
   --native-policy-summary-markdown PATH Summary markdown path (default reports/native_policy_summary.md)
   --native-policy-history-csv PATH      History CSV path (default reports/native_policy_history.csv)
-  --native-policy-triage-csv PATH       Triage combined CSV path (default reports/native_policy_triage.csv)
+  --native-policy-triage-csv PATH       Triage combined CSV path (default reports/native_policy_triage.csv when --strict-triage-csv)
   --native-policy-triage-delta-csv PATH Triage delta CSV path (default reports/native_policy_triage_delta.only.csv when --strict-triage-delta-csv)
 EOF
       exit 0
@@ -88,6 +88,11 @@ fi
 if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 1 && -z "$POLICY_TRIAGE_DELTA_CSV" ]]; then
   POLICY_TRIAGE_DELTA_CSV="reports/native_policy_triage_delta.only.csv"
   echo "[INFO] Using default delta triage CSV path: $POLICY_TRIAGE_DELTA_CSV"
+fi
+
+if [[ "$STRICT_TRIAGE_CSV" -eq 1 && -z "$POLICY_TRIAGE_CSV" ]]; then
+  POLICY_TRIAGE_CSV="reports/native_policy_triage.csv"
+  echo "[INFO] Using default triage CSV path: $POLICY_TRIAGE_CSV"
 fi
 
 # Local default: tolerate repeated native policy blocks on Windows hosts.
@@ -159,10 +164,10 @@ if [[ "$STRICT_ARTIFACTS" -eq 1 ]]; then
   if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 1 ]]; then
     args+=( -RequireTriageDeltaCsv )
   fi
-  if [[ -n "$POLICY_TRIAGE_CSV" ]]; then
+  if [[ "$STRICT_TRIAGE_CSV" -eq 1 && -n "$POLICY_TRIAGE_CSV" ]]; then
     args+=( -TriageCsv "$POLICY_TRIAGE_CSV" )
   fi
-  if [[ -n "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+  if [[ "$STRICT_TRIAGE_DELTA_CSV" -eq 1 && -n "$POLICY_TRIAGE_DELTA_CSV" ]]; then
     args+=( -TriageDeltaCsv "$POLICY_TRIAGE_DELTA_CSV" )
   fi
 

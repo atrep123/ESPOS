@@ -10,7 +10,7 @@ param(
   [string]$NativePolicyHistoryJsonl = "reports/native_policy_probe_history.jsonl",
   [string]$NativePolicySummaryMarkdown = "reports/native_policy_summary.md",
   [string]$NativePolicyHistoryCsv = "reports/native_policy_history.csv",
-  [string]$NativePolicyTriageCsv = "reports/native_policy_triage.csv",
+  [string]$NativePolicyTriageCsv = "",
   [string]$NativePolicyTriageDeltaCsv = ""
 )
 
@@ -32,6 +32,11 @@ $prev = $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK
 $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK = "1"
 
 try {
+  if ($StrictTriageCsv -and [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
+    $NativePolicyTriageCsv = "reports/native_policy_triage.csv"
+    Write-Host "[INFO] Using default triage CSV path: $NativePolicyTriageCsv"
+  }
+
   if ($StrictTriageDeltaCsv -and [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
     $NativePolicyTriageDeltaCsv = "reports/native_policy_triage_delta.only.csv"
     Write-Host "[INFO] Using default delta triage CSV path: $NativePolicyTriageDeltaCsv"
@@ -81,10 +86,10 @@ try {
       $artifactParams.RequireTriageDeltaCsv = $true
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
+    if ($StrictTriageCsv -and -not [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
       $artifactParams.TriageCsv = $NativePolicyTriageCsv
     }
-    if (-not [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
+    if ($StrictTriageDeltaCsv -and -not [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
       $artifactParams.TriageDeltaCsv = $NativePolicyTriageDeltaCsv
     }
 
