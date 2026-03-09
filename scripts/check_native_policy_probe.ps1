@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
   [int]$MaxAttemptsPerSuite = 3,
   [int]$DelaySeconds = 2,
@@ -21,6 +22,14 @@ function Try-AddMsysGccToPath {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $testRoot = Join-Path $repoRoot "test"
 
+function Resolve-RepoPath([string]$inputPath) {
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($inputPath)
+  if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+    return $expandedPath
+  }
+  return (Join-Path $repoRoot $expandedPath)
+}
+
 Write-Host "== Native Policy Probe (Windows) =="
 Write-Host "Repo: $repoRoot"
 
@@ -38,6 +47,7 @@ if ($Rounds -lt 1) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($JsonOut)) {
+  $JsonOut = Resolve-RepoPath $JsonOut
   $jsonDir = Split-Path -Parent $JsonOut
   if (-not [string]::IsNullOrWhiteSpace($jsonDir) -and -not (Test-Path $jsonDir)) {
     New-Item -ItemType Directory -Path $jsonDir -Force | Out-Null
