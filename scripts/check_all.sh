@@ -4,7 +4,7 @@ set -euo pipefail
 DESIGN="${1:-main_scene.json}"
 
 python -m ruff check .
-python -m pytest -q
+python -m pytest -q --ignore=output/buildprobe/tests
 
 if [[ -f "tools/validate_design.py" ]]; then
   python tools/validate_design.py "${DESIGN}"

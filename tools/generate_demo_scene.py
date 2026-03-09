@@ -1,12 +1,12 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ui_cli import create_cli_interface
-from tools.validate_design import validate_file
+from tools.validate_design import validate_file  # noqa: E402
+from ui_cli import create_cli_interface  # noqa: E402
 
 cmds = [
     "new demo_clean2",

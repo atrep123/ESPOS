@@ -20,7 +20,7 @@ function Run-Step([string]$Name, [string]$Command) {
 
 if (-not $SkipPython) {
   Run-Step "ruff" "python -m ruff check ."
-  Run-Step "pytest" "python -m pytest -q"
+  Run-Step "pytest" "python -m pytest -q --ignore=output/buildprobe/tests"
 }
 
 if (Test-Path "tools\\validate_design.py") {

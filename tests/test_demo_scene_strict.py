@@ -2,7 +2,6 @@ from pathlib import Path
 
 from tools.validate_design import validate_data, validate_file
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
