@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
   [string]$CombinedCsv = "reports/native_policy_triage.csv",
   [string]$DeltaCsv = "",
