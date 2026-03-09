@@ -12,6 +12,14 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ([string]::IsNullOrWhiteSpace($Design)) {
+  throw "-Design cannot be empty"
+}
+
+if ($NativePolicyProbeRounds -lt 1) {
+  throw "-NativePolicyProbeRounds must be >= 1"
+}
+
 $allowNativePolicyBlockResolved = $AllowNativePolicyBlock -or ($env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK -eq "1")
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $nativePolicyDiagnosticsTriggered = $false
@@ -263,7 +271,8 @@ if (-not $SkipPython) {
 }
 
 if (Test-Path "tools\\validate_design.py") {
-  Run-Step "validate_design" "python tools\\validate_design.py $Design"
+  $quotedDesign = '"' + $Design.Replace('"', '""') + '"'
+  Run-Step "validate_design" "python tools\validate_design.py $quotedDesign"
 }
 
 if (Test-Path "tools\\check_demo_scene_strict.py") {
