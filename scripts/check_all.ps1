@@ -79,10 +79,12 @@ function Invoke-NativePolicyCsvSmokeCheck {
   $smokeCsvPath = Join-Path $repoRoot "reports/native_policy_history.smoke.csv"
   Write-Host "[INFO] Running CSV smoke-check: $smokeCsvPath"
 
-  & powershell -ExecutionPolicy Bypass -File $summaryScript -HistoryPath $NativePolicyHistoryJsonl -Last 1 -CsvOut "reports/native_policy_history.smoke.csv"
-  if ($LASTEXITCODE -ne 0) {
-    throw "Native policy CSV smoke-check failed: summarize_native_policy_history.ps1 exited with code $LASTEXITCODE"
+  $summaryParams = @{
+    HistoryPath = $NativePolicyHistoryJsonl
+    Last = 1
+    CsvOut = "reports/native_policy_history.smoke.csv"
   }
+  & $summaryScript @summaryParams
 
   if (-not (Test-Path $smokeCsvPath)) {
     throw "Native policy CSV smoke-check failed: CSV file was not created at $smokeCsvPath"
@@ -132,19 +134,19 @@ function Invoke-NativePolicyDiagnostics {
   # Keep diagnostics bounded so strict check remains fast enough for routine use.
   $probeJsonPath = Get-NativePolicyProbeJsonPath
 
-  $probeArgs = @(
-    "-ExecutionPolicy", "Bypass",
-    "-File", $probeScript,
-    "-MaxAttemptsPerSuite", "2",
-    "-DelaySeconds", "1",
-    "-Rounds", $NativePolicyProbeRounds
-  )
+  $probeParams = @{
+    MaxAttemptsPerSuite = 2
+    DelaySeconds = 1
+    Rounds = $NativePolicyProbeRounds
+  }
   if (-not [string]::IsNullOrWhiteSpace($probeJsonPath)) {
-    $probeArgs += @("-JsonOut", $probeJsonPath)
+    $probeParams.JsonOut = $probeJsonPath
   }
 
-  & powershell @probeArgs
-  if ($LASTEXITCODE -ne 0) {
+  try {
+    & $probeScript @probeParams
+  }
+  catch {
     Write-Warning "Native policy diagnostics reported blocked suites."
   }
   if (-not [string]::IsNullOrWhiteSpace($probeJsonPath)) {
