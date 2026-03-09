@@ -2,7 +2,12 @@ param(
   [switch]$SkipPython,
   [switch]$SkipPio,
   [switch]$Fast,
-  [string]$Design = "main_scene.json"
+  [switch]$StrictArtifacts,
+  [string]$Design = "main_scene.json",
+  [string]$NativePolicyProbeJson = "reports/native_policy_probe_auto.json",
+  [string]$NativePolicyHistoryJsonl = "reports/native_policy_probe_history.jsonl",
+  [string]$NativePolicySummaryMarkdown = "reports/native_policy_summary.md",
+  [string]$NativePolicyHistoryCsv = "reports/native_policy_history.csv"
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,7 +41,29 @@ try {
     -SkipPio:$SkipPio `
     -Fast:$Fast `
     -Design $Design `
+    -NativePolicyProbeJson $NativePolicyProbeJson `
+    -NativePolicyHistoryJsonl $NativePolicyHistoryJsonl `
     -AllowNativePolicyBlock
+
+  if ($StrictArtifacts) {
+    $artifactCheck = Join-Path $PSScriptRoot "check_native_policy_artifacts.ps1"
+    if (-not (Test-Path $artifactCheck)) {
+      throw "Missing script: $artifactCheck"
+    }
+
+    Write-Host "[INFO] Running strict native policy artifact check..."
+    & powershell -ExecutionPolicy Bypass -File $artifactCheck `
+      -ProbeJson $NativePolicyProbeJson `
+      -HistoryJsonl $NativePolicyHistoryJsonl `
+      -SummaryMarkdown $NativePolicySummaryMarkdown `
+      -HistoryCsv $NativePolicyHistoryCsv `
+      -RequireMarkdown `
+      -RequireCsv
+
+    if ($LASTEXITCODE -ne 0) {
+      throw "Strict native policy artifact check failed with exit code $LASTEXITCODE"
+    }
+  }
 }
 finally {
   if ($null -eq $prev) {

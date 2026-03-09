@@ -48,6 +48,7 @@ Poznámka:
 - Rychlá cesta na Windows: `winget install -e --id MSYS2.MSYS2`, pak v MSYS2 shellu `pacman -S --needed mingw-w64-ucrt-x86_64-gcc` a přidat `C:\msys64\ucrt64\bin` do `PATH`.
 - Na Windows může lokální policy zablokovat některé ESP-IDF toolchain binárky.
 - Pokud native testy padají na `WinError 4551`, problém je host policy (App Control), ne kód testu; použij `scripts/check_all_local.ps1 -Fast` (tolerant) nebo povol běh `.pio\\build\\native` test binárek.
+- Pokud chces i po tolerant runu tvrde overit report artefakty, pouzij `scripts/check_all_local.ps1 -Fast -StrictArtifacts`.
 - `scripts/check_all.ps1` v režimu `-AllowNativePolicyBlock` po opakovaném policy failu automaticky spustí krátký `check_native_policy_probe.ps1`, aby vypsal blokované suites.
 - Ve stejném kroku uloží i JSON artefakt `reports/native_policy_probe_auto.json` (lze změnit přes `-NativePolicyProbeJson` nebo vypnout prázdnou hodnotou).
 - Pokud se probe nespusti (zadny opakovany policy fail), zapise se placeholder JSON se stavem `Triggered=false`, aby artefakt existoval konzistentne po kazdem behu.
@@ -78,6 +79,7 @@ Poznámka:
 ```powershell
 scripts/check_all.ps1
 scripts/check_all_local.ps1 -Fast
+scripts/check_all_local.ps1 -Fast -StrictArtifacts
 scripts/check_native_toolchain.ps1
 scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1

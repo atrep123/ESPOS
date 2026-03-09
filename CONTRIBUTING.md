@@ -20,6 +20,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Native policy probe (Windows): `scripts/check_native_policy_probe.ps1`
 - Native preflight (shell): `./scripts/check_native_toolchain.sh`
 - Lokalni tolerant checks (Windows): `scripts/check_all_local.ps1 -Fast`
+- Lokalni tolerant checks + strict artefakty (Windows): `scripts/check_all_local.ps1 -Fast -StrictArtifacts`
 - Lokalni tolerant checks (shell): `./scripts/check_all_local.sh main_scene.json`
 
 ## Poznamky k native testum (Windows)
@@ -28,6 +29,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Doporucena instalace na Windows: `winget install -e --id MSYS2.MSYS2`, potom v MSYS2 shellu `pacman -S --needed mingw-w64-ucrt-x86_64-gcc` a pridat `C:\\msys64\\ucrt64\\bin` do `PATH`.
 - Pokud `gcc` chybi, `scripts/check_all_local.ps1` v tolerantnim rezimu native test preskoci a vypise varovani.
 - Pokud testy padaji na `WinError 4551`, jde o host App Control policy (ne regresi firmware); pouzij tolerant workflow (`scripts/check_all_local.ps1 -Fast`) nebo povol test binarky v `.pio\\build\\native`.
+- Kdyz potrebujes po tolerant runu tvrde overit reporty, pouzij `scripts/check_all_local.ps1 -Fast -StrictArtifacts`.
 - `scripts/check_all.ps1 -AllowNativePolicyBlock` po opakovanem policy failu automaticky spusti kratky probe a vypise blokovane suites.
 - Pri tom samem behu uklada JSON artefakt do `reports/native_policy_probe_auto.json` (prepsatelne parametrem `-NativePolicyProbeJson`).
 - Kdyz probe neni potreba spustit, vytvori se placeholder JSON (`Triggered=false`) pro konzistentni reporting.
