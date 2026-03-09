@@ -2,7 +2,8 @@ param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
   [int]$Top = 5,
   [string]$MarkdownOut = "reports/native_policy_triage.md",
-  [int]$DeltaWindow = 0
+  [int]$DeltaWindow = 0,
+  [switch]$OnlyWorsening
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,6 +15,10 @@ if ($Top -lt 1) {
 
 if ($DeltaWindow -lt 0) {
   throw "Invalid value for -DeltaWindow: must be >= 0"
+}
+
+if ($OnlyWorsening -and $DeltaWindow -le 0) {
+  throw "Invalid usage: -OnlyWorsening requires -DeltaWindow > 0"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -174,6 +179,10 @@ if ($deltaEnabled) {
       }
     )
 
+    if ($OnlyWorsening) {
+      $deltaRanked = @($deltaRanked | Where-Object { $_.DeltaScore -gt 0 })
+    }
+
     $deltaTop = @(
       $deltaRanked |
         Sort-Object @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = 'Suite'; Descending = $false} |
@@ -188,6 +197,7 @@ Write-Host "Runs: $($rows.Count)"
 Write-Host "Top: $Top"
 if ($deltaEnabled) {
   Write-Host "DeltaWindow: $DeltaWindow"
+  Write-Host "OnlyWorsening: $OnlyWorsening"
 }
 
 if ($topRanked.Count -eq 0) {
@@ -204,7 +214,11 @@ if ($deltaEnabled) {
   if ($deltaPreviousWindow -eq 0) {
     Write-Host "Insufficient history for delta trend. Need at least 2 runs when -DeltaWindow is used."
   } elseif ($deltaTop.Count -eq 0) {
-    Write-Host "No suite deltas found for requested windows."
+    if ($OnlyWorsening) {
+      Write-Host "No worsening suite deltas found for requested windows."
+    } else {
+      Write-Host "No suite deltas found for requested windows."
+    }
   } else {
     Write-Host "Recent window: $deltaRecentWindow run(s); Previous window: $deltaPreviousWindow run(s)"
     $deltaTop |
@@ -226,6 +240,7 @@ $md += ('- History: ' + $resolvedHistoryPath)
 $md += ('- Runs: ' + $rows.Count)
 $md += ('- Top: ' + $Top)
 $md += ('- DeltaWindow: ' + $DeltaWindow)
+$md += ('- OnlyWorsening: ' + $OnlyWorsening)
 $md += "- Score formula: 2 * PolicyHits + TransientHits"
 $md += ""
 
@@ -258,7 +273,11 @@ if ($deltaEnabled) {
   if ($deltaPreviousWindow -eq 0) {
     $md += 'Insufficient history for delta trend. Need at least 2 runs when `-DeltaWindow` is used.'
   } elseif ($deltaTop.Count -eq 0) {
-    $md += "No suite deltas found for requested windows."
+    if ($OnlyWorsening) {
+      $md += "No worsening suite deltas found for requested windows."
+    } else {
+      $md += "No suite deltas found for requested windows."
+    }
   } else {
     $md += ('- Recent window: ' + $deltaRecentWindow)
     $md += ('- Previous window: ' + $deltaPreviousWindow)

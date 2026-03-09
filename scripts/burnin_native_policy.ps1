@@ -11,6 +11,7 @@ param(
 	[string]$TriageReportPath = "reports/native_policy_triage.md",
 	[int]$TriageTop = 5,
 	[int]$TriageDeltaWindow = 0,
+	[switch]$TriageOnlyWorsening,
 	[switch]$SkipTriage,
 	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
@@ -174,6 +175,10 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 
 	if ($TriageDeltaWindow -gt 0) {
 		$triageArgs += @("-DeltaWindow", $TriageDeltaWindow)
+	}
+
+	if ($TriageOnlyWorsening) {
+		$triageArgs += "-OnlyWorsening"
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {
