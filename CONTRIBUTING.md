@@ -16,6 +16,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Firmware testy (host): `pio test -e native`
 - Firmware build (bez HW): `pio run -e arduino_nano_esp32-nohw`
 - Native preflight (Windows): `scripts/check_native_toolchain.ps1`
+- Native preflight (shell): `./scripts/check_native_toolchain.sh`
 
 ## Poznamky k native testum (Windows)
 

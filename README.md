@@ -54,6 +54,10 @@ scripts/check_all.ps1
 scripts/check_native_toolchain.ps1
 ```
 
+```bash
+./scripts/check_native_toolchain.sh
+```
+
 ## Repo docs
 
 - `AGENTS.md` (work guide)
