@@ -1,0 +1,113 @@
+﻿{
+    "Summary":  {
+                    "ProbeTimestamp":  "2026-03-09T19:36:27.2083988+01:00",
+                    "RepoRoot":  "C:\\Users\\atrep\\Desktop\\ESPOS\\ESPOS",
+                    "Triggered":  true,
+                    "MaxAttemptsPerSuite":  2,
+                    "DelaySeconds":  1,
+                    "Rounds":  1,
+                    "Suites":  [
+                                   "test_msgbus",
+                                   "test_seesaw",
+                                   "test_store",
+                                   "test_ui_bindings",
+                                   "test_ui_cmd",
+                                   "test_ui_components",
+                                   "test_ui_core",
+                                   "test_ui_font",
+                                   "test_ui_listmodel",
+                                   "test_ui_meta",
+                                   "test_ui_nav",
+                                   "test_ui_render_swbuf"
+                               ],
+                    "PolicyBlockCount":  3,
+                    "TransientPolicyBlockCount":  0,
+                    "FailureCount":  0
+                },
+    "Results":  [
+                    {
+                        "Round":  1,
+                        "Suite":  "test_msgbus",
+                        "Status":  "POLICY_BLOCK",
+                        "ExitCode":  1,
+                        "Attempts":  2
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_seesaw",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_store",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_bindings",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_cmd",
+                        "Status":  "POLICY_BLOCK",
+                        "ExitCode":  1,
+                        "Attempts":  2
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_components",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_core",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_font",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_listmodel",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_meta",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_nav",
+                        "Status":  "POLICY_BLOCK",
+                        "ExitCode":  1,
+                        "Attempts":  2
+                    },
+                    {
+                        "Round":  1,
+                        "Suite":  "test_ui_render_swbuf",
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
+                    }
+                ]
+}

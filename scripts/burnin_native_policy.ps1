@@ -6,7 +6,9 @@ param(
 	[switch]$FailOnPolicyBlock,
 	[string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
 	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
-	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md"
+	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md",
+	[switch]$ArchiveProbeSnapshots,
+	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots"
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,6 +22,11 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $checkAll = Join-Path $PSScriptRoot "check_all.ps1"
 $summarize = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
 $resolvedProbeJsonPath = Join-Path $repoRoot $ProbeJsonPath
+$resolvedSnapshotDir = Join-Path $repoRoot $ProbeSnapshotDir
+
+if ($ArchiveProbeSnapshots -and -not (Test-Path $resolvedSnapshotDir)) {
+	New-Item -ItemType Directory -Path $resolvedSnapshotDir -Force | Out-Null
+}
 
 if (-not (Test-Path $checkAll)) {
 	throw "Missing script: $checkAll"
@@ -51,6 +58,13 @@ for ($round = 1; $round -le $Rounds; $round++) {
 
 	& powershell @args
 	$exitCode = $LASTEXITCODE
+
+	if ($ArchiveProbeSnapshots -and (Test-Path $resolvedProbeJsonPath)) {
+		$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+		$snapshotPath = Join-Path $resolvedSnapshotDir ("probe_round{0:D2}_{1}.json" -f $round, $stamp)
+		Copy-Item -Path $resolvedProbeJsonPath -Destination $snapshotPath -Force
+		Write-Host "[INFO] Archived probe snapshot: $snapshotPath"
+	}
 
 	if (Test-Path $resolvedProbeJsonPath) {
 		try {
