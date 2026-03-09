@@ -3,6 +3,8 @@ param(
   [switch]$SkipPio,
   [switch]$Fast,
   [switch]$AllowNativePolicyBlock,
+  [string]$NativePolicyProbeJson = "reports/native_policy_probe_auto.json",
+  [int]$NativePolicyProbeRounds = 1,
   [string]$Design = "main_scene.json"
 )
 
@@ -10,6 +12,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $allowNativePolicyBlockResolved = $AllowNativePolicyBlock -or ($env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK -eq "1")
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 function Try-AddMsysGccToPath {
   $msysGccDir = "C:\msys64\ucrt64\bin"
@@ -39,9 +42,28 @@ function Invoke-NativePolicyDiagnostics {
   Write-Host ""
   Write-Host "[INFO] Running native policy diagnostics to identify blocked suites..."
   # Keep diagnostics bounded so strict check remains fast enough for routine use.
-  & powershell -ExecutionPolicy Bypass -File $probeScript -MaxAttemptsPerSuite 2 -DelaySeconds 1
+  $probeJsonPath = ""
+  if (-not [string]::IsNullOrWhiteSpace($NativePolicyProbeJson)) {
+    $probeJsonPath = (Join-Path $repoRoot $NativePolicyProbeJson)
+  }
+
+  $probeArgs = @(
+    "-ExecutionPolicy", "Bypass",
+    "-File", $probeScript,
+    "-MaxAttemptsPerSuite", "2",
+    "-DelaySeconds", "1",
+    "-Rounds", $NativePolicyProbeRounds
+  )
+  if (-not [string]::IsNullOrWhiteSpace($probeJsonPath)) {
+    $probeArgs += @("-JsonOut", $probeJsonPath)
+  }
+
+  & powershell @probeArgs
   if ($LASTEXITCODE -ne 0) {
     Write-Warning "Native policy diagnostics reported blocked suites."
+  }
+  if (-not [string]::IsNullOrWhiteSpace($probeJsonPath)) {
+    Write-Host "[INFO] Native policy JSON report: $probeJsonPath"
   }
 }
 
