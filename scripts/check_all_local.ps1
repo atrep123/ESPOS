@@ -12,6 +12,18 @@ $prev = $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK
 $env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK = "1"
 
 try {
+  if (-not $SkipPio) {
+    $preflight = Join-Path $PSScriptRoot "check_native_toolchain.ps1"
+    if (Test-Path $preflight) {
+      try {
+        & $preflight
+      }
+      catch {
+        Write-Warning "Native preflight reported missing prerequisites; continuing with tolerant local checks."
+      }
+    }
+  }
+
   & "$PSScriptRoot\check_all.ps1" `
     -SkipPython:$SkipPython `
     -SkipPio:$SkipPio `
