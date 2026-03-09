@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
   [int]$Last = 20,
@@ -28,7 +29,21 @@ if ($csvOutSpecified -and [string]::IsNullOrWhiteSpace($CsvOut)) {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$resolvedHistoryPath = Join-Path $repoRoot $HistoryPath
+
+function Resolve-RepoPath([string]$inputPath) {
+  if ([string]::IsNullOrWhiteSpace($inputPath)) {
+    return ""
+  }
+
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($inputPath)
+  if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+    return $expandedPath
+  }
+
+  return (Join-Path $repoRoot $expandedPath)
+}
+
+$resolvedHistoryPath = Resolve-RepoPath $HistoryPath
 
 if (-not (Test-Path $resolvedHistoryPath)) {
   throw "History file not found: $resolvedHistoryPath"
@@ -145,7 +160,7 @@ if ($transientSuiteFreq.Count -gt 0) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
-  $mdPath = Join-Path $repoRoot $MarkdownOut
+  $mdPath = Resolve-RepoPath $MarkdownOut
   $mdDir = Split-Path -Parent $mdPath
   if (-not [string]::IsNullOrWhiteSpace($mdDir) -and -not (Test-Path $mdDir)) {
     New-Item -ItemType Directory -Path $mdDir -Force | Out-Null
@@ -203,7 +218,7 @@ if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($CsvOut)) {
-  $csvPath = Join-Path $repoRoot $CsvOut
+  $csvPath = Resolve-RepoPath $CsvOut
   $csvDir = Split-Path -Parent $csvPath
   if (-not [string]::IsNullOrWhiteSpace($csvDir) -and -not (Test-Path $csvDir)) {
     New-Item -ItemType Directory -Path $csvDir -Force | Out-Null
