@@ -21,6 +21,26 @@ if ((-not $StrictArtifacts) -and ($StrictTriageCsv -or $StrictTriageDeltaCsv)) {
   throw "-StrictTriageCsv/-StrictTriageDeltaCsv require -StrictArtifacts"
 }
 
+if ([string]::IsNullOrWhiteSpace($Design)) {
+  throw "-Design cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($NativePolicyProbeJson)) {
+  throw "-NativePolicyProbeJson cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($NativePolicyHistoryJsonl)) {
+  throw "-NativePolicyHistoryJsonl cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($NativePolicySummaryMarkdown)) {
+  throw "-NativePolicySummaryMarkdown cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($NativePolicyHistoryCsv)) {
+  throw "-NativePolicyHistoryCsv cannot be empty"
+}
+
 if ((-not $StrictTriageCsv) -and -not [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
   throw "-NativePolicyTriageCsv requires -StrictTriageCsv"
 }
