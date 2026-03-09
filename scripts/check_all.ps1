@@ -59,6 +59,47 @@ function Append-NativePolicyHistory {
   Write-Host "[INFO] Appended native policy history: $historyPath"
 }
 
+function Invoke-NativePolicyCsvSmokeCheck {
+  if ([string]::IsNullOrWhiteSpace($NativePolicyHistoryJsonl)) {
+    return
+  }
+
+  $historyPath = Join-Path $repoRoot $NativePolicyHistoryJsonl
+  if (-not (Test-Path $historyPath)) {
+    Write-Warning "Native policy history not found for CSV smoke-check: $historyPath"
+    return
+  }
+
+  $summaryScript = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
+  if (-not (Test-Path $summaryScript)) {
+    Write-Warning "CSV smoke-check skipped: summarize_native_policy_history.ps1 not found"
+    return
+  }
+
+  $smokeCsvPath = Join-Path $repoRoot "reports/native_policy_history.smoke.csv"
+  Write-Host "[INFO] Running CSV smoke-check: $smokeCsvPath"
+
+  & powershell -ExecutionPolicy Bypass -File $summaryScript -HistoryPath $NativePolicyHistoryJsonl -Last 1 -CsvOut "reports/native_policy_history.smoke.csv"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Native policy CSV smoke-check failed: summarize_native_policy_history.ps1 exited with code $LASTEXITCODE"
+  }
+
+  if (-not (Test-Path $smokeCsvPath)) {
+    throw "Native policy CSV smoke-check failed: CSV file was not created at $smokeCsvPath"
+  }
+
+  $csvLines = @(Get-Content -Path $smokeCsvPath)
+  if ($csvLines.Count -lt 2) {
+    throw "Native policy CSV smoke-check failed: CSV file contains no data rows ($smokeCsvPath)"
+  }
+
+  if ($csvLines[0] -notmatch 'ProbeTimestamp' -or $csvLines[0] -notmatch 'PolicyBlockCount') {
+    throw "Native policy CSV smoke-check failed: CSV header is missing expected columns"
+  }
+
+  Write-Host "[INFO] Native policy CSV smoke-check passed"
+}
+
 function Try-AddMsysGccToPath {
   $msysGccDir = "C:\msys64\ucrt64\bin"
   $msysGccExe = Join-Path $msysGccDir "gcc.exe"
@@ -247,6 +288,7 @@ if (-not $SkipPio) {
     if ($allowNativePolicyBlockResolved) {
       Write-NativePolicyProbePlaceholder
       Append-NativePolicyHistory
+      Invoke-NativePolicyCsvSmokeCheck
     }
   }
   if (-not $Fast) {

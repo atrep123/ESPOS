@@ -52,6 +52,7 @@ Poznámka:
 - Ve stejném kroku uloží i JSON artefakt `reports/native_policy_probe_auto.json` (lze změnit přes `-NativePolicyProbeJson` nebo vypnout prázdnou hodnotou).
 - Pokud se probe nespusti (zadny opakovany policy fail), zapise se placeholder JSON se stavem `Triggered=false`, aby artefakt existoval konzistentne po kazdem behu.
 - Po kazdem behu s `-AllowNativePolicyBlock` se navic appendne JSONL historie do `reports/native_policy_probe_history.jsonl` (lze zmenit parametrem `-NativePolicyHistoryJsonl`).
+- Ve stejnem rezimu se po appendu historie provede i CSV smoke-check exportu (`reports/native_policy_history.smoke.csv`).
 - Rychly trend/report z historie vypises pres `scripts/summarize_native_policy_history.ps1`.
 - Summary navic ukazuje frekvenci konkretnich blokovanych/transient suites (pokud jsou v historii dostupne).
 - Summary vypisuje i procentualni run-rate metriky (triggered/policy/transient/failure).

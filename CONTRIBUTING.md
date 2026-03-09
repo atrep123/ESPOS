@@ -32,6 +32,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Pri tom samem behu uklada JSON artefakt do `reports/native_policy_probe_auto.json` (prepsatelne parametrem `-NativePolicyProbeJson`).
 - Kdyz probe neni potreba spustit, vytvori se placeholder JSON (`Triggered=false`) pro konzistentni reporting.
 - Zaroven se appenduje JSONL historie do `reports/native_policy_probe_history.jsonl` (konfigurovatelne `-NativePolicyHistoryJsonl`).
+- Ve stejnem rezimu se po appendu provede i CSV smoke-check exportu do `reports/native_policy_history.smoke.csv`.
 - Rychly souhrn trendu vypises pomoci `scripts/summarize_native_policy_history.ps1`.
 - Souhrn umi i frekvenci konkretnich blokovanych/transient suites napric historií.
 - Soucasti souhrnu jsou i procentualni run-rate metriky pro rychle porovnani stability.
