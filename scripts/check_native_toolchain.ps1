@@ -24,7 +24,14 @@ if (-not $hasGcc) {
   Write-Host ""
   Write-Host "Suggested fix:"
   Write-Host "- Install MSYS2 or MinGW-w64"
-  Write-Host "- Add the gcc bin folder to PATH"
+  if ($null -ne (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Write-Host "- winget install -e --id MSYS2.MSYS2"
+    Write-Host "  then in MSYS2 shell: pacman -S --needed mingw-w64-ucrt-x86_64-gcc"
+  }
+  if ($null -ne (Get-Command choco -ErrorAction SilentlyContinue)) {
+    Write-Host "- choco install mingw -y"
+  }
+  Write-Host "- Add the gcc bin folder to PATH (for MSYS2: C:\\msys64\\ucrt64\\bin)"
   Write-Host "- Verify with: gcc --version"
 }
 

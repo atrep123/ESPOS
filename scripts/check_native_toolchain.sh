@@ -23,8 +23,30 @@ fi
 if [[ "$HAS_GCC" -eq 0 ]]; then
   echo
   echo "Suggested fix:"
-  echo "- Install MSYS2 or MinGW-w64"
-  echo "- Add the gcc bin folder to PATH"
+  case "$(uname -s)" in
+    Linux*)
+      if command -v apt >/dev/null 2>&1; then
+        echo "- sudo apt update; sudo apt install -y build-essential"
+      elif command -v dnf >/dev/null 2>&1; then
+        echo "- sudo dnf groupinstall -y \"Development Tools\""
+      elif command -v pacman >/dev/null 2>&1; then
+        echo "- sudo pacman -S --needed base-devel gcc"
+      else
+        echo "- Install gcc using your distro package manager"
+      fi
+      ;;
+    Darwin*)
+      if command -v brew >/dev/null 2>&1; then
+        echo "- brew install gcc"
+      else
+        echo "- Install Xcode Command Line Tools: xcode-select --install"
+      fi
+      ;;
+    *)
+      echo "- Install MSYS2 or MinGW-w64"
+      echo "- Add the gcc bin folder to PATH"
+      ;;
+  esac
   echo "- Verify with: gcc --version"
 fi
 

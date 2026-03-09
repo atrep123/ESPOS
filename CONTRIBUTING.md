@@ -23,4 +23,5 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 ## Poznamky k native testum (Windows)
 
 - `pio test -e native` potrebuje mit `gcc` v `PATH`.
+- Doporucena instalace na Windows: `winget install -e --id MSYS2.MSYS2`, potom v MSYS2 shellu `pacman -S --needed mingw-w64-ucrt-x86_64-gcc` a pridat `C:\\msys64\\ucrt64\\bin` do `PATH`.
 - Pokud `gcc` chybi, `scripts/check_all_local.ps1` v tolerantnim rezimu native test preskoci a vypise varovani.
