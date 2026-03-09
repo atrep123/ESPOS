@@ -15,3 +15,8 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Python testy: `python -m pytest -q`
 - Firmware testy (host): `pio test -e native`
 - Firmware build (bez HW): `pio run -e arduino_nano_esp32-nohw`
+
+## Poznamky k native testum (Windows)
+
+- `pio test -e native` potrebuje mit `gcc` v `PATH`.
+- Pokud `gcc` chybi, `scripts/check_all_local.ps1` v tolerantnim rezimu native test preskoci a vypise varovani.

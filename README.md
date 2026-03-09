@@ -44,6 +44,7 @@ pio run -e esp32-s3-devkitm-1-nohw
 Poznámka:
 - PlatformIO verze jsou v repu připnuté záměrně kvůli reprodukovatelným buildům a stabilním `sdkconfig`.
 - `pio test -e native` vyžaduje host C compiler dostupný v `PATH`.
+- Na Windows to znamená mít v `PATH` `gcc` (napr. MSYS2/MinGW-w64). Pokud `gcc` chybí, `scripts/check_all_local.ps1` native testy přeskočí s varováním.
 - Na Windows může lokální policy zablokovat některé ESP-IDF toolchain binárky.
 
 ## Quick checks
