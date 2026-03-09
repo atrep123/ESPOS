@@ -119,6 +119,11 @@ if [[ -z "$DESIGN" ]]; then
   exit 2
 fi
 
+if [[ "$DESIGN" =~ ^[[:space:]]+$ ]]; then
+  echo "[FAIL] Design path cannot be whitespace-only" >&2
+  exit 2
+fi
+
 if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIAGE_DELTA_CSV" -eq 1 ) ]]; then
   echo "[FAIL] --strict-triage-csv/--strict-triage-delta-csv require --strict-artifacts" >&2
   exit 2
