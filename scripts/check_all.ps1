@@ -27,6 +27,10 @@ if (Test-Path "tools\\validate_design.py") {
   Run-Step "validate_design" "python tools\\validate_design.py $Design"
 }
 
+if (Test-Path "tools\\check_demo_scene_strict.py") {
+  Run-Step "demo_scene strict gate" "python tools\\check_demo_scene_strict.py"
+}
+
 if (-not $SkipPio) {
   Run-Step "pio native tests" "pio test -e native"
   if (-not $Fast) {
