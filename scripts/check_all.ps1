@@ -13,6 +13,7 @@ Set-StrictMode -Version Latest
 
 $allowNativePolicyBlockResolved = $AllowNativePolicyBlock -or ($env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK -eq "1")
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$nativePolicyDiagnosticsTriggered = $false
 
 function Try-AddMsysGccToPath {
   $msysGccDir = "C:\msys64\ucrt64\bin"
@@ -38,6 +39,8 @@ function Invoke-NativePolicyDiagnostics {
   if (-not (Test-Path $probeScript)) {
     return
   }
+
+  $script:nativePolicyDiagnosticsTriggered = $true
 
   Write-Host ""
   Write-Host "[INFO] Running native policy diagnostics to identify blocked suites..."
@@ -65,6 +68,34 @@ function Invoke-NativePolicyDiagnostics {
   if (-not [string]::IsNullOrWhiteSpace($probeJsonPath)) {
     Write-Host "[INFO] Native policy JSON report: $probeJsonPath"
   }
+}
+
+function Write-NativePolicyProbePlaceholder {
+  if ([string]::IsNullOrWhiteSpace($NativePolicyProbeJson)) {
+    return
+  }
+  if ($script:nativePolicyDiagnosticsTriggered) {
+    return
+  }
+
+  $probeJsonPath = Join-Path $repoRoot $NativePolicyProbeJson
+  $probeJsonDir = Split-Path -Parent $probeJsonPath
+  if (-not [string]::IsNullOrWhiteSpace($probeJsonDir) -and -not (Test-Path $probeJsonDir)) {
+    New-Item -ItemType Directory -Path $probeJsonDir -Force | Out-Null
+  }
+
+  $placeholder = [pscustomobject]@{
+    Summary = [pscustomobject]@{
+      ProbeTimestamp = (Get-Date).ToString("o")
+      RepoRoot = $repoRoot
+      Triggered = $false
+      Note = "No repeated WinError 4551 policy blocking detected in this check_all run."
+    }
+    Results = @()
+  }
+
+  $placeholder | ConvertTo-Json -Depth 5 | Set-Content -Path $probeJsonPath -Encoding UTF8
+  Write-Host "[INFO] Native policy JSON placeholder: $probeJsonPath"
 }
 
 function Run-Step-WithWin4551Retry(
@@ -169,6 +200,9 @@ if (-not $SkipPio) {
     }
   } else {
     Run-Step-WithWin4551Retry "pio native tests" "pio test -e native" 4 2 $allowNativePolicyBlockResolved
+    if ($allowNativePolicyBlockResolved) {
+      Write-NativePolicyProbePlaceholder
+    }
   }
   if (-not $Fast) {
     Run-Step "pio build (arduino_nano_esp32-nohw)" "pio run -e arduino_nano_esp32-nohw"
