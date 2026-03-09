@@ -34,6 +34,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Kdyz potrebujes po tolerant runu tvrde overit reporty, pouzij `scripts/check_all_local.ps1 -Fast -StrictArtifacts`.
 - Ve strict modu lze volitelne vyzadovat i triage CSV pres `-StrictTriageCsv` (pokud nezadas `-NativePolicyTriageCsv`, pouzije se default `reports/native_policy_triage.csv`) a delta pres `-StrictTriageDeltaCsv` (pokud nezadas `-NativePolicyTriageDeltaCsv`, pouzije se default `reports/native_policy_triage_delta.only.csv`).
 - Pozor: explicitni cesty `-NativePolicyTriageCsv`/`-NativePolicyTriageDeltaCsv` vyzaduji odpovidajici flag `-StrictTriageCsv`/`-StrictTriageDeltaCsv` (jinak wrapper failne hned na argument validation).
+- Stejne i v shell wrapperu: `--native-policy-triage-csv` vyzaduje `--strict-triage-csv` a `--native-policy-triage-delta-csv` vyzaduje `--strict-triage-delta-csv`.
 - `scripts/check_all.ps1 -AllowNativePolicyBlock` po opakovanem policy failu automaticky spusti kratky probe a vypise blokovane suites.
 - Pri tom samem behu uklada JSON artefakt do `reports/native_policy_probe_auto.json` (prepsatelne parametrem `-NativePolicyProbeJson`).
 - Kdyz probe neni potreba spustit, vytvori se placeholder JSON (`Triggered=false`) pro konzistentni reporting.

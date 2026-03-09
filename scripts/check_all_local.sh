@@ -64,8 +64,8 @@ Options:
   --native-policy-history-jsonl PATH    History JSONL path (default reports/native_policy_probe_history.jsonl)
   --native-policy-summary-markdown PATH Summary markdown path (default reports/native_policy_summary.md)
   --native-policy-history-csv PATH      History CSV path (default reports/native_policy_history.csv)
-  --native-policy-triage-csv PATH       Triage combined CSV path (default reports/native_policy_triage.csv when --strict-triage-csv)
-  --native-policy-triage-delta-csv PATH Triage delta CSV path (default reports/native_policy_triage_delta.only.csv when --strict-triage-delta-csv)
+  --native-policy-triage-csv PATH       Triage combined CSV path (requires --strict-triage-csv; default reports/native_policy_triage.csv)
+  --native-policy-triage-delta-csv PATH Triage delta CSV path (requires --strict-triage-delta-csv; default reports/native_policy_triage_delta.only.csv)
 EOF
       exit 0
       ;;
