@@ -80,22 +80,25 @@ for ($round = 1; $round -le $Rounds; $round++) {
 	Write-Host ""
 	Write-Host "== Burn-in round $round/$Rounds =="
 
-	$args = @(
-		"-ExecutionPolicy", "Bypass",
-		"-File", $checkAll,
-		"-AllowNativePolicyBlock",
-		"-NativePolicyHistoryJsonl", $HistoryPath,
-		"-NativePolicyProbeJson", $ProbeJsonPath
-	)
+	$checkAllParams = @{
+		AllowNativePolicyBlock = $true
+		NativePolicyHistoryJsonl = $HistoryPath
+		NativePolicyProbeJson = $ProbeJsonPath
+	}
 	if ($SkipPython) {
-		$args += "-SkipPython"
+		$checkAllParams.SkipPython = $true
 	}
 	if (-not $IncludePioBuilds) {
-		$args += "-Fast"
+		$checkAllParams.Fast = $true
 	}
 
-	& powershell @args
-	$exitCode = $LASTEXITCODE
+	$exitCode = 0
+	try {
+		& $checkAll @checkAllParams
+	}
+	catch {
+		$exitCode = 1
+	}
 
 	if ($ArchiveProbeSnapshots -and (Test-Path $resolvedProbeJsonPath)) {
 		$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -165,98 +168,94 @@ if ($transientPolicyRounds.Count -gt 0) {
 
 if (Test-Path $summarize) {
 	Write-Host ""
-	$sumArgs = @(
-		"-ExecutionPolicy", "Bypass",
-		"-File", $summarize,
-		"-HistoryPath", $HistoryPath,
-		"-Last", ([Math]::Max($Rounds, 20))
-	)
+	$sumParams = @{
+		HistoryPath = $HistoryPath
+		Last = [Math]::Max($Rounds, 20)
+	}
 	if (-not [string]::IsNullOrWhiteSpace($MarkdownSummaryPath)) {
-		$sumArgs += @("-MarkdownOut", $MarkdownSummaryPath)
+		$sumParams.MarkdownOut = $MarkdownSummaryPath
 	}
 	if (-not [string]::IsNullOrWhiteSpace($CsvSummaryPath)) {
-		$sumArgs += @("-CsvOut", $CsvSummaryPath)
+		$sumParams.CsvOut = $CsvSummaryPath
 	}
-	& powershell @sumArgs
+	& $summarize @sumParams
 }
 
 if (-not $SkipTriage -and (Test-Path $triage)) {
 	Write-Host ""
-	$triageArgs = @(
-		"-ExecutionPolicy", "Bypass",
-		"-File", $triage,
-		"-HistoryPath", $HistoryPath,
-		"-Top", $TriageTop
-	)
+	$triageParams = @{
+		HistoryPath = $HistoryPath
+		Top = $TriageTop
+	}
 
 	if ($TriageDeltaWindow -gt 0) {
-		$triageArgs += @("-DeltaWindow", $TriageDeltaWindow)
+		$triageParams.DeltaWindow = $TriageDeltaWindow
 	}
 
 	if ($TriageOnlyWorsening) {
-		$triageArgs += "-OnlyWorsening"
+		$triageParams.OnlyWorsening = $true
 	}
 
 	if ($TriageIncludeAllDeltaRows) {
-		$triageArgs += "-IncludeAllDeltaRows"
+		$triageParams.IncludeAllDeltaRows = $true
 	}
 
 	if ($TriageMinAbsDeltaScore -gt 0) {
-		$triageArgs += @("-MinAbsDeltaScore", $TriageMinAbsDeltaScore)
+		$triageParams.MinAbsDeltaScore = $TriageMinAbsDeltaScore
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageDeltaSortBy)) {
-		$triageArgs += @("-DeltaSortBy", $TriageDeltaSortBy)
+		$triageParams.DeltaSortBy = $TriageDeltaSortBy
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {
-		$triageArgs += @("-MarkdownOut", $TriageReportPath)
+		$triageParams.MarkdownOut = $TriageReportPath
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageCsvPath)) {
-		$triageArgs += @("-CsvOut", $TriageCsvPath)
+		$triageParams.CsvOut = $TriageCsvPath
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsvPath)) {
-		$triageArgs += @("-DeltaCsvOut", $TriageDeltaCsvPath)
+		$triageParams.DeltaCsvOut = $TriageDeltaCsvPath
 	}
 
-	& powershell @triageArgs
+	& $triage @triageParams
 
 	if (-not $SkipTriageCsvCheck -and (Test-Path $triageCsvCheck)) {
-		$triageCheckArgs = @(
-			"-ExecutionPolicy", "Bypass",
-			"-File", $triageCsvCheck
-		)
+		$triageCheckParams = @{
+			RequireCombined = $true
+		}
 
 		if (-not [string]::IsNullOrWhiteSpace($TriageCsvPath)) {
-			$triageCheckArgs += @("-CombinedCsv", $TriageCsvPath)
+			$triageCheckParams.CombinedCsv = $TriageCsvPath
 		}
 		if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsvPath)) {
-			$triageCheckArgs += @("-DeltaCsv", $TriageDeltaCsvPath, "-RequireDelta")
+			$triageCheckParams.DeltaCsv = $TriageDeltaCsvPath
+			$triageCheckParams.RequireDelta = $true
 		}
 
-		& powershell @triageCheckArgs
+		& $triageCsvCheck @triageCheckParams
 	}
 }
 
 if (-not $SkipArtifactCheck -and (Test-Path $artifactCheck)) {
 	Write-Host ""
-	$artifactArgs = @(
-		"-ExecutionPolicy", "Bypass",
-		"-File", $artifactCheck,
-		"-ProbeJson", $ProbeJsonPath,
-		"-HistoryJsonl", $HistoryPath
-	)
+	$artifactParams = @{
+		ProbeJson = $ProbeJsonPath
+		HistoryJsonl = $HistoryPath
+	}
 
 	if (-not [string]::IsNullOrWhiteSpace($MarkdownSummaryPath)) {
-		$artifactArgs += @("-SummaryMarkdown", $MarkdownSummaryPath, "-RequireMarkdown")
+		$artifactParams.SummaryMarkdown = $MarkdownSummaryPath
+		$artifactParams.RequireMarkdown = $true
 	}
 	if (-not [string]::IsNullOrWhiteSpace($CsvSummaryPath)) {
-		$artifactArgs += @("-HistoryCsv", $CsvSummaryPath, "-RequireCsv")
+		$artifactParams.HistoryCsv = $CsvSummaryPath
+		$artifactParams.RequireCsv = $true
 	}
 
-	& powershell @artifactArgs
+	& $artifactCheck @artifactParams
 }
 
 if ($failed -gt 0) {
