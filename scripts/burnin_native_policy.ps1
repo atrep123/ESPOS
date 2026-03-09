@@ -3,6 +3,7 @@ param(
 	[int]$DelaySeconds = 0,
 	[switch]$SkipPython = $true,
 	[switch]$IncludePioBuilds,
+	[switch]$FailOnPolicyBlock,
 	[string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
 	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
 	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md"
@@ -18,6 +19,7 @@ if ($Rounds -lt 1) {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $checkAll = Join-Path $PSScriptRoot "check_all.ps1"
 $summarize = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
+$resolvedProbeJsonPath = Join-Path $repoRoot $ProbeJsonPath
 
 if (-not (Test-Path $checkAll)) {
 	throw "Missing script: $checkAll"
@@ -26,6 +28,8 @@ if (-not (Test-Path $checkAll)) {
 $passed = 0
 $failed = 0
 $failRounds = @()
+$policyBlockRounds = @()
+$transientPolicyRounds = @()
 
 for ($round = 1; $round -le $Rounds; $round++) {
 	Write-Host ""
@@ -47,6 +51,27 @@ for ($round = 1; $round -le $Rounds; $round++) {
 
 	& powershell @args
 	$exitCode = $LASTEXITCODE
+
+	if (Test-Path $resolvedProbeJsonPath) {
+		try {
+			$probe = Get-Content $resolvedProbeJsonPath -Raw | ConvertFrom-Json
+			$summary = $probe.Summary
+			$policyCount = [int]$summary.PolicyBlockCount
+			$transientCount = [int]$summary.TransientPolicyBlockCount
+
+			if ($policyCount -gt 0) {
+				$policyBlockRounds += $round
+				Write-Warning "Round $round recorded POLICY_BLOCK count: $policyCount"
+			} elseif ($transientCount -gt 0) {
+				$transientPolicyRounds += $round
+				Write-Warning "Round $round recorded transient policy blocks: $transientCount"
+			}
+		}
+		catch {
+			Write-Warning "Round ${round}: unable to parse probe JSON at $resolvedProbeJsonPath"
+		}
+	}
+
 	if ($exitCode -eq 0) {
 		$passed++
 	} else {
@@ -65,8 +90,16 @@ Write-Host "== Burn-in Summary =="
 Write-Host "Rounds: $Rounds"
 Write-Host "Passed: $passed"
 Write-Host "Failed: $failed"
+Write-Host "Rounds with POLICY_BLOCK: $($policyBlockRounds.Count)"
+Write-Host "Rounds with transient policy block only: $($transientPolicyRounds.Count)"
 if ($failRounds.Count -gt 0) {
 	Write-Host "Failed rounds: $($failRounds -join ', ')"
+}
+if ($policyBlockRounds.Count -gt 0) {
+	Write-Host "POLICY_BLOCK rounds: $($policyBlockRounds -join ', ')"
+}
+if ($transientPolicyRounds.Count -gt 0) {
+	Write-Host "Transient-only rounds: $($transientPolicyRounds -join ', ')"
 }
 
 if (Test-Path $summarize) {
@@ -85,6 +118,11 @@ if (Test-Path $summarize) {
 
 if ($failed -gt 0) {
 	exit 1
+}
+
+if ($FailOnPolicyBlock -and $policyBlockRounds.Count -gt 0) {
+	Write-Error "Burn-in completed, but POLICY_BLOCK was detected in round(s): $($policyBlockRounds -join ', ')"
+	exit 2
 }
 
 exit 0
