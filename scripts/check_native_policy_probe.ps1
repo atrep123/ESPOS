@@ -1,4 +1,7 @@
-param()
+param(
+  [int]$MaxAttemptsPerSuite = 3,
+  [int]$DelaySeconds = 2
+)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
@@ -42,30 +45,60 @@ foreach ($suite in $testSuites) {
   Write-Host ""
   Write-Host "== Probe $suite =="
 
-  $cmdOutput = & cmd /c "pio test -e native -f $suite 2>&1"
-  $exitCode = $LASTEXITCODE
-  $outText = ($cmdOutput | Out-String)
+  $attempt = 1
+  $exitCode = 1
+  $status = "FAILED"
+  $hadPolicyBlock = $false
 
-  # Echo command output so this script is useful directly in terminal.
-  $cmdOutput | Out-Host
+  while ($attempt -le $MaxAttemptsPerSuite) {
+    Write-Host "-- attempt $attempt/$MaxAttemptsPerSuite --"
 
-  $isPolicyBlock = ($outText -match 'WinError\s*4551') -or
-                   ($outText -match 'application control policy') -or
-                   ($outText -match 'Zásada řízení aplikací') -or
-                   ($outText -match 'Z.sada .* aplikac.') -or
-                   ($outText -match 'zablokovala')
+    $cmdOutput = & cmd /c "pio test -e native -f $suite 2>&1"
+    $exitCode = $LASTEXITCODE
+    $outText = ($cmdOutput | Out-String)
 
-  $status = "PASSED"
-  if ($exitCode -ne 0 -and $isPolicyBlock) {
-    $status = "POLICY_BLOCK"
-  } elseif ($exitCode -ne 0) {
-    $status = "FAILED"
+    # Echo command output so this script is useful directly in terminal.
+    $cmdOutput | Out-Host
+
+    $isPolicyBlock = ($outText -match 'WinError\s*4551') -or
+                     ($outText -match 'application control policy') -or
+                     ($outText -match 'Zásada řízení aplikací') -or
+                     ($outText -match 'Z.sada .* aplikac.') -or
+                     ($outText -match 'zablokovala')
+
+    if ($isPolicyBlock) {
+      $hadPolicyBlock = $true
+    }
+
+    if ($exitCode -eq 0) {
+      if ($hadPolicyBlock) {
+        $status = "POLICY_BLOCK_TRANSIENT"
+      } else {
+        $status = "PASSED"
+      }
+      break
+    }
+
+    if ($isPolicyBlock -and $attempt -lt $MaxAttemptsPerSuite) {
+      Write-Warning "Policy block detected for $suite, retrying in $DelaySeconds s..."
+      Start-Sleep -Seconds $DelaySeconds
+      $attempt++
+      continue
+    }
+
+    if ($isPolicyBlock) {
+      $status = "POLICY_BLOCK"
+    } else {
+      $status = "FAILED"
+    }
+    break
   }
 
   $results += [pscustomobject]@{
     Suite = $suite
     Status = $status
     ExitCode = $exitCode
+    Attempts = $attempt
   }
 }
 
@@ -74,6 +107,7 @@ Write-Host "== Probe Summary =="
 $results | Format-Table -AutoSize
 
 $policyCount = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK" }).Count
+$transientPolicyCount = @($results | Where-Object { $_.Status -eq "POLICY_BLOCK_TRANSIENT" }).Count
 $failCount = @($results | Where-Object { $_.Status -eq "FAILED" }).Count
 
 if ($failCount -gt 0) {
@@ -87,6 +121,11 @@ if ($policyCount -gt 0) {
   Write-Warning "Detected $policyCount suite(s) blocked by host policy (WinError 4551)."
   Write-Host "Use scripts/list_native_whitelist_targets.ps1 to prepare App Control allow-list targets."
   exit 2
+}
+
+if ($transientPolicyCount -gt 0) {
+  Write-Host ""
+  Write-Warning "Detected $transientPolicyCount transient policy block(s) that passed after retry."
 }
 
 Write-Host ""
