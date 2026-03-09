@@ -78,6 +78,7 @@ Poznámka:
 - Pocet ulozenych snapshotu lze omezit pres `-MaxSnapshotFiles` (default 50), starsi soubory se automaticky promazou.
 - Pro pripravu podkladu pro IT/App Control pouzij `scripts/generate_native_policy_allowlist_request.ps1` (vystup: `reports/native_policy_allowlist_request.md`).
 - Konzistenci policy artefaktu overis jednim krokem: `scripts/check_native_policy_artifacts.ps1 -RequireMarkdown -RequireCsv`.
+- Tentyz checker umi i triage CSV: `scripts/check_native_policy_artifacts.ps1 -TriageCsv reports/native_policy_triage.csv -RequireTriageCsv` (a volitelne `-TriageDeltaCsv ... -RequireTriageDeltaCsv`).
 - Konzistenci triage CSV overis jednim krokem: `scripts/check_native_policy_triage_csv.ps1 -RequireCombined` (a volitelne `-DeltaCsv ... -RequireDelta`).
 - Priority suites pro allow-list eskalaci vytahnes skriptem: `scripts/triage_native_policy_blockers.ps1 -Top 5`.
 - Trend zhorseni/zlepseni mezi okny ziskas pres `scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5`.

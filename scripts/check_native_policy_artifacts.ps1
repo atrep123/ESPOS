@@ -3,8 +3,12 @@ param(
   [string]$HistoryJsonl = "reports/native_policy_probe_history.jsonl",
   [string]$SummaryMarkdown = "reports/native_policy_summary.md",
   [string]$HistoryCsv = "reports/native_policy_history.csv",
+  [string]$TriageCsv = "",
+  [string]$TriageDeltaCsv = "",
   [switch]$RequireMarkdown,
-  [switch]$RequireCsv
+  [switch]$RequireCsv,
+  [switch]$RequireTriageCsv,
+  [switch]$RequireTriageDeltaCsv
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,6 +39,7 @@ $probePath = Resolve-RepoPath $ProbeJson
 $historyPath = Resolve-RepoPath $HistoryJsonl
 $markdownPath = Resolve-RepoPath $SummaryMarkdown
 $csvPath = Resolve-RepoPath $HistoryCsv
+$triageCsvCheck = Join-Path $PSScriptRoot "check_native_policy_triage_csv.ps1"
 
 Write-Host "== Native Policy Artifact Check =="
 
@@ -102,6 +107,35 @@ if ($RequireCsv) {
   }
 }
 
+if ($RequireTriageCsv -or $RequireTriageDeltaCsv -or -not [string]::IsNullOrWhiteSpace($TriageCsv) -or -not [string]::IsNullOrWhiteSpace($TriageDeltaCsv)) {
+  if (-not (Test-Path $triageCsvCheck)) {
+    throw "Missing script: $triageCsvCheck"
+  }
+
+  $triageArgs = @(
+    "-ExecutionPolicy", "Bypass",
+    "-File", $triageCsvCheck
+  )
+
+  if (-not [string]::IsNullOrWhiteSpace($TriageCsv)) {
+    $triageArgs += @("-CombinedCsv", $TriageCsv)
+  }
+  if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsv)) {
+    $triageArgs += @("-DeltaCsv", $TriageDeltaCsv)
+  }
+  if ($RequireTriageCsv) {
+    $triageArgs += "-RequireCombined"
+  }
+  if ($RequireTriageDeltaCsv) {
+    $triageArgs += "-RequireDelta"
+  }
+
+  & powershell @triageArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Triage CSV check failed with exit code $LASTEXITCODE"
+  }
+}
+
 $latestHistory = $historyEntries[-1]
 $probeTs = [string]$probe.Summary.ProbeTimestamp
 $historyTs = [string]$latestHistory.ProbeTimestamp
@@ -118,5 +152,11 @@ if ($RequireMarkdown) {
 }
 if ($RequireCsv) {
   Write-Host "[OK] History CSV: $csvPath"
+}
+if ($RequireTriageCsv -or -not [string]::IsNullOrWhiteSpace($TriageCsv)) {
+  Write-Host "[OK] Triage CSV checked"
+}
+if ($RequireTriageDeltaCsv -or -not [string]::IsNullOrWhiteSpace($TriageDeltaCsv)) {
+  Write-Host "[OK] Triage delta CSV checked"
 }
 Write-Host "[OK] Native policy artifact check passed"
