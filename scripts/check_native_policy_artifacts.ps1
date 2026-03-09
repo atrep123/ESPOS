@@ -41,6 +41,16 @@ $markdownPath = Resolve-RepoPath $SummaryMarkdown
 $csvPath = Resolve-RepoPath $HistoryCsv
 $triageCsvCheck = Join-Path $PSScriptRoot "check_native_policy_triage_csv.ps1"
 
+if ($RequireTriageCsv -and [string]::IsNullOrWhiteSpace($TriageCsv)) {
+  $TriageCsv = "reports/native_policy_triage.csv"
+  Write-Host "[INFO] Using default triage CSV path: $TriageCsv"
+}
+
+if ($RequireTriageDeltaCsv -and [string]::IsNullOrWhiteSpace($TriageDeltaCsv)) {
+  $TriageDeltaCsv = "reports/native_policy_triage_delta.only.csv"
+  Write-Host "[INFO] Using default delta triage CSV path: $TriageDeltaCsv"
+}
+
 Write-Host "== Native Policy Artifact Check =="
 
 Assert-FileExists $probePath "Probe JSON"
