@@ -40,7 +40,15 @@ def has_esp32s3() -> bool:
 
 def main() -> int:
     # We intentionally always "succeed" but explain what happened.
+    if len(sys.argv) > 2:
+        print(f"ERROR: Unexpected arguments: {' '.join(sys.argv[2:])}", file=sys.stderr)
+        return 2
+
     want = sys.argv[1] if len(sys.argv) > 1 else "test"
+    if not want.strip():
+        print("ERROR: Stage argument cannot be empty", file=sys.stderr)
+        return 2
+
     board_present = has_esp32s3()
     env = os.getenv("PIOENV") or ""
     hw_env = env[:-5] if env.endswith("-nohw") else env
