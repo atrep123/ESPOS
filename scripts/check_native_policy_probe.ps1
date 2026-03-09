@@ -50,7 +50,10 @@ if (-not (Test-Path $testRoot)) {
 
 $testSuites = @()
 if ($Suites.Count -gt 0) {
-  $testSuites = @($Suites | Sort-Object -Unique)
+  $testSuites = @($Suites | ForEach-Object { "$_".Trim() } | Sort-Object -Unique)
+  if (@($testSuites | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
+    throw "Invalid value for -Suites: suite names must be non-empty"
+  }
   foreach ($suite in $testSuites) {
     if (-not (Test-Path (Join-Path $testRoot $suite))) {
       throw "Requested suite not found: $suite"
