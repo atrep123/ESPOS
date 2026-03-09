@@ -11,6 +11,14 @@ Set-StrictMode -Version Latest
 $combinedCsvSpecified = $PSBoundParameters.ContainsKey("CombinedCsv")
 $deltaCsvSpecified = $PSBoundParameters.ContainsKey("DeltaCsv")
 
+if ($combinedCsvSpecified -and [string]::IsNullOrWhiteSpace($CombinedCsv)) {
+  throw "-CombinedCsv was provided but is empty. Provide a CSV path or omit the parameter."
+}
+
+if ($deltaCsvSpecified -and [string]::IsNullOrWhiteSpace($DeltaCsv)) {
+  throw "-DeltaCsv was provided but is empty. Provide a CSV path or omit the parameter."
+}
+
 if ($RequireDelta -and -not $deltaCsvSpecified -and [string]::IsNullOrWhiteSpace($DeltaCsv)) {
   $DeltaCsv = "reports/native_policy_triage_delta.only.csv"
   Write-Host "[INFO] Using default delta triage CSV path: $DeltaCsv"
