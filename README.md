@@ -103,6 +103,8 @@ scripts/check_all_local.ps1 -Fast
 scripts/check_all_local.ps1 -Fast -StrictArtifacts
 scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageCsv
 scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageDeltaCsv
+scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageCsv -NativePolicyTriageCsv reports/native_policy_triage.csv
+scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageDeltaCsv -NativePolicyTriageDeltaCsv reports/native_policy_triage_delta.only.csv
 scripts/check_native_toolchain.ps1
 scripts/list_native_whitelist_targets.ps1
 scripts/check_native_policy_probe.ps1
@@ -123,6 +125,8 @@ scripts/triage_native_policy_blockers.ps1 -Top 5 -DeltaWindow 5 -DeltaCsvOut rep
 ./scripts/check_all_local.sh main_scene.json
 ./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv
 ./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-delta-csv
+./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv --native-policy-triage-csv reports/native_policy_triage.csv
+./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-delta-csv --native-policy-triage-delta-csv reports/native_policy_triage_delta.only.csv
 ./scripts/check_native_toolchain.sh
 ```
 
