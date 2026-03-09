@@ -25,6 +25,22 @@ if ($triageDeltaCsvSpecified -and [string]::IsNullOrWhiteSpace($TriageDeltaCsv))
   throw "-TriageDeltaCsv was provided but is empty. Provide a CSV path or omit the parameter."
 }
 
+if ([string]::IsNullOrWhiteSpace($ProbeJson)) {
+  throw "-ProbeJson cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($HistoryJsonl)) {
+  throw "-HistoryJsonl cannot be empty"
+}
+
+if ($RequireMarkdown -and [string]::IsNullOrWhiteSpace($SummaryMarkdown)) {
+  throw "-SummaryMarkdown cannot be empty when -RequireMarkdown is set"
+}
+
+if ($RequireCsv -and [string]::IsNullOrWhiteSpace($HistoryCsv)) {
+  throw "-HistoryCsv cannot be empty when -RequireCsv is set"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 function Resolve-RepoPath([string]$relativePath) {
