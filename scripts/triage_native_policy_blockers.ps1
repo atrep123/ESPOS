@@ -14,12 +14,23 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$csvOutSpecified = $PSBoundParameters.ContainsKey("CsvOut")
+$deltaCsvOutSpecified = $PSBoundParameters.ContainsKey("DeltaCsvOut")
+
 if ([string]::IsNullOrWhiteSpace($HistoryPath)) {
   throw "Invalid value for -HistoryPath: cannot be empty"
 }
 
 if ([string]::IsNullOrWhiteSpace($MarkdownOut)) {
   throw "Invalid value for -MarkdownOut: cannot be empty"
+}
+
+if ($csvOutSpecified -and [string]::IsNullOrWhiteSpace($CsvOut)) {
+  throw "Invalid value for -CsvOut: cannot be empty when explicitly provided"
+}
+
+if ($deltaCsvOutSpecified -and [string]::IsNullOrWhiteSpace($DeltaCsvOut)) {
+  throw "Invalid value for -DeltaCsvOut: cannot be empty when explicitly provided"
 }
 
 if ($Top -lt 1) {
