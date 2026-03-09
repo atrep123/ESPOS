@@ -4,6 +4,7 @@ param(
   [switch]$Fast,
   [switch]$AllowNativePolicyBlock,
   [string]$NativePolicyProbeJson = "reports/native_policy_probe_auto.json",
+  [string]$NativePolicyHistoryJsonl = "reports/native_policy_probe_history.jsonl",
   [int]$NativePolicyProbeRounds = 1,
   [string]$Design = "main_scene.json"
 )
@@ -14,6 +15,44 @@ Set-StrictMode -Version Latest
 $allowNativePolicyBlockResolved = $AllowNativePolicyBlock -or ($env:ESP32OS_ALLOW_NATIVE_POLICY_BLOCK -eq "1")
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $nativePolicyDiagnosticsTriggered = $false
+
+function Get-NativePolicyProbeJsonPath {
+  if ([string]::IsNullOrWhiteSpace($NativePolicyProbeJson)) {
+    return ""
+  }
+  return (Join-Path $repoRoot $NativePolicyProbeJson)
+}
+
+function Append-NativePolicyHistory {
+  if ([string]::IsNullOrWhiteSpace($NativePolicyHistoryJsonl)) {
+    return
+  }
+
+  $probeJsonPath = Get-NativePolicyProbeJsonPath
+  if ([string]::IsNullOrWhiteSpace($probeJsonPath) -or -not (Test-Path $probeJsonPath)) {
+    return
+  }
+
+  $historyPath = Join-Path $repoRoot $NativePolicyHistoryJsonl
+  $historyDir = Split-Path -Parent $historyPath
+  if (-not [string]::IsNullOrWhiteSpace($historyDir) -and -not (Test-Path $historyDir)) {
+    New-Item -ItemType Directory -Path $historyDir -Force | Out-Null
+  }
+
+  $report = Get-Content $probeJsonPath -Raw | ConvertFrom-Json
+  $summary = $report.Summary
+  $entry = [pscustomobject]@{
+    RecordedAt = (Get-Date).ToString("o")
+    ProbeTimestamp = $summary.ProbeTimestamp
+    Triggered = [bool]$summary.Triggered
+    PolicyBlockCount = $summary.PolicyBlockCount
+    TransientPolicyBlockCount = $summary.TransientPolicyBlockCount
+    FailureCount = $summary.FailureCount
+    JsonPath = $probeJsonPath
+  }
+  $entry | ConvertTo-Json -Compress | Add-Content -Path $historyPath -Encoding UTF8
+  Write-Host "[INFO] Appended native policy history: $historyPath"
+}
 
 function Try-AddMsysGccToPath {
   $msysGccDir = "C:\msys64\ucrt64\bin"
@@ -45,10 +84,7 @@ function Invoke-NativePolicyDiagnostics {
   Write-Host ""
   Write-Host "[INFO] Running native policy diagnostics to identify blocked suites..."
   # Keep diagnostics bounded so strict check remains fast enough for routine use.
-  $probeJsonPath = ""
-  if (-not [string]::IsNullOrWhiteSpace($NativePolicyProbeJson)) {
-    $probeJsonPath = (Join-Path $repoRoot $NativePolicyProbeJson)
-  }
+  $probeJsonPath = Get-NativePolicyProbeJsonPath
 
   $probeArgs = @(
     "-ExecutionPolicy", "Bypass",
@@ -89,6 +125,9 @@ function Write-NativePolicyProbePlaceholder {
       ProbeTimestamp = (Get-Date).ToString("o")
       RepoRoot = $repoRoot
       Triggered = $false
+      PolicyBlockCount = 0
+      TransientPolicyBlockCount = 0
+      FailureCount = 0
       Note = "No repeated WinError 4551 policy blocking detected in this check_all run."
     }
     Results = @()
@@ -202,6 +241,7 @@ if (-not $SkipPio) {
     Run-Step-WithWin4551Retry "pio native tests" "pio test -e native" 4 2 $allowNativePolicyBlockResolved
     if ($allowNativePolicyBlockResolved) {
       Write-NativePolicyProbePlaceholder
+      Append-NativePolicyHistory
     }
   }
   if (-not $Fast) {

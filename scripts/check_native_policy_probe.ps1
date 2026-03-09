@@ -162,6 +162,7 @@ $failCount = @($results | Where-Object { $_.Status -eq "FAILED" }).Count
 $summary = [pscustomobject]@{
   ProbeTimestamp = (Get-Date).ToString("o")
   RepoRoot = $repoRoot
+  Triggered = $true
   MaxAttemptsPerSuite = $MaxAttemptsPerSuite
   DelaySeconds = $DelaySeconds
   Rounds = $Rounds
