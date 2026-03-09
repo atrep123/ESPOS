@@ -112,28 +112,22 @@ if ($RequireTriageCsv -or $RequireTriageDeltaCsv -or -not [string]::IsNullOrWhit
     throw "Missing script: $triageCsvCheck"
   }
 
-  $triageArgs = @(
-    "-ExecutionPolicy", "Bypass",
-    "-File", $triageCsvCheck
-  )
+  $triageParams = @{}
 
   if (-not [string]::IsNullOrWhiteSpace($TriageCsv)) {
-    $triageArgs += @("-CombinedCsv", $TriageCsv)
+    $triageParams["CombinedCsv"] = $TriageCsv
   }
   if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsv)) {
-    $triageArgs += @("-DeltaCsv", $TriageDeltaCsv)
+    $triageParams["DeltaCsv"] = $TriageDeltaCsv
   }
   if ($RequireTriageCsv) {
-    $triageArgs += "-RequireCombined"
+    $triageParams["RequireCombined"] = $true
   }
   if ($RequireTriageDeltaCsv) {
-    $triageArgs += "-RequireDelta"
+    $triageParams["RequireDelta"] = $true
   }
 
-  & powershell @triageArgs
-  if ($LASTEXITCODE -ne 0) {
-    throw "Triage CSV check failed with exit code $LASTEXITCODE"
-  }
+  & $triageCsvCheck @triageParams
 }
 
 $latestHistory = $historyEntries[-1]
