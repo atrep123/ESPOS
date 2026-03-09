@@ -74,6 +74,11 @@ if [[ -z "$DESIGN" ]]; then
   exit 2
 fi
 
+if [[ "$DESIGN" =~ ^[[:space:]]+$ ]]; then
+  echo "[FAIL] Design path cannot be whitespace-only" >&2
+  exit 2
+fi
+
 PYTHON_CMD=""
 if command -v python >/dev/null 2>&1; then
   PYTHON_CMD="python"
