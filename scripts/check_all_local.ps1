@@ -17,6 +17,10 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ((-not $StrictArtifacts) -and ($StrictTriageCsv -or $StrictTriageDeltaCsv)) {
+  throw "-StrictTriageCsv/-StrictTriageDeltaCsv require -StrictArtifacts"
+}
+
 $msysGccDir = "C:\msys64\ucrt64\bin"
 $msysGccExe = Join-Path $msysGccDir "gcc.exe"
 if ((-not (Get-Command gcc -ErrorAction SilentlyContinue)) -and (Test-Path $msysGccExe)) {
