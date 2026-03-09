@@ -30,6 +30,21 @@ function Run-Step([string]$Name, [string]$Command) {
   }
 }
 
+function Invoke-NativePolicyDiagnostics {
+  $probeScript = Join-Path $PSScriptRoot "check_native_policy_probe.ps1"
+  if (-not (Test-Path $probeScript)) {
+    return
+  }
+
+  Write-Host ""
+  Write-Host "[INFO] Running native policy diagnostics to identify blocked suites..."
+  # Keep diagnostics bounded so strict check remains fast enough for routine use.
+  & powershell -ExecutionPolicy Bypass -File $probeScript -MaxAttemptsPerSuite 2 -DelaySeconds 1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Native policy diagnostics reported blocked suites."
+  }
+}
+
 function Run-Step-WithWin4551Retry(
   [string]$Name,
   [string]$Command,
@@ -72,6 +87,9 @@ function Run-Step-WithWin4551Retry(
       if ($AllowPolicyBlockAsWarning) {
         if ($attempt -ge $MaxAttempts) {
           Write-Warning "Step '$Name' failed after $MaxAttempts attempts with unresolved host-side native test failure (exit code $LASTEXITCODE); continuing due to AllowNativePolicyBlock"
+          if ($Name -eq "pio native tests") {
+            Invoke-NativePolicyDiagnostics
+          }
           return
         }
         Write-Warning "Native test step failed with unresolved host-side error (exit code $LASTEXITCODE). Retrying in $DelaySeconds s due to AllowNativePolicyBlock..."
@@ -85,6 +103,9 @@ function Run-Step-WithWin4551Retry(
     if ($attempt -ge $MaxAttempts) {
       if ($AllowPolicyBlockAsWarning) {
         Write-Warning "Step '$Name' hit repeated WinError 4551 policy blocking after $MaxAttempts attempts; continuing due to AllowNativePolicyBlock. $policyHint"
+        if ($Name -eq "pio native tests") {
+          Invoke-NativePolicyDiagnostics
+        }
         return
       }
       throw "Step '$Name' failed after $MaxAttempts attempts due to repeated WinError 4551 policy blocking. $policyHint"
