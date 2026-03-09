@@ -16,4 +16,9 @@ if ! command -v gcc >/dev/null 2>&1; then
   done
 fi
 
+if [[ -f "$SCRIPT_DIR/check_native_toolchain.sh" ]]; then
+  "$SCRIPT_DIR/check_native_toolchain.sh" || \
+    echo "[WARN] Native preflight reported missing prerequisites; continuing with tolerant local checks." >&2
+fi
+
 exec "$SCRIPT_DIR/check_all.sh" "$@"
