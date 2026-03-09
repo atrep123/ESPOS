@@ -1,0 +1,6 @@
+- Native test runners in `test/*/app_main.c` must declare test function prototypes outside `#ifdef ESP_PLATFORM`; native `main()` uses the same names and fails to compile otherwise.
+- `test/stubs/store_stub.c` should keep strong `store_*` symbols for native so `ui_bindings` links reliably with the current MinGW toolchain.
+- `test/test_store/test_store.c` includes `services/store/store.c`; rename exported `store_*` symbols via preprocessor macros to avoid multiple-definition conflicts with `store_stub.c`.
+- `WinError 4551` during `pio test -e native` is intermittent host policy blocking and can move between targets; rerunning isolated targets often passes.
+- Keep `scripts/check_all.sh` with LF line endings; CRLF causes bash parse errors like `unexpected token '{\r'` on Windows-hosted bash.
+- For Windows-hosted bash, `check_all.sh` should resolve both `python`/`python.exe` and `pio`/`pio.exe` to avoid PATH differences versus PowerShell.
