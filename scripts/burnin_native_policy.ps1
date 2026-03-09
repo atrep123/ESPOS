@@ -13,6 +13,7 @@ param(
 	[int]$TriageTop = 5,
 	[int]$TriageDeltaWindow = 0,
 	[switch]$TriageOnlyWorsening,
+	[switch]$TriageIncludeAllDeltaRows,
 	[switch]$SkipTriage,
 	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
@@ -180,6 +181,10 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 
 	if ($TriageOnlyWorsening) {
 		$triageArgs += "-OnlyWorsening"
+	}
+
+	if ($TriageIncludeAllDeltaRows) {
+		$triageArgs += "-IncludeAllDeltaRows"
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {

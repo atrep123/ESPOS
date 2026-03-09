@@ -4,7 +4,8 @@ param(
   [string]$MarkdownOut = "reports/native_policy_triage.md",
   [string]$CsvOut = "reports/native_policy_triage.csv",
   [int]$DeltaWindow = 0,
-  [switch]$OnlyWorsening
+  [switch]$OnlyWorsening,
+  [switch]$IncludeAllDeltaRows
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,6 +21,10 @@ if ($DeltaWindow -lt 0) {
 
 if ($OnlyWorsening -and $DeltaWindow -le 0) {
   throw "Invalid usage: -OnlyWorsening requires -DeltaWindow > 0"
+}
+
+if ($IncludeAllDeltaRows -and $DeltaWindow -le 0) {
+  throw "Invalid usage: -IncludeAllDeltaRows requires -DeltaWindow > 0"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -188,11 +193,16 @@ if ($deltaEnabled) {
       $deltaRanked = @($deltaRanked | Where-Object { $_.DeltaScore -gt 0 })
     }
 
-    $deltaTop = @(
+    $deltaSorted = @(
       $deltaRanked |
-        Sort-Object @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = 'Suite'; Descending = $false} |
-        Select-Object -First $Top
+        Sort-Object @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = 'Suite'; Descending = $false}
     )
+
+    if ($IncludeAllDeltaRows) {
+      $deltaTop = $deltaSorted
+    } else {
+      $deltaTop = @($deltaSorted | Select-Object -First $Top)
+    }
   }
 }
 
@@ -203,6 +213,7 @@ Write-Host "Top: $Top"
 if ($deltaEnabled) {
   Write-Host "DeltaWindow: $DeltaWindow"
   Write-Host "OnlyWorsening: $OnlyWorsening"
+  Write-Host "IncludeAllDeltaRows: $IncludeAllDeltaRows"
 }
 
 if ($topRanked.Count -eq 0) {
@@ -256,15 +267,20 @@ foreach ($suite in $topRanked) {
     PreviousScore = $null
     DeltaWindow = $DeltaWindow
     OnlyWorsening = [bool]$OnlyWorsening
+    IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
   }
   $priorityRank++
 }
 
 if ($deltaEnabled -and $deltaTop.Count -gt 0) {
   $deltaRank = 1
+  $deltaRowType = "DeltaTop"
+  if ($IncludeAllDeltaRows) {
+    $deltaRowType = "DeltaAll"
+  }
   foreach ($entry in $deltaTop) {
     $csvRows += [pscustomobject]@{
-      RowType = "DeltaTop"
+      RowType = $deltaRowType
       Rank = $deltaRank
       Suite = $entry.Suite
       Score = $null
@@ -279,6 +295,7 @@ if ($deltaEnabled -and $deltaTop.Count -gt 0) {
       PreviousScore = $entry.PreviousScore
       DeltaWindow = $DeltaWindow
       OnlyWorsening = [bool]$OnlyWorsening
+      IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
     }
     $deltaRank++
   }
@@ -293,6 +310,7 @@ $md += ('- Runs: ' + $rows.Count)
 $md += ('- Top: ' + $Top)
 $md += ('- DeltaWindow: ' + $DeltaWindow)
 $md += ('- OnlyWorsening: ' + $OnlyWorsening)
+$md += ('- IncludeAllDeltaRows: ' + $IncludeAllDeltaRows)
 $md += "- Score formula: 2 * PolicyHits + TransientHits"
 $md += ""
 
@@ -333,6 +351,7 @@ if ($deltaEnabled) {
   } else {
     $md += ('- Recent window: ' + $deltaRecentWindow)
     $md += ('- Previous window: ' + $deltaPreviousWindow)
+    $md += ('- IncludeAllDeltaRows: ' + $IncludeAllDeltaRows)
     $md += ""
     $md += "| Rank | Suite | DeltaScore | DeltaPolicyHits | DeltaTransientHits | RecentScore | PreviousScore |"
     $md += "|---:|---|---:|---:|---:|---:|---:|"
@@ -370,7 +389,8 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedCsvPath)) {
     "RecentScore",
     "PreviousScore",
     "DeltaWindow",
-    "OnlyWorsening"
+    "OnlyWorsening",
+    "IncludeAllDeltaRows"
   )
 
   if ($csvRows.Count -eq 0) {
