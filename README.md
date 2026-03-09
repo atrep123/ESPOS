@@ -60,6 +60,8 @@ Poznámka:
 - Pro analyzu v tabulkach lze exportovat CSV: `scripts/summarize_native_policy_history.ps1 -CsvOut reports/native_policy_history.csv`.
 - Burn-in vice kol overis pres `scripts/burnin_native_policy.ps1 -Rounds 10 -DelaySeconds 2`.
 - Burn-in po dobehu automaticky vygeneruje i markdown report (`reports/native_policy_summary.md`), lze zmenit parametrem `-MarkdownSummaryPath`.
+- Burn-in po dobehu automaticky vygeneruje i CSV report (`reports/native_policy_history.csv`), lze zmenit parametrem `-CsvSummaryPath`.
+- Burn-in na konci automaticky spousti `check_native_policy_artifacts.ps1` (s md/csv gate podle nastaveni); vypnout lze `-SkipArtifactCheck`.
 - Pro prisny gate (selhat pri POLICY_BLOCK) pouzij `scripts/burnin_native_policy.ps1 -Rounds 10 -FailOnPolicyBlock`.
 - Pro uchovani detailu kazdeho kola zapni archivaci snapshotu: `scripts/burnin_native_policy.ps1 -Rounds 10 -ArchiveProbeSnapshots` (default slozka `reports/native_policy_snapshots`).
 - Pocet ulozenych snapshotu lze omezit pres `-MaxSnapshotFiles` (default 50), starsi soubory se automaticky promazou.

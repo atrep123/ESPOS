@@ -7,6 +7,8 @@ param(
 	[string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
 	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
 	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md",
+	[string]$CsvSummaryPath = "reports/native_policy_history.csv",
+	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
 	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots",
 	[int]$MaxSnapshotFiles = 50
@@ -26,6 +28,7 @@ if ($MaxSnapshotFiles -lt 1) {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $checkAll = Join-Path $PSScriptRoot "check_all.ps1"
 $summarize = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
+$artifactCheck = Join-Path $PSScriptRoot "check_native_policy_artifacts.ps1"
 $resolvedProbeJsonPath = Join-Path $repoRoot $ProbeJsonPath
 $resolvedSnapshotDir = Join-Path $repoRoot $ProbeSnapshotDir
 
@@ -141,7 +144,29 @@ if (Test-Path $summarize) {
 	if (-not [string]::IsNullOrWhiteSpace($MarkdownSummaryPath)) {
 		$sumArgs += @("-MarkdownOut", $MarkdownSummaryPath)
 	}
+	if (-not [string]::IsNullOrWhiteSpace($CsvSummaryPath)) {
+		$sumArgs += @("-CsvOut", $CsvSummaryPath)
+	}
 	& powershell @sumArgs
+}
+
+if (-not $SkipArtifactCheck -and (Test-Path $artifactCheck)) {
+	Write-Host ""
+	$artifactArgs = @(
+		"-ExecutionPolicy", "Bypass",
+		"-File", $artifactCheck,
+		"-ProbeJson", $ProbeJsonPath,
+		"-HistoryJsonl", $HistoryPath
+	)
+
+	if (-not [string]::IsNullOrWhiteSpace($MarkdownSummaryPath)) {
+		$artifactArgs += @("-SummaryMarkdown", $MarkdownSummaryPath, "-RequireMarkdown")
+	}
+	if (-not [string]::IsNullOrWhiteSpace($CsvSummaryPath)) {
+		$artifactArgs += @("-HistoryCsv", $CsvSummaryPath, "-RequireCsv")
+	}
+
+	& powershell @artifactArgs
 }
 
 if ($failed -gt 0) {

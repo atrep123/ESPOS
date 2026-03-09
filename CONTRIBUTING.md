@@ -40,6 +40,8 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Pro dalsi zpracovani lze exportovat i CSV: `scripts/summarize_native_policy_history.ps1 -CsvOut reports/native_policy_history.csv`.
 - Pro opakovany burn-in pouzij `scripts/burnin_native_policy.ps1 -Rounds 10 -DelaySeconds 2`.
 - Burn-in umi po dobehu rovnou zapsat markdown souhrn (`-MarkdownSummaryPath`, default `reports/native_policy_summary.md`).
+- Burn-in umi po dobehu zapsat i CSV souhrn (`-CsvSummaryPath`, default `reports/native_policy_history.csv`).
+- Burn-in po dobehu standardne spousti i `check_native_policy_artifacts.ps1`; lze vypnout prepinacem `-SkipArtifactCheck`.
 - Pokud ma burn-in failnout pri policy blokovani, pouzij `-FailOnPolicyBlock`.
 - Pro audit/detail per-round probe reportu zapni `-ArchiveProbeSnapshots` (vystup do `reports/native_policy_snapshots`, lze zmenit `-ProbeSnapshotDir`).
 - Retenci snapshots ridi `-MaxSnapshotFiles` (starsi probe JSON se automaticky maze).
