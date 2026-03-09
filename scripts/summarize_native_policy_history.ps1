@@ -30,10 +30,17 @@ $rows = @($rows | Sort-Object ProbeTimestamp)
 $take = [Math]::Min($Last, $rows.Count)
 $recent = @($rows | Select-Object -Last $take)
 
+$totalRuns = [double]$rows.Count
+
 $triggeredCount = @($rows | Where-Object { $_.Triggered }).Count
 $policyBlockedRuns = @($rows | Where-Object { $_.PolicyBlockCount -gt 0 }).Count
 $transientRuns = @($rows | Where-Object { $_.TransientPolicyBlockCount -gt 0 }).Count
 $failureRuns = @($rows | Where-Object { $_.FailureCount -gt 0 }).Count
+
+$triggeredRate = [Math]::Round((100.0 * $triggeredCount / $totalRuns), 1)
+$policyBlockedRate = [Math]::Round((100.0 * $policyBlockedRuns / $totalRuns), 1)
+$transientRate = [Math]::Round((100.0 * $transientRuns / $totalRuns), 1)
+$failureRate = [Math]::Round((100.0 * $failureRuns / $totalRuns), 1)
 
 $blockedSuiteFreq = @{}
 $transientSuiteFreq = @{}
@@ -76,6 +83,10 @@ Write-Host "Triggered diagnostics: $triggeredCount"
 Write-Host "Runs with POLICY_BLOCK > 0: $policyBlockedRuns"
 Write-Host "Runs with transient blocks > 0: $transientRuns"
 Write-Host "Runs with non-policy failures > 0: $failureRuns"
+Write-Host "Triggered diagnostics rate: $triggeredRate%"
+Write-Host "POLICY_BLOCK run rate: $policyBlockedRate%"
+Write-Host "Transient run rate: $transientRate%"
+Write-Host "Non-policy failure run rate: $failureRate%"
 
 Write-Host ""
 Write-Host "== Recent Entries (last $take) =="
@@ -88,7 +99,13 @@ if ($blockedSuiteFreq.Count -gt 0) {
   Write-Host "== Blocked Suite Frequency =="
   $blockedSuiteFreq.GetEnumerator() |
     Sort-Object Value -Descending |
-    ForEach-Object { [pscustomobject]@{ Suite = $_.Key; Hits = $_.Value } } |
+    ForEach-Object {
+      [pscustomobject]@{
+        Suite = $_.Key
+        Hits = $_.Value
+        HitRatePercent = [Math]::Round((100.0 * $_.Value / $totalRuns), 1)
+      }
+    } |
     Format-Table -AutoSize
 }
 
@@ -97,7 +114,13 @@ if ($transientSuiteFreq.Count -gt 0) {
   Write-Host "== Transient Suite Frequency =="
   $transientSuiteFreq.GetEnumerator() |
     Sort-Object Value -Descending |
-    ForEach-Object { [pscustomobject]@{ Suite = $_.Key; Hits = $_.Value } } |
+    ForEach-Object {
+      [pscustomobject]@{
+        Suite = $_.Key
+        Hits = $_.Value
+        HitRatePercent = [Math]::Round((100.0 * $_.Value / $totalRuns), 1)
+      }
+    } |
     Format-Table -AutoSize
 }
 
@@ -117,6 +140,10 @@ if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
   $md += "- Runs with POLICY_BLOCK > 0: $policyBlockedRuns"
   $md += "- Runs with transient blocks > 0: $transientRuns"
   $md += "- Runs with non-policy failures > 0: $failureRuns"
+  $md += "- Triggered diagnostics rate: $triggeredRate%"
+  $md += "- POLICY_BLOCK run rate: $policyBlockedRate%"
+  $md += "- Transient run rate: $transientRate%"
+  $md += "- Non-policy failure run rate: $failureRate%"
   $md += ""
   $md += "## Recent Entries (last $take)"
   $md += ""
@@ -130,10 +157,11 @@ if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
     $md += ""
     $md += "## Blocked Suite Frequency"
     $md += ""
-    $md += "| Suite | Hits |"
-    $md += "|---|---:|"
+    $md += "| Suite | Hits | HitRatePercent |"
+    $md += "|---|---:|---:|"
     foreach ($pair in ($blockedSuiteFreq.GetEnumerator() | Sort-Object Value -Descending)) {
-      $md += "| $($pair.Key) | $($pair.Value) |"
+      $rate = [Math]::Round((100.0 * $pair.Value / $totalRuns), 1)
+      $md += "| $($pair.Key) | $($pair.Value) | $rate |"
     }
   }
 
@@ -141,10 +169,11 @@ if (-not [string]::IsNullOrWhiteSpace($MarkdownOut)) {
     $md += ""
     $md += "## Transient Suite Frequency"
     $md += ""
-    $md += "| Suite | Hits |"
-    $md += "|---|---:|"
+    $md += "| Suite | Hits | HitRatePercent |"
+    $md += "|---|---:|---:|"
     foreach ($pair in ($transientSuiteFreq.GetEnumerator() | Sort-Object Value -Descending)) {
-      $md += "| $($pair.Key) | $($pair.Value) |"
+      $rate = [Math]::Round((100.0 * $pair.Value / $totalRuns), 1)
+      $md += "| $($pair.Key) | $($pair.Value) | $rate |"
     }
   }
 

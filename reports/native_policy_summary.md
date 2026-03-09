@@ -6,6 +6,10 @@
 - Runs with POLICY_BLOCK > 0: 8
 - Runs with transient blocks > 0: 1
 - Runs with non-policy failures > 0: 0
+- Triggered diagnostics rate: 50%
+- POLICY_BLOCK run rate: 44.4%
+- Transient run rate: 5.6%
+- Non-policy failure run rate: 0%
 
 ## Recent Entries (last 18)
 
@@ -32,12 +36,12 @@
 
 ## Blocked Suite Frequency
 
-| Suite | Hits |
-|---|---:|
-| test_msgbus | 4 |
-| test_seesaw | 2 |
-| test_ui_cmd | 2 |
-| test_store | 2 |
-| test_ui_components | 1 |
-| test_ui_listmodel | 1 |
-| test_ui_nav | 1 |
+| Suite | Hits | HitRatePercent |
+|---|---:|---:|
+| test_msgbus | 4 | 22.2 |
+| test_seesaw | 2 | 11.1 |
+| test_ui_cmd | 2 | 11.1 |
+| test_store | 2 | 11.1 |
+| test_ui_components | 1 | 5.6 |
+| test_ui_listmodel | 1 | 5.6 |
+| test_ui_nav | 1 | 5.6 |

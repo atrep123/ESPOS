@@ -34,6 +34,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Zaroven se appenduje JSONL historie do `reports/native_policy_probe_history.jsonl` (konfigurovatelne `-NativePolicyHistoryJsonl`).
 - Rychly souhrn trendu vypises pomoci `scripts/summarize_native_policy_history.ps1`.
 - Souhrn umi i frekvenci konkretnich blokovanych/transient suites napric historií.
+- Soucasti souhrnu jsou i procentualni run-rate metriky pro rychle porovnani stability.
 - Souhrn lze vyexportovat i do markdownu: `scripts/summarize_native_policy_history.ps1 -Last 30 -MarkdownOut reports/native_policy_summary.md`.
 - Pro opakovany burn-in pouzij `scripts/burnin_native_policy.ps1 -Rounds 10 -DelaySeconds 2`.
 - Burn-in umi po dobehu rovnou zapsat markdown souhrn (`-MarkdownSummaryPath`, default `reports/native_policy_summary.md`).
