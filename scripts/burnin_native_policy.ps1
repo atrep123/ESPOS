@@ -13,6 +13,7 @@ param(
 	[int]$TriageTop = 5,
 	[int]$TriageDeltaWindow = 0,
 	[int]$TriageMinAbsDeltaScore = 0,
+	[string]$TriageDeltaSortBy = "abs-delta",
 	[switch]$TriageOnlyWorsening,
 	[switch]$TriageIncludeAllDeltaRows,
 	[switch]$SkipTriage,
@@ -43,6 +44,11 @@ if ($TriageDeltaWindow -lt 0) {
 
 if ($TriageMinAbsDeltaScore -lt 0) {
 	throw "Invalid value for -TriageMinAbsDeltaScore: must be >= 0"
+}
+
+$allowedDeltaSortModes = @("abs-delta", "delta", "suite")
+if (-not ($allowedDeltaSortModes -contains $TriageDeltaSortBy)) {
+	throw "Invalid value for -TriageDeltaSortBy: must be one of abs-delta, delta, suite"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -194,6 +200,10 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 
 	if ($TriageMinAbsDeltaScore -gt 0) {
 		$triageArgs += @("-MinAbsDeltaScore", $TriageMinAbsDeltaScore)
+	}
+
+	if (-not [string]::IsNullOrWhiteSpace($TriageDeltaSortBy)) {
+		$triageArgs += @("-DeltaSortBy", $TriageDeltaSortBy)
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {

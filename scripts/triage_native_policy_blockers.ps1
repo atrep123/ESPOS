@@ -6,7 +6,8 @@ param(
   [int]$DeltaWindow = 0,
   [switch]$OnlyWorsening,
   [switch]$IncludeAllDeltaRows,
-  [int]$MinAbsDeltaScore = 0
+  [int]$MinAbsDeltaScore = 0,
+  [string]$DeltaSortBy = "abs-delta"
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,6 +35,15 @@ if ($MinAbsDeltaScore -lt 0) {
 
 if ($MinAbsDeltaScore -gt 0 -and $DeltaWindow -le 0) {
   throw "Invalid usage: -MinAbsDeltaScore requires -DeltaWindow > 0"
+}
+
+$allowedDeltaSortModes = @("abs-delta", "delta", "suite")
+if (-not ($allowedDeltaSortModes -contains $DeltaSortBy)) {
+  throw "Invalid value for -DeltaSortBy: must be one of abs-delta, delta, suite"
+}
+
+if ($DeltaSortBy -ne "abs-delta" -and $DeltaWindow -le 0) {
+  throw "Invalid usage: -DeltaSortBy requires -DeltaWindow > 0 when set to delta or suite"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -206,10 +216,23 @@ if ($deltaEnabled) {
       $deltaRanked = @($deltaRanked | Where-Object { [Math]::Abs([int]$_.DeltaScore) -ge $MinAbsDeltaScore })
     }
 
-    $deltaSorted = @(
-      $deltaRanked |
-        Sort-Object @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = 'Suite'; Descending = $false}
-    )
+    $deltaSorted = @()
+    if ($DeltaSortBy -eq "suite") {
+      $deltaSorted = @(
+        $deltaRanked |
+          Sort-Object @{Expression = 'Suite'; Descending = $false}, @{Expression = 'DeltaScore'; Descending = $true}
+      )
+    } elseif ($DeltaSortBy -eq "delta") {
+      $deltaSorted = @(
+        $deltaRanked |
+          Sort-Object @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'Suite'; Descending = $false}
+      )
+    } else {
+      $deltaSorted = @(
+        $deltaRanked |
+          Sort-Object @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = 'Suite'; Descending = $false}
+      )
+    }
 
     if ($IncludeAllDeltaRows) {
       $deltaTop = $deltaSorted
@@ -228,6 +251,7 @@ if ($deltaEnabled) {
   Write-Host "OnlyWorsening: $OnlyWorsening"
   Write-Host "IncludeAllDeltaRows: $IncludeAllDeltaRows"
   Write-Host "MinAbsDeltaScore: $MinAbsDeltaScore"
+  Write-Host "DeltaSortBy: $DeltaSortBy"
 }
 
 if ($topRanked.Count -eq 0) {
@@ -283,6 +307,7 @@ foreach ($suite in $topRanked) {
     OnlyWorsening = [bool]$OnlyWorsening
     IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
     MinAbsDeltaScore = $MinAbsDeltaScore
+    DeltaSortBy = $DeltaSortBy
   }
   $priorityRank++
 }
@@ -312,6 +337,7 @@ if ($deltaEnabled -and $deltaTop.Count -gt 0) {
       OnlyWorsening = [bool]$OnlyWorsening
       IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
       MinAbsDeltaScore = $MinAbsDeltaScore
+      DeltaSortBy = $DeltaSortBy
     }
     $deltaRank++
   }
@@ -328,6 +354,7 @@ $md += ('- DeltaWindow: ' + $DeltaWindow)
 $md += ('- OnlyWorsening: ' + $OnlyWorsening)
 $md += ('- IncludeAllDeltaRows: ' + $IncludeAllDeltaRows)
 $md += ('- MinAbsDeltaScore: ' + $MinAbsDeltaScore)
+$md += ('- DeltaSortBy: ' + $DeltaSortBy)
 $md += "- Score formula: 2 * PolicyHits + TransientHits"
 $md += ""
 
@@ -370,6 +397,7 @@ if ($deltaEnabled) {
     $md += ('- Previous window: ' + $deltaPreviousWindow)
     $md += ('- IncludeAllDeltaRows: ' + $IncludeAllDeltaRows)
     $md += ('- MinAbsDeltaScore: ' + $MinAbsDeltaScore)
+    $md += ('- DeltaSortBy: ' + $DeltaSortBy)
     $md += ""
     $md += "| Rank | Suite | DeltaScore | DeltaPolicyHits | DeltaTransientHits | RecentScore | PreviousScore |"
     $md += "|---:|---|---:|---:|---:|---:|---:|"
@@ -409,7 +437,8 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedCsvPath)) {
     "DeltaWindow",
     "OnlyWorsening",
     "IncludeAllDeltaRows",
-    "MinAbsDeltaScore"
+    "MinAbsDeltaScore",
+    "DeltaSortBy"
   )
 
   if ($csvRows.Count -eq 0) {
