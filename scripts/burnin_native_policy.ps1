@@ -223,19 +223,22 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 	& $triage @triageParams
 
 	if (-not $SkipTriageCsvCheck -and (Test-Path $triageCsvCheck)) {
-		$triageCheckParams = @{
-			RequireCombined = $true
-		}
+		$triageCheckParams = @{}
 
 		if (-not [string]::IsNullOrWhiteSpace($TriageCsvPath)) {
 			$triageCheckParams.CombinedCsv = $TriageCsvPath
+			$triageCheckParams.RequireCombined = $true
 		}
 		if (-not [string]::IsNullOrWhiteSpace($TriageDeltaCsvPath)) {
 			$triageCheckParams.DeltaCsv = $TriageDeltaCsvPath
 			$triageCheckParams.RequireDelta = $true
 		}
 
-		& $triageCsvCheck @triageCheckParams
+		if ($triageCheckParams.Count -gt 0) {
+			& $triageCsvCheck @triageCheckParams
+		} else {
+			Write-Host "[INFO] Triage CSV check skipped (no triage CSV outputs requested)."
+		}
 	}
 }
 
