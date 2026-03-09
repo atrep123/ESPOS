@@ -8,6 +8,9 @@ param(
 	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
 	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md",
 	[string]$CsvSummaryPath = "reports/native_policy_history.csv",
+	[string]$TriageReportPath = "reports/native_policy_triage.md",
+	[int]$TriageTop = 5,
+	[switch]$SkipTriage,
 	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
 	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots",
@@ -25,9 +28,14 @@ if ($MaxSnapshotFiles -lt 1) {
 	throw "Invalid value for -MaxSnapshotFiles: must be >= 1"
 }
 
+if ($TriageTop -lt 1) {
+	throw "Invalid value for -TriageTop: must be >= 1"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $checkAll = Join-Path $PSScriptRoot "check_all.ps1"
 $summarize = Join-Path $PSScriptRoot "summarize_native_policy_history.ps1"
+$triage = Join-Path $PSScriptRoot "triage_native_policy_blockers.ps1"
 $artifactCheck = Join-Path $PSScriptRoot "check_native_policy_artifacts.ps1"
 $resolvedProbeJsonPath = Join-Path $repoRoot $ProbeJsonPath
 $resolvedSnapshotDir = Join-Path $repoRoot $ProbeSnapshotDir
@@ -148,6 +156,22 @@ if (Test-Path $summarize) {
 		$sumArgs += @("-CsvOut", $CsvSummaryPath)
 	}
 	& powershell @sumArgs
+}
+
+if (-not $SkipTriage -and (Test-Path $triage)) {
+	Write-Host ""
+	$triageArgs = @(
+		"-ExecutionPolicy", "Bypass",
+		"-File", $triage,
+		"-HistoryPath", $HistoryPath,
+		"-Top", $TriageTop
+	)
+
+	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {
+		$triageArgs += @("-MarkdownOut", $TriageReportPath)
+	}
+
+	& powershell @triageArgs
 }
 
 if (-not $SkipArtifactCheck -and (Test-Path $artifactCheck)) {
