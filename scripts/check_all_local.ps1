@@ -3,11 +3,15 @@ param(
   [switch]$SkipPio,
   [switch]$Fast,
   [switch]$StrictArtifacts,
+  [switch]$StrictTriageCsv,
+  [switch]$StrictTriageDeltaCsv,
   [string]$Design = "main_scene.json",
   [string]$NativePolicyProbeJson = "reports/native_policy_probe_auto.json",
   [string]$NativePolicyHistoryJsonl = "reports/native_policy_probe_history.jsonl",
   [string]$NativePolicySummaryMarkdown = "reports/native_policy_summary.md",
-  [string]$NativePolicyHistoryCsv = "reports/native_policy_history.csv"
+  [string]$NativePolicyHistoryCsv = "reports/native_policy_history.csv",
+  [string]$NativePolicyTriageCsv = "reports/native_policy_triage.csv",
+  [string]$NativePolicyTriageDeltaCsv = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,13 +56,32 @@ try {
     }
 
     Write-Host "[INFO] Running strict native policy artifact check..."
-    & powershell -ExecutionPolicy Bypass -File $artifactCheck `
-      -ProbeJson $NativePolicyProbeJson `
-      -HistoryJsonl $NativePolicyHistoryJsonl `
-      -SummaryMarkdown $NativePolicySummaryMarkdown `
-      -HistoryCsv $NativePolicyHistoryCsv `
-      -RequireMarkdown `
-      -RequireCsv
+    $artifactArgs = @(
+      "-ExecutionPolicy", "Bypass",
+      "-File", $artifactCheck,
+      "-ProbeJson", $NativePolicyProbeJson,
+      "-HistoryJsonl", $NativePolicyHistoryJsonl,
+      "-SummaryMarkdown", $NativePolicySummaryMarkdown,
+      "-HistoryCsv", $NativePolicyHistoryCsv,
+      "-RequireMarkdown",
+      "-RequireCsv"
+    )
+
+    if ($StrictTriageCsv) {
+      $artifactArgs += "-RequireTriageCsv"
+    }
+    if ($StrictTriageDeltaCsv) {
+      $artifactArgs += "-RequireTriageDeltaCsv"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($NativePolicyTriageCsv)) {
+      $artifactArgs += @("-TriageCsv", $NativePolicyTriageCsv)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($NativePolicyTriageDeltaCsv)) {
+      $artifactArgs += @("-TriageDeltaCsv", $NativePolicyTriageDeltaCsv)
+    }
+
+    & powershell @artifactArgs
 
     if ($LASTEXITCODE -ne 0) {
       throw "Strict native policy artifact check failed with exit code $LASTEXITCODE"
