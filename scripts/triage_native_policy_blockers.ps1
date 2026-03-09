@@ -14,6 +14,14 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ([string]::IsNullOrWhiteSpace($HistoryPath)) {
+  throw "Invalid value for -HistoryPath: cannot be empty"
+}
+
+if ([string]::IsNullOrWhiteSpace($MarkdownOut)) {
+  throw "Invalid value for -MarkdownOut: cannot be empty"
+}
+
 if ($Top -lt 1) {
   throw "Invalid value for -Top: must be >= 1"
 }
