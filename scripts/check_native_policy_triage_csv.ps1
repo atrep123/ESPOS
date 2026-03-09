@@ -8,6 +8,14 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$combinedCsvSpecified = $PSBoundParameters.ContainsKey("CombinedCsv")
+$deltaCsvSpecified = $PSBoundParameters.ContainsKey("DeltaCsv")
+
+if ($RequireDelta -and -not $deltaCsvSpecified -and [string]::IsNullOrWhiteSpace($DeltaCsv)) {
+  $DeltaCsv = "reports/native_policy_triage_delta.only.csv"
+  Write-Host "[INFO] Using default delta triage CSV path: $DeltaCsv"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 function Resolve-RepoPath([string]$relativePath) {
@@ -42,7 +50,7 @@ $deltaPath = Resolve-RepoPath $DeltaCsv
 
 Write-Host "== Native Policy Triage CSV Check =="
 
-if ($RequireCombined -or -not [string]::IsNullOrWhiteSpace($combinedPath)) {
+if ($RequireCombined -or $combinedCsvSpecified) {
   Assert-FileExists $combinedPath "Combined triage CSV"
   $combinedRows = @(Import-Csv -Path $combinedPath)
   Assert-Columns -rows $combinedRows -requiredColumns @(
@@ -60,7 +68,7 @@ if ($RequireCombined -or -not [string]::IsNullOrWhiteSpace($combinedPath)) {
   Write-Host "[OK] Combined triage CSV rows: $($combinedRows.Count)"
 }
 
-if ($RequireDelta -or -not [string]::IsNullOrWhiteSpace($deltaPath)) {
+if ($RequireDelta -or $deltaCsvSpecified) {
   Assert-FileExists $deltaPath "Delta triage CSV"
   $deltaRows = @(Import-Csv -Path $deltaPath)
 
@@ -85,7 +93,8 @@ if ($RequireDelta -or -not [string]::IsNullOrWhiteSpace($deltaPath)) {
       throw "Delta triage CSV has empty header: $deltaPath"
     }
 
-    $headerColumns = @($headerLine.Trim('"') -split '","')
+    # Support both Export-Csv quoted headers and plain comma-separated headers.
+    $headerColumns = @($headerLine -split ',' | ForEach-Object { $_.Trim().Trim('"') })
     foreach ($column in $requiredDeltaColumns) {
       if ($headerColumns -notcontains $column) {
         throw "Delta triage CSV missing expected column '$column'"
