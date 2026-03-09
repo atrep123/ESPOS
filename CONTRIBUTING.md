@@ -22,6 +22,7 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Lokalni tolerant checks (Windows): `scripts/check_all_local.ps1 -Fast`
 - Lokalni tolerant checks + strict artefakty (Windows): `scripts/check_all_local.ps1 -Fast -StrictArtifacts`
 - Lokalni tolerant checks (shell): `./scripts/check_all_local.sh main_scene.json`
+- Lokalni strict artefakty + triage gate (shell): `./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv`
 
 ## Poznamky k native testum (Windows)
 
