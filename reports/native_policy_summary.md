@@ -1,13 +1,13 @@
 ﻿# Native Policy History Summary
 
 - File: C:\Users\atrep\Desktop\ESPOS\ESPOS\reports\native_policy_probe_history.jsonl
-- Entries: 14
-- Triggered diagnostics: 5
-- Runs with POLICY_BLOCK > 0: 4
+- Entries: 15
+- Triggered diagnostics: 6
+- Runs with POLICY_BLOCK > 0: 5
 - Runs with transient blocks > 0: 1
 - Runs with non-policy failures > 0: 0
 
-## Recent Entries (last 14)
+## Recent Entries (last 15)
 
 | ProbeTimestamp | Triggered | PolicyBlockCount | TransientPolicyBlockCount | FailureCount |
 |---|---:|---:|---:|---:|
@@ -25,10 +25,14 @@
 | 2026-03-09T19:27:18.5138263+01:00 | False | 0 | 0 | 0 |
 | 2026-03-09T19:28:01.6614864+01:00 | True | 0 | 1 | 0 |
 | 2026-03-09T19:29:30.8965775+01:00 | True | 2 | 0 | 0 |
+| 2026-03-09T19:32:28.1715100+01:00 | True | 4 | 0 | 0 |
 
 ## Blocked Suite Frequency
 
 | Suite | Hits |
 |---|---:|
-| test_msgbus | 1 |
+| test_msgbus | 2 |
+| test_seesaw | 1 |
+| test_ui_cmd | 1 |
 | test_ui_listmodel | 1 |
+| test_store | 1 |

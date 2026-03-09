@@ -4,7 +4,8 @@ param(
 	[switch]$SkipPython = $true,
 	[switch]$IncludePioBuilds,
 	[string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
-	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json"
+	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
+	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md"
 )
 
 $ErrorActionPreference = "Stop"
@@ -70,7 +71,16 @@ if ($failRounds.Count -gt 0) {
 
 if (Test-Path $summarize) {
 	Write-Host ""
-	& powershell -ExecutionPolicy Bypass -File $summarize -HistoryPath $HistoryPath -Last ([Math]::Max($Rounds, 20))
+	$sumArgs = @(
+		"-ExecutionPolicy", "Bypass",
+		"-File", $summarize,
+		"-HistoryPath", $HistoryPath,
+		"-Last", ([Math]::Max($Rounds, 20))
+	)
+	if (-not [string]::IsNullOrWhiteSpace($MarkdownSummaryPath)) {
+		$sumArgs += @("-MarkdownOut", $MarkdownSummaryPath)
+	}
+	& powershell @sumArgs
 }
 
 if ($failed -gt 0) {
