@@ -14,6 +14,17 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$triageCsvSpecified = $PSBoundParameters.ContainsKey("TriageCsv")
+$triageDeltaCsvSpecified = $PSBoundParameters.ContainsKey("TriageDeltaCsv")
+
+if ($triageCsvSpecified -and [string]::IsNullOrWhiteSpace($TriageCsv)) {
+  throw "-TriageCsv was provided but is empty. Provide a CSV path or omit the parameter."
+}
+
+if ($triageDeltaCsvSpecified -and [string]::IsNullOrWhiteSpace($TriageDeltaCsv)) {
+  throw "-TriageDeltaCsv was provided but is empty. Provide a CSV path or omit the parameter."
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 function Resolve-RepoPath([string]$relativePath) {
