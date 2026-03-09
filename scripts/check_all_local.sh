@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --native-policy-probe-json)
-      if [[ $# -lt 2 || "$2" == --* ]]; then
+      if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "[FAIL] Missing value for --native-policy-probe-json" >&2
         exit 2
       fi
@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-history-jsonl)
-      if [[ $# -lt 2 || "$2" == --* ]]; then
+      if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "[FAIL] Missing value for --native-policy-history-jsonl" >&2
         exit 2
       fi
@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-summary-markdown)
-      if [[ $# -lt 2 || "$2" == --* ]]; then
+      if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "[FAIL] Missing value for --native-policy-summary-markdown" >&2
         exit 2
       fi
@@ -56,7 +56,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-history-csv)
-      if [[ $# -lt 2 || "$2" == --* ]]; then
+      if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "[FAIL] Missing value for --native-policy-history-csv" >&2
         exit 2
       fi
@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-triage-csv)
-      if [[ $# -lt 2 || "$2" == --* ]]; then
+      if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "[FAIL] Missing value for --native-policy-triage-csv" >&2
         exit 2
       fi
@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --native-policy-triage-delta-csv)
-      if [[ $# -lt 2 || "$2" == --* ]]; then
+      if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "[FAIL] Missing value for --native-policy-triage-delta-csv" >&2
         exit 2
       fi
@@ -116,6 +116,26 @@ done
 
 if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIAGE_DELTA_CSV" -eq 1 ) ]]; then
   echo "[FAIL] --strict-triage-csv/--strict-triage-delta-csv require --strict-artifacts" >&2
+  exit 2
+fi
+
+if [[ -z "$POLICY_PROBE_JSON" ]]; then
+  echo "[FAIL] --native-policy-probe-json cannot be empty" >&2
+  exit 2
+fi
+
+if [[ -z "$POLICY_HISTORY_JSONL" ]]; then
+  echo "[FAIL] --native-policy-history-jsonl cannot be empty" >&2
+  exit 2
+fi
+
+if [[ -z "$POLICY_SUMMARY_MD" ]]; then
+  echo "[FAIL] --native-policy-summary-markdown cannot be empty" >&2
+  exit 2
+fi
+
+if [[ -z "$POLICY_HISTORY_CSV" ]]; then
+  echo "[FAIL] --native-policy-history-csv cannot be empty" >&2
   exit 2
 fi
 
