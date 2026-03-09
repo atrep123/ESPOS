@@ -12,6 +12,7 @@ param(
 	[string]$TriageCsvPath = "reports/native_policy_triage.csv",
 	[int]$TriageTop = 5,
 	[int]$TriageDeltaWindow = 0,
+	[int]$TriageMinAbsDeltaScore = 0,
 	[switch]$TriageOnlyWorsening,
 	[switch]$TriageIncludeAllDeltaRows,
 	[switch]$SkipTriage,
@@ -38,6 +39,10 @@ if ($TriageTop -lt 1) {
 
 if ($TriageDeltaWindow -lt 0) {
 	throw "Invalid value for -TriageDeltaWindow: must be >= 0"
+}
+
+if ($TriageMinAbsDeltaScore -lt 0) {
+	throw "Invalid value for -TriageMinAbsDeltaScore: must be >= 0"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -185,6 +190,10 @@ if (-not $SkipTriage -and (Test-Path $triage)) {
 
 	if ($TriageIncludeAllDeltaRows) {
 		$triageArgs += "-IncludeAllDeltaRows"
+	}
+
+	if ($TriageMinAbsDeltaScore -gt 0) {
+		$triageArgs += @("-MinAbsDeltaScore", $TriageMinAbsDeltaScore)
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($TriageReportPath)) {

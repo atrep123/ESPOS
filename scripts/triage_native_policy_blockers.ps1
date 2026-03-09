@@ -5,7 +5,8 @@ param(
   [string]$CsvOut = "reports/native_policy_triage.csv",
   [int]$DeltaWindow = 0,
   [switch]$OnlyWorsening,
-  [switch]$IncludeAllDeltaRows
+  [switch]$IncludeAllDeltaRows,
+  [int]$MinAbsDeltaScore = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,6 +26,14 @@ if ($OnlyWorsening -and $DeltaWindow -le 0) {
 
 if ($IncludeAllDeltaRows -and $DeltaWindow -le 0) {
   throw "Invalid usage: -IncludeAllDeltaRows requires -DeltaWindow > 0"
+}
+
+if ($MinAbsDeltaScore -lt 0) {
+  throw "Invalid value for -MinAbsDeltaScore: must be >= 0"
+}
+
+if ($MinAbsDeltaScore -gt 0 -and $DeltaWindow -le 0) {
+  throw "Invalid usage: -MinAbsDeltaScore requires -DeltaWindow > 0"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -193,6 +202,10 @@ if ($deltaEnabled) {
       $deltaRanked = @($deltaRanked | Where-Object { $_.DeltaScore -gt 0 })
     }
 
+    if ($MinAbsDeltaScore -gt 0) {
+      $deltaRanked = @($deltaRanked | Where-Object { [Math]::Abs([int]$_.DeltaScore) -ge $MinAbsDeltaScore })
+    }
+
     $deltaSorted = @(
       $deltaRanked |
         Sort-Object @{Expression = { [Math]::Abs([double]$_.DeltaScore) }; Descending = $true}, @{Expression = 'DeltaScore'; Descending = $true}, @{Expression = 'Suite'; Descending = $false}
@@ -214,6 +227,7 @@ if ($deltaEnabled) {
   Write-Host "DeltaWindow: $DeltaWindow"
   Write-Host "OnlyWorsening: $OnlyWorsening"
   Write-Host "IncludeAllDeltaRows: $IncludeAllDeltaRows"
+  Write-Host "MinAbsDeltaScore: $MinAbsDeltaScore"
 }
 
 if ($topRanked.Count -eq 0) {
@@ -268,6 +282,7 @@ foreach ($suite in $topRanked) {
     DeltaWindow = $DeltaWindow
     OnlyWorsening = [bool]$OnlyWorsening
     IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
+    MinAbsDeltaScore = $MinAbsDeltaScore
   }
   $priorityRank++
 }
@@ -296,6 +311,7 @@ if ($deltaEnabled -and $deltaTop.Count -gt 0) {
       DeltaWindow = $DeltaWindow
       OnlyWorsening = [bool]$OnlyWorsening
       IncludeAllDeltaRows = [bool]$IncludeAllDeltaRows
+      MinAbsDeltaScore = $MinAbsDeltaScore
     }
     $deltaRank++
   }
@@ -311,6 +327,7 @@ $md += ('- Top: ' + $Top)
 $md += ('- DeltaWindow: ' + $DeltaWindow)
 $md += ('- OnlyWorsening: ' + $OnlyWorsening)
 $md += ('- IncludeAllDeltaRows: ' + $IncludeAllDeltaRows)
+$md += ('- MinAbsDeltaScore: ' + $MinAbsDeltaScore)
 $md += "- Score formula: 2 * PolicyHits + TransientHits"
 $md += ""
 
@@ -352,6 +369,7 @@ if ($deltaEnabled) {
     $md += ('- Recent window: ' + $deltaRecentWindow)
     $md += ('- Previous window: ' + $deltaPreviousWindow)
     $md += ('- IncludeAllDeltaRows: ' + $IncludeAllDeltaRows)
+    $md += ('- MinAbsDeltaScore: ' + $MinAbsDeltaScore)
     $md += ""
     $md += "| Rank | Suite | DeltaScore | DeltaPolicyHits | DeltaTransientHits | RecentScore | PreviousScore |"
     $md += "|---:|---|---:|---:|---:|---:|---:|"
@@ -390,7 +408,8 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedCsvPath)) {
     "PreviousScore",
     "DeltaWindow",
     "OnlyWorsening",
-    "IncludeAllDeltaRows"
+    "IncludeAllDeltaRows",
+    "MinAbsDeltaScore"
   )
 
   if ($csvRows.Count -eq 0) {
