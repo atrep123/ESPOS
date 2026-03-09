@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
   [string]$ProbeJson = "reports/native_policy_probe_auto.json",
   [string]$HistoryJsonl = "reports/native_policy_probe_history.jsonl",
@@ -47,7 +48,13 @@ function Resolve-RepoPath([string]$relativePath) {
   if ([string]::IsNullOrWhiteSpace($relativePath)) {
     return ""
   }
-  return (Join-Path $repoRoot $relativePath)
+
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($relativePath)
+  if ([System.IO.Path]::IsPathRooted($expandedPath)) {
+    return $expandedPath
+  }
+
+  return (Join-Path $repoRoot $expandedPath)
 }
 
 function Assert-FileExists([string]$path, [string]$label) {
