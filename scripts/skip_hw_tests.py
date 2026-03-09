@@ -12,6 +12,7 @@ ESPRESSIF_VID = 0x303A
 ESP32S3_PIDS: List[int] = [0x1001, 0x1002, 0x1004]  # common S3 JTAG/USB serial PIDs
 ARDUINO_VID = 0x2341
 ARDUINO_NANO_ESP32_PIDS: List[int] = [0x0070]
+ALLOWED_STAGES = {"test", "upload"}
 
 
 def has_esp32s3() -> bool:
@@ -47,6 +48,10 @@ def main() -> int:
     want = sys.argv[1] if len(sys.argv) > 1 else "test"
     if not want.strip():
         print("ERROR: Stage argument cannot be empty", file=sys.stderr)
+        return 2
+    if want not in ALLOWED_STAGES:
+        allowed = ", ".join(sorted(ALLOWED_STAGES))
+        print(f"ERROR: Unsupported stage '{want}'. Allowed: {allowed}", file=sys.stderr)
         return 2
 
     board_present = has_esp32s3()
