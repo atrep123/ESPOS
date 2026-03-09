@@ -1,6 +1,6 @@
 ﻿{
     "Summary":  {
-                    "ProbeTimestamp":  "2026-03-09T19:36:27.2083988+01:00",
+                    "ProbeTimestamp":  "2026-03-09T19:38:08.8993484+01:00",
                     "RepoRoot":  "C:\\Users\\atrep\\Desktop\\ESPOS\\ESPOS",
                     "Triggered":  true,
                     "MaxAttemptsPerSuite":  2,
@@ -20,7 +20,7 @@
                                    "test_ui_nav",
                                    "test_ui_render_swbuf"
                                ],
-                    "PolicyBlockCount":  3,
+                    "PolicyBlockCount":  2,
                     "TransientPolicyBlockCount":  0,
                     "FailureCount":  0
                 },
@@ -35,9 +35,9 @@
                     {
                         "Round":  1,
                         "Suite":  "test_seesaw",
-                        "Status":  "PASSED",
-                        "ExitCode":  0,
-                        "Attempts":  1
+                        "Status":  "POLICY_BLOCK",
+                        "ExitCode":  1,
+                        "Attempts":  2
                     },
                     {
                         "Round":  1,
@@ -56,9 +56,9 @@
                     {
                         "Round":  1,
                         "Suite":  "test_ui_cmd",
-                        "Status":  "POLICY_BLOCK",
-                        "ExitCode":  1,
-                        "Attempts":  2
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
                     },
                     {
                         "Round":  1,
@@ -98,9 +98,9 @@
                     {
                         "Round":  1,
                         "Suite":  "test_ui_nav",
-                        "Status":  "POLICY_BLOCK",
-                        "ExitCode":  1,
-                        "Attempts":  2
+                        "Status":  "PASSED",
+                        "ExitCode":  0,
+                        "Attempts":  1
                     },
                     {
                         "Round":  1,

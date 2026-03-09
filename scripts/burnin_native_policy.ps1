@@ -8,7 +8,8 @@ param(
 	[string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
 	[string]$MarkdownSummaryPath = "reports/native_policy_summary.md",
 	[switch]$ArchiveProbeSnapshots,
-	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots"
+	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots",
+	[int]$MaxSnapshotFiles = 50
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,6 +17,10 @@ Set-StrictMode -Version Latest
 
 if ($Rounds -lt 1) {
 	throw "Invalid value for -Rounds: must be >= 1"
+}
+
+if ($MaxSnapshotFiles -lt 1) {
+	throw "Invalid value for -MaxSnapshotFiles: must be >= 1"
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -64,6 +69,15 @@ for ($round = 1; $round -le $Rounds; $round++) {
 		$snapshotPath = Join-Path $resolvedSnapshotDir ("probe_round{0:D2}_{1}.json" -f $round, $stamp)
 		Copy-Item -Path $resolvedProbeJsonPath -Destination $snapshotPath -Force
 		Write-Host "[INFO] Archived probe snapshot: $snapshotPath"
+
+		$allSnapshots = @(Get-ChildItem -Path $resolvedSnapshotDir -Filter "*.json" | Sort-Object LastWriteTime -Descending)
+		if ($allSnapshots.Count -gt $MaxSnapshotFiles) {
+			$toDelete = @($allSnapshots | Select-Object -Skip $MaxSnapshotFiles)
+			foreach ($old in $toDelete) {
+				Remove-Item -Path $old.FullName -Force
+			}
+			Write-Host "[INFO] Pruned $($toDelete.Count) old snapshot(s); kept latest $MaxSnapshotFiles"
+		}
 	}
 
 	if (Test-Path $resolvedProbeJsonPath) {
