@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
 
@@ -44,4 +45,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(
+        description="ESP32 OS Quick Launcher — interactive menu for the Pygame UI Designer"
+    ).parse_args()
     main()
