@@ -3,8 +3,11 @@
 #include <stdbool.h>
 
 #include "display_config.h"
+#include "esp_log.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+
+static const char *TAG = "store";
 
 #define SCHEMA_VER 2U
 
@@ -26,10 +29,17 @@ esp_err_t store_init(store_conf_t *out)
 
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_erase();
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "nvs_flash_erase failed: %s", esp_err_to_name(err));
+            return err;
+        }
         err = nvs_flash_init();
     }
-    ESP_ERROR_CHECK(err);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_flash_init failed: %s", esp_err_to_name(err));
+        return err;
+    }
 
     nvs_handle_t h;
     err = nvs_open("app", NVS_READWRITE, &h);
