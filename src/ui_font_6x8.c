@@ -144,6 +144,36 @@ static const uint8_t GLYPH_Y[8] = {
 static const uint8_t GLYPH_Z[8] = {
     ROW5(0x1F), ROW5(0x01), ROW5(0x02), ROW5(0x04), ROW5(0x08), ROW5(0x10), ROW5(0x1F), 0x00
 };
+static const uint8_t GLYPH_PLUS[8] = {
+    0x00, ROW5(0x04), ROW5(0x04), ROW5(0x1F), ROW5(0x04), ROW5(0x04), 0x00, 0x00
+};
+static const uint8_t GLYPH_LT[8] = {
+    ROW5(0x02), ROW5(0x04), ROW5(0x08), ROW5(0x10), ROW5(0x08), ROW5(0x04), ROW5(0x02), 0x00
+};
+static const uint8_t GLYPH_GT[8] = {
+    ROW5(0x08), ROW5(0x04), ROW5(0x02), ROW5(0x01), ROW5(0x02), ROW5(0x04), ROW5(0x08), 0x00
+};
+static const uint8_t GLYPH_EXCL[8] = {
+    ROW5(0x04), ROW5(0x04), ROW5(0x04), ROW5(0x04), ROW5(0x04), 0x00, ROW5(0x04), 0x00
+};
+static const uint8_t GLYPH_EQ[8] = {
+    0x00, 0x00, ROW5(0x1F), 0x00, ROW5(0x1F), 0x00, 0x00, 0x00
+};
+static const uint8_t GLYPH_LPAREN[8] = {
+    ROW5(0x02), ROW5(0x04), ROW5(0x08), ROW5(0x08), ROW5(0x08), ROW5(0x04), ROW5(0x02), 0x00
+};
+static const uint8_t GLYPH_RPAREN[8] = {
+    ROW5(0x08), ROW5(0x04), ROW5(0x02), ROW5(0x02), ROW5(0x02), ROW5(0x04), ROW5(0x08), 0x00
+};
+static const uint8_t GLYPH_COMMA[8] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, ROW5(0x04), ROW5(0x04), ROW5(0x08)
+};
+static const uint8_t GLYPH_HASH[8] = {
+    ROW5(0x0A), ROW5(0x0A), ROW5(0x1F), ROW5(0x0A), ROW5(0x1F), ROW5(0x0A), ROW5(0x0A), 0x00
+};
+static const uint8_t GLYPH_STAR[8] = {
+    0x00, ROW5(0x04), ROW5(0x15), ROW5(0x0E), ROW5(0x15), ROW5(0x04), 0x00, 0x00
+};
 
 const uint8_t *ui_font6x8_glyph(char c)
 {
@@ -168,6 +198,26 @@ const uint8_t *ui_font6x8_glyph(char c)
             return GLYPH_PERCENT;
         case '?':
             return GLYPH_QMARK;
+        case '+':
+            return GLYPH_PLUS;
+        case '<':
+            return GLYPH_LT;
+        case '>':
+            return GLYPH_GT;
+        case '!':
+            return GLYPH_EXCL;
+        case '=':
+            return GLYPH_EQ;
+        case '(':
+            return GLYPH_LPAREN;
+        case ')':
+            return GLYPH_RPAREN;
+        case ',':
+            return GLYPH_COMMA;
+        case '#':
+            return GLYPH_HASH;
+        case '*':
+            return GLYPH_STAR;
 
         case '0':
             return GLYPH_0;
