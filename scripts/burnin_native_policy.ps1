@@ -23,11 +23,41 @@ param(
 	[switch]$SkipArtifactCheck,
 	[switch]$ArchiveProbeSnapshots,
 	[string]$ProbeSnapshotDir = "reports/native_policy_snapshots",
-	[int]$MaxSnapshotFiles = 50
+	[int]$MaxSnapshotFiles = 50,
+	[switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+	Write-Host "Usage: .\scripts\burnin_native_policy.ps1 [-Help]"
+	Write-Host "  -Rounds <int>               Burn-in rounds (default: 10)"
+	Write-Host "  -DelaySeconds <int>          Delay between rounds (default: 0)"
+	Write-Host "  -SkipPython                  Skip Python checks"
+	Write-Host "  -IncludePioBuilds            Include PIO build steps"
+	Write-Host "  -FailOnPolicyBlock           Fail on policy block"
+	Write-Host "  -HistoryPath <path>          History JSONL path"
+	Write-Host "  -ProbeJsonPath <path>        Probe JSON output"
+	Write-Host "  -MarkdownSummaryPath <path>  Markdown summary output"
+	Write-Host "  -CsvSummaryPath <path>       CSV summary output"
+	Write-Host "  -TriageReportPath <path>     Triage markdown output"
+	Write-Host "  -TriageCsvPath <path>        Triage CSV output"
+	Write-Host "  -TriageDeltaCsvPath <path>   Triage delta CSV output"
+	Write-Host "  -TriageTop <int>             Top N in triage (default: 5)"
+	Write-Host "  -TriageDeltaWindow <int>     Delta window size"
+	Write-Host "  -TriageMinAbsDeltaScore <int> Minimum abs delta score"
+	Write-Host "  -TriageDeltaSortBy <string>  Delta sort column"
+	Write-Host "  -TriageOnlyWorsening         Only show worsening suites"
+	Write-Host "  -TriageIncludeAllDeltaRows   Include all delta rows"
+	Write-Host "  -SkipTriage                  Skip triage step"
+	Write-Host "  -SkipTriageCsvCheck          Skip triage CSV validation"
+	Write-Host "  -SkipArtifactCheck           Skip artifact validation"
+	Write-Host "  -ArchiveProbeSnapshots       Archive probe snapshots"
+	Write-Host "  -ProbeSnapshotDir <path>     Snapshot directory"
+	Write-Host "  -MaxSnapshotFiles <int>      Max snapshot files (default: 50)"
+	exit 0
+}
 
 if ($Rounds -lt 1) {
 	throw "Invalid value for -Rounds: must be >= 1"
