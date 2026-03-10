@@ -49,6 +49,10 @@ void test_render_progressbar_inverted_range_no_crash(void);
 void test_render_slider_inverted_range_no_crash(void);
 void test_render_gauge_inverted_range_no_crash(void);
 void test_render_checkbox_tiny_no_crash(void);
+void test_render_icon_no_text_no_crash(void);
+void test_render_icon_empty_text_no_crash(void);
+void test_render_chart_tiny_no_crash(void);
+void test_render_textbox_null_text_no_crash(void);
 
 void app_main(void)
 {
@@ -100,6 +104,10 @@ void app_main(void)
     RUN_TEST(test_render_slider_inverted_range_no_crash);
     RUN_TEST(test_render_gauge_inverted_range_no_crash);
     RUN_TEST(test_render_checkbox_tiny_no_crash);
+    RUN_TEST(test_render_icon_no_text_no_crash);
+    RUN_TEST(test_render_icon_empty_text_no_crash);
+    RUN_TEST(test_render_chart_tiny_no_crash);
+    RUN_TEST(test_render_textbox_null_text_no_crash);
     UNITY_END();
 }
 
@@ -152,6 +160,10 @@ void test_render_progressbar_inverted_range_no_crash(void);
 void test_render_slider_inverted_range_no_crash(void);
 void test_render_gauge_inverted_range_no_crash(void);
 void test_render_checkbox_tiny_no_crash(void);
+void test_render_icon_no_text_no_crash(void);
+void test_render_icon_empty_text_no_crash(void);
+void test_render_chart_tiny_no_crash(void);
+void test_render_textbox_null_text_no_crash(void);
 
 int main(void)
 {
@@ -203,6 +215,10 @@ int main(void)
     RUN_TEST(test_render_slider_inverted_range_no_crash);
     RUN_TEST(test_render_gauge_inverted_range_no_crash);
     RUN_TEST(test_render_checkbox_tiny_no_crash);
+    RUN_TEST(test_render_icon_no_text_no_crash);
+    RUN_TEST(test_render_icon_empty_text_no_crash);
+    RUN_TEST(test_render_chart_tiny_no_crash);
+    RUN_TEST(test_render_textbox_null_text_no_crash);
     UNITY_END();
     return 0;
 }

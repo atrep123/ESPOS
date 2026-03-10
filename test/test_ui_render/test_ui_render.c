@@ -769,3 +769,41 @@ void test_render_checkbox_tiny_no_crash(void)
     ui_render_widget(&w, &ops);
     TEST_ASSERT_TRUE(1);
 }
+
+void test_render_icon_no_text_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_ICON, 0, 0, 24, 24);
+    w.text = NULL;
+    ui_render_widget(&w, &ops);
+    /* NULL text: icon falls through to text path with "?" */
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_render_icon_empty_text_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_ICON, 0, 0, 24, 24);
+    w.text = "";
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_render_chart_tiny_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    /* Chart with inner_w=0 after subtracting borders → early return */
+    UiWidget w = make_widget(UIW_CHART, 0, 0, 2, 2);
+    w.border = 1;
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_render_textbox_null_text_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_TEXTBOX, 0, 0, 100, 40);
+    w.text = NULL;
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(1);
+}
