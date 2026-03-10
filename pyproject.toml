@@ -32,8 +32,25 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
-ignore = ["E501"]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear (common pitfalls)
+    "S",    # flake8-bandit (security)
+    "UP",   # pyupgrade (modern Python idioms)
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "S101",   # assert used (fine in tests)
+    "S110",   # try-except-pass (intentional silencing in many places)
+    "S112",   # try-except-continue (intentional skip pattern)
+    "S603",   # subprocess untrusted input (we validate inputs already)
+    "S607",   # partial executable path (acceptable for pio/python)
+    "UP006",  # use X | Y instead of Optional/Union (requires Python 3.10+)
+    "UP035",  # deprecated typing imports (requires Python 3.9+)
+    "UP045",  # use X | Y in type aliases (requires Python 3.10+)
+]
 
 [tool.mypy]
 python_version = "3.9"

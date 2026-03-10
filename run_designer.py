@@ -27,7 +27,7 @@ def _require_pygame() -> None:
     except Exception:
         print("[FAIL] Missing dependency: pygame")
         print("       Install with: pip install pygame")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
 
 
 def parse_args() -> argparse.Namespace:
@@ -124,7 +124,7 @@ def send_live_preview(json_path: Path, port: str, baud: int = 115200) -> None:
         print("[WARN] PySerial neni nainstalovany; preskakuji live preview.")
         return
     payload = json_path.read_text(encoding="utf-8")
-    frame = f"<<UIJSON>>{payload}<<END>>".encode("utf-8")
+    frame = f"<<UIJSON>>{payload}<<END>>".encode()
     try:
         with serial.Serial(port=port, baudrate=baud, timeout=2) as ser:
             ser.write(frame)
@@ -164,7 +164,7 @@ def main() -> None:
         from cyberpunk_editor import CyberpunkEditorApp
     except Exception as exc:
         print(f"[FAIL] Unable to start Pygame designer: {exc}")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
 
     app = CyberpunkEditorApp(json_path, (width, height), profile=profile)
     app.run()

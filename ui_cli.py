@@ -600,7 +600,7 @@ def create_cli_interface(
                 if 0 <= _idx < len(snaps):
                     try:
                         # Load snapshot into current scene (create scene if needed)
-                        with open(snaps[_idx], "r", encoding="utf-8") as _f:
+                        with open(snaps[_idx], encoding="utf-8") as _f:
                             _state = json.load(_f)
                         _name = _state.get("name", "restored")
                         designer.scenes[_name] = SceneConfig(
