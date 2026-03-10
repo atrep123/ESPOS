@@ -28,10 +28,10 @@ pio test -e native -f test_ui_core  # single suite
 | `test_ui_listmodel` | `src/services/ui/ui_listmodel.c` — list/tree model | 20 |
 | `test_ui_meta` | `src/services/ui/ui_meta.c` — widget metadata | 12 |
 | `test_ui_nav` | `src/ui_nav.c` — focus navigation | 50 |
-| `test_ui_render` | `src/ui_render.c` — widget rendering dispatch | 44 |
+| `test_ui_render` | `src/ui_render.c` — widget rendering dispatch | 48 |
 | `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 53 |
 
-**Total: ~359 test cases**
+**Total: ~363 test cases**
 
 ## Stubs
 

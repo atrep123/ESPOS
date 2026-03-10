@@ -717,3 +717,55 @@ void test_render_progressbar_tiny_no_crash(void)
     ui_render_widget(&w, &ops);
     TEST_ASSERT_TRUE(1);
 }
+
+/* ------------------------------------------------------------------ */
+/* Inverted range (min > max) edge cases — range is forced to 1        */
+/* ------------------------------------------------------------------ */
+
+void test_render_progressbar_inverted_range_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_PROGRESSBAR, 0, 0, 60, 10);
+    w.border = 1;
+    w.min_value = 100;
+    w.max_value = 0; /* inverted */
+    w.value = 50;
+    ui_render_widget(&w, &ops);
+    /* Should draw without crashing ("range <= 0" path sets range = 1). */
+    TEST_ASSERT_TRUE(has_call_type(DRAW_FILL_RECT));
+}
+
+void test_render_slider_inverted_range_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_SLIDER, 0, 0, 60, 14);
+    w.border = 1;
+    w.min_value = 200;
+    w.max_value = -100; /* inverted, negative */
+    w.value = 0;
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(has_call_type(DRAW_FILL_RECT));
+}
+
+void test_render_gauge_inverted_range_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_GAUGE, 0, 0, 80, 14);
+    w.border = 1;
+    w.min_value = 50;
+    w.max_value = 50; /* equal = range 0, forced to 1 */
+    w.value = 50;
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(has_call_type(DRAW_FILL_RECT));
+}
+
+void test_render_checkbox_tiny_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    /* Height=2 → box=0, clamped to 2 → should still not crash. */
+    UiWidget w = make_widget(UIW_CHECKBOX, 0, 0, 40, 2);
+    w.checked = 1;
+    w.text = "X";
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(1);
+}
