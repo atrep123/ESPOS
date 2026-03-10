@@ -18,6 +18,7 @@ void test_set_col_offset_normal(void);
 void test_set_col_offset_boundary(void);
 void test_set_col_offset_clamped(void);
 void test_set_col_offset_clamped_max(void);
+void test_store_init_truncated_blob_resets(void);
 
 #ifdef ESP_PLATFORM
 
@@ -42,6 +43,7 @@ void app_main(void)
     RUN_TEST(test_set_col_offset_boundary);
     RUN_TEST(test_set_col_offset_clamped);
     RUN_TEST(test_set_col_offset_clamped_max);
+    RUN_TEST(test_store_init_truncated_blob_resets);
     UNITY_END();
 }
 
@@ -71,6 +73,7 @@ int main(void)
     RUN_TEST(test_set_col_offset_boundary);
     RUN_TEST(test_set_col_offset_clamped);
     RUN_TEST(test_set_col_offset_clamped_max);
+    RUN_TEST(test_store_init_truncated_blob_resets);
     return UNITY_END();
 }
 

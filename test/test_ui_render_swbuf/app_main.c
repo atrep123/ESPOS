@@ -68,6 +68,7 @@ void test_render_widget_icon_no_crash(void);
 void test_render_widget_icon_with_border(void);
 void test_render_widget_invisible_skipped(void);
 void test_render_widget_button_border_styles(void);
+void test_swbuf_blit_mono_stride_too_small_rejected(void);
 #endif
 
 int main(void)
@@ -124,6 +125,7 @@ int main(void)
     RUN_TEST(test_render_widget_icon_with_border);
     RUN_TEST(test_render_widget_invisible_skipped);
     RUN_TEST(test_render_widget_button_border_styles);
+    RUN_TEST(test_swbuf_blit_mono_stride_too_small_rejected);
 #endif
     return UNITY_END();
 }

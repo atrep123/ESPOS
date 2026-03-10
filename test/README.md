@@ -18,7 +18,7 @@ pio test -e native -f test_ui_core  # single suite
 |-------|-------------------|-------|
 | `test_msgbus` | `src/kernel/msgbus.c` — message bus pub/sub | 15 |
 | `test_seesaw` | `src/services/input/seesaw.c` — Adafruit seesaw encoder | 25 |
-| `test_store` | `src/services/store/` — NVS/SPIFFS persistence | 18 |
+| `test_store` | `src/services/store/` — NVS/SPIFFS persistence | 19 |
 | `test_ui_bindings` | `src/services/ui/ui_bindings.c` — runtime value bindings | 19 |
 | `test_ui_cmd` | `src/services/ui/ui_cmd.c` — UI command dispatch | 27 |
 | `test_ui_components` | `src/services/ui/ui_components.c` — widget rendering | 18 |
@@ -29,9 +29,9 @@ pio test -e native -f test_ui_core  # single suite
 | `test_ui_meta` | `src/services/ui/ui_meta.c` — widget metadata | 12 |
 | `test_ui_nav` | `src/ui_nav.c` — focus navigation | 50 |
 | `test_ui_render` | `src/ui_render.c` — widget rendering dispatch | 44 |
-| `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 52 |
+| `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 53 |
 
-**Total: ~357 test cases**
+**Total: ~359 test cases**
 
 ## Stubs
 

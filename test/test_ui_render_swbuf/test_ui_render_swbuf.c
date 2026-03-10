@@ -1134,3 +1134,24 @@ void test_render_widget_button_border_styles(void)
     }
 }
 #endif
+
+/* ------------------------------------------------------------------ */
+/* blit_mono: stride too small for width → silently rejected           */
+/* ------------------------------------------------------------------ */
+
+void test_swbuf_blit_mono_stride_too_small_rejected(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+
+    /* w=16 needs stride >= 2, but we pass stride=1 */
+    static const uint8_t data[] = { 0xFF, 0xFF };
+    ui_swbuf_blit_mono(&b, 0, 0, 16, 1, 1, data, 0x0F, 0);
+
+    /* Buffer should be unchanged — blit was rejected */
+    for (int i = 0; i < (int)sizeof(backing); ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0, backing[i]);
+    }
+}

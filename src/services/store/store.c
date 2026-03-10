@@ -47,9 +47,9 @@ esp_err_t store_init(store_conf_t *out)
         return err;
     }
 
-    size_t sz = sizeof(*out);
+    size_t sz = sizeof(g_conf);
     err = nvs_get_blob(h, "conf", &g_conf, &sz);
-    if (err != ESP_OK || g_conf.schema != SCHEMA_VER) {
+    if (err != ESP_OK || sz != sizeof(g_conf) || g_conf.schema != SCHEMA_VER) {
         g_conf.schema = SCHEMA_VER;
         g_conf.bg_rgb = 0x101010;
         g_conf.display_contrast = 0xFF;

@@ -316,3 +316,32 @@ void test_set_col_offset_clamped_max(void)
     store_get_conf(&out);
     TEST_ASSERT_EQUAL(79, out.display_col_offset);
 }
+
+/* ------------------------------------------------------------------ */
+/* store_init: truncated blob (size mismatch) → reset to defaults      */
+/* ------------------------------------------------------------------ */
+
+void test_store_init_truncated_blob_resets(void)
+{
+    /* Stage a blob that is too short but starts with a valid schema. */
+    store_conf_t staged = {
+        .schema = SCHEMA_VER,
+        .bg_rgb = 0xDEADBE,
+        .display_contrast = 77,
+        .display_invert = 1,
+        .display_col_offset = 55,
+        ._reserved0 = 0,
+    };
+    /* Only write half the struct — simulates NVS corruption/truncation. */
+    nvs_stub_set_blob(&staged, sizeof(staged) / 2);
+
+    store_conf_t out;
+    esp_err_t err = store_init(&out);
+    TEST_ASSERT_EQUAL(ESP_OK, err);
+
+    /* Should get defaults because size didn't match. */
+    TEST_ASSERT_EQUAL(SCHEMA_VER, out.schema);
+    TEST_ASSERT_EQUAL_HEX32(0x101010, out.bg_rgb);
+    TEST_ASSERT_EQUAL(0xFF, out.display_contrast);
+    TEST_ASSERT_EQUAL(1, nvs_stub_set_blob_call_count());
+}
