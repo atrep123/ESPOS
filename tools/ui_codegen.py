@@ -100,6 +100,26 @@ def as_int(v: object, default: int = 0) -> int:
         return int(default)
 
 
+def _clamp(v: int, lo: int, hi: int) -> int:
+    if v < lo:
+        return lo
+    if v > hi:
+        return hi
+    return v
+
+
+def as_uint16(v: object, default: int = 0) -> int:
+    return _clamp(as_int(v, default), 0, 65535)
+
+
+def as_int16(v: object, default: int = 0) -> int:
+    return _clamp(as_int(v, default), -32768, 32767)
+
+
+def as_uint8(v: object, default: int = 0) -> int:
+    return _clamp(as_int(v, default), 0, 255)
+
+
 def as_bool(v: object, default: bool = False) -> bool:
     if v is None:
         return bool(default)
@@ -343,15 +363,15 @@ def generate_ui_design_pair(
         if not isinstance(w, dict):
             continue
         wtype = WIDGET_TYPE_MAP.get(str(w.get("type", "label")).lower(), "UIW_LABEL")
-        x = as_int(w.get("x", 0), 0)
-        y = as_int(w.get("y", 0), 0)
-        ww = as_int(w.get("width", 8), 8)
-        hh = as_int(w.get("height", 8), 8)
+        x = as_uint16(w.get("x", 0), 0)
+        y = as_uint16(w.get("y", 0), 0)
+        ww = as_uint16(w.get("width", 8), 8)
+        hh = as_uint16(w.get("height", 8), 8)
         border = 1 if as_bool(w.get("border", True), True) else 0
         checked = 1 if as_bool(w.get("checked", False), False) else 0
-        value = as_int(w.get("value", 0), 0)
-        min_value = as_int(w.get("min_value", 0), 0)
-        max_value = as_int(w.get("max_value", 100), 100)
+        value = as_int16(w.get("value", 0), 0)
+        min_value = as_int16(w.get("min_value", 0), 0)
+        max_value = as_int16(w.get("max_value", 100), 100)
 
         widget_id = str(w.get("_widget_id") or w.get("id") or "")
         text = str(w.get("text", "") or "")
@@ -373,9 +393,7 @@ def generate_ui_design_pair(
         align = align_for(w)
         valign = valign_for(w)
         overflow = overflow_for(w)
-        max_lines = as_int(w.get("max_lines", 0), 0)
-        if max_lines < 0:
-            max_lines = 0
+        max_lines = as_uint8(w.get("max_lines", 0), 0)
         style = style_expr(w.get("style", ""))
         visible = 1 if as_bool(w.get("visible", True), True) else 0
         enabled = 1 if as_bool(w.get("enabled", True), True) else 0
@@ -481,15 +499,15 @@ def generate_scenes_header(
             if not isinstance(w, dict):
                 continue
             wtype = WIDGET_TYPE_MAP.get(str(w.get("type", "label")).lower(), "UIW_LABEL")
-            x = as_int(w.get("x", 0), 0)
-            y = as_int(w.get("y", 0), 0)
-            ww = as_int(w.get("width", 8), 8)
-            hh = as_int(w.get("height", 8), 8)
+            x = as_uint16(w.get("x", 0), 0)
+            y = as_uint16(w.get("y", 0), 0)
+            ww = as_uint16(w.get("width", 8), 8)
+            hh = as_uint16(w.get("height", 8), 8)
             border = 1 if as_bool(w.get("border", True), True) else 0
             checked = 1 if as_bool(w.get("checked", False), False) else 0
-            value = as_int(w.get("value", 0), 0)
-            min_value = as_int(w.get("min_value", 0), 0)
-            max_value = as_int(w.get("max_value", 100), 100)
+            value = as_int16(w.get("value", 0), 0)
+            min_value = as_int16(w.get("min_value", 0), 0)
+            max_value = as_int16(w.get("max_value", 100), 100)
 
             widget_id = str(w.get("_widget_id") or w.get("id") or "")
             text = str(w.get("text", "") or "")
@@ -512,9 +530,7 @@ def generate_scenes_header(
             align = align_for(w)
             valign = valign_for(w)
             overflow = overflow_for(w)
-            max_lines = as_int(w.get("max_lines", 0), 0)
-            if max_lines < 0:
-                max_lines = 0
+            max_lines = as_uint8(w.get("max_lines", 0), 0)
             style = style_expr(w.get("style", ""))
             visible = 1 if as_bool(w.get("visible", True), True) else 0
             enabled = 1 if as_bool(w.get("enabled", True), True) else 0
@@ -566,15 +582,15 @@ def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
     """Return C initializer lines for a single UiWidget."""
     lines: list[str] = []
     wtype = WIDGET_TYPE_MAP.get(str(w.get("type", "label")).lower(), "UIW_LABEL")
-    x = as_int(w.get("x", 0), 0)
-    y = as_int(w.get("y", 0), 0)
-    ww = as_int(w.get("width", 8), 8)
-    hh = as_int(w.get("height", 8), 8)
+    x = as_uint16(w.get("x", 0), 0)
+    y = as_uint16(w.get("y", 0), 0)
+    ww = as_uint16(w.get("width", 8), 8)
+    hh = as_uint16(w.get("height", 8), 8)
     border = 1 if as_bool(w.get("border", True), True) else 0
     checked = 1 if as_bool(w.get("checked", False), False) else 0
-    value = as_int(w.get("value", 0), 0)
-    min_value = as_int(w.get("min_value", 0), 0)
-    max_value = as_int(w.get("max_value", 100), 100)
+    value = as_int16(w.get("value", 0), 0)
+    min_value = as_int16(w.get("min_value", 0), 0)
+    max_value = as_int16(w.get("max_value", 100), 100)
 
     widget_id = str(w.get("_widget_id") or w.get("id") or "")
     text = str(w.get("text", "") or "")
@@ -596,9 +612,7 @@ def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
     al = align_for(w)
     va = valign_for(w)
     ov = overflow_for(w)
-    ml = as_int(w.get("max_lines", 0), 0)
-    if ml < 0:
-        ml = 0
+    ml = as_uint8(w.get("max_lines", 0), 0)
     st = style_expr(w.get("style", ""))
     vis = 1 if as_bool(w.get("visible", True), True) else 0
     ena = 1 if as_bool(w.get("enabled", True), True) else 0

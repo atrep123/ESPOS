@@ -10,6 +10,9 @@ from tools.ui_codegen import (
     align_for,
     as_bool,
     as_int,
+    as_int16,
+    as_uint8,
+    as_uint16,
     border_style_for,
     build_string_pool,
     collect_scenes_strings,
@@ -534,3 +537,75 @@ class TestLoadScenes:
         p.write_text(json.dumps(data), encoding="utf-8")
         result = load_scenes(p)
         assert "scene_0" in result
+
+
+# ── as_uint16 ──
+
+
+class TestAsUint16:
+    def test_normal(self):
+        assert as_uint16(100) == 100
+
+    def test_negative_clamped(self):
+        assert as_uint16(-5) == 0
+
+    def test_overflow_clamped(self):
+        assert as_uint16(70000) == 65535
+
+    def test_boundary_max(self):
+        assert as_uint16(65535) == 65535
+
+    def test_boundary_zero(self):
+        assert as_uint16(0) == 0
+
+    def test_string(self):
+        assert as_uint16("200") == 200
+
+    def test_none_default(self):
+        assert as_uint16(None, 8) == 8
+
+
+# ── as_int16 ──
+
+
+class TestAsInt16:
+    def test_normal(self):
+        assert as_int16(50) == 50
+
+    def test_negative(self):
+        assert as_int16(-100) == -100
+
+    def test_overflow_clamped(self):
+        assert as_int16(99999) == 32767
+
+    def test_underflow_clamped(self):
+        assert as_int16(-99999) == -32768
+
+    def test_boundary_max(self):
+        assert as_int16(32767) == 32767
+
+    def test_boundary_min(self):
+        assert as_int16(-32768) == -32768
+
+    def test_string(self):
+        assert as_int16("1000") == 1000
+
+
+# ── as_uint8 ──
+
+
+class TestAsUint8:
+    def test_normal(self):
+        assert as_uint8(42) == 42
+
+    def test_negative_clamped(self):
+        assert as_uint8(-1) == 0
+
+    def test_overflow_clamped(self):
+        assert as_uint8(300) == 255
+
+    def test_boundary_max(self):
+        assert as_uint8(255) == 255
+
+    def test_boundary_zero(self):
+        assert as_uint8(0) == 0

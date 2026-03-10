@@ -482,9 +482,10 @@ class TestDimensionValues:
         assert ".y = 60000" in out
 
     def test_negative_x_y(self):
+        """Negative x/y clamped to 0 (uint16_t field)."""
         out = _emit(_w(x=-5, y=-10))
-        assert ".x = -5" in out
-        assert ".y = -10" in out
+        assert ".x = 0" in out
+        assert ".y = 0" in out
 
     def test_zero_dimensions(self):
         out = _emit(_w(width=0, height=0))
