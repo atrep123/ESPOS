@@ -1,11 +1,19 @@
 [CmdletBinding(PositionalBinding = $false)]
 param(
     [string]$ProbeJsonPath = "reports/native_policy_probe_auto.json",
-    [string]$OutputPath = "reports/native_policy_allowlist_request.md"
+    [string]$OutputPath = "reports/native_policy_allowlist_request.md",
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+    Write-Host "Usage: .\scripts\generate_native_policy_allowlist_request.ps1 [-Help]"
+    Write-Host "  -ProbeJsonPath <path>  Probe JSON input (default: reports/native_policy_probe_auto.json)"
+    Write-Host "  -OutputPath <path>     Markdown output (default: reports/native_policy_allowlist_request.md)"
+    exit 0
+}
 
 if ([string]::IsNullOrWhiteSpace($ProbeJsonPath)) {
     throw "Invalid value for -ProbeJsonPath: cannot be empty"
