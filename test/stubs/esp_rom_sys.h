@@ -1,0 +1,10 @@
+#pragma once
+
+/* Minimal esp_rom_sys stub for native/host builds. */
+
+#include <stdint.h>
+
+static inline void esp_rom_delay_us(uint32_t us)
+{
+    (void)us;
+}
