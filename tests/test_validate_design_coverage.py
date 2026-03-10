@@ -203,7 +203,7 @@ class TestValidateFile:
         p = tmp_path / "nonexistent.json"
         issues = validate_file(p, warnings_as_errors=False)
         assert len(issues) == 1
-        assert "failed to parse JSON" in issues[0].message
+        assert "failed to read" in issues[0].message
 
     def test_non_dict_root(self, tmp_path):
         """Line 1102: JSON root is not a dict."""
@@ -226,6 +226,18 @@ class TestValidateFile:
         issues = validate_file(p, warnings_as_errors=False)
         # Should succeed (may have warnings, but no crash)
         assert isinstance(issues, list)
+
+    def test_oversized_file_rejected(self, tmp_path):
+        """Files exceeding MAX_JSON_FILE_SIZE are rejected before parsing."""
+        from tools.validate_design import MAX_JSON_FILE_SIZE
+
+        p = tmp_path / "huge.json"
+        # Write a file just over the limit
+        p.write_text("x" * (MAX_JSON_FILE_SIZE + 1), encoding="utf-8")
+        issues = validate_file(p, warnings_as_errors=False)
+        assert len(issues) == 1
+        assert issues[0].level == "ERROR"
+        assert "size limit" in issues[0].message
 
 
 # ── Lines 1107-1126: main() CLI entry point ──

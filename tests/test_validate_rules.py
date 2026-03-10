@@ -977,6 +977,27 @@ def test_rule33_within_limit():
     assert not any("exceeds recommended max" in i.message for i in warns)
 
 
+def test_rule33_hard_limit_errors():
+    """Exceeding HARD_WIDGET_LIMIT (256) produces ERROR, not just WARN."""
+    widgets = [
+        {"type": "box", "x": i % 32 * 8, "y": i // 32 * 8, "width": 8, "height": 8}
+        for i in range(257)
+    ]
+    errs = _errors(_make(widgets, scene_w=256, scene_h=128))
+    assert any("hard limit" in e.message for e in errs)
+
+
+def test_rule21_skipped_above_hard_limit():
+    """O(n^2) overlap checks are skipped when widget count exceeds hard limit."""
+    widgets = [
+        {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10}
+        for _ in range(257)
+    ]
+    warns = _warns(_make(widgets, scene_w=256, scene_h=128))
+    # All 257 widgets overlap at (0,0), but overlap detection should be skipped
+    assert not any("OVERLAP" in w.message for w in warns)
+
+
 # ── Rule 34: Slider minimum height ──
 
 

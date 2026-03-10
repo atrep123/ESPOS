@@ -235,6 +235,7 @@ class WidgetConfig:
         self._apply_style_aliases()
         self._apply_text_defaults()
         self._apply_dimension_defaults()
+        self._apply_integer_bounds()
 
     def _apply_text_defaults(self) -> None:
         try:
@@ -318,6 +319,19 @@ class WidgetConfig:
         self.width = self._sanitize_dimension(self.width, default=DEFAULT_WIDGET_SIZE)
         self.height = self._sanitize_dimension(self.height, default=DEFAULT_WIDGET_SIZE)
 
+    def _apply_integer_bounds(self) -> None:
+        """Clamp numeric fields to C type ranges used by firmware.
+
+        Note: x/y are intentionally NOT clamped here — the designer uses
+        negative coordinates for offscreen positioning / animation targets.
+        The codegen layer (ui_codegen.py) handles final uint16_t clamping.
+        """
+        self.value = self._clamp_int16(self.value)
+        self.min_value = self._clamp_int16(self.min_value)
+        self.max_value = self._clamp_int16(self.max_value)
+        if self.max_lines is not None:
+            self.max_lines = self._clamp_uint8(self.max_lines)
+
     def _default_width(self, widget_type: str) -> int:
         if widget_type == "label":
             pad = int(getattr(self, "padding_x", 1) or 0)
@@ -338,12 +352,36 @@ class WidgetConfig:
             return 6
         return 3
 
+    @staticmethod
+    def _clamp_uint16(v: int) -> int:
+        """Clamp to uint16_t range (0..65535)."""
+        try:
+            return max(0, min(65535, int(v)))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _clamp_int16(v: int) -> int:
+        """Clamp to int16_t range (-32768..32767)."""
+        try:
+            return max(-32768, min(32767, int(v)))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _clamp_uint8(v: int) -> int:
+        """Clamp to uint8_t range (0..255)."""
+        try:
+            return max(0, min(255, int(v)))
+        except (TypeError, ValueError):
+            return 0
+
     def _sanitize_dimension(self, value: Optional[int], default: int = DEFAULT_WIDGET_SIZE) -> int:
         try:
             if value is None:
                 return default
             coerced = int(value)
-            return max(1, coerced)
+            return max(1, min(65535, coerced))
         except Exception:
             return default
 

@@ -397,3 +397,75 @@ class TestScene:
         wc = WidgetConfig(type="label", x=0, y=0)
         s.widgets.append(wc)
         assert len(s.widgets) == 1
+
+
+# ── Integer bounds clamping (C type safety) ──
+
+
+class TestWidgetConfigIntegerBounds:
+    """Verify WidgetConfig clamps numeric fields to firmware C type ranges."""
+
+    def test_x_negative_preserved(self):
+        """x/y are NOT clamped — designer uses negative coords for offscreen."""
+        wc = WidgetConfig(type="label", x=-10, y=0)
+        assert wc.x == -10
+
+    def test_y_negative_preserved(self):
+        wc = WidgetConfig(type="label", x=0, y=-5)
+        assert wc.y == -5
+
+    def test_value_clamps_below_int16_min(self):
+        wc = WidgetConfig(type="slider", x=0, y=0, value=-50000)
+        assert wc.value == -32768
+
+    def test_value_clamps_above_int16_max(self):
+        wc = WidgetConfig(type="slider", x=0, y=0, value=50000)
+        assert wc.value == 32767
+
+    def test_value_in_range_unchanged(self):
+        wc = WidgetConfig(type="slider", x=0, y=0, value=-100)
+        assert wc.value == -100
+
+    def test_value_non_numeric_defaults_zero(self):
+        wc = WidgetConfig(type="slider", x=0, y=0, value="abc")
+        assert wc.value == 0
+
+    def test_min_value_clamps_int16(self):
+        wc = WidgetConfig(type="gauge", x=0, y=0, min_value=-99999)
+        assert wc.min_value == -32768
+
+    def test_max_value_clamps_int16(self):
+        wc = WidgetConfig(type="gauge", x=0, y=0, max_value=99999)
+        assert wc.max_value == 32767
+
+    def test_max_lines_clamps_to_uint8(self):
+        wc = WidgetConfig(type="textbox", x=0, y=0, max_lines=999)
+        assert wc.max_lines == 255
+
+    def test_max_lines_negative_becomes_none(self):
+        wc = WidgetConfig(type="textbox", x=0, y=0, max_lines=-1)
+        assert wc.max_lines is None
+
+    def test_max_lines_none_stays_none(self):
+        wc = WidgetConfig(type="textbox", x=0, y=0, max_lines=None)
+        assert wc.max_lines is None
+
+    def test_max_lines_valid_unchanged(self):
+        wc = WidgetConfig(type="textbox", x=0, y=0, max_lines=10)
+        assert wc.max_lines == 10
+
+    def test_width_clamps_to_uint16_max(self):
+        wc = WidgetConfig(type="box", x=0, y=0, width=99999)
+        assert wc.width == 65535
+
+    def test_height_clamps_to_uint16_max(self):
+        wc = WidgetConfig(type="box", x=0, y=0, height=99999)
+        assert wc.height == 65535
+
+    def test_width_negative_clamps_to_one(self):
+        wc = WidgetConfig(type="box", x=0, y=0, width=-10)
+        assert wc.width == 1
+
+    def test_height_negative_clamps_to_one(self):
+        wc = WidgetConfig(type="box", x=0, y=0, height=-10)
+        assert wc.height == 1

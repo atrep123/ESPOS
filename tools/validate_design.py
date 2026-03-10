@@ -84,6 +84,8 @@ INT16_MIN = -32768
 INT16_MAX = 32767
 UINT16_MAX = 65535
 MAX_WIDGETS_PER_SCENE = 64  # soft limit; ESP32 memory pressure
+HARD_WIDGET_LIMIT = 256  # hard cap; skip O(n²) checks above this
+MAX_JSON_FILE_SIZE = 10 * 1024 * 1024  # 10 MB guard for resource exhaustion
 MAX_TEXT_LEN = 127  # practical limit for OLED readability
 
 # Valid widget ID pattern: letters, digits, underscore, hyphen, dot
@@ -1249,35 +1251,36 @@ def validate_data(
             )
 
         # ── Rule 105: overlapping widgets with identical z_index ──
-        for i in range(len(widgets)):
-            a = widgets[i]
-            if not isinstance(a, dict):
-                continue
-            ax, ay = a.get("x", 0), a.get("y", 0)
-            aw, ah = a.get("width", 0), a.get("height", 0)
-            az = a.get("z_index", 0)
-            if not (_is_int(ax) and _is_int(ay) and _is_int(aw) and _is_int(ah)):
-                continue
-            ax2, ay2 = ax + aw, ay + ah
-            for j in range(i + 1, len(widgets)):
-                b = widgets[j]
-                if not isinstance(b, dict):
+        if len(widgets) <= HARD_WIDGET_LIMIT:
+            for i in range(len(widgets)):
+                a = widgets[i]
+                if not isinstance(a, dict):
                     continue
-                bx, by = b.get("x", 0), b.get("y", 0)
-                bw, bh = b.get("width", 0), b.get("height", 0)
-                bz = b.get("z_index", 0)
-                if not (_is_int(bx) and _is_int(by) and _is_int(bw) and _is_int(bh)):
+                ax, ay = a.get("x", 0), a.get("y", 0)
+                aw, ah = a.get("width", 0), a.get("height", 0)
+                az = a.get("z_index", 0)
+                if not (_is_int(ax) and _is_int(ay) and _is_int(aw) and _is_int(ah)):
                     continue
-                bx2, by2 = bx + bw, by + bh
-                if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
-                    if _is_int(az) and _is_int(bz) and az == bz:
-                        ref_a = _wref(scene_name, a, i)
-                        ref_b = _wref(scene_name, b, j)
-                        issues.append(
-                            Issue(
-                                "WARN", f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}"
+                ax2, ay2 = ax + aw, ay + ah
+                for j in range(i + 1, len(widgets)):
+                    b = widgets[j]
+                    if not isinstance(b, dict):
+                        continue
+                    bx, by = b.get("x", 0), b.get("y", 0)
+                    bw, bh = b.get("width", 0), b.get("height", 0)
+                    bz = b.get("z_index", 0)
+                    if not (_is_int(bx) and _is_int(by) and _is_int(bw) and _is_int(bh)):
+                        continue
+                    bx2, by2 = bx + bw, by + bh
+                    if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
+                        if _is_int(az) and _is_int(bz) and az == bz:
+                            ref_a = _wref(scene_name, a, i)
+                            ref_b = _wref(scene_name, b, j)
+                            issues.append(
+                                Issue(
+                                    "WARN", f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}"
+                                )
                             )
-                        )
 
         # ── Rule 106: scene dimensions too small ──
         if sw < 8 or sh < 8:
@@ -1332,7 +1335,14 @@ def validate_data(
                 )
 
         # ── Rule 33: Excessive widget count per scene ──
-        if len(widgets) > MAX_WIDGETS_PER_SCENE:
+        if len(widgets) > HARD_WIDGET_LIMIT:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {len(widgets)} widgets exceeds hard limit {HARD_WIDGET_LIMIT}",
+                )
+            )
+        elif len(widgets) > MAX_WIDGETS_PER_SCENE:
             issues.append(
                 Issue(
                     "WARN",
@@ -1340,29 +1350,30 @@ def validate_data(
                 )
             )
 
-        # ── Rule 21: Overlap detection ──
-        for i in range(len(widgets)):
-            a = widgets[i]
-            if not isinstance(a, dict):
-                continue
-            ax, ay = a.get("x", 0), a.get("y", 0)
-            aw, ah = a.get("width", 0), a.get("height", 0)
-            if not (_is_int(ax) and _is_int(ay) and _is_int(aw) and _is_int(ah)):
-                continue
-            ax2, ay2 = ax + aw, ay + ah
-            for j in range(i + 1, len(widgets)):
-                b = widgets[j]
-                if not isinstance(b, dict):
+        # ── Rule 21: Overlap detection (skip if widget count exceeds hard limit) ──
+        if len(widgets) <= HARD_WIDGET_LIMIT:
+            for i in range(len(widgets)):
+                a = widgets[i]
+                if not isinstance(a, dict):
                     continue
-                bx, by = b.get("x", 0), b.get("y", 0)
-                bw, bh = b.get("width", 0), b.get("height", 0)
-                if not (_is_int(bx) and _is_int(by) and _is_int(bw) and _is_int(bh)):
+                ax, ay = a.get("x", 0), a.get("y", 0)
+                aw, ah = a.get("width", 0), a.get("height", 0)
+                if not (_is_int(ax) and _is_int(ay) and _is_int(aw) and _is_int(ah)):
                     continue
-                bx2, by2 = bx + bw, by + bh
-                if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
-                    ref_a = _wref(scene_name, a, i)
-                    ref_b = _wref(scene_name, b, j)
-                    issues.append(Issue("WARN", f"{pfx}: OVERLAP {ref_a} <> {ref_b}"))
+                ax2, ay2 = ax + aw, ay + ah
+                for j in range(i + 1, len(widgets)):
+                    b = widgets[j]
+                    if not isinstance(b, dict):
+                        continue
+                    bx, by = b.get("x", 0), b.get("y", 0)
+                    bw, bh = b.get("width", 0), b.get("height", 0)
+                    if not (_is_int(bx) and _is_int(by) and _is_int(bw) and _is_int(bh)):
+                        continue
+                    bx2, by2 = bx + bw, by + bh
+                    if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
+                        ref_a = _wref(scene_name, a, i)
+                        ref_b = _wref(scene_name, b, j)
+                        issues.append(Issue("WARN", f"{pfx}: OVERLAP {ref_a} <> {ref_b}"))
 
     # ── Rule 97: Cross-scene duplicate widget IDs ──
     global_ids: dict[str, str] = {}  # id → first scene name
@@ -1400,7 +1411,13 @@ def validate_file(
     path: Path, *, warnings_as_errors: bool, strict_critical: bool = False
 ) -> list[Issue]:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        return [Issue("ERROR", f"{path}: failed to read file ({exc})")]
+    if len(raw) > MAX_JSON_FILE_SIZE:
+        return [Issue("ERROR", f"{path}: file exceeds {MAX_JSON_FILE_SIZE // (1024 * 1024)}MB size limit")]
+    try:
+        data = json.loads(raw)
     except Exception as exc:
         return [Issue("ERROR", f"{path}: failed to parse JSON ({exc})")]
     if not isinstance(data, dict):
