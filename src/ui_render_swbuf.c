@@ -299,7 +299,9 @@ void ui_swbuf_flush_ssd1363(const UiSwBuf *b)
      *   0x5C: Write RAM
      * Adjust for SSD1363 specifics as needed.
      */
-    (void)ssd1363_begin_frame(0, 0, (uint16_t)(b->width - 1), (uint16_t)(b->height - 1));
+    if (ssd1363_begin_frame(0, 0, (uint16_t)(b->width - 1), (uint16_t)(b->height - 1)) != ESP_OK) {
+        return;
+    }
 
     /* Send packed framebuffer as-is (1bpp). If your panel expects different
      * pixel format (e.g., 4-bit grayscale), convert here before sending.
@@ -311,7 +313,9 @@ void ui_swbuf_flush_ssd1363(const UiSwBuf *b)
 void ui_swbuf_flush_gray4_ssd1363(const UiSwBuf *b)
 {
     /* Flush as 4bpp grayscale. For 1bpp builds, convert on the fly (0x0/0xF). */
-    (void)ssd1363_begin_frame(0, 0, (uint16_t)(b->width - 1), (uint16_t)(b->height - 1));
+    if (ssd1363_begin_frame(0, 0, (uint16_t)(b->width - 1), (uint16_t)(b->height - 1)) != ESP_OK) {
+        return;
+    }
 
     const int W = b->width;
     const int H = b->height;
@@ -395,7 +399,9 @@ void ui_swbuf_flush_dirty_ssd1363(const UiSwBuf *b)
     int x, y, w, h;
     if (!ui_swbuf_get_dirty(b, &x, &y, &w, &h)) { ui_swbuf_flush_ssd1363(b); return; }
 
-    (void)ssd1363_begin_frame((uint16_t)x, (uint16_t)y, (uint16_t)(x + w - 1), (uint16_t)(y + h - 1));
+    if (ssd1363_begin_frame((uint16_t)x, (uint16_t)y, (uint16_t)(x + w - 1), (uint16_t)(y + h - 1)) != ESP_OK) {
+        return;
+    }
 
     /* Pack the region tightly so bits align to x, avoiding leakage from neighbouring columns. */
     const uint8_t *row = b->data + (size_t)b->stride_bytes * (size_t)y;
@@ -449,7 +455,9 @@ void ui_swbuf_flush_dirty_gray4_ssd1363(const UiSwBuf *b)
         return;
     }
 
-    (void)ssd1363_begin_frame((uint16_t)ax0, (uint16_t)y, (uint16_t)ax1, (uint16_t)(y + h - 1));
+    if (ssd1363_begin_frame((uint16_t)ax0, (uint16_t)y, (uint16_t)ax1, (uint16_t)(y + h - 1)) != ESP_OK) {
+        return;
+    }
 
     /* Each row in region: convert [x..x+w) from 1bpp to 4bpp nibble-packed aligned to window. */
     int out_row_bytes = (aw + 1) / 2;
