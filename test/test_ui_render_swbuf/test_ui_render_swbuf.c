@@ -1142,6 +1142,7 @@ void test_render_widget_button_border_styles(void)
 void test_swbuf_blit_mono_stride_too_small_rejected(void)
 {
     uint8_t backing[64];
+    memset(backing, 0, sizeof(backing));
     UiSwBuf b;
     ui_swbuf_init(&b, backing, 8, 4);
     ui_swbuf_clear(&b, 0);

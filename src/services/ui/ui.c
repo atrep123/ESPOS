@@ -1408,7 +1408,13 @@ static void ui_task(void *arg)
                         int cur = 0;
                         if (ui_bind_get_int(edit.meta.bind_key, &cur)) {
                             int step = edit.meta.has_step ? edit.meta.step : 1;
-                            int v = cur + delta * step;
+                            /* Clamp step to prevent delta*step overflow (delta is ±5). */
+                            if (step > 10000) step = 10000;
+                            if (step < -10000) step = -10000;
+                            long long vll = (long long)cur + (long long)delta * (long long)step;
+                            if (vll < INT_MIN) vll = INT_MIN;
+                            if (vll > INT_MAX) vll = INT_MAX;
+                            int v = (int)vll;
                             if (edit.meta.has_min && v < edit.meta.min) v = edit.meta.min;
                             if (edit.meta.has_max && v > edit.meta.max) v = edit.meta.max;
                             if (v != cur) {
@@ -1424,9 +1430,11 @@ static void ui_task(void *arg)
                         int cur = 0;
                         int cnt = ui_meta_values_count(edit.meta.values);
                         if (cnt > 0 && ui_bind_get_int(edit.meta.bind_key, &cur)) {
-                            int next = cur + delta;
-                            while (next < 0) next += cnt;
-                            while (next >= cnt) next -= cnt;
+                            /* Normalize cur into [0,cnt) first, then apply delta.
+                             * Uses modulo instead of O(N) while-loops to avoid
+                             * freezing the UI task on corrupted/stale values. */
+                            int next = ((cur % cnt) + cnt) % cnt + delta;
+                            next = ((next % cnt) + cnt) % cnt;
                             if (next != cur) {
                                 (void)ui_bind_set_int(edit.meta.bind_key, next);
                                 if (ui_update_bound_text(scene, edit.idx)) {

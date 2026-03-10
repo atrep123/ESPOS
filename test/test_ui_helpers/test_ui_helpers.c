@@ -66,13 +66,10 @@ void test_parse_uint_dec_large_number(void)
 
 void test_parse_uint_dec_overflow_stops(void)
 {
-    /* A number that would overflow int (>2147483647) should stop parsing
-     * before the overflow and return the partial result. */
+    /* A number that would overflow int (>2147483647) should be rejected. */
     int v = -1;
-    TEST_ASSERT_EQUAL_INT(1, ui_parse_uint_dec("9999999999", &v));
-    /* Implementation stops before overflow; value <= INT_MAX */
-    TEST_ASSERT_TRUE(v >= 0);
-    TEST_ASSERT_TRUE(v <= 2147483647);
+    TEST_ASSERT_EQUAL_INT(0, ui_parse_uint_dec("9999999999", &v));
+    TEST_ASSERT_EQUAL_INT(0, v); /* reset to 0 on failure */
 }
 
 void test_parse_uint_dec_max_int(void)

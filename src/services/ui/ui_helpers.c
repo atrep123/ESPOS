@@ -18,7 +18,7 @@ int ui_parse_uint_dec(const char *s, int *out_value)
     while (*p >= '0' && *p <= '9') {
         int digit = *p - '0';
         if (v > (INT_MAX - digit) / 10) {
-            break; /* would overflow */
+            return 0; /* overflow — reject entire parse */
         }
         v = v * 10 + digit;
         p += 1;

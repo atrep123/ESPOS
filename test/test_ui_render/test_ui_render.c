@@ -566,10 +566,10 @@ void test_render_unknown_type_draws_rect(void)
 {
     UiDrawOps ops = make_ops();
     UiWidget w = make_widget(UIW_LABEL, 10, 10, 40, 20);
-    w.type = 255; /* unknown */
+    w.type = 255; /* unknown — rejected by type bounds guard */
     ui_render_widget(&w, &ops);
-    /* Default case draws a rect */
-    TEST_ASSERT_TRUE(has_call_type(DRAW_RECT) || has_call_type(DRAW_HLINE));
+    /* Out-of-range type is silently rejected, no draw calls */
+    TEST_ASSERT_EQUAL_INT(0, s_call_count);
 }
 
 /* ------------------------------------------------------------------ */
