@@ -233,3 +233,175 @@ void test_ui_components_sync_active_from_focus_updates_tabs_highlight(void)
     TEST_ASSERT_EQUAL_UINT8(UI_STYLE_HIGHLIGHT, widgets[1].style);
     TEST_ASSERT_EQUAL_INT(2, cap.calls);
 }
+
+/* ---------------------------------------------------------------------------
+ * Edge case tests for ui_components
+ * ------------------------------------------------------------------------ */
+
+void test_ui_components_null_scene(void)
+{
+    /* NULL scene returns false without crash */
+    TEST_ASSERT_FALSE(ui_components_menu_set_active(NULL, "menu", 0, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_tabs_set_active(NULL, "tabs", 0, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_set_prefix_visible(NULL, "pfx", true, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(NULL, 0, NULL, NULL));
+}
+
+void test_ui_components_null_root(void)
+{
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "menu.item0";
+    widgets[0].style = 0;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* NULL root → false */
+    TEST_ASSERT_FALSE(ui_components_menu_set_active(&scene, NULL, 0, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_menu_set_active(&scene, "", 0, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_set_prefix_visible(&scene, NULL, true, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_set_prefix_visible(&scene, "", true, NULL, NULL));
+}
+
+void test_ui_components_sync_no_dot_in_id(void)
+{
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "nodothere";
+    widgets[0].style = 0;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* No dot → sync returns false */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, 0, NULL, NULL));
+}
+
+void test_ui_components_sync_invalid_focus_idx(void)
+{
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "menu.item0";
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* Negative index */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, -1, NULL, NULL));
+    /* Out of bounds */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, 5, NULL, NULL));
+}
+
+void test_ui_components_sync_null_widget_id(void)
+{
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = NULL;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* NULL id → returns false */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, 0, NULL, NULL));
+}
+
+void test_ui_components_sync_unknown_role(void)
+{
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "grp.unknownrole";
+    widgets[0].style = 0;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* Unknown role after dot → returns false */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, 0, NULL, NULL));
+}
+
+void test_ui_components_menu_no_dirty_fn(void)
+{
+    UiWidget widgets[2];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "menu.item0";
+    widgets[0].style = UI_STYLE_HIGHLIGHT;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+    widgets[1].id = "menu.item1";
+    widgets[1].style = 0;
+    widgets[1].visible = 1;
+    widgets[1].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 2,
+        .widgets = widgets,
+    };
+
+    /* dirty_add = NULL should still work, just no callbacks */
+    TEST_ASSERT_TRUE(ui_components_menu_set_active(&scene, "menu", 1, NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT8(0, widgets[0].style);
+    TEST_ASSERT_EQUAL_UINT8(UI_STYLE_HIGHLIGHT, widgets[1].style);
+}
+
+void test_ui_components_prefix_visible_null_widget_ids(void)
+{
+    UiWidget widgets[2];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = NULL;  /* NULL id should be skipped safely */
+    widgets[0].visible = 0;
+    widgets[0].enabled = 1;
+    widgets[1].id = "toast.msg";
+    widgets[1].visible = 0;
+    widgets[1].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 2,
+        .widgets = widgets,
+    };
+
+    TEST_ASSERT_TRUE(ui_components_set_prefix_visible(&scene, "toast", true, NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT8(0, widgets[0].visible);  /* NULL id skipped */
+    TEST_ASSERT_EQUAL_UINT8(1, widgets[1].visible);
+}

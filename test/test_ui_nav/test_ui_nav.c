@@ -85,3 +85,328 @@ void test_ui_nav_move_focus_in_rect_from_outside_picks_first(void)
     TEST_ASSERT_EQUAL_INT(0, next);
 }
 
+/* --- ui_nav_is_focusable tests --- */
+
+void test_is_focusable_null_returns_false(void)
+{
+    TEST_ASSERT_FALSE(ui_nav_is_focusable(NULL));
+}
+
+void test_is_focusable_button_returns_true(void)
+{
+    UiWidget w;
+    init_button(&w, "b", 0, 0);
+    TEST_ASSERT_TRUE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_label_returns_false(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_LABEL;
+    w.visible = 1;
+    w.enabled = 1;
+    TEST_ASSERT_FALSE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_checkbox_returns_true(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_CHECKBOX;
+    w.visible = 1;
+    w.enabled = 1;
+    TEST_ASSERT_TRUE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_radiobutton_returns_true(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_RADIOBUTTON;
+    w.visible = 1;
+    w.enabled = 1;
+    TEST_ASSERT_TRUE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_slider_returns_true(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_SLIDER;
+    w.visible = 1;
+    w.enabled = 1;
+    TEST_ASSERT_TRUE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_invisible_button_returns_false(void)
+{
+    UiWidget w;
+    init_button(&w, "b", 0, 0);
+    w.visible = 0;
+    TEST_ASSERT_FALSE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_disabled_button_returns_false(void)
+{
+    UiWidget w;
+    init_button(&w, "b", 0, 0);
+    w.enabled = 0;
+    TEST_ASSERT_FALSE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_panel_returns_false(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_PANEL;
+    w.visible = 1;
+    w.enabled = 1;
+    TEST_ASSERT_FALSE(ui_nav_is_focusable(&w));
+}
+
+void test_is_focusable_box_returns_false(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BOX;
+    w.visible = 1;
+    w.enabled = 1;
+    TEST_ASSERT_FALSE(ui_nav_is_focusable(&w));
+}
+
+/* --- ui_nav_first_focus tests --- */
+
+void test_first_focus_null_scene_returns_neg1(void)
+{
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_first_focus(NULL));
+}
+
+void test_first_focus_empty_scene_returns_neg1(void)
+{
+    UiScene s = make_scene(NULL, 0);
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_first_focus(&s));
+}
+
+void test_first_focus_single_button(void)
+{
+    UiWidget w;
+    init_button(&w, "b0", 10, 20);
+    UiScene s = make_scene(&w, 1);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_first_focus(&s));
+}
+
+void test_first_focus_picks_top_left(void)
+{
+    UiWidget widgets[3];
+    init_button(&widgets[0], "b0", 50, 50);
+    init_button(&widgets[1], "b1", 10, 10);
+    init_button(&widgets[2], "b2", 30, 10);
+    UiScene s = make_scene(widgets, 3);
+    /* b1 at (10,10) is top-left */
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_first_focus(&s));
+}
+
+void test_first_focus_no_focusables_returns_neg1(void)
+{
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_LABEL;
+    w.visible = 1;
+    w.enabled = 1;
+    UiScene s = make_scene(&w, 1);
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_first_focus(&s));
+}
+
+void test_first_focus_same_y_picks_leftmost(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "b0", 40, 5);
+    init_button(&widgets[1], "b1", 10, 5);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_first_focus(&s));
+}
+
+/* --- ui_nav_cycle_focus tests --- */
+
+void test_cycle_focus_forward(void)
+{
+    UiWidget widgets[3];
+    init_button(&widgets[0], "b0", 0, 0);
+    init_button(&widgets[1], "b1", 20, 0);
+    init_button(&widgets[2], "b2", 40, 0);
+    UiScene s = make_scene(widgets, 3);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_cycle_focus(&s, 0, 1));
+}
+
+void test_cycle_focus_backward(void)
+{
+    UiWidget widgets[3];
+    init_button(&widgets[0], "b0", 0, 0);
+    init_button(&widgets[1], "b1", 20, 0);
+    init_button(&widgets[2], "b2", 40, 0);
+    UiScene s = make_scene(widgets, 3);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_cycle_focus(&s, 1, -1));
+}
+
+void test_cycle_focus_wraps_forward(void)
+{
+    UiWidget widgets[3];
+    init_button(&widgets[0], "b0", 0, 0);
+    init_button(&widgets[1], "b1", 20, 0);
+    init_button(&widgets[2], "b2", 40, 0);
+    UiScene s = make_scene(widgets, 3);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_cycle_focus(&s, 2, 1));
+}
+
+void test_cycle_focus_wraps_backward(void)
+{
+    UiWidget widgets[3];
+    init_button(&widgets[0], "b0", 0, 0);
+    init_button(&widgets[1], "b1", 20, 0);
+    init_button(&widgets[2], "b2", 40, 0);
+    UiScene s = make_scene(widgets, 3);
+    TEST_ASSERT_EQUAL_INT(2, ui_nav_cycle_focus(&s, 0, -1));
+}
+
+void test_cycle_focus_invalid_current_returns_first(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "b0", 10, 10);
+    init_button(&widgets[1], "b1", 30, 10);
+    UiScene s = make_scene(widgets, 2);
+    /* index -1 is invalid → returns first focus */
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_cycle_focus(&s, -1, 1));
+}
+
+void test_cycle_focus_null_scene_returns_neg1(void)
+{
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_cycle_focus(NULL, 0, 1));
+}
+
+void test_cycle_focus_skips_non_focusable(void)
+{
+    UiWidget widgets[3];
+    init_button(&widgets[0], "b0", 0, 0);
+    memset(&widgets[1], 0, sizeof(widgets[1]));
+    widgets[1].type = UIW_LABEL;
+    widgets[1].x = 20; widgets[1].y = 0;
+    widgets[1].visible = 1; widgets[1].enabled = 1;
+    init_button(&widgets[2], "b2", 40, 0);
+    UiScene s = make_scene(widgets, 3);
+    /* Forward from b0 should skip label and land on b2 */
+    TEST_ASSERT_EQUAL_INT(2, ui_nav_cycle_focus(&s, 0, 1));
+}
+
+void test_cycle_focus_single_widget_stays(void)
+{
+    UiWidget w;
+    init_button(&w, "b0", 5, 5);
+    UiScene s = make_scene(&w, 1);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_cycle_focus(&s, 0, 1));
+}
+
+/* --- ui_nav_move_focus tests --- */
+
+void test_move_focus_down_beam(void)
+{
+    /* Two widgets vertically aligned (beam = x overlap) */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "top", 20, 0);
+    init_button(&widgets[1], "bot", 20, 30);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_DOWN));
+}
+
+void test_move_focus_up_beam(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "top", 20, 0);
+    init_button(&widgets[1], "bot", 20, 30);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, 1, UI_NAV_UP));
+}
+
+void test_move_focus_right_beam(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "left", 0, 20);
+    init_button(&widgets[1], "right", 40, 20);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_RIGHT));
+}
+
+void test_move_focus_left_beam(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "left", 0, 20);
+    init_button(&widgets[1], "right", 40, 20);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, 1, UI_NAV_LEFT));
+}
+
+void test_move_focus_loose_fallback_diagonal(void)
+{
+    /* Two widgets: no beam overlap (different row & column) → loose fallback */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "tl", 0, 0);
+    init_button(&widgets[1], "br", 60, 40);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_DOWN));
+}
+
+void test_move_focus_no_candidate_wraps(void)
+{
+    /* Grid of 2 buttons, moving DOWN from bottom → wraps to top */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "top", 20, 0);
+    init_button(&widgets[1], "bot", 20, 30);
+    UiScene s = make_scene(widgets, 2);
+    /* From bottom, moving DOWN: no candidate below → cycle wraps to top */
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, 1, UI_NAV_DOWN));
+}
+
+void test_move_focus_2x2_grid(void)
+{
+    UiWidget widgets[4];
+    init_button(&widgets[0], "tl", 0, 0);
+    init_button(&widgets[1], "tr", 30, 0);
+    init_button(&widgets[2], "bl", 0, 30);
+    init_button(&widgets[3], "br", 30, 30);
+    UiScene s = make_scene(widgets, 4);
+
+    /* From top-left, RIGHT → top-right */
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_RIGHT));
+    /* From top-left, DOWN → bottom-left */
+    TEST_ASSERT_EQUAL_INT(2, ui_nav_move_focus(&s, 0, UI_NAV_DOWN));
+    /* From bottom-right, LEFT → bottom-left */
+    TEST_ASSERT_EQUAL_INT(2, ui_nav_move_focus(&s, 3, UI_NAV_LEFT));
+    /* From bottom-right, UP → top-right */
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 3, UI_NAV_UP));
+}
+
+void test_move_focus_null_scene_returns_neg1(void)
+{
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_move_focus(NULL, 0, UI_NAV_DOWN));
+}
+
+void test_move_focus_invalid_current_returns_first(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "b0", 10, 10);
+    init_button(&widgets[1], "b1", 50, 10);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, -1, UI_NAV_RIGHT));
+}
+
+void test_move_focus_beam_prefers_closer(void)
+{
+    /* Three widgets in a column; from top, DOWN should pick middle (closer) */
+    UiWidget widgets[3];
+    init_button(&widgets[0], "top", 20, 0);
+    init_button(&widgets[1], "mid", 20, 20);
+    init_button(&widgets[2], "far", 20, 60);
+    UiScene s = make_scene(widgets, 3);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_DOWN));
+}
+

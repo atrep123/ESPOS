@@ -270,4 +270,519 @@ void test_swbuf_blit_mono_gray4_sets_pixels(void)
     TEST_ASSERT_EQUAL_UINT8(0x50, b.data[2 * b.stride_bytes + 2]);
     TEST_ASSERT_EQUAL_UINT8(0x00, b.data[2 * b.stride_bytes + 3]);
 }
+
+void test_swbuf_hline_sets_pixels_and_marks_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_hline(&b, 0, 1, 4, 5);
+
+    int x, y, w, h;
+    TEST_ASSERT_TRUE(ui_swbuf_get_dirty(&b, &x, &y, &w, &h));
+    TEST_ASSERT_EQUAL_INT(0, x);
+    TEST_ASSERT_EQUAL_INT(1, y);
+    TEST_ASSERT_EQUAL_INT(4, w);
+    TEST_ASSERT_EQUAL_INT(1, h);
+
+    /* pixels at y=1, x=0..3 should be set to gray4 level 5 */
+    TEST_ASSERT_EQUAL_UINT8(0x55, b.data[1 * b.stride_bytes + 0]); /* nibbles: 5,5 */
+    TEST_ASSERT_EQUAL_UINT8(0x55, b.data[1 * b.stride_bytes + 1]); /* nibbles: 5,5 */
+}
+
+void test_swbuf_vline_sets_pixels_and_marks_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_vline(&b, 2, 0, 3, 7);
+
+    int x, y, w, h;
+    TEST_ASSERT_TRUE(ui_swbuf_get_dirty(&b, &x, &y, &w, &h));
+    TEST_ASSERT_EQUAL_INT(2, x);
+    TEST_ASSERT_EQUAL_INT(0, y);
+    TEST_ASSERT_EQUAL_INT(1, w);
+    TEST_ASSERT_EQUAL_INT(3, h);
+}
+
+void test_swbuf_fill_rect_marks_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_fill_rect(&b, 1, 1, 3, 2, 10);
+
+    int x, y, w, h;
+    TEST_ASSERT_TRUE(ui_swbuf_get_dirty(&b, &x, &y, &w, &h));
+    TEST_ASSERT_EQUAL_INT(1, x);
+    TEST_ASSERT_EQUAL_INT(1, y);
+    TEST_ASSERT_EQUAL_INT(3, w);
+    TEST_ASSERT_EQUAL_INT(2, h);
+}
+
+void test_swbuf_text_marks_dirty(void)
+{
+    uint8_t backing[256];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 32, 16);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_text(&b, 0, 0, "AB", 1);
+
+    int x, y, w, h;
+    TEST_ASSERT_TRUE(ui_swbuf_get_dirty(&b, &x, &y, &w, &h));
+    /* "AB" = 2 chars × 6px wide = 12px, 8px tall */
+    TEST_ASSERT_EQUAL_INT(0, x);
+    TEST_ASSERT_EQUAL_INT(0, y);
+    TEST_ASSERT_EQUAL_INT(12, w);
+    TEST_ASSERT_EQUAL_INT(8, h);
+}
+
+void test_swbuf_text_null_no_crash(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Should not crash */
+    ui_swbuf_text(&b, 0, 0, NULL, 1);
+    ui_swbuf_text(NULL, 0, 0, "A", 1);
+
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_text_empty_no_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_text(&b, 0, 0, "", 1);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_rect_marks_dirty(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_rect(&b, 2, 2, 6, 4, 1);
+
+    int x, y, w, h;
+    TEST_ASSERT_TRUE(ui_swbuf_get_dirty(&b, &x, &y, &w, &h));
+    /* rect draws outline: top hline, bottom hline, left vline, right vline */
+    TEST_ASSERT_EQUAL_INT(2, x);
+    TEST_ASSERT_EQUAL_INT(2, y);
+}
+
+void test_swbuf_make_ops_fills_all(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+
+    UiDrawOps ops;
+    ui_swbuf_make_ops(&b, &ops);
+
+    TEST_ASSERT_NOT_NULL(ops.fill_rect);
+    TEST_ASSERT_NOT_NULL(ops.draw_hline);
+    TEST_ASSERT_NOT_NULL(ops.draw_vline);
+    TEST_ASSERT_NOT_NULL(ops.draw_rect);
+    TEST_ASSERT_NOT_NULL(ops.draw_text);
+    TEST_ASSERT_NOT_NULL(ops.blit_mono);
+    TEST_ASSERT_EQUAL_PTR(&b, ops.ctx);
+}
+
+void test_swbuf_fill_rect_sets_pixels(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Fill 2x2 rect at (2,1) with color 7 */
+    ui_swbuf_fill_rect(&b, 2, 1, 2, 2, 7);
+
+    /* y=1: byte 1 covers x=2 (high nibble=7) and x=3 (low nibble=7) */
+    TEST_ASSERT_EQUAL_UINT8(0x77, b.data[1 * b.stride_bytes + 1]);
+    /* y=2: same pattern */
+    TEST_ASSERT_EQUAL_UINT8(0x77, b.data[2 * b.stride_bytes + 1]);
+    /* Surrounding bytes should still be 0 */
+    TEST_ASSERT_EQUAL_UINT8(0x00, b.data[1 * b.stride_bytes + 0]);
+    TEST_ASSERT_EQUAL_UINT8(0x00, b.data[1 * b.stride_bytes + 2]);
+}
+
+void test_swbuf_hline_clipping(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* hline starting at negative x — should clip left */
+    ui_swbuf_hline(&b, -2, 0, 5, 3);
+    /* Should draw x=0..2 (5 pixels starting at -2, clipped to 0) */
+    /* byte 0: x=0 high=3, x=1 low=3 → 0x33 */
+    TEST_ASSERT_EQUAL_UINT8(0x33, b.data[0]);
+    /* byte 1: x=2 high=3, x=3 low=0 → 0x30 */
+    TEST_ASSERT_EQUAL_UINT8(0x30, b.data[1]);
+
+    /* hline going beyond right edge — should clip right */
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+    ui_swbuf_hline(&b, 6, 0, 10, 4);
+    /* Should draw x=6..7 only */
+    /* byte 3: x=6 high=4, x=7 low=4 → 0x44 */
+    TEST_ASSERT_EQUAL_UINT8(0x44, b.data[3]);
+
+    /* hline at out-of-bounds y — should be no-op */
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+    ui_swbuf_hline(&b, 0, 10, 4, 5);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_vline_clipping(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* vline starting at negative y — should clip top */
+    ui_swbuf_vline(&b, 0, -1, 3, 6);
+    /* Should draw y=0..1 */
+    TEST_ASSERT_EQUAL_UINT8(0x60, b.data[0 * b.stride_bytes + 0]);
+    TEST_ASSERT_EQUAL_UINT8(0x60, b.data[1 * b.stride_bytes + 0]);
+    TEST_ASSERT_EQUAL_UINT8(0x00, b.data[2 * b.stride_bytes + 0]);
+
+    /* vline at out-of-bounds x — should be no-op */
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+    ui_swbuf_vline(&b, 20, 0, 2, 5);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_rect_draws_outline(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 8);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Draw 4x4 rect outline at (2,2) with color 9 */
+    ui_swbuf_rect(&b, 2, 2, 4, 4, 9);
+
+    /* Top edge y=2: x=2..5 should have color 9 */
+    TEST_ASSERT_EQUAL_UINT8(0x99, b.data[2 * b.stride_bytes + 1]); /* x=2,3 */
+    TEST_ASSERT_EQUAL_UINT8(0x99, b.data[2 * b.stride_bytes + 2]); /* x=4,5 */
+
+    /* Bottom edge y=5 */
+    TEST_ASSERT_EQUAL_UINT8(0x99, b.data[5 * b.stride_bytes + 1]);
+    TEST_ASSERT_EQUAL_UINT8(0x99, b.data[5 * b.stride_bytes + 2]);
+
+    /* Left edge x=2 at y=3: byte 1 high nibble = 9, low nibble should be 0 */
+    TEST_ASSERT_EQUAL_UINT8(0x90, b.data[3 * b.stride_bytes + 1]);
+    /* Right edge x=5 at y=3: byte 2 low nibble = 9, high=0 */
+    TEST_ASSERT_EQUAL_UINT8(0x09, b.data[3 * b.stride_bytes + 2]);
+}
+
+void test_swbuf_clear_sets_all_bytes(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+
+    /* Clear with color 0 */
+    ui_swbuf_clear(&b, 0);
+    for (int i = 0; i < 4 * b.stride_bytes; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0x00, b.data[i]);
+    }
+
+    /* Clear with color 1 → gray4 level is 0x0F */
+    ui_swbuf_clear(&b, 1);
+    for (int i = 0; i < 4 * b.stride_bytes; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0xFF, b.data[i]);
+    }
+}
+
+void test_render_scene_draws_all_visible_widgets(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget widgets[3];
+    memset(widgets, 0, sizeof(widgets));
+
+    /* Widget 0: visible label */
+    widgets[0].type = UIW_LABEL;
+    widgets[0].x = 0; widgets[0].y = 0;
+    widgets[0].width = 60; widgets[0].height = 10;
+    widgets[0].text = "Hello";
+    widgets[0].visible = 1; widgets[0].enabled = 1;
+
+    /* Widget 1: invisible label */
+    widgets[1].type = UIW_LABEL;
+    widgets[1].x = 0; widgets[1].y = 10;
+    widgets[1].width = 60; widgets[1].height = 10;
+    widgets[1].text = "Hidden";
+    widgets[1].visible = 0; widgets[1].enabled = 1;
+
+    /* Widget 2: visible button */
+    widgets[2].type = UIW_BUTTON;
+    widgets[2].x = 0; widgets[2].y = 20;
+    widgets[2].width = 60; widgets[2].height = 10;
+    widgets[2].text = "Click";
+    widgets[2].visible = 1; widgets[2].enabled = 1;
+
+    UiScene scene;
+    scene.name = "test";
+    scene.width = 256; scene.height = 128;
+    scene.widget_count = 3;
+    scene.widgets = widgets;
+
+    ui_render_scene(&scene, &ops);
+
+    /* 2 visible text-bearing widgets should produce text draws */
+    TEST_ASSERT_EQUAL_INT(2, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Hello", cap.text[0]);
+    TEST_ASSERT_EQUAL_STRING("Click", cap.text[1]);
+}
+
+void test_render_scene_null_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    ui_render_scene(NULL, &ops);
+    ui_render_scene(NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_widget_progressbar(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_PROGRESSBAR;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 14;
+    w.border = 1;
+    w.value = 50; w.min_value = 0; w.max_value = 100;
+    w.text = "50%";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("50%", cap.text[0]);
+}
+
+void test_render_widget_slider(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_SLIDER;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 16;
+    w.border = 1;
+    w.value = 25; w.min_value = 0; w.max_value = 100;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    /* Slider doesn't draw text, but should not crash */
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_widget_gauge(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_GAUGE;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 12;
+    w.border = 1;
+    w.value = 75; w.min_value = 0; w.max_value = 100;
+    w.text = "75";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("75", cap.text[0]);
+}
+
+void test_render_widget_radiobutton(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_RADIOBUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 12;
+    w.text = "Option 1";
+    w.checked = 1;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Option 1", cap.text[0]);
+}
+
+void test_render_widget_textbox(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_TEXTBOX;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 12;
+    w.border = 1;
+    w.text = "Input";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Input", cap.text[0]);
+}
+
+void test_render_widget_chart(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_CHART;
+    w.x = 0; w.y = 0;
+    w.width = 80; w.height = 40;
+    w.border = 1;
+    w.value = 50; w.min_value = 0; w.max_value = 100;
+    w.text = "Chart";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Chart", cap.text[0]);
+}
+
+void test_render_widget_unknown_type(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = 99;
+    w.x = 0; w.y = 0;
+    w.width = 20; w.height = 10;
+    w.visible = 1; w.enabled = 1;
+
+    /* Should not crash, falls through to default rect */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_label_center_align(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_LABEL;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 10;
+    w.text = "Hi";
+    w.align = UI_ALIGN_CENTER;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Hi", cap.text[0]);
+}
+
+void test_render_label_text_overflow_auto_wraps(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_LABEL;
+    w.x = 0; w.y = 0;
+    w.width = 32;
+    w.height = 20;
+    w.text = "one two three";
+    w.text_overflow = UI_TEXT_OVERFLOW_AUTO;
+    w.align = UI_ALIGN_LEFT;
+    w.valign = UI_VALIGN_TOP;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    /* AUTO with multi-height should wrap */
+    TEST_ASSERT_TRUE(cap.count >= 2);
+}
+
+void test_render_widget_disabled_style(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 10;
+    w.text = "Disabled";
+    w.visible = 1; w.enabled = 0;
+
+    ui_render_widget(&w, &ops);
+    /* Should still render text, just with dimmed color */
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Disabled", cap.text[0]);
+}
 #endif

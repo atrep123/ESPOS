@@ -26,6 +26,31 @@ void test_render_checkbox_overflow_clip_truncates_without_ellipsis(void);
 #if DISPLAY_COLOR_BITS == 4
 void test_swbuf_flush_dirty_gray4_aligns_x_to_columns(void);
 void test_swbuf_blit_mono_gray4_sets_pixels(void);
+void test_swbuf_hline_sets_pixels_and_marks_dirty(void);
+void test_swbuf_vline_sets_pixels_and_marks_dirty(void);
+void test_swbuf_fill_rect_marks_dirty(void);
+void test_swbuf_text_marks_dirty(void);
+void test_swbuf_text_null_no_crash(void);
+void test_swbuf_text_empty_no_dirty(void);
+void test_swbuf_rect_marks_dirty(void);
+void test_swbuf_make_ops_fills_all(void);
+void test_swbuf_fill_rect_sets_pixels(void);
+void test_swbuf_hline_clipping(void);
+void test_swbuf_vline_clipping(void);
+void test_swbuf_rect_draws_outline(void);
+void test_swbuf_clear_sets_all_bytes(void);
+void test_render_scene_draws_all_visible_widgets(void);
+void test_render_scene_null_no_crash(void);
+void test_render_widget_progressbar(void);
+void test_render_widget_slider(void);
+void test_render_widget_gauge(void);
+void test_render_widget_radiobutton(void);
+void test_render_widget_textbox(void);
+void test_render_widget_chart(void);
+void test_render_widget_unknown_type(void);
+void test_render_label_center_align(void);
+void test_render_label_text_overflow_auto_wraps(void);
+void test_render_widget_disabled_style(void);
 #endif
 
 int main(void)
@@ -40,6 +65,31 @@ int main(void)
 #if DISPLAY_COLOR_BITS == 4
     RUN_TEST(test_swbuf_flush_dirty_gray4_aligns_x_to_columns);
     RUN_TEST(test_swbuf_blit_mono_gray4_sets_pixels);
+    RUN_TEST(test_swbuf_hline_sets_pixels_and_marks_dirty);
+    RUN_TEST(test_swbuf_vline_sets_pixels_and_marks_dirty);
+    RUN_TEST(test_swbuf_fill_rect_marks_dirty);
+    RUN_TEST(test_swbuf_text_marks_dirty);
+    RUN_TEST(test_swbuf_text_null_no_crash);
+    RUN_TEST(test_swbuf_text_empty_no_dirty);
+    RUN_TEST(test_swbuf_rect_marks_dirty);
+    RUN_TEST(test_swbuf_make_ops_fills_all);
+    RUN_TEST(test_swbuf_fill_rect_sets_pixels);
+    RUN_TEST(test_swbuf_hline_clipping);
+    RUN_TEST(test_swbuf_vline_clipping);
+    RUN_TEST(test_swbuf_rect_draws_outline);
+    RUN_TEST(test_swbuf_clear_sets_all_bytes);
+    RUN_TEST(test_render_scene_draws_all_visible_widgets);
+    RUN_TEST(test_render_scene_null_no_crash);
+    RUN_TEST(test_render_widget_progressbar);
+    RUN_TEST(test_render_widget_slider);
+    RUN_TEST(test_render_widget_gauge);
+    RUN_TEST(test_render_widget_radiobutton);
+    RUN_TEST(test_render_widget_textbox);
+    RUN_TEST(test_render_widget_chart);
+    RUN_TEST(test_render_widget_unknown_type);
+    RUN_TEST(test_render_label_center_align);
+    RUN_TEST(test_render_label_text_overflow_auto_wraps);
+    RUN_TEST(test_render_widget_disabled_style);
 #endif
     return UNITY_END();
 }

@@ -7,6 +7,14 @@ void test_ui_components_menu_active_sets_highlight(void);
 void test_ui_components_tabs_active_sets_highlight(void);
 void test_ui_components_sync_active_from_focus_updates_menu_highlight(void);
 void test_ui_components_sync_active_from_focus_updates_tabs_highlight(void);
+void test_ui_components_null_scene(void);
+void test_ui_components_null_root(void);
+void test_ui_components_sync_no_dot_in_id(void);
+void test_ui_components_sync_invalid_focus_idx(void);
+void test_ui_components_sync_null_widget_id(void);
+void test_ui_components_sync_unknown_role(void);
+void test_ui_components_menu_no_dirty_fn(void);
+void test_ui_components_prefix_visible_null_widget_ids(void);
 
 void app_main(void)
 {
@@ -16,6 +24,14 @@ void app_main(void)
     RUN_TEST(test_ui_components_tabs_active_sets_highlight);
     RUN_TEST(test_ui_components_sync_active_from_focus_updates_menu_highlight);
     RUN_TEST(test_ui_components_sync_active_from_focus_updates_tabs_highlight);
+    RUN_TEST(test_ui_components_null_scene);
+    RUN_TEST(test_ui_components_null_root);
+    RUN_TEST(test_ui_components_sync_no_dot_in_id);
+    RUN_TEST(test_ui_components_sync_invalid_focus_idx);
+    RUN_TEST(test_ui_components_sync_null_widget_id);
+    RUN_TEST(test_ui_components_sync_unknown_role);
+    RUN_TEST(test_ui_components_menu_no_dirty_fn);
+    RUN_TEST(test_ui_components_prefix_visible_null_widget_ids);
     UNITY_END();
 }
 
@@ -26,6 +42,14 @@ void test_ui_components_menu_active_sets_highlight(void);
 void test_ui_components_tabs_active_sets_highlight(void);
 void test_ui_components_sync_active_from_focus_updates_menu_highlight(void);
 void test_ui_components_sync_active_from_focus_updates_tabs_highlight(void);
+void test_ui_components_null_scene(void);
+void test_ui_components_null_root(void);
+void test_ui_components_sync_no_dot_in_id(void);
+void test_ui_components_sync_invalid_focus_idx(void);
+void test_ui_components_sync_null_widget_id(void);
+void test_ui_components_sync_unknown_role(void);
+void test_ui_components_menu_no_dirty_fn(void);
+void test_ui_components_prefix_visible_null_widget_ids(void);
 
 int main(void)
 {
@@ -35,6 +59,14 @@ int main(void)
     RUN_TEST(test_ui_components_tabs_active_sets_highlight);
     RUN_TEST(test_ui_components_sync_active_from_focus_updates_menu_highlight);
     RUN_TEST(test_ui_components_sync_active_from_focus_updates_tabs_highlight);
+    RUN_TEST(test_ui_components_null_scene);
+    RUN_TEST(test_ui_components_null_root);
+    RUN_TEST(test_ui_components_sync_no_dot_in_id);
+    RUN_TEST(test_ui_components_sync_invalid_focus_idx);
+    RUN_TEST(test_ui_components_sync_null_widget_id);
+    RUN_TEST(test_ui_components_sync_unknown_role);
+    RUN_TEST(test_ui_components_menu_no_dirty_fn);
+    RUN_TEST(test_ui_components_prefix_visible_null_widget_ids);
     return UNITY_END();
 }
 
