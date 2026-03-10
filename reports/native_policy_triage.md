@@ -1,20 +1,21 @@
 ﻿# Native Policy Blocker Triage
 
-- Generated: 2026-03-09T19:56:03.9754770+01:00
+- Generated: 2026-03-09T22:23:51.0974830+01:00
 - History: C:\Users\atrep\Desktop\ESPOS\ESPOS\reports\native_policy_probe_history.jsonl
-- Runs: 21
-- Top: 5
+- Runs: 36
+- Top: 1
+- DeltaWindow: 0
+- OnlyWorsening: False
+- IncludeAllDeltaRows: False
+- MinAbsDeltaScore: 0
+- DeltaSortBy: abs-delta
 - Score formula: 2 * PolicyHits + TransientHits
 
 ## Top Suites For Allow-List Priority
 
 | Rank | Suite | Score | PolicyHits | PolicyRunRate% | TransientHits | TransientRunRate% |
 |---:|---|---:|---:|---:|---:|---:|
-| 1 | test_msgbus | 8 | 4 | 19 | 0 | 0 |
-| 2 | test_seesaw | 4 | 2 | 9.5 | 0 | 0 |
-| 3 | test_store | 4 | 2 | 9.5 | 0 | 0 |
-| 4 | test_ui_cmd | 4 | 2 | 9.5 | 0 | 0 |
-| 5 | test_ui_components | 2 | 1 | 4.8 | 0 | 0 |
+| 1 | test_msgbus | 26 | 13 | 36.1 | 0 | 0 |
 
 ## Recommended Next Action
 

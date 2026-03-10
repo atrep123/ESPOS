@@ -56,6 +56,9 @@ src-tauri/target/
 *.so
 *.d
 
+# Demo build output
+demos/
+
 # Logs
 simulator.log
 sim_ports.json

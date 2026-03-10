@@ -1,6 +1,6 @@
 ﻿# Native Policy Allow-List Request
 
-Generated: 2026-03-09T19:39:42.4709615+01:00
+Generated: 2026-03-09T22:28:13.4500019+01:00
 Repository: C:\Users\atrep\Desktop\ESPOS\ESPOS
 Probe Source: C:\Users\atrep\Desktop\ESPOS\ESPOS\reports\native_policy_probe_auto.json
 
@@ -17,13 +17,8 @@ Request allow-listing for local test executables and toolchain runtime so firmwa
 
 ## Current Probe Summary
 
-- Triggered: True
-- PolicyBlockCount: 2
+- Triggered: False
+- PolicyBlockCount: 0
 - TransientPolicyBlockCount: 0
 - FailureCount: 0
-
-## Suites With POLICY_BLOCK
-
-- test_msgbus
-- test_seesaw
 
