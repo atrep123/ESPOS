@@ -74,11 +74,12 @@ def main() -> int:
         if want == "upload"
         else f"pio test -e {hw_env}"
     )
+    action_label = "hardware upload" if want == "upload" else "hardware tests"
 
     if not board_present:
         print(
             f"INFO: No compatible board detected. Skipping '{want}' stage.\n"
-            "To run hardware tests, connect your board and use:\n"
+            f"To run {action_label}, connect your board and use:\n"
             f"  {suggested_cmd}"
         )
         return 0
@@ -86,7 +87,7 @@ def main() -> int:
     # Board is present: suggest using the real HW env for full test execution.
     print(
         f"INFO: Board detected, but this '-nohw' environment auto-skips "
-        f"'{want}' stage to avoid conflicts. For full hardware test execution, use:\n"
+        f"'{want}' stage to avoid conflicts. For full {action_label}, use:\n"
         f"  {suggested_cmd}"
     )
     return 0
