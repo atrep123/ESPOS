@@ -35,6 +35,10 @@ while [[ $# -gt 0 ]]; do
         echo "[FAIL] Invalid value for --design: '$1'" >&2
         exit 2
       fi
+      if [[ "$1" =~ ^[[:space:]]+$ ]]; then
+        echo "[FAIL] Whitespace-only value for --design is not allowed" >&2
+        exit 2
+      fi
       DESIGN="$1"
       DESIGN_ARG_SET=1
       ;;
@@ -46,6 +50,10 @@ while [[ $# -gt 0 ]]; do
       fi
       if [[ "$DESIGN" == -* ]]; then
         echo "[FAIL] Invalid value for --design: '$DESIGN'" >&2
+        exit 2
+      fi
+      if [[ "$DESIGN" =~ ^[[:space:]]+$ ]]; then
+        echo "[FAIL] Whitespace-only value for --design is not allowed" >&2
         exit 2
       fi
       DESIGN_ARG_SET=1
