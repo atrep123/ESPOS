@@ -27,9 +27,11 @@ jobs:
         run: python -m ruff check .
       - name: Ruff format check
         run: python -m ruff format --check .
-      - name: Mypy
+      - name: Mypy (codegen tools — strict)
+        run: python -m mypy --ignore-missing-imports --no-error-summary tools/ui_codegen.py scripts/pio_generate_ui_design.py
+      - name: Mypy (designer — advisory)
         continue-on-error: true
-        run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py design_tokens.py tools/ui_codegen.py scripts/pio_generate_ui_design.py || true
+        run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py design_tokens.py || true
       - name: Validate design JSON
         run: python tools/validate_design.py main_scene.json
       - name: Run tests
