@@ -9,11 +9,25 @@ param(
   [switch]$RequireMarkdown,
   [switch]$RequireCsv,
   [switch]$RequireTriageCsv,
-  [switch]$RequireTriageDeltaCsv
+  [switch]$RequireTriageDeltaCsv,
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\check_native_policy_artifacts.ps1 [-Help]"
+  Write-Host "  -ProbeJson <path>          Probe JSON (default: reports/native_policy_probe_auto.json)"
+  Write-Host "  -HistoryJsonl <path>       History JSONL"
+  Write-Host "  -SummaryMarkdown <path>    Summary markdown"
+  Write-Host "  -HistoryCsv <path>         History CSV"
+  Write-Host "  -RequireMarkdown           Require markdown file exists"
+  Write-Host "  -RequireCsv                Require CSV file exists"
+  Write-Host "  -RequireTriageCsv          Require triage CSV"
+  Write-Host "  -RequireTriageDeltaCsv     Require triage delta CSV"
+  exit 0
+}
 
 $triageCsvSpecified = $PSBoundParameters.ContainsKey("TriageCsv")
 $triageDeltaCsvSpecified = $PSBoundParameters.ContainsKey("TriageDeltaCsv")
