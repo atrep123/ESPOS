@@ -115,3 +115,117 @@ void test_bus_ui_cmd_message(void)
 
     vQueueDelete(q);
 }
+
+void test_bus_publish_queue_full_silent_drop(void)
+{
+    /* Create a queue with depth 1, publish 2 messages — second is silently dropped */
+    QueueHandle_t q = bus_make_queue(1);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m1 = {0};
+    m1.topic = TOP_TICK_10MS;
+    m1.u.tick.tick = 1;
+    bus_publish(&m1);
+
+    msg_t m2 = {0};
+    m2.topic = TOP_TICK_10MS;
+    m2.u.tick.tick = 2;
+    bus_publish(&m2); /* should not crash, dropped silently */
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+    TEST_ASSERT_EQUAL_UINT32(1, recv.u.tick.tick); /* only first message */
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q, &recv, 0)); /* empty */
+
+    vQueueDelete(q);
+}
+
+void test_bus_subscribe_max_subs_exceeded_no_crash(void)
+{
+    /* MAX_SUBS is 8 — subscribing a 9th should be silently ignored */
+    QueueHandle_t queues[10];
+    for (int i = 0; i < 10; ++i) {
+        queues[i] = bus_make_queue(4);
+        bus_subscribe(TOP_TICK_10MS, queues[i]);
+    }
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 77;
+    bus_publish(&m);
+
+    /* First 8 subscribers should receive the message */
+    for (int i = 0; i < 8; ++i) {
+        msg_t recv;
+        TEST_ASSERT_EQUAL_INT(1, xQueueReceive(queues[i], &recv, 0));
+        TEST_ASSERT_EQUAL_UINT32(77, recv.u.tick.tick);
+    }
+    /* 9th and 10th should NOT receive (silent subscriber limit) */
+    for (int i = 8; i < 10; ++i) {
+        msg_t recv;
+        TEST_ASSERT_EQUAL_INT(0, xQueueReceive(queues[i], &recv, 0));
+    }
+
+    for (int i = 0; i < 10; ++i) {
+        vQueueDelete(queues[i]);
+    }
+}
+
+void test_bus_publish_negative_topic_no_crash(void)
+{
+    msg_t m = {0};
+    m.topic = (topic_t)(-1);
+    bus_publish(&m); /* should not crash or corrupt */
+}
+
+void test_bus_reinit_clears_subscriptions(void)
+{
+    QueueHandle_t q = bus_make_queue(4);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    /* Re-init should clear all subscriptions */
+    bus_init();
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 55;
+    bus_publish(&m);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q, &recv, 0)); /* not delivered */
+
+    vQueueDelete(q);
+}
+
+void test_bus_subscribe_multiple_topics(void)
+{
+    QueueHandle_t q1 = bus_make_queue(4);
+    QueueHandle_t q2 = bus_make_queue(4);
+    bus_subscribe(TOP_INPUT_BTN, q1);
+    bus_subscribe(TOP_UI_ACTION, q2);
+
+    msg_t m1 = {0};
+    m1.topic = TOP_INPUT_BTN;
+    m1.u.btn.id = 3;
+    m1.u.btn.pressed = 1;
+    bus_publish(&m1);
+
+    msg_t m2 = {0};
+    m2.topic = TOP_UI_ACTION;
+    strncpy(m2.u.ui_action.id, "btn_ok", sizeof(m2.u.ui_action.id) - 1);
+    bus_publish(&m2);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q1, &recv, 0));
+    TEST_ASSERT_EQUAL_INT(TOP_INPUT_BTN, recv.topic);
+    TEST_ASSERT_EQUAL_UINT(3, recv.u.btn.id);
+
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q1, &recv, 0)); /* q1 didn't get q2's msg */
+
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q2, &recv, 0));
+    TEST_ASSERT_EQUAL_INT(TOP_UI_ACTION, recv.topic);
+    TEST_ASSERT_EQUAL_STRING("btn_ok", recv.u.ui_action.id);
+
+    vQueueDelete(q1);
+    vQueueDelete(q2);
+}

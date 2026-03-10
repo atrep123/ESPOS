@@ -10,6 +10,11 @@ void test_bus_publish_wrong_topic_not_delivered(void);
 void test_bus_multiple_subscribers(void);
 void test_bus_subscribe_out_of_range_topic_no_crash(void);
 void test_bus_ui_cmd_message(void);
+void test_bus_publish_queue_full_silent_drop(void);
+void test_bus_subscribe_max_subs_exceeded_no_crash(void);
+void test_bus_publish_negative_topic_no_crash(void);
+void test_bus_reinit_clears_subscriptions(void);
+void test_bus_subscribe_multiple_topics(void);
 
 void app_main(void)
 {
@@ -22,6 +27,11 @@ void app_main(void)
     RUN_TEST(test_bus_multiple_subscribers);
     RUN_TEST(test_bus_subscribe_out_of_range_topic_no_crash);
     RUN_TEST(test_bus_ui_cmd_message);
+    RUN_TEST(test_bus_publish_queue_full_silent_drop);
+    RUN_TEST(test_bus_subscribe_max_subs_exceeded_no_crash);
+    RUN_TEST(test_bus_publish_negative_topic_no_crash);
+    RUN_TEST(test_bus_reinit_clears_subscriptions);
+    RUN_TEST(test_bus_subscribe_multiple_topics);
     UNITY_END();
 }
 
@@ -35,6 +45,11 @@ void test_bus_publish_wrong_topic_not_delivered(void);
 void test_bus_multiple_subscribers(void);
 void test_bus_subscribe_out_of_range_topic_no_crash(void);
 void test_bus_ui_cmd_message(void);
+void test_bus_publish_queue_full_silent_drop(void);
+void test_bus_subscribe_max_subs_exceeded_no_crash(void);
+void test_bus_publish_negative_topic_no_crash(void);
+void test_bus_reinit_clears_subscriptions(void);
+void test_bus_subscribe_multiple_topics(void);
 
 int main(void)
 {
@@ -47,6 +62,11 @@ int main(void)
     RUN_TEST(test_bus_multiple_subscribers);
     RUN_TEST(test_bus_subscribe_out_of_range_topic_no_crash);
     RUN_TEST(test_bus_ui_cmd_message);
+    RUN_TEST(test_bus_publish_queue_full_silent_drop);
+    RUN_TEST(test_bus_subscribe_max_subs_exceeded_no_crash);
+    RUN_TEST(test_bus_publish_negative_topic_no_crash);
+    RUN_TEST(test_bus_reinit_clears_subscriptions);
+    RUN_TEST(test_bus_subscribe_multiple_topics);
     return UNITY_END();
 }
 
