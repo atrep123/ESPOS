@@ -489,6 +489,9 @@ esp_err_t ssd1363_set_addr_window(uint16_t x0, uint16_t x1, uint16_t y0, uint16_
     x0 = col0;
     x1 = col1;
 #endif
+    if (y0 > 255 || y1 > 255) {
+        return ESP_ERR_INVALID_ARG;
+    }
     uint8_t cmds[6];
     cmds[0] = 0x15; /* Set Column Address */
     cmds[1] = (uint8_t)x0;
