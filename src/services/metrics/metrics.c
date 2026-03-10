@@ -22,7 +22,7 @@ static void metrics_task(void *arg)
     bus_subscribe(TOP_TICK_10MS, q);
 
     while (1) {
-        if (xQueueReceive(q, &m, portMAX_DELAY)) {
+        if (xQueueReceive(q, &m, portMAX_DELAY) == pdTRUE) {
             if (m.topic == TOP_TICK_10MS) {
                 tick_count++;
                 /* Roughly once per second (100 * 10ms). */
