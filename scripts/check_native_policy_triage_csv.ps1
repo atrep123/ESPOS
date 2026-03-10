@@ -3,11 +3,21 @@ param(
   [string]$CombinedCsv = "reports/native_policy_triage.csv",
   [string]$DeltaCsv = "",
   [switch]$RequireCombined,
-  [switch]$RequireDelta
+  [switch]$RequireDelta,
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\check_native_policy_triage_csv.ps1 [-Help]"
+  Write-Host "  -CombinedCsv <path>    Combined triage CSV (default: reports/native_policy_triage.csv)"
+  Write-Host "  -DeltaCsv <path>       Delta triage CSV"
+  Write-Host "  -RequireCombined       Require combined CSV exists"
+  Write-Host "  -RequireDelta          Require delta CSV exists"
+  exit 0
+}
 
 $combinedCsvSpecified = $PSBoundParameters.ContainsKey("CombinedCsv")
 $deltaCsvSpecified = $PSBoundParameters.ContainsKey("DeltaCsv")
