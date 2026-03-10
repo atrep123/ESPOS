@@ -13,7 +13,9 @@ from .widgets import draw_scrollbar
 def draw_palette(app) -> None:
     r = app.layout.palette_rect
     draw_pixel_panel_bg(app, r)
-    title = render_pixel_text(app, "Widgets", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24))
+    title = render_pixel_text(
+        app, "Widgets", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24)
+    )
     app.logical_surface.blit(title, (r.x + app.pixel_padding, r.y + (app.pixel_padding // 2)))
 
     row_h = int(app.pixel_row_height)
@@ -26,7 +28,9 @@ def draw_palette(app) -> None:
     view_h = max(0, int(content_rect.height))
     max_scroll = max(0, content_h - view_h)
     try:
-        app.state.palette_scroll = max(0, min(max_scroll, int(getattr(app.state, "palette_scroll", 0) or 0)))
+        app.state.palette_scroll = max(
+            0, min(max_scroll, int(getattr(app.state, "palette_scroll", 0) or 0))
+        )
     except Exception:
         app.state.palette_scroll = 0
 
@@ -155,7 +159,9 @@ def draw_inspector(app) -> None:
     view_h = max(0, int(content_rect.height))
     max_scroll = max(0, content_h - view_h)
     try:
-        app.state.inspector_scroll = max(0, min(max_scroll, int(getattr(app.state, "inspector_scroll", 0) or 0)))
+        app.state.inspector_scroll = max(
+            0, min(max_scroll, int(getattr(app.state, "inspector_scroll", 0) or 0))
+        )
     except Exception:
         app.state.inspector_scroll = 0
 
@@ -163,7 +169,9 @@ def draw_inspector(app) -> None:
     app.inspector_hitboxes = []
     alt_stride = False
 
-    title = render_pixel_text(app, "Inspector", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24))
+    title = render_pixel_text(
+        app, "Inspector", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24)
+    )
     app.logical_surface.blit(title, (r.x + app.pixel_padding, r.y + (app.pixel_padding // 2)))
 
     edit_key = app.state.inspector_selected_field
@@ -180,7 +188,7 @@ def draw_inspector(app) -> None:
         for key, text in rows:
             # Section header
             if isinstance(key, str) and key.startswith("_section:"):
-                sec_name = key[len("_section:"):]
+                sec_name = key[len("_section:") :]
                 current_section = sec_name
                 is_collapsed = sec_name in collapsed
                 hdr_rect = pygame.Rect(r.x, y, r.width, row_h)
@@ -287,9 +295,9 @@ def draw_status(app) -> None:
         wcount = f"({len(sc.widgets)}w)"
     # Show scene name when multiple scenes exist
     try:
-        scene_names = list((getattr(app, 'designer', None) or app).scenes.keys())
+        scene_names = list((getattr(app, "designer", None) or app).scenes.keys())
         if len(scene_names) > 1:
-            cur = getattr(app.designer, 'current_scene', '')
+            cur = getattr(app.designer, "current_scene", "")
             idx = scene_names.index(cur) + 1 if cur in scene_names else 0
             scene_label = f"[{idx}/{len(scene_names)}:{cur}]"
     except Exception:  # pragma: no cover — defensive

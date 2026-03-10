@@ -19,6 +19,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -214,8 +215,13 @@ class TestDrawWidgetPreview:
         w = WidgetConfig(**defaults)
         r = pygame.Rect(0, 0, int(w.width), int(w.height))
         draw_widget_preview(
-            app, surface=app.logical_surface, w=w, rect=r,
-            base_bg=(30, 30, 30), padding=2, is_selected=False,
+            app,
+            surface=app.logical_surface,
+            w=w,
+            rect=r,
+            base_bg=(30, 30, 30),
+            padding=2,
+            is_selected=False,
         )
 
     def test_gauge_small(self, tmp_path, monkeypatch):
@@ -237,21 +243,24 @@ class TestDrawWidgetPreview:
 
     def test_chart_bar(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        self._draw(app, type="chart", style="bar", text="bar chart",
-                   width=80, height=48)
+        self._draw(app, type="chart", style="bar", text="bar chart", width=80, height=48)
 
     def test_chart_line(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        self._draw(app, type="chart", style="line", text="line chart",
-                   width=80, height=48)
+        self._draw(app, type="chart", style="line", text="line chart", width=80, height=48)
 
     def test_textbox(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         w = WidgetConfig(type="textbox", x=0, y=0, width=80, height=24, text="input")
         r = pygame.Rect(0, 0, 80, 24)
         draw_widget_preview(
-            app, surface=app.logical_surface, w=w, rect=r,
-            base_bg=(30, 30, 30), padding=2, is_selected=True,
+            app,
+            surface=app.logical_surface,
+            w=w,
+            rect=r,
+            base_bg=(30, 30, 30),
+            padding=2,
+            is_selected=True,
         )
 
     def test_radiobutton(self, tmp_path, monkeypatch):

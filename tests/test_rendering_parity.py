@@ -40,8 +40,20 @@ def _widget(**kw) -> WidgetConfig:
 class TestColorMappingParity:
     """Named colors and hex codes should resolve identically in both pipelines."""
 
-    NAMES = ["black", "white", "red", "green", "blue", "yellow", "cyan",
-             "magenta", "gray", "grey", "orange", "purple"]
+    NAMES = [
+        "black",
+        "white",
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "cyan",
+        "magenta",
+        "gray",
+        "grey",
+        "orange",
+        "purple",
+    ]
 
     def test_named_colors_match(self):
         for name in self.NAMES:
@@ -66,7 +78,7 @@ class TestColorMappingParity:
 
     def test_gray4_fg_bg_defaults(self):
         assert parse_gray4("", default=15) == 15  # fg default
-        assert parse_gray4("", default=0) == 0    # bg default
+        assert parse_gray4("", default=0) == 0  # bg default
 
     def test_gray4_red_has_low_luminance(self):
         """Pure red (255,0,0) has low luminance in BT.709."""
@@ -167,8 +179,7 @@ class TestTextTruncationParity:
         """Wrap mode: text that fits in 2 lines should not truncate."""
         # inner_w = 60 - 4 = 56 → max_chars = 56/6 = 9
         # inner_h = 30 - 4 = 26 → max_lines = 26/8 = 3
-        w = _widget(width=60, height=30, text="Hello World", border=True,
-                    text_overflow="wrap")
+        w = _widget(width=60, height=30, text="Hello World", border=True, text_overflow="wrap")
         # "Hello World" → 11 chars > 9 → wraps to 2 lines, fits in 3
         assert not text_metrics.text_truncates_in_widget(w, "Hello World")
 
@@ -176,8 +187,7 @@ class TestTextTruncationParity:
         """Wrap mode that exceeds available lines."""
         # inner_w = 30-4 = 26 → max_chars = 26/6 = 4
         # inner_h = 16-4 = 12 → max_lines = 12/8 = 1
-        w = _widget(width=30, height=16, text="ABCDEFGH", border=True,
-                    text_overflow="wrap")
+        w = _widget(width=30, height=16, text="ABCDEFGH", border=True, text_overflow="wrap")
         assert text_metrics.text_truncates_in_widget(w, "ABCDEFGH")
 
     def test_checkbox_inner_area_uses_box_offset(self):
@@ -224,11 +234,19 @@ class TestMappingParity:
         assert border_style_for(w, border=0) == "UI_BORDER_NONE"
 
     def test_align_maps(self):
-        for name, expected in [("left", "UI_ALIGN_LEFT"), ("center", "UI_ALIGN_CENTER"), ("right", "UI_ALIGN_RIGHT")]:
+        for name, expected in [
+            ("left", "UI_ALIGN_LEFT"),
+            ("center", "UI_ALIGN_CENTER"),
+            ("right", "UI_ALIGN_RIGHT"),
+        ]:
             assert align_for({"align": name}) == expected
 
     def test_valign_maps(self):
-        for name, expected in [("top", "UI_VALIGN_TOP"), ("middle", "UI_VALIGN_MIDDLE"), ("bottom", "UI_VALIGN_BOTTOM")]:
+        for name, expected in [
+            ("top", "UI_VALIGN_TOP"),
+            ("middle", "UI_VALIGN_MIDDLE"),
+            ("bottom", "UI_VALIGN_BOTTOM"),
+        ]:
             assert valign_for({"valign": name}) == expected
 
     def test_overflow_maps(self):
@@ -251,9 +269,21 @@ class TestMappingParity:
     def test_widget_type_coverage(self):
         """Every WidgetConfig type should have a codegen mapping."""
         from tools.ui_codegen import WIDGET_TYPE_MAP
-        types = ["label", "button", "checkbox", "slider", "progressbar",
-                 "gauge", "textbox", "radiobutton", "icon", "chart",
-                 "box", "panel"]
+
+        types = [
+            "label",
+            "button",
+            "checkbox",
+            "slider",
+            "progressbar",
+            "gauge",
+            "textbox",
+            "radiobutton",
+            "icon",
+            "chart",
+            "box",
+            "panel",
+        ]
         for t in types:
             assert t in WIDGET_TYPE_MAP, f"missing codegen mapping for '{t}'"
 
@@ -323,6 +353,7 @@ class TestFillMathParity:
 class TestStringPool:
     def test_deduplication(self):
         from tools.ui_codegen import build_string_pool
+
         vals = ["hello", "world", "hello", "world", "extra"]
         pool = build_string_pool(vals, symbol_prefix="s_")
         assert len(pool.mapping) == 3  # hello, world, extra
@@ -333,6 +364,7 @@ class TestStringPool:
 
     def test_empty_strings_skipped(self):
         from tools.ui_codegen import build_string_pool
+
         vals = ["", "", "ok", ""]
         pool = build_string_pool(vals, symbol_prefix="x_")
         assert len(pool.mapping) == 1
@@ -340,8 +372,9 @@ class TestStringPool:
 
     def test_special_chars_escaped(self):
         from tools.ui_codegen import build_string_pool
+
         vals = ['say "hi"', "line\nbreak"]
         pool = build_string_pool(vals, symbol_prefix="e_")
         assert len(pool.decls) == 2
         for d in pool.decls:
-            assert '\\n' in d or '\\"' in d or 'say' in d
+            assert "\\n" in d or '\\"' in d or "say" in d

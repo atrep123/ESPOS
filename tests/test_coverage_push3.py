@@ -123,16 +123,19 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.clipboard = [_w(x=10, y=10)]
+
         # pointer_pos passes collidepoint but causes exception inside int() math
         # Create a scene_rect that returns True for collidepoint but pointer_pos
         # has values that break int() arithmetic
         class BadRect:
             x = 0
             y = 0
+
             def collidepoint(self, pos):
                 return True
+
         app.scene_rect = BadRect()
-        app.pointer_pos = (float('inf'), float('inf'))
+        app.pointer_pos = (float("inf"), float("inf"))
         clipboard.paste_clipboard(app)
         # Should fall back to GRID*2 offset
         assert len(app.state.current_scene().widgets) == 2
@@ -186,6 +189,7 @@ class TestClipboardExceptions:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         # Need 2 scenes
         from ui_designer import SceneConfig
+
         app.designer.scenes["scene2"] = SceneConfig(
             name="scene2", width=256, height=128, widgets=[], bg_color="black"
         )
@@ -216,6 +220,7 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         from ui_designer import SceneConfig
+
         app.designer.scenes["scene2"] = SceneConfig(
             name="scene2", width=256, height=128, widgets=[], bg_color="black"
         )
@@ -228,6 +233,7 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         from ui_designer import SceneConfig
+
         app.designer.scenes["scene2"] = SceneConfig(
             name="scene2", width=256, height=128, widgets=[], bg_color="black"
         )
@@ -266,6 +272,7 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         from ui_designer import SceneConfig
+
         app.designer.scenes["scene2"] = SceneConfig(
             name="scene2", width=256, height=128, widgets=[], bg_color="black"
         )
@@ -404,9 +411,13 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
-        monkeypatch.setattr(pygame, "scrap", MagicMock(
-            init=MagicMock(side_effect=RuntimeError("no scrap")),
-        ))
+        monkeypatch.setattr(
+            pygame,
+            "scrap",
+            MagicMock(
+                init=MagicMock(side_effect=RuntimeError("no scrap")),
+            ),
+        )
         clipboard.export_selection_json(app)
 
     # ---- export_selection_json: nothing selected ----
@@ -506,7 +517,9 @@ class TestTransformsExceptions:
     def test_resize_with_snap(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import transforms
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=8, y=8, width=40, height=24)], snap=True)
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(x=8, y=8, width=40, height=24)], snap=True
+        )
         app.state.selected = [0]
         result = transforms.resize_selection_to(app, 80, 48)
         assert result is True
@@ -1130,13 +1143,13 @@ class TestPropagationExceptions:
 
 
 class TestClipboardExtraEdges:
-
     # ---- copy_to_next_scene: current not in names (lines 136-137) ----
     def test_copy_to_next_scene_current_not_in_names(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import clipboard
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         from ui_designer import SceneConfig
+
         app.designer.scenes["scene2"] = SceneConfig(
             name="scene2", width=256, height=128, widgets=[], bg_color="black"
         )
@@ -1163,6 +1176,7 @@ class TestClipboardExtraEdges:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         from ui_designer import SceneConfig
+
         # Add 2 extra scenes, make one None
         app.designer.scenes["scene2"] = None  # type: ignore[assignment]
         app.designer.scenes["scene3"] = SceneConfig(
@@ -1235,7 +1249,9 @@ class TestLayoutSelectOpsEdges:
     def test_equalize_gaps_auto(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import layout as layout_mod
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=0, y=0, width=20), _w(x=40, y=0, width=20)])
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(x=0, y=0, width=20), _w(x=40, y=0, width=20)]
+        )
         app.state.selected = [0, 1]
         layout_mod.equalize_gaps(app, axis="auto")
 
@@ -1666,8 +1682,11 @@ class TestPropertyCyclesEdges:
 
         # adjust_value needs delta arg
         if func_name == "adjust_value":
-            app = _make_app(tmp_path, monkeypatch,
-                            widgets=[_w(type="gauge", value=50, min_value=0, max_value=100)])
+            app = _make_app(
+                tmp_path,
+                monkeypatch,
+                widgets=[_w(type="gauge", value=50, min_value=0, max_value=100)],
+            )
             app.state.selected = [0]
             _make_save_raise(app)
             pc.adjust_value(app, 5)
@@ -1699,8 +1718,7 @@ class TestPropertyCyclesEdges:
     def test_smart_edit_checkbox_save_except(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import property_cycles as pc
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(type="checkbox", checked=False)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(type="checkbox", checked=False)])
         app.state.selected = [0]
         _make_save_raise(app)
         pc.smart_edit(app)
@@ -1733,8 +1751,7 @@ class TestPropertyCyclesEdges:
     def test_toggle_checked_save_except(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import property_cycles as pc
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(type="checkbox", checked=False)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(type="checkbox", checked=False)])
         app.state.selected = [0]
         _make_save_raise(app)
         pc.toggle_checked(app)
@@ -1916,16 +1933,16 @@ class TestQuerySelectEdges:
     def test_overflow_icon_branch(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import query_select as qs
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(type="icon", icon_char="X", width=10, height=10)])
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(type="icon", icon_char="X", width=10, height=10)]
+        )
         qs.select_overflow(app)
 
     # select_overflow: no overflow found (large widget, small text)
     def test_overflow_no_overflow(self, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import query_select as qs
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(text="Hi", width=200, height=100)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="Hi", width=200, height=100)])
         qs.select_overflow(app)
 
     # select_overflow: import exception for text_metrics
@@ -1935,12 +1952,15 @@ class TestQuerySelectEdges:
         _make_app(tmp_path, monkeypatch, widgets=[_w()])
         # Make the relative import of text_metrics fail
         import cyberpunk_designer.text_metrics as tm
-        monkeypatch.setattr(tm, "text_truncates_in_widget",
-                            MagicMock(side_effect=ImportError("no module")))
+
+        monkeypatch.setattr(
+            tm, "text_truncates_in_widget", MagicMock(side_effect=ImportError("no module"))
+        )
         # The import itself won't fail (already cached), but we can make the
         # function inside the loop raise. Actually the except is around import.
         # We need to make the `from .. import text_metrics` fail.
         import sys
+
         saved = sys.modules.get("cyberpunk_designer.text_metrics")
         monkeypatch.delitem(sys.modules, "cyberpunk_designer.text_metrics", raising=False)
         monkeypatch.setitem(sys.modules, "cyberpunk_designer.text_metrics", None)
@@ -1949,6 +1969,7 @@ class TestQuerySelectEdges:
             monkeypatch.delattr(qs, "_text_metrics_cache", raising=False)
         # Reload the module so the `from .. import text_metrics` re-executes
         import importlib
+
         try:
             importlib.reload(qs)
         except Exception:
@@ -1963,7 +1984,6 @@ class TestQuerySelectEdges:
         from cyberpunk_designer.selection_ops import query_select as qs
 
         # Scene has only labels, no panels → all iterations hit "continue"
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(x=10, y=10), _w(x=20, y=20)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10), _w(x=20, y=20)])
         app.state.selected = [0]
         qs.select_parent_panel(app)

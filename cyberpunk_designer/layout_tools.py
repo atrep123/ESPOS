@@ -155,7 +155,9 @@ def align_selection(app, mode: str) -> None:
         app._mark_dirty()
     else:
         if skipped_locked:
-            app._set_status(f"Align {mode}: nothing to change (locked: {skipped_locked}).", ttl_sec=2.5)
+            app._set_status(
+                f"Align {mode}: nothing to change (locked: {skipped_locked}).", ttl_sec=2.5
+            )
         else:
             app._set_status(f"Align {mode}: nothing to change.", ttl_sec=2.0)
 
@@ -185,7 +187,9 @@ def distribute_selection(app, axis: str) -> None:
         first = ordered[0][1]
         last = ordered[-1][1]
         left = int(getattr(first, "x", 0) or 0)
-        right = int(getattr(last, "x", 0) or 0) + max(GRID, int(getattr(last, "width", GRID) or GRID))
+        right = int(getattr(last, "x", 0) or 0) + max(
+            GRID, int(getattr(last, "width", GRID) or GRID)
+        )
         total = sum(max(GRID, int(getattr(w, "width", GRID) or GRID)) for _i, w in ordered)
         gap = float(right - left - total) / float(max(1, len(ordered) - 1))
         cursor = float(left)
@@ -214,7 +218,9 @@ def distribute_selection(app, axis: str) -> None:
         first = ordered[0][1]
         last = ordered[-1][1]
         top = int(getattr(first, "y", 0) or 0)
-        bottom = int(getattr(last, "y", 0) or 0) + max(GRID, int(getattr(last, "height", GRID) or GRID))
+        bottom = int(getattr(last, "y", 0) or 0) + max(
+            GRID, int(getattr(last, "height", GRID) or GRID)
+        )
         total = sum(max(GRID, int(getattr(w, "height", GRID) or GRID)) for _i, w in ordered)
         gap = float(bottom - top - total) / float(max(1, len(ordered) - 1))
         cursor = float(top)
@@ -315,7 +321,9 @@ def match_size_selection(app, mode: str) -> None:
         app._mark_dirty()
     else:
         if skipped_locked:
-            app._set_status(f"Match {mode}: nothing to change (locked: {skipped_locked}).", ttl_sec=2.5)
+            app._set_status(
+                f"Match {mode}: nothing to change (locked: {skipped_locked}).", ttl_sec=2.5
+            )
         else:
             app._set_status(f"Match {mode}: nothing to change.", ttl_sec=2.0)
 
@@ -354,7 +362,9 @@ def clear_active_guides(app) -> None:
         pass
 
 
-def snap_drag_to_guides(app, desired_x: int, desired_y: int, bounds: pygame.Rect) -> Tuple[int, int]:
+def snap_drag_to_guides(
+    app, desired_x: int, desired_y: int, bounds: pygame.Rect
+) -> Tuple[int, int]:
     """Snap a moving selection bounds to nearby guides.
 
     Returns adjusted (x,y) in scene coordinates and updates `state.active_guides`.
@@ -445,4 +455,3 @@ def snap_drag_to_guides(app, desired_x: int, desired_y: int, bounds: pygame.Rect
     except Exception:
         pass
     return nx, ny
-

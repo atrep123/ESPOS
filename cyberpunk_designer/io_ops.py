@@ -141,6 +141,7 @@ def save_prefs(app) -> None:
 
 def save_json(app) -> None:
     import tempfile
+
     target = str(app.json_path)
     dir_name = str(Path(target).parent)
     tmp_path = None
@@ -176,6 +177,7 @@ def load_json(app) -> None:
     # Drain stale events so they don't apply to the freshly loaded scene
     try:
         import pygame
+
         pygame.event.clear()
     except Exception:
         pass

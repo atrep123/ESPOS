@@ -50,58 +50,68 @@ def _make_port(vid=None, pid=None, description=""):
 class TestHasEsp32s3:
     def test_no_devices(self, monkeypatch):
         import skip_hw_tests
+
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: []))
         assert has_esp32s3() is False
 
     def test_espressif_vid_match(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=ESPRESSIF_VID, pid=ESP32S3_PIDS[0])
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
 
     def test_arduino_vid_match(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=ARDUINO_VID, pid=ARDUINO_NANO_ESP32_PIDS[0])
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
 
     def test_description_esp32s3(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=0, pid=0, description="ESP32-S3 USB JTAG")
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
 
     def test_description_espressif(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=0, pid=0, description="Espressif Device")
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
 
     def test_description_arduino_nano(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=0, pid=0, description="Arduino Nano ESP32")
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
 
     def test_description_nora(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=0, pid=0, description="NORA-W306 Bluetooth")
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
 
     def test_unrelated_device(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=0x1234, pid=0x5678, description="Generic Serial")
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is False
 
     def test_list_ports_none(self, monkeypatch):
         import skip_hw_tests
+
         monkeypatch.setattr(skip_hw_tests, "list_ports", None)
         assert has_esp32s3() is False
 
     def test_usb_jtag_description(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=0, pid=0, description="USB JTAG serial debug")
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         assert has_esp32s3() is True
@@ -115,12 +125,14 @@ class TestHasEsp32s3:
 class TestMain:
     def test_no_board_returns_zero(self, monkeypatch):
         import skip_hw_tests
+
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: []))
         monkeypatch.setattr(sys, "argv", ["skip_hw_tests.py", "test"])
         assert main() == 0
 
     def test_board_present_returns_zero(self, monkeypatch):
         import skip_hw_tests
+
         port = _make_port(vid=ESPRESSIF_VID, pid=ESP32S3_PIDS[0])
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: [port]))
         monkeypatch.setattr(sys, "argv", ["skip_hw_tests.py", "upload"])
@@ -128,12 +140,14 @@ class TestMain:
 
     def test_no_argv_uses_test(self, monkeypatch):
         import skip_hw_tests
+
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: []))
         monkeypatch.setattr(sys, "argv", ["skip_hw_tests.py"])
         assert main() == 0
 
     def test_nohw_env_strips_suffix(self, monkeypatch, capsys):
         import skip_hw_tests
+
         monkeypatch.setattr(skip_hw_tests, "list_ports", SimpleNamespace(comports=lambda: []))
         monkeypatch.setenv("PIOENV", "esp32-s3-devkitm-1-nohw")
         monkeypatch.setattr(sys, "argv", ["skip_hw_tests.py"])

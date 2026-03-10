@@ -72,9 +72,7 @@ def test_palette_click_adds_widget_and_canvas_renders(tmp_path, monkeypatch):
 
     app.logical_surface.fill(PALETTE["bg"])
     app._draw_palette()
-    button_rect, _label, enabled = next(
-        row for row in app.palette_hitboxes if row[1] == "button"
-    )
+    button_rect, _label, enabled = next(row for row in app.palette_hitboxes if row[1] == "button")
     assert enabled
 
     app._on_mouse_down(button_rect.center)
@@ -265,9 +263,9 @@ def test_component_os_menu_list_inserts_focusable_items(tmp_path, monkeypatch):
 
     app._add_component("menu_list")
     assert sc.widgets
-    assert any(
-        w.type == "button" for w in sc.widgets
-    ), "menu list should contain focusable button items"
+    assert any(w.type == "button" for w in sc.widgets), (
+        "menu list should contain focusable button items"
+    )
     assert app.designer.groups
     assert any(name.startswith("comp:menu_list:") for name in app.designer.groups)
 
@@ -852,8 +850,9 @@ def test_widget_label_renders_text(tmp_path, monkeypatch):
 
 def test_widget_button_renders_bevel(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "button", text="OK", border=True, border_style="single",
-                          color_bg="#303030")
+    surf = _render_widget(
+        app, "button", text="OK", border=True, border_style="single", color_bg="#303030"
+    )
     # Button fills its rect with bg (non-black), so it should differ from surface
     full_area = pygame.Rect(4, 4, 100, 40)
     assert _has_nonbg_pixels(surf, full_area), "button should have visible fill/text"
@@ -872,36 +871,51 @@ def test_widget_checkbox_checked_has_cross(tmp_path, monkeypatch):
     surf_checked = _render_widget(app, "checkbox", text="OPT", checked=True)
     # Count non-bg pixels in the checkbox box area
     box_area = pygame.Rect(4, 4, GRID + 4, GRID + 4)
-    unchecked_px = sum(1 for x in range(box_area.left, box_area.right)
-                       for y in range(box_area.top, box_area.bottom)
-                       if surf_unchecked.get_at((x, y))[:3] != BG_COLOR)
-    checked_px = sum(1 for x in range(box_area.left, box_area.right)
-                     for y in range(box_area.top, box_area.bottom)
-                     if surf_checked.get_at((x, y))[:3] != BG_COLOR)
+    unchecked_px = sum(
+        1
+        for x in range(box_area.left, box_area.right)
+        for y in range(box_area.top, box_area.bottom)
+        if surf_unchecked.get_at((x, y))[:3] != BG_COLOR
+    )
+    checked_px = sum(
+        1
+        for x in range(box_area.left, box_area.right)
+        for y in range(box_area.top, box_area.bottom)
+        if surf_checked.get_at((x, y))[:3] != BG_COLOR
+    )
     assert checked_px > unchecked_px, "checked checkbox should have more pixels (cross)"
 
 
 def test_widget_radiobutton_renders_circle(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "radiobutton", text="OPT", checked=False,
-                          border=False, border_style="none")
+    surf = _render_widget(
+        app, "radiobutton", text="OPT", checked=False, border=False, border_style="none"
+    )
     circle_area = pygame.Rect(4, 4, GRID + 4, 40)
     assert _has_nonbg_pixels(surf, circle_area), "radiobutton ring should be visible"
 
 
 def test_widget_radiobutton_checked_fills(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf_off = _render_widget(app, "radiobutton", text="R", checked=False,
-                              border=False, border_style="none")
-    surf_on = _render_widget(app, "radiobutton", text="R", checked=True,
-                             border=False, border_style="none")
+    surf_off = _render_widget(
+        app, "radiobutton", text="R", checked=False, border=False, border_style="none"
+    )
+    surf_on = _render_widget(
+        app, "radiobutton", text="R", checked=True, border=False, border_style="none"
+    )
     area = pygame.Rect(4, 4, GRID + 4, 40)
-    off_px = sum(1 for x in range(area.left, area.right)
-                 for y in range(area.top, area.bottom)
-                 if surf_off.get_at((x, y))[:3] != BG_COLOR)
-    on_px = sum(1 for x in range(area.left, area.right)
-                for y in range(area.top, area.bottom)
-                if surf_on.get_at((x, y))[:3] != BG_COLOR)
+    off_px = sum(
+        1
+        for x in range(area.left, area.right)
+        for y in range(area.top, area.bottom)
+        if surf_off.get_at((x, y))[:3] != BG_COLOR
+    )
+    on_px = sum(
+        1
+        for x in range(area.left, area.right)
+        for y in range(area.top, area.bottom)
+        if surf_on.get_at((x, y))[:3] != BG_COLOR
+    )
     assert on_px > off_px, "checked radiobutton should have filled inner circle"
 
 
@@ -911,19 +925,26 @@ def test_widget_progressbar_fill(tmp_path, monkeypatch):
     surf_half = _render_widget(app, "progressbar", value=50, min_value=0, max_value=100)
     # Right half should have more pixels when 50% filled
     right = pygame.Rect(50, 4, 50, 40)
-    empty_right = sum(1 for x in range(right.left, right.right)
-                      for y in range(right.top, right.bottom)
-                      if surf_empty.get_at((x, y))[:3] != BG_COLOR)
-    half_right = sum(1 for x in range(right.left, right.right)
-                     for y in range(right.top, right.bottom)
-                     if surf_half.get_at((x, y))[:3] != BG_COLOR)
+    empty_right = sum(
+        1
+        for x in range(right.left, right.right)
+        for y in range(right.top, right.bottom)
+        if surf_empty.get_at((x, y))[:3] != BG_COLOR
+    )
+    half_right = sum(
+        1
+        for x in range(right.left, right.right)
+        for y in range(right.top, right.bottom)
+        if surf_half.get_at((x, y))[:3] != BG_COLOR
+    )
     assert half_right > empty_right, "50% progressbar should fill more than 0%"
 
 
 def test_widget_slider_renders_knob(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "slider", value=50, min_value=0, max_value=100,
-                          border=False, border_style="none")
+    surf = _render_widget(
+        app, "slider", value=50, min_value=0, max_value=100, border=False, border_style="none"
+    )
     # Slider track + knob should produce visible pixels in center
     center = pygame.Rect(20, 8, 60, 30)
     assert _has_nonbg_pixels(surf, center), "slider should have visible track+knob"
@@ -931,26 +952,51 @@ def test_widget_slider_renders_knob(tmp_path, monkeypatch):
 
 def test_widget_gauge_renders_arc_or_bar(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "gauge", value=50, min_value=0, max_value=100,
-                          width=60, height=60, border=False, border_style="none")
+    surf = _render_widget(
+        app,
+        "gauge",
+        value=50,
+        min_value=0,
+        max_value=100,
+        width=60,
+        height=60,
+        border=False,
+        border_style="none",
+    )
     area = pygame.Rect(4, 4, 60, 60)
     assert _has_nonbg_pixels(surf, area), "gauge should render arc or bar"
 
 
 def test_widget_chart_bar_renders_bars(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "chart", text="BAR", style="bar",
-                          data_points=[10, 30, 20, 50], width=100, height=50,
-                          border=False, border_style="none")
+    surf = _render_widget(
+        app,
+        "chart",
+        text="BAR",
+        style="bar",
+        data_points=[10, 30, 20, 50],
+        width=100,
+        height=50,
+        border=False,
+        border_style="none",
+    )
     chart_area = pygame.Rect(4, 10, 96, 40)
     assert _has_nonbg_pixels(surf, chart_area), "bar chart should have visible bars"
 
 
 def test_widget_chart_line_renders_lines(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "chart", text="LINE", style="line",
-                          data_points=[5, 15, 10, 20], width=100, height=50,
-                          border=False, border_style="none")
+    surf = _render_widget(
+        app,
+        "chart",
+        text="LINE",
+        style="line",
+        data_points=[5, 15, 10, 20],
+        width=100,
+        height=50,
+        border=False,
+        border_style="none",
+    )
     chart_area = pygame.Rect(4, 10, 96, 40)
     assert _has_nonbg_pixels(surf, chart_area), "line chart should have visible lines"
 
@@ -964,24 +1010,23 @@ def test_widget_textbox_renders_input(tmp_path, monkeypatch):
 
 def test_widget_icon_renders_char(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "icon", icon_char="@", width=24, height=24,
-                          border=False, border_style="none")
+    surf = _render_widget(
+        app, "icon", icon_char="@", width=24, height=24, border=False, border_style="none"
+    )
     area = pygame.Rect(4, 4, 24, 24)
     assert _has_nonbg_pixels(surf, area), "icon should render character"
 
 
 def test_widget_box_renders_filled_rect(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "box", border=True, border_style="single",
-                          width=60, height=30)
+    surf = _render_widget(app, "box", border=True, border_style="single", width=60, height=30)
     area = pygame.Rect(4, 4, 60, 30)
     assert _has_nonbg_pixels(surf, area), "box should render filled rect with border"
 
 
 def test_widget_panel_renders_hatching(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
-    surf = _render_widget(app, "panel", border=True, border_style="single",
-                          width=80, height=40)
+    surf = _render_widget(app, "panel", border=True, border_style="single", width=80, height=40)
     area = pygame.Rect(4, 4, 80, 40)
     assert _has_nonbg_pixels(surf, area), "panel should render bg+hatching"
 

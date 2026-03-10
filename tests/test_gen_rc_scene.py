@@ -77,9 +77,21 @@ def test_widget_default_fields():
 
 
 def test_widget_custom_fields():
-    w = widget("button", 0, 0, 40, 12, "GO", wid="t.3",
-               fg="#ffffff", bg="#111111", border=True, border_style="single",
-               bold=True, runtime="bind=x;kind=int")
+    w = widget(
+        "button",
+        0,
+        0,
+        40,
+        12,
+        "GO",
+        wid="t.3",
+        fg="#ffffff",
+        bg="#111111",
+        border=True,
+        border_style="single",
+        bold=True,
+        runtime="bind=x;kind=int",
+    )
     assert w["color_fg"] == "#ffffff"
     assert w["color_bg"] == "#111111"
     assert w["border"] is True
@@ -106,7 +118,7 @@ def test_parse_color_hex():
 
 
 def test_parse_color_hex_mixed_case():
-    assert _parse_color("#aaBBcc") == (0xaa, 0xbb, 0xcc)
+    assert _parse_color("#aaBBcc") == (0xAA, 0xBB, 0xCC)
 
 
 def test_parse_color_named_black():

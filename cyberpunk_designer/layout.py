@@ -39,7 +39,9 @@ class Layout:
 
     @property
     def palette_rect(self) -> pygame.Rect:
-        return pygame.Rect(0, self._body_top, self.palette_w, self.height - self._body_top - self.status_h)
+        return pygame.Rect(
+            0, self._body_top, self.palette_w, self.height - self._body_top - self.status_h
+        )
 
     @property
     def inspector_rect(self) -> pygame.Rect:
@@ -61,4 +63,3 @@ class Layout:
     @property
     def status_rect(self) -> pygame.Rect:
         return pygame.Rect(0, self.height - self.status_h, self.width, self.status_h)
-

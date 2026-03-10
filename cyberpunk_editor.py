@@ -16,4 +16,3 @@ __all__ = ["CyberpunkEditorApp", "GRID", "PALETTE", "main"]
 
 if __name__ == "__main__":
     main()
-

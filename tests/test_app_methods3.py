@@ -74,8 +74,14 @@ class TestAutoCompleteWidget:
     def test_keeps_existing_colors(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         w = WidgetConfig(
-            type="label", x=0, y=0, width=40, height=16, text="X",
-            color_fg="#aabbcc", color_bg="#112233",
+            type="label",
+            x=0,
+            y=0,
+            width=40,
+            height=16,
+            text="X",
+            color_fg="#aabbcc",
+            color_bg="#112233",
         )
         app._auto_complete_widget(w)
         assert w.color_fg == "#aabbcc"
@@ -373,7 +379,7 @@ class TestInspectorContentHeight:
         rows, _, _ = app._compute_inspector_rows()
         for key, _ in rows:
             if isinstance(key, str) and key.startswith("_section:"):
-                sec = key[len("_section:"):]
+                sec = key[len("_section:") :]
                 if not hasattr(app, "inspector_collapsed"):
                     app.inspector_collapsed = set()
                 app.inspector_collapsed.add(sec)
@@ -494,6 +500,7 @@ class TestSwitchScene:
     def test_switch_forward(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from ui_models import SceneConfig
+
         app.designer.scenes["second"] = SceneConfig(
             name="second", width=256, height=128, widgets=[]
         )
@@ -504,6 +511,7 @@ class TestSwitchScene:
     def test_switch_backward_wraps(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from ui_models import SceneConfig
+
         app.designer.scenes["second"] = SceneConfig(
             name="second", width=256, height=128, widgets=[]
         )
@@ -515,6 +523,7 @@ class TestSwitchScene:
     def test_clears_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from ui_models import SceneConfig
+
         app.designer.scenes["second"] = SceneConfig(
             name="second", width=256, height=128, widgets=[]
         )

@@ -74,11 +74,28 @@ def reset_to_defaults(app) -> None:
     for _idx, w in items:
         ref = WidgetConfig(type=w.type, x=w.x, y=w.y, width=w.width, height=w.height)
         for attr in (
-            "style", "color_fg", "color_bg", "border", "border_style",
-            "align", "valign", "text_overflow", "max_lines",
-            "value", "min_value", "max_value", "checked", "enabled", "visible",
-            "icon_char", "data_points", "z_index",
-            "padding_x", "padding_y", "margin_x", "margin_y",
+            "style",
+            "color_fg",
+            "color_bg",
+            "border",
+            "border_style",
+            "align",
+            "valign",
+            "text_overflow",
+            "max_lines",
+            "value",
+            "min_value",
+            "max_value",
+            "checked",
+            "enabled",
+            "visible",
+            "icon_char",
+            "data_points",
+            "z_index",
+            "padding_x",
+            "padding_y",
+            "margin_x",
+            "margin_y",
         ):
             if attr not in keep_fields:
                 setattr(w, attr, getattr(ref, attr))
@@ -188,9 +205,7 @@ def scene_stats(app) -> None:
     sc = app.state.current_scene()
     total = len(sc.widgets)
     if total == 0:
-        app._set_status(
-            f"Scene '{sc.name}' {sc.width}x{sc.height}: empty.", ttl_sec=4.0
-        )
+        app._set_status(f"Scene '{sc.name}' {sc.width}x{sc.height}: empty.", ttl_sec=4.0)
         return
     types: Counter[str] = Counter()
     hidden = locked = disabled = 0
@@ -282,9 +297,7 @@ def fit_scene_to_content(app) -> None:
     old_w, old_h = int(sc.width), int(sc.height)
     sc.width = max(GRID, new_w)
     sc.height = max(GRID, new_h)
-    app._set_status(
-        f"Scene resized: {old_w}x{old_h} -> {sc.width}x{sc.height}", ttl_sec=2.0
-    )
+    app._set_status(f"Scene resized: {old_w}x{old_h} -> {sc.width}x{sc.height}", ttl_sec=2.0)
     app._mark_dirty()
 
 
@@ -357,10 +370,7 @@ def remove_degenerate_widgets(app) -> None:
     if not sc.widgets:
         app._set_status("No widgets in scene.", ttl_sec=2.0)
         return
-    degenerate = [
-        i for i, w in enumerate(sc.widgets)
-        if int(w.width) <= 0 or int(w.height) <= 0
-    ]
+    degenerate = [i for i, w in enumerate(sc.widgets) if int(w.width) <= 0 or int(w.height) <= 0]
     if not degenerate:
         app._set_status("No degenerate widgets found.", ttl_sec=2.0)
         return
@@ -602,8 +612,13 @@ def remove_duplicates(app) -> None:
     keep = []
     removed = 0
     for w in sc.widgets:
-        key = (str(getattr(w, "type", "")), int(w.x), int(w.y),
-               int(w.width or 0), int(w.height or 0))
+        key = (
+            str(getattr(w, "type", "")),
+            int(w.x),
+            int(w.y),
+            int(w.width or 0),
+            int(w.height or 0),
+        )
         if key in seen:
             removed += 1
         else:
@@ -632,7 +647,7 @@ def increment_text(app) -> None:
         w = sc.widgets[i]
         base = str(getattr(w, "text", "") or "")
         # Strip existing trailing number
-        base = re.sub(r'\s*\d+$', '', base)
+        base = re.sub(r"\s*\d+$", "", base)
         w.text = f"{base} {seq}" if base else str(seq)
     app._set_status(f"Numbered {len(valid)} widget text(s).", ttl_sec=2.0)
     app._mark_dirty()
@@ -1340,7 +1355,8 @@ def spread_values(app) -> None:
     sc = app.state.current_scene()
     value_types = {"gauge", "slider", "progressbar"}
     indices = [
-        i for i in app.state.selected
+        i
+        for i in app.state.selected
         if 0 <= i < len(sc.widgets)
         and str(getattr(sc.widgets[i], "type", "") or "").lower() in value_types
     ]

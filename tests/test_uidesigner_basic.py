@@ -95,9 +95,22 @@ def test_preview_ascii_text_is_clipped_to_widget_box():
 
     # Long label next to another bordered widget: text must not overwrite neighbour's border.
     sc.widgets.append(
-        WidgetConfig(type="label", x=1, y=1, width=10, height=3, text="ABCDEFGHIJKLMN", border=True, border_style="single")
+        WidgetConfig(
+            type="label",
+            x=1,
+            y=1,
+            width=10,
+            height=3,
+            text="ABCDEFGHIJKLMN",
+            border=True,
+            border_style="single",
+        )
     )
-    sc.widgets.append(WidgetConfig(type="box", x=12, y=1, width=10, height=3, text="", border=True, border_style="single"))
+    sc.widgets.append(
+        WidgetConfig(
+            type="box", x=12, y=1, width=10, height=3, text="", border=True, border_style="single"
+        )
+    )
 
     out = designer.preview_ascii("main", show_grid=False)
     lines = out.splitlines()

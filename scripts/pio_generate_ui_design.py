@@ -34,7 +34,9 @@ from tools.ui_codegen import (  # noqa: E402
 
 def _strip_optional_quotes(value: str) -> str:
     text = value.strip()
-    if len(text) >= 2 and ((text[0] == '"' and text[-1] == '"') or (text[0] == "'" and text[-1] == "'")):
+    if len(text) >= 2 and (
+        (text[0] == '"' and text[-1] == '"') or (text[0] == "'" and text[-1] == "'")
+    ):
         text = text[1:-1].strip()
     return text
 
@@ -55,7 +57,9 @@ def _main() -> None:
         if not json_override:
             raise RuntimeError("[UI] ESP32OS_UI_JSON cannot be empty")
 
-    json_path_raw = json_override if json_override is not None else str(project_dir / "main_scene.json")
+    json_path_raw = (
+        json_override if json_override is not None else str(project_dir / "main_scene.json")
+    )
     json_path = Path(json_path_raw).expanduser().resolve()
     if not json_path.is_absolute():
         json_path = (project_dir / json_path).resolve()
@@ -87,7 +91,9 @@ def _main() -> None:
         c_text, h_text = generate_ui_design_multi_pair(json_path, source_label=source_label)
         mode = f"multi-scene, {len(scenes)} scenes"
     else:
-        c_text, h_text = generate_ui_design_pair(json_path, scene_name=scene_name, source_label=source_label)
+        c_text, h_text = generate_ui_design_pair(
+            json_path, scene_name=scene_name, source_label=source_label
+        )
         mode = f"scene: {scene_name}"
 
     changed = False

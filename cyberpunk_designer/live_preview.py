@@ -46,7 +46,9 @@ def send_live_preview(app) -> None:
         return
     frame = f"<<UIJSON>>{payload}<<END>>".encode()
     try:
-        with serial.Serial(port=app.live_preview_port, baudrate=int(app.live_preview_baud), timeout=2) as ser:
+        with serial.Serial(
+            port=app.live_preview_port, baudrate=int(app.live_preview_baud), timeout=2
+        ) as ser:
             ser.write(frame)
             ser.flush()
         app._set_status(

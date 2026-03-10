@@ -17,7 +17,9 @@ def test_run_designer_headless_export(tmp_path):
     ]
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
-    result = subprocess.run(cmd, cwd=str(Path(__file__).resolve().parents[1]), capture_output=True, text=True, env=env)
+    result = subprocess.run(
+        cmd, cwd=str(Path(__file__).resolve().parents[1]), capture_output=True, text=True, env=env
+    )
     assert result.returncode == 0, result.stderr
     assert out.exists()
     data = json.loads(out.read_text(encoding="utf-8"))

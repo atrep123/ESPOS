@@ -190,7 +190,9 @@ def create_cli_interface(
                 _text = " ".join(parts[6:]) if len(parts) > 6 else ""
                 if "_" in _text and " " not in _text:
                     _text = _text.replace("_", " ")
-                    print('[TIP] Converted underscore placeholders to spaces. Use quotes for exact text: add ... "Sharp LCD Demo"')
+                    print(
+                        '[TIP] Converted underscore placeholders to spaces. Use quotes for exact text: add ... "Sharp LCD Demo"'
+                    )
 
                 widget = WidgetConfig(
                     type=parts[1],
@@ -296,7 +298,9 @@ def create_cli_interface(
                 _value = " ".join(parts[3:])
                 if _prop == "text" and "_" in _value and " " not in _value:
                     _value = _value.replace("_", " ")
-                    print('[TIP] Converted underscore placeholders to spaces. Use quotes for exact text: edit <idx> text "Sharp LCD Demo"')
+                    print(
+                        '[TIP] Converted underscore placeholders to spaces. Use quotes for exact text: edit <idx> text "Sharp LCD Demo"'
+                    )
 
                 if designer.current_scene and designer.current_scene in designer.scenes:
                     scene = designer.scenes[designer.current_scene]
@@ -802,7 +806,7 @@ def create_cli_interface(
                         _ix = _ch["index"]
                         _keys = ", ".join(list(_ch["changes"].keys())[:6])
                         print(
-                            f"     [{_ix}] fields: {_keys}{' ...' if len(_ch['changes'])>6 else ''}"
+                            f"     [{_ix}] fields: {_keys}{' ...' if len(_ch['changes']) > 6 else ''}"
                         )
                 else:
                     print("  No property changes in matching indices")
@@ -1068,7 +1072,7 @@ def create_cli_interface(
                                 "steps": _steps,
                                 "t": _t,
                             }
-                            print(f"\n[# {_t+1}/{_steps}] {_name}\n")
+                            print(f"\n[# {_t + 1}/{_steps}] {_name}\n")
                             print(designer.preview_ascii())
                             time.sleep(max(0, _delay_ms) / 1000.0)
                     except KeyboardInterrupt:
@@ -1109,7 +1113,7 @@ def create_cli_interface(
                         print(f"   Text: '{_w.text}'")
                     if getattr(_w, "locked", False):
                         print(f"   State: [LOCK] locked (use: lock {_target_idx} off)")
-                    print(f"\nAbout About: {_info.get('description','N/A')}")
+                    print(f"\nAbout About: {_info.get('description', 'N/A')}")
                     _tips = _info.get("tips", [])
                     if _tips:
                         print("Tips Tips:")

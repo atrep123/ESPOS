@@ -77,9 +77,7 @@ def compact_widgets(app) -> None:
     for w in sc.widgets:
         w.x = int(w.x) - min_x
         w.y = int(w.y) - min_y
-    app._set_status(
-        f"Compacted: shifted by ({-min_x},{-min_y}).", ttl_sec=2.0
-    )
+    app._set_status(f"Compacted: shifted by ({-min_x},{-min_y}).", ttl_sec=2.0)
     app._mark_dirty()
 
 

@@ -67,20 +67,31 @@ class TestDesignToC:
         designer = UIDesigner(256, 128)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        scene.widgets.append(WidgetConfig(
-            type="button", x=10, y=20, width=60, height=16,
-            text="Start", border=True,
-        ))
-        scene.widgets.append(WidgetConfig(
-            type="label", x=10, y=40, width=80, height=10,
-            text="Status: OK",
-        ))
+        scene.widgets.append(
+            WidgetConfig(
+                type="button",
+                x=10,
+                y=20,
+                width=60,
+                height=16,
+                text="Start",
+                border=True,
+            )
+        )
+        scene.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=10,
+                y=40,
+                width=80,
+                height=10,
+                text="Status: OK",
+            )
+        )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
-        c_src, h_src = generate_ui_design_pair(
-            json_path, scene_name="main", source_label="test"
-        )
+        c_src, h_src = generate_ui_design_pair(json_path, scene_name="main", source_label="test")
 
         # Header checks
         assert "#ifndef UI_DESIGN_H" in h_src
@@ -100,19 +111,35 @@ class TestDesignToC:
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        types = ["label", "button", "checkbox", "slider", "progressbar",
-                 "gauge", "textbox", "radiobutton", "icon", "chart",
-                 "box", "panel"]
+        types = [
+            "label",
+            "button",
+            "checkbox",
+            "slider",
+            "progressbar",
+            "gauge",
+            "textbox",
+            "radiobutton",
+            "icon",
+            "chart",
+            "box",
+            "panel",
+        ]
         for i, wtype in enumerate(types):
-            scene.widgets.append(WidgetConfig(
-                type=wtype, x=0, y=i * 8, width=20, height=8, text=wtype,
-            ))
+            scene.widgets.append(
+                WidgetConfig(
+                    type=wtype,
+                    x=0,
+                    y=i * 8,
+                    width=20,
+                    height=8,
+                    text=wtype,
+                )
+            )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
-        c_src, h_src = generate_ui_design_pair(
-            json_path, scene_name="main", source_label="test"
-        )
+        c_src, h_src = generate_ui_design_pair(json_path, scene_name="main", source_label="test")
 
         for wtype in types:
             c_enum = f"UIW_{wtype.upper()}"
@@ -123,18 +150,22 @@ class TestDesignToC:
         designer = UIDesigner(256, 128)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        scene.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=80, height=10,
-            text="Temp",
-            runtime='{"bind":"sensor.temp","fmt":"%d°C"}',
-            animations=["fade_in,300", "slide_up,200"],
-        ))
+        scene.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=80,
+                height=10,
+                text="Temp",
+                runtime='{"bind":"sensor.temp","fmt":"%d°C"}',
+                animations=["fade_in,300", "slide_up,200"],
+            )
+        )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
-        c_src, _ = generate_ui_design_pair(
-            json_path, scene_name="main", source_label="test"
-        )
+        c_src, _ = generate_ui_design_pair(json_path, scene_name="main", source_label="test")
 
         assert "sensor.temp" in c_src
         assert "fade_in" in c_src
@@ -144,16 +175,22 @@ class TestDesignToC:
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        scene.widgets.append(WidgetConfig(
-            type="slider", x=0, y=0, width=60, height=10,
-            value=30, min_value=10, max_value=200,
-        ))
+        scene.widgets.append(
+            WidgetConfig(
+                type="slider",
+                x=0,
+                y=0,
+                width=60,
+                height=10,
+                value=30,
+                min_value=10,
+                max_value=200,
+            )
+        )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
-        c_src, _ = generate_ui_design_pair(
-            json_path, scene_name="main", source_label="test"
-        )
+        c_src, _ = generate_ui_design_pair(json_path, scene_name="main", source_label="test")
 
         assert ".value = 30," in c_src
         assert ".min_value = 10," in c_src
@@ -163,16 +200,21 @@ class TestDesignToC:
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        scene.widgets.append(WidgetConfig(
-            type="button", x=0, y=0, width=40, height=10,
-            text="Go", _widget_id="btn_go",
-        ))
+        scene.widgets.append(
+            WidgetConfig(
+                type="button",
+                x=0,
+                y=0,
+                width=40,
+                height=10,
+                text="Go",
+                _widget_id="btn_go",
+            )
+        )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
-        c_src, _ = generate_ui_design_pair(
-            json_path, scene_name="main", source_label="test"
-        )
+        c_src, _ = generate_ui_design_pair(json_path, scene_name="main", source_label="test")
 
         assert "btn_go" in c_src
 
@@ -190,9 +232,16 @@ class TestRoundtrip:
         scene = designer.create_scene("main")
         designer.current_scene = "main"
         for i in range(5):
-            scene.widgets.append(WidgetConfig(
-                type="button", x=i * 20, y=0, width=18, height=10, text=f"B{i}",
-            ))
+            scene.widgets.append(
+                WidgetConfig(
+                    type="button",
+                    x=i * 20,
+                    y=0,
+                    width=18,
+                    height=10,
+                    text=f"B{i}",
+                )
+            )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
@@ -206,14 +255,25 @@ class TestRoundtrip:
         scene = designer.create_scene("main")
         designer.current_scene = "main"
         w = WidgetConfig(
-            type="slider", x=10, y=20, width=80, height=12,
-            text="Vol", value=75, min_value=0, max_value=100,
-            color_fg="white", color_bg="#303030",
-            border=True, border_style="double",
-            align="center", valign="middle",
+            type="slider",
+            x=10,
+            y=20,
+            width=80,
+            height=12,
+            text="Vol",
+            value=75,
+            min_value=0,
+            max_value=100,
+            color_fg="white",
+            color_bg="#303030",
+            border=True,
+            border_style="double",
+            align="center",
+            valign="middle",
             text_overflow="ellipsis",
             style="default",
-            enabled=True, visible=True,
+            enabled=True,
+            visible=True,
         )
         scene.widgets.append(w)
         json_path = tmp_path / "design.json"
@@ -237,9 +297,16 @@ class TestRoundtrip:
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        scene.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=40, height=10, text="Original",
-        ))
+        scene.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=40,
+                height=10,
+                text="Original",
+            )
+        )
         json_path = tmp_path / "design.json"
         _save_design_json(json_path, designer)
 
@@ -248,9 +315,16 @@ class TestRoundtrip:
         d2.load_from_json(str(json_path))
         sc2 = d2.scenes[d2.current_scene]
         sc2.widgets[0].text = "Modified"
-        sc2.widgets.append(WidgetConfig(
-            type="button", x=50, y=0, width=30, height=10, text="New",
-        ))
+        sc2.widgets.append(
+            WidgetConfig(
+                type="button",
+                x=50,
+                y=0,
+                width=30,
+                height=10,
+                text="New",
+            )
+        )
         _save_design_json(json_path, d2)
 
         # Reload and verify
@@ -266,9 +340,17 @@ class TestRoundtrip:
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("main")
         designer.current_scene = "main"
-        scene.widgets.append(WidgetConfig(
-            type="checkbox", x=0, y=0, width=30, height=10, text="OK", checked=True,
-        ))
+        scene.widgets.append(
+            WidgetConfig(
+                type="checkbox",
+                x=0,
+                y=0,
+                width=30,
+                height=10,
+                text="OK",
+                checked=True,
+            )
+        )
         p1 = tmp_path / "save1.json"
         p2 = tmp_path / "save2.json"
         _save_design_json(p1, designer)
@@ -287,8 +369,12 @@ class TestMultiScene:
         s1 = designer.create_scene("home")
         s1.widgets.append(WidgetConfig(type="label", x=0, y=0, width=50, height=10, text="Home"))
         s2 = designer.create_scene("settings")
-        s2.widgets.append(WidgetConfig(type="slider", x=0, y=0, width=60, height=12, text="Brightness"))
-        s2.widgets.append(WidgetConfig(type="checkbox", x=0, y=20, width=40, height=10, text="WiFi"))
+        s2.widgets.append(
+            WidgetConfig(type="slider", x=0, y=0, width=60, height=12, text="Brightness")
+        )
+        s2.widgets.append(
+            WidgetConfig(type="checkbox", x=0, y=20, width=40, height=10, text="WiFi")
+        )
         designer.current_scene = "home"
 
         json_path = tmp_path / "multi.json"
@@ -333,13 +419,20 @@ class TestFocusNavigation:
         sc.widgets.clear()
         # Row 1: two buttons side by side
         sc.widgets.append(WidgetConfig(type="button", x=10, y=5, width=30, height=10, text="OK"))
-        sc.widgets.append(WidgetConfig(type="button", x=50, y=5, width=30, height=10, text="Cancel"))
+        sc.widgets.append(
+            WidgetConfig(type="button", x=50, y=5, width=30, height=10, text="Cancel")
+        )
         # Row 2: a slider and a checkbox
-        sc.widgets.append(WidgetConfig(type="slider", x=10, y=20, width=60, height=10,
-                                       value=50, min_value=0, max_value=100))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider", x=10, y=20, width=60, height=10, value=50, min_value=0, max_value=100
+            )
+        )
         sc.widgets.append(WidgetConfig(type="checkbox", x=80, y=20, width=30, height=10, text="On"))
         # Non-focusable widget (label)
-        sc.widgets.append(WidgetConfig(type="label", x=10, y=35, width=50, height=10, text="Status"))
+        sc.widgets.append(
+            WidgetConfig(type="label", x=10, y=35, width=50, height=10, text="Status")
+        )
         return app, sc
 
     def test_focusable_indices_correct(self, tmp_path, monkeypatch):
@@ -388,10 +481,12 @@ class TestFocusNavigation:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="button", x=0, y=0, width=30, height=10,
-                                       text="A", enabled=False))
-        sc.widgets.append(WidgetConfig(type="button", x=40, y=0, width=30, height=10,
-                                       text="B", enabled=True))
+        sc.widgets.append(
+            WidgetConfig(type="button", x=0, y=0, width=30, height=10, text="A", enabled=False)
+        )
+        sc.widgets.append(
+            WidgetConfig(type="button", x=40, y=0, width=30, height=10, text="B", enabled=True)
+        )
         indices = focus_nav.focusable_indices(sc)
         assert 0 not in indices
         assert 1 in indices
@@ -400,10 +495,12 @@ class TestFocusNavigation:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="button", x=0, y=0, width=30, height=10,
-                                       text="A", visible=False))
-        sc.widgets.append(WidgetConfig(type="button", x=40, y=0, width=30, height=10,
-                                       text="B", visible=True))
+        sc.widgets.append(
+            WidgetConfig(type="button", x=0, y=0, width=30, height=10, text="A", visible=False)
+        )
+        sc.widgets.append(
+            WidgetConfig(type="button", x=40, y=0, width=30, height=10, text="B", visible=True)
+        )
         indices = focus_nav.focusable_indices(sc)
         assert 0 not in indices
         assert 1 in indices
@@ -428,8 +525,11 @@ class TestValueEditing:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="slider", x=0, y=0, width=60, height=10,
-                                       value=50, min_value=0, max_value=100))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider", x=0, y=0, width=60, height=10, value=50, min_value=0, max_value=100
+            )
+        )
         focus_nav.set_focus(app, 0)
         focus_nav.adjust_focused_value(app, 5)
         assert sc.widgets[0].value == 55
@@ -438,8 +538,11 @@ class TestValueEditing:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="slider", x=0, y=0, width=60, height=10,
-                                       value=98, min_value=0, max_value=100))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider", x=0, y=0, width=60, height=10, value=98, min_value=0, max_value=100
+            )
+        )
         focus_nav.set_focus(app, 0)
         focus_nav.adjust_focused_value(app, 10)
         assert sc.widgets[0].value == 100
@@ -448,8 +551,11 @@ class TestValueEditing:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="slider", x=0, y=0, width=60, height=10,
-                                       value=3, min_value=0, max_value=100))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider", x=0, y=0, width=60, height=10, value=3, min_value=0, max_value=100
+            )
+        )
         focus_nav.set_focus(app, 0)
         focus_nav.adjust_focused_value(app, -10)
         assert sc.widgets[0].value == 0
@@ -458,8 +564,11 @@ class TestValueEditing:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="slider", x=0, y=0, width=60, height=10,
-                                       value=50, min_value=0, max_value=100))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider", x=0, y=0, width=60, height=10, value=50, min_value=0, max_value=100
+            )
+        )
         focus_nav.set_focus(app, 0)
         focus_nav.adjust_focused_value(app, -15)
         assert sc.widgets[0].value == 35
@@ -468,8 +577,9 @@ class TestValueEditing:
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.clear()
-        sc.widgets.append(WidgetConfig(type="checkbox", x=0, y=0, width=30, height=10,
-                                       text="WiFi", checked=False))
+        sc.widgets.append(
+            WidgetConfig(type="checkbox", x=0, y=0, width=30, height=10, text="WiFi", checked=False)
+        )
         focus_nav.set_focus(app, 0)
         assert not sc.widgets[0].checked
         focus_nav.activate_focused(app)
@@ -601,9 +711,7 @@ class TestFullAppWorkflow:
             app.logical_surface.fill((0, 0, 0))
             app._draw_palette()
             try:
-                hit = next(
-                    (r, label, e) for r, label, e in app.palette_hitboxes if label == wtype
-                )
+                hit = next((r, label, e) for r, label, e in app.palette_hitboxes if label == wtype)
                 app._on_mouse_down(hit[0].center)
             except StopIteration:
                 pass
@@ -634,9 +742,16 @@ class TestSceneBounds:
         scene = designer.create_scene("main")
         designer.current_scene = "main"
         for i in range(10):
-            scene.widgets.append(WidgetConfig(
-                type="button", x=0, y=0, width=20, height=8, text=f"B{i}",
-            ))
+            scene.widgets.append(
+                WidgetConfig(
+                    type="button",
+                    x=0,
+                    y=0,
+                    width=20,
+                    height=8,
+                    text=f"B{i}",
+                )
+            )
         designer.auto_layout(layout_type="grid", spacing=2, scene_name="main")
         for w in scene.widgets:
             assert w.x >= 0

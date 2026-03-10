@@ -71,8 +71,19 @@ class TestGenerateUiDesignPairEdge:
 
     def test_non_dict_widget_skipped(self, tmp_path):
         """Line 314: non-dict widget triggers continue."""
-        data = {"scenes": {"main": {"name": "main", "width": 128, "height": 64,
-                                     "widgets": ["not_a_dict", {"type": "label", "x": 0, "y": 0, "width": 10, "height": 3, "text": "ok"}]}}}
+        data = {
+            "scenes": {
+                "main": {
+                    "name": "main",
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        "not_a_dict",
+                        {"type": "label", "x": 0, "y": 0, "width": 10, "height": 3, "text": "ok"},
+                    ],
+                }
+            }
+        }
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         c_src, _ = generate_ui_design_pair(p, scene_name="main", source_label="test")
@@ -80,8 +91,18 @@ class TestGenerateUiDesignPairEdge:
 
     def test_negative_max_lines_clamped(self, tmp_path):
         """Line 348: max_lines < 0 → 0."""
-        data = {"scenes": {"main": {"name": "main", "width": 128, "height": 64,
-                                     "widgets": [{"type": "label", "x": 0, "y": 0, "width": 10, "height": 3, "max_lines": -5}]}}}
+        data = {
+            "scenes": {
+                "main": {
+                    "name": "main",
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        {"type": "label", "x": 0, "y": 0, "width": 10, "height": 3, "max_lines": -5}
+                    ],
+                }
+            }
+        }
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         c_src, _ = generate_ui_design_pair(p, scene_name="main", source_label="test")
@@ -112,10 +133,24 @@ class TestGenerateScenesHeaderEdge:
 
     def test_widget_with_animations_list(self, tmp_path):
         """Line 468: animations list gets joined to anim_csv."""
-        data = {"scenes": {"main": {"width": 128, "height": 64, "widgets": [
-            {"type": "label", "x": 0, "y": 0, "width": 10, "height": 3,
-             "animations": ["fade_in", "slide_left"]}
-        ]}}}
+        data = {
+            "scenes": {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        {
+                            "type": "label",
+                            "x": 0,
+                            "y": 0,
+                            "width": 10,
+                            "height": 3,
+                            "animations": ["fade_in", "slide_left"],
+                        }
+                    ],
+                }
+            }
+        }
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = generate_scenes_header(p, guard="TEST_H", source_name="test", generated_ts="now")
@@ -123,9 +158,17 @@ class TestGenerateScenesHeaderEdge:
 
     def test_negative_max_lines(self, tmp_path):
         """Line 484: max_lines < 0 → clamped to 0."""
-        data = {"scenes": {"main": {"width": 128, "height": 64, "widgets": [
-            {"type": "label", "x": 0, "y": 0, "width": 10, "height": 3, "max_lines": -3}
-        ]}}}
+        data = {
+            "scenes": {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        {"type": "label", "x": 0, "y": 0, "width": 10, "height": 3, "max_lines": -3}
+                    ],
+                }
+            }
+        }
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = generate_scenes_header(p, guard="TEST_H", source_name="test", generated_ts="now")

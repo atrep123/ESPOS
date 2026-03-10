@@ -3,7 +3,6 @@ from __future__ import annotations
 _GRAY4 = [f"#{v:02x}{v:02x}{v:02x}" for v in range(0, 256, 17)]
 
 
-
 def cycle_style(app) -> None:
     """Cycle style on selected widgets: default → bold → inverse → highlight."""
     if not app.state.selected:
@@ -57,8 +56,17 @@ def toggle_visibility(app) -> None:
 
 def cycle_widget_type(app) -> None:
     """Cycle widget type on selected widgets."""
-    types = ["label", "button", "panel", "progressbar", "gauge", "slider",
-             "checkbox", "chart", "icon"]
+    types = [
+        "label",
+        "button",
+        "panel",
+        "progressbar",
+        "gauge",
+        "slider",
+        "checkbox",
+        "chart",
+        "icon",
+    ]
     if not app.state.selected:
         app._set_status("Type: nothing selected.", ttl_sec=2.0)
         return
@@ -355,7 +363,8 @@ def toggle_checked(app) -> None:
     if not items:
         return
     applicable = [
-        (i, w) for i, w in items
+        (i, w)
+        for i, w in items
         if str(getattr(w, "type", "") or "").lower() in ("checkbox", "radiobutton")
     ]
     if not applicable:

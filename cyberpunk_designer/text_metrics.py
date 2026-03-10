@@ -149,5 +149,7 @@ def text_truncates_in_widget(w: WidgetConfig, text: str) -> bool:
         pass
     max_lines = max(1, int(max_lines))
 
-    _lines, truncated = wrap_text_chars(raw, max_chars=max_chars, max_lines=max_lines, ellipsis="...")
+    _lines, truncated = wrap_text_chars(
+        raw, max_chars=max_chars, max_lines=max_lines, ellipsis="..."
+    )
     return truncated

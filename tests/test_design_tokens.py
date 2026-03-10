@@ -474,9 +474,9 @@ class TestApplyTokensEdge:
             @property
             def color_fg(self):
                 return "#000000"
+
             # no setter → setattr raises AttributeError
 
         target = Frozen()
         result = apply_tokens(target, {"color_fg": "primary"})
         assert result is target  # no crash
-

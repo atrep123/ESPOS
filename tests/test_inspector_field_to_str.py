@@ -16,15 +16,28 @@ from cyberpunk_designer.inspector_logic import (
 def _w(**kw):
     """Minimal WidgetConfig-like object."""
     defaults = dict(
-        type="label", x=10, y=20, width=60, height=14,
-        text="HI", style="default",
-        color_fg="#f0f0f0", color_bg="black",
-        border=False, border_style="none",
-        align="left", valign="middle",
-        value=0, min_value=0, max_value=100,
-        padding_x=1, padding_y=0,
-        margin_x=0, margin_y=0,
-        z_index=0, runtime="",
+        type="label",
+        x=10,
+        y=20,
+        width=60,
+        height=14,
+        text="HI",
+        style="default",
+        color_fg="#f0f0f0",
+        color_bg="black",
+        border=False,
+        border_style="none",
+        align="left",
+        valign="middle",
+        value=0,
+        min_value=0,
+        max_value=100,
+        padding_x=1,
+        padding_y=0,
+        margin_x=0,
+        margin_y=0,
+        z_index=0,
+        runtime="",
         data_points=[],
     )
     defaults.update(kw)
@@ -39,6 +52,7 @@ def _app(selected=None):
 
 
 # ── data_points ────────────────────────────────────────────────────────
+
 
 def test_data_points_empty():
     assert inspector_field_to_str(_app(), "data_points", _w()) == ""
@@ -55,6 +69,7 @@ def test_data_points_none():
 
 
 # ── chart_mode ─────────────────────────────────────────────────────────
+
 
 def test_chart_mode_bar():
     w = _w(style="bar", text="")
@@ -78,6 +93,7 @@ def test_chart_mode_fallback_line():
 
 # ── text / runtime ────────────────────────────────────────────────────
 
+
 def test_text_field():
     assert inspector_field_to_str(_app(), "text", _w(text="HELLO")) == "HELLO"
 
@@ -96,6 +112,7 @@ def test_runtime_field_empty():
 
 
 # ── computed fields ───────────────────────────────────────────────────
+
 
 def test_size():
     w = _w(width=60, height=14)
@@ -205,6 +222,7 @@ def test_value_range():
 
 # ── int fields ────────────────────────────────────────────────────────
 
+
 def test_x():
     assert inspector_field_to_str(_app(), "x", _w(x=42)) == "42"
 
@@ -222,6 +240,7 @@ def test_z_index():
 
 
 # ── color / string fields ────────────────────────────────────────────
+
 
 def test_color_fg():
     assert inspector_field_to_str(_app(), "color_fg", _w(color_fg="#ff0000")) == "#ff0000"

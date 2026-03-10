@@ -32,8 +32,13 @@ def _make_app(tmp_path, monkeypatch):
 def _add_widget(app, wtype="label", **kw):
     """Append a widget to the current scene and return its index."""
     defaults = dict(
-        type=wtype, x=16, y=16, width=40, height=20,
-        color_fg="#f0f0f0", color_bg="#000000",
+        type=wtype,
+        x=16,
+        y=16,
+        width=40,
+        height=20,
+        color_fg="#f0f0f0",
+        color_bg="#000000",
     )
     defaults.update(kw)
     sc = app.state.current_scene()
@@ -266,8 +271,9 @@ class TestFocusRing:
 
     def test_focus_ring_cyan_editing(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        idx = _add_widget(app, "slider", x=8, y=8, width=60, height=20,
-                          value=50, min_value=0, max_value=100)
+        idx = _add_widget(
+            app, "slider", x=8, y=8, width=60, height=20, value=50, min_value=0, max_value=100
+        )
         app.sim_input_mode = True
         app.focus_idx = idx
         app.focus_edit_value = True

@@ -13,6 +13,7 @@ from ui_designer import SceneConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -30,8 +31,9 @@ class TestDrawSceneTabsEdgeCases:
     def test_zero_height_tabs_rect(self, tmp_path, monkeypatch):
         """scene_tabs_rect with height=0 → early return (line 34)."""
         app = _make_app(tmp_path, monkeypatch)
-        monkeypatch.setattr(type(app.layout), "scene_tabs_rect",
-                            property(lambda self: pygame.Rect(0, 0, 256, 0)))
+        monkeypatch.setattr(
+            type(app.layout), "scene_tabs_rect", property(lambda self: pygame.Rect(0, 0, 256, 0))
+        )
         draw_scene_tabs(app)
 
     def test_empty_names_noop(self, tmp_path, monkeypatch):
@@ -54,7 +56,10 @@ class TestDrawSceneTabsOverflow:
         for i in range(15):
             name = f"scene_{i:02d}"
             app.designer.scenes[name] = SceneConfig(
-                name=name, width=256, height=128, widgets=[],
+                name=name,
+                width=256,
+                height=128,
+                widgets=[],
             )
         draw_scene_tabs(app)
         # Should have scroll arrow hitboxes
@@ -66,7 +71,10 @@ class TestDrawSceneTabsOverflow:
         for i in range(15):
             name = f"scene_{i:02d}"
             app.designer.scenes[name] = SceneConfig(
-                name=name, width=256, height=128, widgets=[],
+                name=name,
+                width=256,
+                height=128,
+                widgets=[],
             )
         app._tab_scroll = 50  # Pre-scroll
         draw_scene_tabs(app)
@@ -78,7 +86,10 @@ class TestDrawSceneTabsOverflow:
         for i in range(15):
             name = f"scene_{i:02d}"
             app.designer.scenes[name] = SceneConfig(
-                name=name, width=256, height=128, widgets=[],
+                name=name,
+                width=256,
+                height=128,
+                widgets=[],
             )
         # Set current scene to a far scene
         app.designer.current_scene = "scene_14"
@@ -98,7 +109,10 @@ class TestDrawSceneTabsDrag:
         app = _make_app(tmp_path, monkeypatch)
         # Add a second scene so multi=True
         app.designer.scenes["second"] = SceneConfig(
-            name="second", width=256, height=128, widgets=[],
+            name="second",
+            width=256,
+            height=128,
+            widgets=[],
         )
         draw_scene_tabs(app)
         # Now set drag state and redraw
@@ -129,7 +143,10 @@ class TestDrawSceneTabsDirty:
         """Multiple scenes show close buttons."""
         app = _make_app(tmp_path, monkeypatch)
         app.designer.scenes["second"] = SceneConfig(
-            name="second", width=256, height=128, widgets=[],
+            name="second",
+            width=256,
+            height=128,
+            widgets=[],
         )
         draw_scene_tabs(app)
         assert len(app.tab_close_hitboxes) >= 1

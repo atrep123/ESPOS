@@ -49,7 +49,13 @@ def test_resource_helpers_and_over_limits():
 
 def test_scene_building_helpers():
     d = UIDesigner(10, 10)
-    data = {"scenes": {"main": {"widgets": [{"id": "w1", "type": "box", "x": 0, "y": 0, "width": 1, "height": 1}]}}}
+    data = {
+        "scenes": {
+            "main": {
+                "widgets": [{"id": "w1", "type": "box", "x": 0, "y": 0, "width": 1, "height": 1}]
+            }
+        }
+    }
     scenes_dict = d._scenes_dict_from_data(data["scenes"], data)
     assert "main" in scenes_dict
     widgets = d._widgets_for_scene(data, "main")

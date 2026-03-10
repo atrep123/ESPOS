@@ -24,6 +24,7 @@ from ui_models import WidgetConfig
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _run(commands, capsys=None):
     """Run CLI commands and return captured stdout."""
     create_cli_interface(commands=commands)
@@ -36,6 +37,7 @@ def _run(commands, capsys=None):
 # MSG constants
 # ===========================================================================
 
+
 class TestMsgConstants:
     def test_msg_constants_are_strings(self):
         for c in (MSG_INVALID_INDEX, MSG_NO_SCENE, MSG_INDEX_INTEGER, MSG_FAILED, MSG_UNKNOWN_ANIM):
@@ -45,6 +47,7 @@ class TestMsgConstants:
 # ===========================================================================
 # _parse_color
 # ===========================================================================
+
 
 class TestParseColor:
     def test_named_black(self):
@@ -76,14 +79,27 @@ class TestParseColor:
         assert _parse_color("chartreuse") == (0, 0, 0)
 
     def test_all_named_present(self):
-        expected_names = {"black", "white", "red", "green", "blue", "yellow",
-                          "cyan", "magenta", "gray", "grey", "orange", "purple"}
+        expected_names = {
+            "black",
+            "white",
+            "red",
+            "green",
+            "blue",
+            "yellow",
+            "cyan",
+            "magenta",
+            "gray",
+            "grey",
+            "orange",
+            "purple",
+        }
         assert expected_names == set(_NAMED_COLORS.keys())
 
 
 # ===========================================================================
 # _rel_lum / _contrast_ratio
 # ===========================================================================
+
 
 class TestContrastHelpers:
     def test_rel_lum_black(self):
@@ -110,6 +126,7 @@ class TestContrastHelpers:
 # but verify they work from ui_cli directly)
 # ===========================================================================
 
+
 class TestHelpers:
     def test_show_command_help_add(self, capsys):
         show_command_help("add")
@@ -133,8 +150,20 @@ class TestHelpers:
         assert info["description"] == "Generic widget."
 
     def test_get_widget_help_all_known_types(self):
-        known = ["label", "button", "progressbar", "gauge", "checkbox",
-                 "radiobutton", "textbox", "panel", "icon", "chart", "box", "slider"]
+        known = [
+            "label",
+            "button",
+            "progressbar",
+            "gauge",
+            "checkbox",
+            "radiobutton",
+            "textbox",
+            "panel",
+            "icon",
+            "chart",
+            "box",
+            "slider",
+        ]
         for t in known:
             w = WidgetConfig(type=t, x=0, y=0, width=10, height=10)
             info = get_widget_help(w)
@@ -144,6 +173,7 @@ class TestHelpers:
 # ===========================================================================
 # create_cli_interface — Scene management
 # ===========================================================================
+
 
 class TestCliSceneManagement:
     def test_quit(self, capsys):
@@ -190,6 +220,7 @@ class TestCliSceneManagement:
 # ===========================================================================
 # Widget operations
 # ===========================================================================
+
 
 class TestCliWidgetOps:
     def test_add_widget(self, capsys):
@@ -273,6 +304,7 @@ class TestCliWidgetOps:
 # Lock
 # ===========================================================================
 
+
 class TestCliLock:
     def test_lock_on(self, capsys):
         out = _run(["new S", "add label 10 10 50 10", "lock 0 on", "quit"], capsys)
@@ -299,6 +331,7 @@ class TestCliLock:
 # Edit
 # ===========================================================================
 
+
 class TestCliEdit:
     def test_edit_text(self, capsys):
         out = _run(["new S", "add label 10 10 50 10 Hello", "edit 0 text World", "quit"], capsys)
@@ -321,6 +354,7 @@ class TestCliEdit:
 # Undo / Redo
 # ===========================================================================
 
+
 class TestCliUndoRedo:
     def test_undo_nothing(self, capsys):
         out = _run(["undo", "quit"], capsys)
@@ -338,6 +372,7 @@ class TestCliUndoRedo:
 # ===========================================================================
 # Grid / Snap / Guides
 # ===========================================================================
+
 
 class TestCliGridSnap:
     def test_grid_status(self, capsys):
@@ -409,6 +444,7 @@ class TestCliGridSnap:
 # Preview / Templates / Widgets listing
 # ===========================================================================
 
+
 class TestCliDisplay:
     def test_preview(self, capsys):
         out = _run(["new S", "add label 10 10 50 10 X", "preview", "quit"], capsys)
@@ -431,6 +467,7 @@ class TestCliDisplay:
 # ===========================================================================
 # Theme & WCAG
 # ===========================================================================
+
 
 class TestCliTheme:
     def test_theme_no_sub(self, capsys):
@@ -474,10 +511,10 @@ class TestCliTheme:
         assert MSG_INDEX_INTEGER in out
 
     def test_theme_apply(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "theme bind 0 fg text", "theme apply", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "theme bind 0 fg text", "theme apply", "quit"],
+            capsys,
+        )
         assert "[OK] Theme applied" in out
 
     def test_theme_unknown_sub(self, capsys):
@@ -485,11 +522,17 @@ class TestCliTheme:
         assert "Unknown theme subcommand" in out
 
     def test_contrast_all_ok(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10 Hi",
-            "edit 0 color_fg white", "edit 0 color_bg black",
-            "contrast", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10 Hi",
+                "edit 0 color_fg white",
+                "edit 0 color_bg black",
+                "contrast",
+                "quit",
+            ],
+            capsys,
+        )
         assert "All text meets contrast" in out
 
     def test_contrast_with_min(self, capsys):
@@ -500,6 +543,7 @@ class TestCliTheme:
 # ===========================================================================
 # Tree
 # ===========================================================================
+
 
 class TestCliTree:
     def test_tree_no_scene(self, capsys):
@@ -519,6 +563,7 @@ class TestCliTree:
 # File operations — save / load / export
 # ===========================================================================
 
+
 class TestCliFileOps:
     def test_save_missing_file(self, capsys):
         out = _run(["save", "quit"], capsys)
@@ -530,10 +575,10 @@ class TestCliFileOps:
 
     def test_save_and_load(self, capsys, tmp_path):
         fpath = str(tmp_path / "test_scene.json").replace("\\", "/")
-        _run([
-            "new S", "add label 10 10 50 10 SaveTest",
-            f"save {fpath}", f"load {fpath}", "quit"
-        ], capsys)
+        _run(
+            ["new S", "add label 10 10 50 10 SaveTest", f"save {fpath}", f"load {fpath}", "quit"],
+            capsys,
+        )
         assert os.path.exists(fpath)
 
     def test_export_missing_file(self, capsys):
@@ -554,27 +599,30 @@ class TestCliFileOps:
 # Layout / Align / Distribute
 # ===========================================================================
 
+
 class TestCliLayout:
     def test_layout_missing_type(self, capsys):
         out = _run(["new S", "layout", "quit"], capsys)
         assert "Usage: layout" in out
 
     def test_layout_vertical(self, capsys):
-        out = _run([
-            "new S",
-            "add label 10 10 50 10",
-            "add label 10 30 50 10",
-            "layout vertical", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "add label 10 30 50 10", "layout vertical", "quit"],
+            capsys,
+        )
         assert "[OK] Applied vertical layout" in out
 
     def test_layout_horizontal(self, capsys):
-        out = _run([
-            "new S",
-            "add label 10 10 50 10",
-            "add label 10 30 50 10",
-            "layout horizontal 8", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "add label 10 30 50 10",
+                "layout horizontal 8",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Applied horizontal layout" in out
 
     def test_align_missing(self, capsys):
@@ -582,12 +630,10 @@ class TestCliLayout:
         assert "Usage: align" in out
 
     def test_align_left(self, capsys):
-        out = _run([
-            "new S",
-            "add label 10 10 50 10",
-            "add label 20 30 50 10",
-            "align left 0 1", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "add label 20 30 50 10", "align left 0 1", "quit"],
+            capsys,
+        )
         assert "[OK] Aligned" in out
 
     def test_distribute_missing(self, capsys):
@@ -595,19 +641,24 @@ class TestCliLayout:
         assert "Usage: distribute" in out
 
     def test_distribute_horizontal(self, capsys):
-        out = _run([
-            "new S",
-            "add label 10 10 50 10",
-            "add label 20 30 50 10",
-            "add label 30 50 50 10",
-            "distribute horizontal 0 1 2", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "add label 20 30 50 10",
+                "add label 30 50 50 10",
+                "distribute horizontal 0 1 2",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Distributed" in out
 
 
 # ===========================================================================
 # Grid columns / Breakpoint / Responsive
 # ===========================================================================
+
 
 class TestCliGridcols:
     def test_gridcols_status(self, capsys):
@@ -655,6 +706,7 @@ class TestCliGridcols:
 # State management
 # ===========================================================================
 
+
 class TestCliState:
     def test_state_no_sub(self, capsys):
         out = _run(["state", "quit"], capsys)
@@ -665,10 +717,9 @@ class TestCliState:
         assert MSG_NO_SCENE in out
 
     def test_state_define(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "state define 0 hover color_fg=cyan", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "state define 0 hover color_fg=cyan", "quit"], capsys
+        )
         assert "[OK] State 'hover' overrides defined" in out
 
     def test_state_define_missing_args(self, capsys):
@@ -684,11 +735,16 @@ class TestCliState:
         assert MSG_INVALID_INDEX in out
 
     def test_state_set(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "state define 0 hover x=1",
-            "state set 0 hover", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "state define 0 hover x=1",
+                "state set 0 hover",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Widget 0 state set to 'hover'" in out
 
     def test_state_set_missing(self, capsys):
@@ -704,11 +760,10 @@ class TestCliState:
         assert MSG_INVALID_INDEX in out
 
     def test_state_list(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "state define 0 hover x=1",
-            "state list 0", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "state define 0 hover x=1", "state list 0", "quit"],
+            capsys,
+        )
         assert "hover" in out
 
     def test_state_list_no_overrides(self, capsys):
@@ -728,11 +783,16 @@ class TestCliState:
         assert MSG_INVALID_INDEX in out
 
     def test_state_clear(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "state define 0 hover x=1",
-            "state clear 0 hover", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "state define 0 hover x=1",
+                "state clear 0 hover",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Removed state 'hover'" in out
 
     def test_state_clear_missing(self, capsys):
@@ -760,6 +820,7 @@ class TestCliState:
 # Animations
 # ===========================================================================
 
+
 class TestCliAnim:
     def test_anim_no_sub(self, capsys):
         out = _run(["anim", "quit"], capsys)
@@ -770,10 +831,7 @@ class TestCliAnim:
         assert "bounce" in out
 
     def test_anim_add(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "anim add 0 bounce", "quit"
-        ], capsys)
+        out = _run(["new S", "add label 10 10 50 10", "anim add 0 bounce", "quit"], capsys)
         assert "[OK] Animation 'bounce' tagged" in out
 
     def test_anim_add_missing(self, capsys):
@@ -797,10 +855,10 @@ class TestCliAnim:
         assert MSG_NO_SCENE in out
 
     def test_anim_clear(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "anim add 0 bounce", "anim clear 0 bounce", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "anim add 0 bounce", "anim clear 0 bounce", "quit"],
+            capsys,
+        )
         assert "[OK] Animation 'bounce' removed" in out
 
     def test_anim_clear_missing(self, capsys):
@@ -816,18 +874,20 @@ class TestCliAnim:
         assert MSG_INVALID_INDEX in out
 
     def test_anim_clear_not_tagged(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "anim clear 0 bounce", "quit"
-        ], capsys)
+        out = _run(["new S", "add label 10 10 50 10", "anim clear 0 bounce", "quit"], capsys)
         assert "Animation not tagged" in out
 
     def test_anim_preview(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "anim add 0 bounce",
-            "anim preview 0 bounce 10 5", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "anim add 0 bounce",
+                "anim preview 0 bounce 10 5",
+                "quit",
+            ],
+            capsys,
+        )
         # Just check it doesn't crash
         assert ">" in out
 
@@ -848,11 +908,16 @@ class TestCliAnim:
         assert MSG_INVALID_INDEX in out
 
     def test_anim_play(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "anim add 0 bounce",
-            "anim play 0 bounce 2 1", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "anim add 0 bounce",
+                "anim play 0 bounce 2 1",
+                "quit",
+            ],
+            capsys,
+        )
         assert "bounce" in out
 
     def test_anim_play_missing(self, capsys):
@@ -880,6 +945,7 @@ class TestCliAnim:
 # Context
 # ===========================================================================
 
+
 class TestCliContext:
     def test_context_with_idx(self, capsys):
         out = _run(["new S", "add label 10 10 50 10 Hi", "context 0", "quit"], capsys)
@@ -906,16 +972,14 @@ class TestCliContext:
         assert MSG_NO_SCENE in out
 
     def test_context_locked_widget(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10 Hi",
-            "lock 0 on", "context 0", "quit"
-        ], capsys)
+        out = _run(["new S", "add label 10 10 50 10 Hi", "lock 0 on", "context 0", "quit"], capsys)
         assert "[LOCK]" in out
 
 
 # ===========================================================================
 # Groups
 # ===========================================================================
+
 
 class TestCliGroups:
     def test_group_no_sub(self, capsys):
@@ -927,10 +991,16 @@ class TestCliGroups:
         assert "No groups" in out
 
     def test_group_create(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10", "add label 20 20 50 10",
-            "group create g1 0 1", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "add label 20 20 50 10",
+                "group create g1 0 1",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Done" in out
 
     def test_group_create_missing(self, capsys):
@@ -942,25 +1012,38 @@ class TestCliGroups:
         assert "Indices must be integers" in out
 
     def test_group_add(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10", "add label 20 20 50 10",
-            "add label 30 30 50 10",
-            "group create g1 0 1", "group add g1 2", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "add label 20 20 50 10",
+                "add label 30 30 50 10",
+                "group create g1 0 1",
+                "group add g1 2",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Done" in out
 
     def test_group_remove(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10", "add label 20 20 50 10",
-            "group create g1 0 1", "group remove g1 1", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "add label 20 20 50 10",
+                "group create g1 0 1",
+                "group remove g1 1",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Done" in out
 
     def test_group_list_with_groups(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "group create g1 0", "group list", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "group create g1 0", "group list", "quit"], capsys
+        )
         assert "g1" in out
 
     def test_group_unknown_sub(self, capsys):
@@ -972,6 +1055,7 @@ class TestCliGroups:
 # Symbols
 # ===========================================================================
 
+
 class TestCliSymbols:
     def test_symbol_no_sub(self, capsys):
         out = _run(["symbol", "quit"], capsys)
@@ -982,10 +1066,7 @@ class TestCliSymbols:
         assert "No symbols" in out
 
     def test_symbol_save(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "symbol save sym1 0", "quit"
-        ], capsys)
+        out = _run(["new S", "add label 10 10 50 10", "symbol save sym1 0", "quit"], capsys)
         assert "[OK] Saved" in out
 
     def test_symbol_save_missing(self, capsys):
@@ -997,10 +1078,16 @@ class TestCliSymbols:
         assert "Indices must be integers" in out
 
     def test_symbol_place(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "symbol save sym1 0", "symbol place sym1 0 0", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "symbol save sym1 0",
+                "symbol place sym1 0 0",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Placed" in out
 
     def test_symbol_place_missing(self, capsys):
@@ -1012,10 +1099,9 @@ class TestCliSymbols:
         assert "x/y must be integers" in out
 
     def test_symbol_list_with_symbols(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "symbol save sym1 0", "symbol list", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "symbol save sym1 0", "symbol list", "quit"], capsys
+        )
         assert "sym1" in out
 
     def test_symbol_unknown_sub(self, capsys):
@@ -1026,6 +1112,7 @@ class TestCliSymbols:
 # ===========================================================================
 # Checkpoints / Rollback / Diff
 # ===========================================================================
+
 
 class TestCliCheckpoints:
     def test_checkpoint_missing(self, capsys):
@@ -1045,10 +1132,9 @@ class TestCliCheckpoints:
         assert "No checkpoints" in out
 
     def test_checkpoints_list(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "checkpoint cp1", "checkpoints", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "checkpoint cp1", "checkpoints", "quit"], capsys
+        )
         assert "cp1" in out
 
     def test_rollback_missing(self, capsys):
@@ -1056,12 +1142,17 @@ class TestCliCheckpoints:
         assert "Usage: rollback" in out
 
     def test_rollback_success(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "checkpoint cp1",
-            "add button 20 20 40 12 Btn",
-            "rollback cp1", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "checkpoint cp1",
+                "add button 20 20 40 12 Btn",
+                "rollback cp1",
+                "quit",
+            ],
+            capsys,
+        )
         assert "[OK] Rolled back to checkpoint: cp1" in out
 
     def test_rollback_unknown(self, capsys):
@@ -1077,36 +1168,45 @@ class TestCliCheckpoints:
         assert "Unknown checkpoint A" in out
 
     def test_diff_two_checkpoints(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "checkpoint cp1",
-            "add button 20 20 40 12 Btn",
-            "checkpoint cp2",
-            "diff cp1 cp2", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "checkpoint cp1",
+                "add button 20 20 40 12 Btn",
+                "checkpoint cp2",
+                "diff cp1 cp2",
+                "quit",
+            ],
+            capsys,
+        )
         assert "Diff" in out
 
     def test_diff_unknown_b(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "checkpoint cp1",
-            "diff cp1 nope", "quit"
-        ], capsys)
+        out = _run(
+            ["new S", "add label 10 10 50 10", "checkpoint cp1", "diff cp1 nope", "quit"], capsys
+        )
         assert "Unknown checkpoint B" in out
 
     def test_diff_vs_current(self, capsys):
-        out = _run([
-            "new S", "add label 10 10 50 10",
-            "checkpoint cp1",
-            "add button 20 20 40 12 Btn",
-            "diff cp1", "quit"
-        ], capsys)
+        out = _run(
+            [
+                "new S",
+                "add label 10 10 50 10",
+                "checkpoint cp1",
+                "add button 20 20 40 12 Btn",
+                "diff cp1",
+                "quit",
+            ],
+            capsys,
+        )
         assert "Diff" in out
 
 
 # ===========================================================================
 # Help / Unknown command / Shlex fallback
 # ===========================================================================
+
 
 class TestCliMisc:
     def test_help_no_arg(self, capsys):

@@ -34,7 +34,7 @@ def _inspector_app(widgets=None, *, groups=None, comp_group=None, group_exact=No
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     if groups is not None:
         designer.groups = groups
@@ -94,13 +94,14 @@ def _make_comp_app(widgets, *, comp_type="card", root="myroot"):
                 if wid == rt:
                     result[str(getattr(sc.widgets[idx], "type", "") or "")] = idx
                 elif wid.startswith(prefix):
-                    role = wid[len(prefix):]
+                    role = wid[len(prefix) :]
                     if role not in result:
                         result[role] = idx
         return result
 
     app._component_role_index = role_idx
     from cyberpunk_designer.component_fields import component_field_specs
+
     app._component_field_specs = component_field_specs
     set_selection(app, list(range(len(widgets))))
     return app

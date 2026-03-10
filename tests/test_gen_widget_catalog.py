@@ -107,8 +107,12 @@ def test_scene_catalog_dashboard():
 def test_all_scenes_unique_ids():
     """All widget IDs across all scenes must be unique."""
     all_ids = []
-    for gen in [gwc.scene_catalog_text, gwc.scene_catalog_controls,
-                gwc.scene_catalog_data, gwc.scene_catalog_dashboard]:
+    for gen in [
+        gwc.scene_catalog_text,
+        gwc.scene_catalog_controls,
+        gwc.scene_catalog_data,
+        gwc.scene_catalog_dashboard,
+    ]:
         scene = gen()
         for w in scene["widgets"]:
             all_ids.append(w["_widget_id"])
@@ -117,8 +121,12 @@ def test_all_scenes_unique_ids():
 
 def test_all_scenes_widgets_inside_bounds():
     """All widgets should fit within scene dimensions."""
-    for gen in [gwc.scene_catalog_text, gwc.scene_catalog_controls,
-                gwc.scene_catalog_data, gwc.scene_catalog_dashboard]:
+    for gen in [
+        gwc.scene_catalog_text,
+        gwc.scene_catalog_controls,
+        gwc.scene_catalog_data,
+        gwc.scene_catalog_dashboard,
+    ]:
         scene = gen()
         for w in scene["widgets"]:
             assert w["x"] >= 0, f"{w['_widget_id']} x={w['x']}"

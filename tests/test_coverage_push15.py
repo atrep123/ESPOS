@@ -407,57 +407,119 @@ class TestClickContextMenu:
 
 # Actions safe to call with 1 widget selected
 _SINGLE_ACTIONS = [
-    "edit_text", "smart_edit", "copy", "duplicate",
-    "z_forward", "z_backward", "z_front", "z_back",
-    "cycle_style", "cycle_type", "cycle_border",
-    "reorder_up", "reorder_down",
-    "toggle_lock", "toggle_visibility", "toggle_enabled",
-    "center_in_scene", "snap_to_grid",
-    "auto_label", "inset_widgets", "outset_widgets",
-    "swap_dims", "toggle_checked", "reset_values",
-    "flatten_z", "number_ids", "z_by_position",
-    "clamp_to_scene", "snap_all_grid",
-    "size_to_text", "clear_all_text", "move_to_origin",
-    "make_square", "scale_up", "scale_down",
-    "number_text", "reset_padding", "reset_colors",
+    "edit_text",
+    "smart_edit",
+    "copy",
+    "duplicate",
+    "z_forward",
+    "z_backward",
+    "z_front",
+    "z_back",
+    "cycle_style",
+    "cycle_type",
+    "cycle_border",
+    "reorder_up",
+    "reorder_down",
+    "toggle_lock",
+    "toggle_visibility",
+    "toggle_enabled",
+    "center_in_scene",
+    "snap_to_grid",
+    "auto_label",
+    "inset_widgets",
+    "outset_widgets",
+    "swap_dims",
+    "toggle_checked",
+    "reset_values",
+    "flatten_z",
+    "number_ids",
+    "z_by_position",
+    "clamp_to_scene",
+    "snap_all_grid",
+    "size_to_text",
+    "clear_all_text",
+    "move_to_origin",
+    "make_square",
+    "scale_up",
+    "scale_down",
+    "number_text",
+    "reset_padding",
+    "reset_colors",
     "outline_only",
-    "set_inverse", "set_bold", "set_default_style",
+    "set_inverse",
+    "set_bold",
+    "set_default_style",
 ]
 
 # Actions that need 2+ widgets selected
 _MULTI_ACTIONS = [
-    "stack_vertical", "stack_horizontal", "equalize_gaps",
-    "swap_positions", "reverse_order", "normalize_sizes",
-    "propagate_style", "propagate_colors", "propagate_border",
-    "propagate_align", "propagate_padding", "propagate_margin",
-    "propagate_value", "propagate_appearance", "propagate_text",
-    "quick_clone", "dup_below", "dup_right", "clone_text",
-    "increment_text", "measure",
-    "distribute_columns", "distribute_rows",
-    "pack_left", "pack_top", "cascade_arrange",
-    "align_h_centers", "align_v_centers",
-    "align_left_edges", "align_top_edges",
-    "align_right_edges", "align_bottom_edges",
-    "spread_values", "distribute_3col",
-    "match_first_width", "match_first_height",
+    "stack_vertical",
+    "stack_horizontal",
+    "equalize_gaps",
+    "swap_positions",
+    "reverse_order",
+    "normalize_sizes",
+    "propagate_style",
+    "propagate_colors",
+    "propagate_border",
+    "propagate_align",
+    "propagate_padding",
+    "propagate_margin",
+    "propagate_value",
+    "propagate_appearance",
+    "propagate_text",
+    "quick_clone",
+    "dup_below",
+    "dup_right",
+    "clone_text",
+    "increment_text",
+    "measure",
+    "distribute_columns",
+    "distribute_rows",
+    "pack_left",
+    "pack_top",
+    "cascade_arrange",
+    "align_h_centers",
+    "align_v_centers",
+    "align_left_edges",
+    "align_top_edges",
+    "align_right_edges",
+    "align_bottom_edges",
+    "spread_values",
+    "distribute_3col",
+    "match_first_width",
+    "match_first_height",
 ]
 
 # View toggles
 _VIEW_ACTIONS = [
-    "view_grid", "view_rulers", "view_guides",
-    "view_snap", "view_ids", "view_zlabels",
+    "view_grid",
+    "view_rulers",
+    "view_guides",
+    "view_snap",
+    "view_ids",
+    "view_zlabels",
 ]
 
 # Add widget actions
 _ADD_ACTIONS = [
-    "add_label", "add_button", "add_panel", "add_progressbar",
-    "add_gauge", "add_slider", "add_checkbox",
-    "add_chart", "add_icon", "add_textbox",
+    "add_label",
+    "add_button",
+    "add_panel",
+    "add_progressbar",
+    "add_gauge",
+    "add_slider",
+    "add_checkbox",
+    "add_chart",
+    "add_icon",
+    "add_textbox",
 ]
 
 # Tab actions
 _TAB_ACTIONS = [
-    "tab_rename", "tab_duplicate", "tab_new",
+    "tab_rename",
+    "tab_duplicate",
+    "tab_new",
 ]
 
 
@@ -680,8 +742,18 @@ class TestAddWidget:
 
     def test_add_all_types(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        for kind in ["label", "button", "panel", "progressbar", "gauge",
-                      "slider", "checkbox", "textbox", "chart", "icon"]:
+        for kind in [
+            "label",
+            "button",
+            "panel",
+            "progressbar",
+            "gauge",
+            "slider",
+            "checkbox",
+            "textbox",
+            "chart",
+            "icon",
+        ]:
             app._add_widget(kind)
         assert len(app.state.current_scene().widgets) >= 10
 
@@ -700,6 +772,7 @@ class TestProfile:
     def test_set_profile(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from ui_designer import HARDWARE_PROFILES
+
         if HARDWARE_PROFILES:
             key = list(HARDWARE_PROFILES.keys())[0]
             app._set_profile(key)

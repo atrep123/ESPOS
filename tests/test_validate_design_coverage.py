@@ -21,18 +21,32 @@ def _base_scene(**overrides):
 
 def _base_widget(**overrides):
     """Minimal valid widget dict."""
-    w = {"type": "label", "x": 10, "y": 10, "width": 50, "height": 20,
-         "text": "hello", "border": True, "color_fg": "white", "color_bg": "black",
-         "visible": True, "enabled": True, "checked": False}
+    w = {
+        "type": "label",
+        "x": 10,
+        "y": 10,
+        "width": 50,
+        "height": 20,
+        "text": "hello",
+        "border": True,
+        "color_fg": "white",
+        "color_bg": "black",
+        "visible": True,
+        "enabled": True,
+        "checked": False,
+    }
     w.update(overrides)
     return w
 
 
 def _validate(data, **kw):
-    return validate_data(data, file_label="test", warnings_as_errors=kw.get("warnings_as_errors", False))
+    return validate_data(
+        data, file_label="test", warnings_as_errors=kw.get("warnings_as_errors", False)
+    )
 
 
 # ── Line 110: _parse_color("") returns None ──
+
 
 class TestParseColor:
     def test_empty_string(self):
@@ -43,6 +57,7 @@ class TestParseColor:
 
 
 # ── Lines 149-157: _scenes_from_data list format and non-dict/list ──
+
 
 class TestScenesFromData:
     def test_scenes_as_list(self):
@@ -68,6 +83,7 @@ class TestScenesFromData:
 
 # ── Lines 173, 175: non-int root width/height ──
 
+
 class TestRootDimensionTypes:
     def test_root_width_not_int(self):
         data = {"width": "256", "height": 128, "scenes": {"main": _base_scene()}}
@@ -82,6 +98,7 @@ class TestRootDimensionTypes:
 
 # ── Lines 195-196: scene height invalid ──
 
+
 class TestSceneHeightInvalid:
     def test_scene_height_zero(self):
         data = {"scenes": {"main": _base_scene(height=0)}}
@@ -95,6 +112,7 @@ class TestSceneHeightInvalid:
 
 
 # ── Lines 201-202: widgets not a list ──
+
 
 class TestWidgetsNotList:
     def test_widgets_is_string(self):
@@ -115,10 +133,12 @@ class TestWidgetsNotList:
 
 # ── Line 229: missing geometry field ──
 
+
 class TestMissingGeometry:
     def test_missing_x_detected(self):
         """Missing geometry is detected but later code may crash — verify error is appended."""
         import pytest
+
         w = _base_widget()
         del w["x"]
         data = {"scenes": {"main": _base_scene(widgets=[w])}}
@@ -136,6 +156,7 @@ class TestMissingGeometry:
 
 # ── Line 265: non-string widget ID ──
 
+
 class TestNonStringWidgetId:
     def test_int_widget_id(self):
         w = _base_widget(_widget_id=123)
@@ -145,6 +166,7 @@ class TestNonStringWidgetId:
 
 
 # ── Lines 278, 280: max_lines edge cases ──
+
 
 class TestMaxLinesEdge:
     def test_max_lines_string(self):
@@ -166,6 +188,7 @@ class TestMaxLinesEdge:
 
 
 # ── Lines 1099-1100: validate_file with bad JSON ──
+
 
 class TestValidateFile:
     def test_bad_json(self, tmp_path):
@@ -191,10 +214,13 @@ class TestValidateFile:
         assert "root must be a JSON object" in issues[0].message
 
     def test_valid_file(self, tmp_path):
-        data = {"width": 256, "height": 128, "scenes": {"main": {
-            "width": 256, "height": 128,
-            "widgets": [_base_widget(_widget_id="w1")]
-        }}}
+        data = {
+            "width": 256,
+            "height": 128,
+            "scenes": {
+                "main": {"width": 256, "height": 128, "widgets": [_base_widget(_widget_id="w1")]}
+            },
+        }
         p = tmp_path / "valid.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         issues = validate_file(p, warnings_as_errors=False)
@@ -204,12 +230,16 @@ class TestValidateFile:
 
 # ── Lines 1107-1126: main() CLI entry point ──
 
+
 class TestMain:
     def test_main_with_valid_file(self, tmp_path, capsys):
-        data = {"width": 256, "height": 128, "scenes": {"main": {
-            "width": 256, "height": 128,
-            "widgets": [_base_widget(_widget_id="w1")]
-        }}}
+        data = {
+            "width": 256,
+            "height": 128,
+            "scenes": {
+                "main": {"width": 256, "height": 128, "widgets": [_base_widget(_widget_id="w1")]}
+            },
+        }
         p = tmp_path / "valid.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         with patch("sys.argv", ["validate_design.py", str(p)]):
@@ -230,10 +260,17 @@ class TestMain:
         assert "[FAIL]" in out
 
     def test_main_warnings_as_errors(self, tmp_path, capsys):
-        data = {"width": 256, "height": 128, "scenes": {"main": {
-            "width": 256, "height": 128,
-            "widgets": []  # Rule 22: empty scene → WARN
-        }}}
+        data = {
+            "width": 256,
+            "height": 128,
+            "scenes": {
+                "main": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [],  # Rule 22: empty scene → WARN
+                }
+            },
+        }
         p = tmp_path / "warn.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         with patch("sys.argv", ["validate_design.py", str(p), "--warnings-as-errors"]):

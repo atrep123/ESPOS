@@ -37,6 +37,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(wtype="label", **kw) -> WidgetConfig:
     defaults = dict(type=wtype, x=0, y=0, width=20, height=10, text="w")
     defaults.update(kw)
@@ -56,7 +57,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None, *, snap: bool = False):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -75,9 +76,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None, *, snap: bool = False):
         _dirty=False,
         _set_status=MagicMock(),
         _mark_dirty=lambda: setattr(app, "_dirty", True),
-        _set_selection=lambda indices, anchor_idx=None: _do_set_selection(
-            app, indices, anchor_idx
-        ),
+        _set_selection=lambda indices, anchor_idx=None: _do_set_selection(app, indices, anchor_idx),
     )
     app._mark_dirty = lambda: setattr(app, "_dirty", True)
     return app
@@ -414,37 +413,45 @@ class TestFocusCycle:
 
 class TestFocusMoveDirection:
     def test_move_down(self):
-        app = _app([
-            _w("button", x=10, y=10, width=20, height=10),
-            _w("button", x=10, y=30, width=20, height=10),
-        ])
+        app = _app(
+            [
+                _w("button", x=10, y=10, width=20, height=10),
+                _w("button", x=10, y=30, width=20, height=10),
+            ]
+        )
         set_focus(app, 0)
         focus_move_direction(app, "down")
         assert app.focus_idx == 1
 
     def test_move_up(self):
-        app = _app([
-            _w("button", x=10, y=10, width=20, height=10),
-            _w("button", x=10, y=30, width=20, height=10),
-        ])
+        app = _app(
+            [
+                _w("button", x=10, y=10, width=20, height=10),
+                _w("button", x=10, y=30, width=20, height=10),
+            ]
+        )
         set_focus(app, 1)
         focus_move_direction(app, "up")
         assert app.focus_idx == 0
 
     def test_move_right(self):
-        app = _app([
-            _w("button", x=10, y=10, width=20, height=10),
-            _w("button", x=50, y=10, width=20, height=10),
-        ])
+        app = _app(
+            [
+                _w("button", x=10, y=10, width=20, height=10),
+                _w("button", x=50, y=10, width=20, height=10),
+            ]
+        )
         set_focus(app, 0)
         focus_move_direction(app, "right")
         assert app.focus_idx == 1
 
     def test_move_left(self):
-        app = _app([
-            _w("button", x=10, y=10, width=20, height=10),
-            _w("button", x=50, y=10, width=20, height=10),
-        ])
+        app = _app(
+            [
+                _w("button", x=10, y=10, width=20, height=10),
+                _w("button", x=50, y=10, width=20, height=10),
+            ]
+        )
         set_focus(app, 1)
         focus_move_direction(app, "left")
         assert app.focus_idx == 0
@@ -678,7 +685,9 @@ class TestListmodelItemTextExtended:
         assert _listmodel_item_text(m, 5) == ("", "")
 
     def test_with_values(self):
-        m = _SimListModel(count=2, seed_labels=["X", "Y"], seed_values=["1", "2"], has_value_cols=True)
+        m = _SimListModel(
+            count=2, seed_labels=["X", "Y"], seed_values=["1", "2"], has_value_cols=True
+        )
         label, value = _listmodel_item_text(m, 0)
         assert label == "X"
         assert value == "1"
@@ -723,11 +732,11 @@ class TestFocusableIndicesExtended:
 
     def test_mixed_types(self):
         ws = [
-            _w("label"),      # not focusable
-            _w("button"),     # focusable
-            _w("box"),        # not focusable
-            _w("slider"),     # focusable
-            _w("checkbox"),   # focusable
+            _w("label"),  # not focusable
+            _w("button"),  # focusable
+            _w("box"),  # not focusable
+            _w("slider"),  # focusable
+            _w("checkbox"),  # focusable
         ]
         sc = _scene(ws)
         result = focusable_indices(sc)
@@ -736,4 +745,3 @@ class TestFocusableIndicesExtended:
         assert 4 in result
         assert 0 not in result
         assert 2 not in result
-

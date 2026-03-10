@@ -48,4 +48,3 @@ def parse_int_list(
         if len(out) > max_items:
             return None
     return out
-

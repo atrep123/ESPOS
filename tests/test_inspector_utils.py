@@ -189,4 +189,3 @@ class TestFormatIntListExtended:
 
     def test_string_input_returns_empty(self):
         assert format_int_list("abc") == ""
-

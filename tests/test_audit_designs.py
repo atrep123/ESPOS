@@ -41,12 +41,7 @@ def _write_design(tmp_path, name, data):
 
 
 def test_audit_file_valid(tmp_path):
-    data = {
-        "width": 128, "height": 64,
-        "scenes": {
-            "main": {"widgets": [{"type": "label"}]}
-        }
-    }
+    data = {"width": 128, "height": 64, "scenes": {"main": {"widgets": [{"type": "label"}]}}}
     p = _write_design(tmp_path, "ok.json", data)
     ok, msg = audit_file(p, 320, 240)
     assert ok is True
@@ -65,20 +60,14 @@ def test_audit_file_invalid_size(tmp_path):
 
 
 def test_audit_file_oversize(tmp_path):
-    data = {
-        "width": 800, "height": 600,
-        "scenes": {"s": {"widgets": [{"type": "box"}]}}
-    }
+    data = {"width": 800, "height": 600, "scenes": {"s": {"widgets": [{"type": "box"}]}}}
     p = _write_design(tmp_path, "big.json", data)
     ok, msg = audit_file(p, 320, 240)
     assert "oversize" in msg
 
 
 def test_audit_file_empty_scene(tmp_path):
-    data = {
-        "width": 128, "height": 64,
-        "scenes": {"empty": {"widgets": []}}
-    }
+    data = {"width": 128, "height": 64, "scenes": {"empty": {"widgets": []}}}
     p = _write_design(tmp_path, "e.json", data)
     ok, msg = audit_file(p, 320, 240)
     assert "empty scenes" in msg
@@ -111,11 +100,12 @@ def test_audit_file_fb_estimate_large(tmp_path):
 
 def test_audit_file_multiple_scenes(tmp_path):
     data = {
-        "width": 128, "height": 64,
+        "width": 128,
+        "height": 64,
         "scenes": {
             "a": {"widgets": [{"type": "label"}, {"type": "button"}]},
             "b": {"widgets": [{"type": "box"}]},
-        }
+        },
     }
     p = _write_design(tmp_path, "multi.json", data)
     ok, msg = audit_file(p, 320, 240)

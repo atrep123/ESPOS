@@ -165,7 +165,8 @@ class TestWrapTextChars:
     def test_truncation_flag(self):
         lines, trunc = text_metrics.wrap_text_chars(
             "Alpha Beta Gamma Delta Epsilon",
-            max_chars=8, max_lines=2,
+            max_chars=8,
+            max_lines=2,
         )
         assert len(lines) <= 2
         assert trunc is True
@@ -203,8 +204,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4")
         surf = _surf(256, 128)
         rect = pygame.Rect(0, 0, 120, 16)
-        drawing.draw_text_clipped(app, surf, "Hello", rect, (255, 255, 255), 1,
-                                  use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "Hello", rect, (255, 255, 255), 1, use_device_font=True
+        )
         assert _count_non_bg(surf, rect) > 0
 
     def test_device_font_vs_pixel_font(self, tmp_path, monkeypatch):
@@ -213,10 +215,12 @@ class TestDrawTextClippedDevice:
         surf_d = _surf(256, 128)
         surf_p = _surf(256, 128)
         rect = pygame.Rect(0, 0, 200, 16)
-        drawing.draw_text_clipped(app, surf_d, "ABCDEFGHIJ", rect, (255, 255, 255), 1,
-                                  use_device_font=True)
-        drawing.draw_text_clipped(app, surf_p, "ABCDEFGHIJ", rect, (255, 255, 255), 1,
-                                  use_device_font=False)
+        drawing.draw_text_clipped(
+            app, surf_d, "ABCDEFGHIJ", rect, (255, 255, 255), 1, use_device_font=True
+        )
+        drawing.draw_text_clipped(
+            app, surf_p, "ABCDEFGHIJ", rect, (255, 255, 255), 1, use_device_font=False
+        )
         px_d = _count_non_bg(surf_d, rect)
         px_p = _count_non_bg(surf_p, rect)
         # Both should have some pixels rendered
@@ -228,8 +232,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch)
         surf = _surf(256, 128)
         rect = pygame.Rect(10, 10, 40, 12)
-        drawing.draw_text_clipped(app, surf, "Hello World", rect, (255, 255, 255), 0,
-                                  use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "Hello World", rect, (255, 255, 255), 0, use_device_font=True
+        )
         # Check that pixels outside rect are still BG
         outside_left = _count_non_bg(surf, pygame.Rect(0, 10, 10, 12))
         outside_right = _count_non_bg(surf, pygame.Rect(51, 10, 50, 12))
@@ -247,8 +252,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch)
         surf = _surf(120, 40)
         rect = pygame.Rect(0, 0, 120, 40)
-        drawing.draw_text_clipped(app, surf, "X", rect, (255, 255, 255), 0,
-                                  valign="top", use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "X", rect, (255, 255, 255), 0, valign="top", use_device_font=True
+        )
         # Text should be near the top — check top half has pixels
         top_half = pygame.Rect(0, 0, 120, 20)
         assert _count_non_bg(surf, top_half) > 0
@@ -257,8 +263,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch)
         surf = _surf(120, 40)
         rect = pygame.Rect(0, 0, 120, 40)
-        drawing.draw_text_clipped(app, surf, "X", rect, (255, 255, 255), 0,
-                                  valign="bottom", use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "X", rect, (255, 255, 255), 0, valign="bottom", use_device_font=True
+        )
         bottom_half = pygame.Rect(0, 20, 120, 20)
         assert _count_non_bg(surf, bottom_half) > 0
 
@@ -266,8 +273,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch)
         surf = _surf(120, 16)
         rect = pygame.Rect(0, 0, 120, 16)
-        drawing.draw_text_clipped(app, surf, "A", rect, (255, 255, 255), 0,
-                                  align="center", use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "A", rect, (255, 255, 255), 0, align="center", use_device_font=True
+        )
         # Center region (40..80) should have pixels
         center = pygame.Rect(40, 0, 40, 16)
         assert _count_non_bg(surf, center) > 0
@@ -276,8 +284,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch)
         surf = _surf(120, 16)
         rect = pygame.Rect(0, 0, 120, 16)
-        drawing.draw_text_clipped(app, surf, "A", rect, (255, 255, 255), 0,
-                                  align="right", use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "A", rect, (255, 255, 255), 0, align="right", use_device_font=True
+        )
         # Right region should have pixels
         right = pygame.Rect(80, 0, 40, 16)
         assert _count_non_bg(surf, right) > 0
@@ -287,9 +296,9 @@ class TestDrawTextClippedDevice:
         app = _make_app(tmp_path, monkeypatch)
         surf = _surf(60, 32)
         rect = pygame.Rect(0, 0, 60, 32)
-        drawing.draw_text_clipped(app, surf, "AAAA BBBB CCCC", rect,
-                                  (255, 255, 255), 0, max_lines=3,
-                                  use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf, "AAAA BBBB CCCC", rect, (255, 255, 255), 0, max_lines=3, use_device_font=True
+        )
         # Should have pixels in both upper and lower halves
         top = _count_non_bg(surf, pygame.Rect(0, 0, 60, 16))
         bot = _count_non_bg(surf, pygame.Rect(0, 16, 60, 16))
@@ -301,12 +310,12 @@ class TestDrawTextClippedDevice:
         surf_no_pad = _surf(120, 32)
         surf_pad = _surf(120, 32)
         rect = pygame.Rect(0, 0, 120, 32)
-        drawing.draw_text_clipped(app, surf_no_pad, "Hello", rect,
-                                  (255, 255, 255), 0,
-                                  use_device_font=True)
-        drawing.draw_text_clipped(app, surf_pad, "Hello", rect,
-                                  (255, 255, 255), 10,
-                                  use_device_font=True)
+        drawing.draw_text_clipped(
+            app, surf_no_pad, "Hello", rect, (255, 255, 255), 0, use_device_font=True
+        )
+        drawing.draw_text_clipped(
+            app, surf_pad, "Hello", rect, (255, 255, 255), 10, use_device_font=True
+        )
         px_no_pad = _count_non_bg(surf_no_pad, rect)
         px_pad = _count_non_bg(surf_pad, rect)
         # Padded version should have fewer or equal pixels

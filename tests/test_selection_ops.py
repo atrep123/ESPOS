@@ -47,6 +47,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=20, height=10, text="w")
     defaults.update(kw)
@@ -57,7 +58,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None, *, snap: bool = False):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -133,8 +134,7 @@ class TestSelectionBounds:
         assert r.height == 15
 
     def test_multiple_widgets(self):
-        app = _app([_w(x=0, y=0, width=10, height=10),
-                     _w(x=50, y=60, width=20, height=20)])
+        app = _app([_w(x=0, y=0, width=10, height=10), _w(x=50, y=60, width=20, height=20)])
         r = selection_bounds(app, [0, 1])
         assert r.x == 0
         assert r.y == 0
@@ -713,8 +713,15 @@ class TestAdjustValue:
 
 class TestCopyPasteStyle:
     def test_roundtrip(self):
-        w0 = _w(style="rounded", color_fg="#aaa", color_bg="#bbb",
-                border=True, border_style="double", align="center", valign="top")
+        w0 = _w(
+            style="rounded",
+            color_fg="#aaa",
+            color_bg="#bbb",
+            border=True,
+            border_style="double",
+            align="center",
+            valign="top",
+        )
         w1 = _w()
         app = _app([w0, w1])
         set_selection(app, [0])

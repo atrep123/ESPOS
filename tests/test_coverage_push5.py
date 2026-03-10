@@ -170,9 +170,7 @@ class TestTransformsEdges:
         """L67: resize_selection_to with locked widget."""
         from cyberpunk_designer.selection_ops.transforms import resize_selection_to
 
-        app = _make_app(
-            tmp_path, monkeypatch, widgets=[_w(locked=True, width=40, height=20)]
-        )
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(locked=True, width=40, height=20)])
         app.state.selected = [0]
         assert resize_selection_to(app, 80, 40) is False
 
@@ -239,7 +237,8 @@ class TestLayoutEdges:
         from cyberpunk_designer.selection_ops.layout import space_evenly_h
 
         app = _make_app(
-            tmp_path, monkeypatch,
+            tmp_path,
+            monkeypatch,
             widgets=[_w(x=0), _w(x=40), _w(x=80)],
         )
         app.state.selected = [0, 1, 2]
@@ -259,7 +258,8 @@ class TestLayoutEdges:
         from cyberpunk_designer.selection_ops.layout import space_evenly_v
 
         app = _make_app(
-            tmp_path, monkeypatch,
+            tmp_path,
+            monkeypatch,
             widgets=[_w(y=0), _w(y=40), _w(y=80)],
         )
         app.state.selected = [0, 1, 2]
@@ -271,7 +271,8 @@ class TestLayoutEdges:
         from cyberpunk_designer.selection_ops.layout import shrink_to_content
 
         app = _make_app(
-            tmp_path, monkeypatch,
+            tmp_path,
+            monkeypatch,
             widgets=[_w(type="panel", x=0, y=0, width=100, height=100)],
         )
         app.state.selected = [0]
@@ -603,7 +604,8 @@ class TestBatchOpsOobGuards:
         from cyberpunk_designer.selection_ops.batch_ops import fill_parent
 
         app = _make_app(
-            tmp_path, monkeypatch,
+            tmp_path,
+            monkeypatch,
             widgets=[_w(x=10, y=10, width=20, height=20)],
         )
         app.state.selected = [0]

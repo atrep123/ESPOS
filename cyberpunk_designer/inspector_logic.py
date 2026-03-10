@@ -293,6 +293,7 @@ def inspector_commit_edit(app) -> bool:
     if f == "_search":
         raw = app.state.inspector_input_buffer
         from cyberpunk_designer.selection_ops import search_widgets
+
         _commit_epilogue(app, "")
         search_widgets(app, raw.strip())
         return True
@@ -350,6 +351,7 @@ def inspector_commit_edit(app) -> bool:
             app._set_status("Invalid values \u2014 use integers.", ttl_sec=3.0)
             return False
         from cyberpunk_designer.selection_ops import array_duplicate
+
         array_duplicate(app, count, dx, dy)
         return True
 
@@ -371,6 +373,7 @@ def inspector_commit_edit(app) -> bool:
             app._set_status("No widgets to save.", ttl_sec=3.0)
             return False
         from ui_template_manager import Template, TemplateMetadata
+
         scene_data = {
             "name": name,
             "widgets": widgets,
@@ -382,7 +385,9 @@ def inspector_commit_edit(app) -> bool:
 
         tpl = Template(
             metadata=TemplateMetadata(
-                name=name, category="Custom", description=f"{len(widgets)} widget(s)",
+                name=name,
+                category="Custom",
+                description=f"{len(widgets)} widget(s)",
             ),
             scene=_SceneProxy(scene_data),
         )
@@ -571,7 +576,7 @@ def inspector_commit_edit(app) -> bool:
                 if wid == str(root or ""):
                     cand = new_root
                 elif wid.startswith(f"{root}."):
-                    cand = f"{new_root}{wid[len(str(root or '')):]}"
+                    cand = f"{new_root}{wid[len(str(root or '')) :]}"
                 else:
                     continue  # pragma: no cover
                 if cand in used_ids:
@@ -590,7 +595,7 @@ def inspector_commit_edit(app) -> bool:
                 if wid == str(root or ""):
                     ww._widget_id = new_root
                 elif wid.startswith(f"{root}."):
-                    ww._widget_id = f"{new_root}{wid[len(str(root or '')):]}"
+                    ww._widget_id = f"{new_root}{wid[len(str(root or '')) :]}"
 
             # Rename the component group itself to keep type/root discoverable.
             try:

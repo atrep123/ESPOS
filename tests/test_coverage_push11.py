@@ -34,7 +34,7 @@ def _inspector_app(widgets=None, *, groups=None, comp_group=None, group_exact=No
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     if groups is not None:
         designer.groups = groups
@@ -137,7 +137,7 @@ class TestFieldToStrCompIntNonNumeric:
                 if 0 <= idx < len(sc.widgets):
                     wid = str(getattr(sc.widgets[idx], "_widget_id", "") or "")
                     if wid.startswith(prefix):
-                        role = wid[len(prefix):]
+                        role = wid[len(prefix) :]
                         if role not in result:
                             result[role] = idx
             return result
@@ -149,6 +149,7 @@ class TestFieldToStrCompIntNonNumeric:
         )
         app._component_role_index = role_idx
         from cyberpunk_designer.component_fields import component_field_specs
+
         app._component_field_specs = component_field_specs
         set_selection(app, [0, 1])
         result = inspector_field_to_str(app, "comp.progress_value", w_title)
@@ -167,7 +168,9 @@ class TestSceneRenameSameName:
         app = _inspector_app([_w()])
         app.state.inspector_selected_field = "_scene_name"
         app.state.inspector_input_buffer = "main"  # Same as current
-        monkeypatch.setattr("pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input")))
+        monkeypatch.setattr(
+            "pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input"))
+        )
         result = inspector_commit_edit(app)
         assert result is True
         assert app.state.inspector_selected_field is None
@@ -180,7 +183,9 @@ class TestSceneRenameSuccess:
         app = _inspector_app([_w()])
         app.state.inspector_selected_field = "_scene_name"
         app.state.inspector_input_buffer = "settings"
-        monkeypatch.setattr("pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input")))
+        monkeypatch.setattr(
+            "pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input"))
+        )
         result = inspector_commit_edit(app)
         assert result is True
         assert app.designer.current_scene == "settings"
@@ -222,7 +227,9 @@ class TestMultiSelectResizeFails:
     """L806: multi-select resize_selection_to returns False."""
 
     def test_resize_returns_false(self):
-        app = _inspector_app([_w(x=0, y=0, width=40, height=20), _w(x=50, y=0, width=40, height=20)])
+        app = _inspector_app(
+            [_w(x=0, y=0, width=40, height=20), _w(x=50, y=0, width=40, height=20)]
+        )
         set_selection(app, [0, 1])
         app._resize_selection_to = lambda w, h: False
         app.state.inspector_selected_field = "width"
@@ -266,13 +273,14 @@ def _make_comp_app(widgets, *, comp_type="card", root="myroot"):
             if 0 <= idx < len(sc.widgets):
                 wid = str(getattr(sc.widgets[idx], "_widget_id", "") or "")
                 if wid.startswith(prefix):
-                    role = wid[len(prefix):]
+                    role = wid[len(prefix) :]
                     if role not in result:
                         result[role] = idx
         return result
 
     app._component_role_index = role_idx
     from cyberpunk_designer.component_fields import component_field_specs
+
     app._component_field_specs = component_field_specs
     set_selection(app, list(range(len(widgets))))
     return app
@@ -417,9 +425,11 @@ class TestPaletteWidgetClick:
         app.palette_section_hitboxes = []
         app.palette_widget_hitboxes = []
         app.palette_collapsed = set()
+
         # Action raises → triggers except at L763-765
         def bad_action():
             raise RuntimeError("boom")
+
         app.palette_sections = [("Actions", [("Boom", bad_action)])]
         on_mouse_down(app, (hit_rect.centerx, hit_rect.centery))
 
@@ -467,7 +477,10 @@ class TestResizeSxSyException:
         app.state.resize_start_mouse = (50, 50)
         # start_rect with non-numeric width → int() raises in sx/sy calc
         app.state.resize_start_rect = SimpleNamespace(
-            x=10, y=10, width="bad", height="bad",
+            x=10,
+            y=10,
+            width="bad",
+            height="bad",
         )
         app.state.drag_start_positions = {0: (10, 10)}
         app.state.drag_start_sizes = {0: (40, 20)}
@@ -545,8 +558,12 @@ class TestTemplateStopTextInputException:
         app = _inspector_app([_w()])
         set_selection(app, [0])
         app.state.inspector_selected_field = "_template_name"
-        app.state.inspector_input_buffer = ""  # Empty name → False, but stop_text_input called first
-        monkeypatch.setattr("pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input")))
+        app.state.inspector_input_buffer = (
+            ""  # Empty name → False, but stop_text_input called first
+        )
+        monkeypatch.setattr(
+            "pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input"))
+        )
         result = inspector_commit_edit(app)
         assert result is False  # Empty name
 
@@ -580,6 +597,7 @@ class TestMenuActiveOOBItem:
             "item2": 98,  # OOB
         }
         from cyberpunk_designer.component_fields import component_field_specs
+
         app._component_field_specs = component_field_specs
         set_selection(app, [0, 1])
         app.state.inspector_selected_field = "comp.active"

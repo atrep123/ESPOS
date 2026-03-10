@@ -11,6 +11,7 @@ from cyberpunk_designer.text_metrics import (
 
 # ── is_device_profile ──
 
+
 class TestIsDeviceProfile:
     def test_esp32os_prefix(self):
         assert is_device_profile("esp32os_256x128_gray4") is True
@@ -32,6 +33,7 @@ class TestIsDeviceProfile:
 
 
 # ── ellipsize_chars ──
+
 
 class TestEllipsizeChars:
     def test_short_text_unchanged(self):
@@ -67,6 +69,7 @@ class TestEllipsizeChars:
 
 
 # ── wrap_text_chars ──
+
 
 class TestWrapTextChars:
     def test_single_line(self):
@@ -119,6 +122,7 @@ class TestWrapTextChars:
 
 
 # ── inner_text_area_px ──
+
 
 def _widget(type="label", width=40, height=14, border=True, **kw):
     return SimpleNamespace(type=type, width=width, height=height, border=border, **kw)

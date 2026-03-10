@@ -69,4 +69,3 @@ class SmartEventQueue:
         """Process single event with optimization."""
         # Preprocessing logic here
         return event
-

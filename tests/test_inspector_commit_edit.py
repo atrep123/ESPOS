@@ -415,9 +415,8 @@ class TestCommitSceneName:
     def test_duplicate_name_rejected(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from ui_models import SceneConfig
-        app.designer.scenes["other"] = SceneConfig(
-            name="other", width=256, height=128, widgets=[]
-        )
+
+        app.designer.scenes["other"] = SceneConfig(name="other", width=256, height=128, widgets=[])
         assert _commit(app, "_scene_name", "other") is False
 
     def test_same_name_is_noop(self, tmp_path, monkeypatch):
@@ -521,7 +520,10 @@ class TestCommitTemplateName:
         ]
         result = _commit(app, "_template_name", "TestTpl")
         assert result is True
-        assert "saved" in (app.dialog_message or "").lower() or "template" in (app.dialog_message or "").lower()
+        assert (
+            "saved" in (app.dialog_message or "").lower()
+            or "template" in (app.dialog_message or "").lower()
+        )
 
 
 # ===================================================================
@@ -535,6 +537,7 @@ class TestInspectorFieldToStr:
         w = _add(app, x=10, y=20)
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "_position", w)
         assert result == "10,20"
 
@@ -545,6 +548,7 @@ class TestInspectorFieldToStr:
         w.padding_y = 2
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "_padding", w)
         assert result == "3,2"
 
@@ -555,6 +559,7 @@ class TestInspectorFieldToStr:
         w.margin_y = 7
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "_margin", w)
         assert result == "5,7"
 
@@ -567,6 +572,7 @@ class TestInspectorFieldToStr:
         w.margin_y = 4
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "_spacing", w)
         assert result == "1,2,3,4"
 
@@ -577,6 +583,7 @@ class TestInspectorFieldToStr:
         w.max_value = 90
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "_value_range", w)
         assert result == "10,90"
 
@@ -585,6 +592,7 @@ class TestInspectorFieldToStr:
         w = _add(app, x=42)
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "x", w)
         assert result == "42"
 
@@ -594,5 +602,6 @@ class TestInspectorFieldToStr:
         w.color_fg = "#aabbcc"
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         result = inspector_field_to_str(app, "color_fg", w)
         assert result == "#aabbcc"

@@ -28,9 +28,19 @@ def _make_app(tmp_path, monkeypatch, *, width=256, height=128, profile=None):
     return CyberpunkEditorApp(json_path, (width, height), profile=profile)
 
 
-def _stub_app(*, scale=1, width=256, height=128, palette_w=120, inspector_w=200,
-              toolbar_h=24, status_h=18, scene_tabs_h=0, max_auto_scale=4,
-              panels_collapsed=False):
+def _stub_app(
+    *,
+    scale=1,
+    width=256,
+    height=128,
+    palette_w=120,
+    inspector_w=200,
+    toolbar_h=24,
+    status_h=18,
+    scene_tabs_h=0,
+    max_auto_scale=4,
+    panels_collapsed=False,
+):
     """Lightweight app-like dictionary for pure windowing math functions."""
     designer = SimpleNamespace(width=width, height=height)
     app = SimpleNamespace(
@@ -163,6 +173,7 @@ class TestLivePreviewFrame:
         app._set_status = lambda msg, **kw: statuses.append(msg)
         # Simulate pyserial missing
         import builtins
+
         real_import = builtins.__import__
 
         def fake_import(name, *a, **kw):
@@ -204,7 +215,7 @@ class TestLivePreviewFrame:
         assert frame.startswith(b"<<UIJSON>>")
         assert frame.endswith(b"<<END>>")
         # Payload should be valid JSON
-        payload = frame[len(b"<<UIJSON>>"):-len(b"<<END>>")]
+        payload = frame[len(b"<<UIJSON>>") : -len(b"<<END>>")]
         parsed = json.loads(payload.decode("utf-8"))
         assert parsed["name"] == "test"
 
@@ -216,6 +227,7 @@ class TestRefreshAvailablePorts:
         app._set_status = lambda msg, **kw: statuses.append(msg)
         # Guarantee pyserial is missing
         import builtins
+
         real_import = builtins.__import__
 
         def fake_import(name, *a, **kw):

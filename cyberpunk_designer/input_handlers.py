@@ -109,6 +109,7 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             return
         if event.key == pygame.K_s:
             from .fit_widget import fit_selection_to_widget
+
             fit_selection_to_widget(app)
             return
         if event.key in _CTRL_ALT_APP_TABLE:
@@ -145,17 +146,31 @@ def on_key_down(app, event: pygame.event.Event) -> None:
         app._export_selection_json()
         return
     # Ctrl+1..9: jump to scene by index
-    if mods & pygame.KMOD_CTRL and not (mods & (pygame.KMOD_ALT | pygame.KMOD_SHIFT)) and not app.sim_input_mode:
+    if (
+        mods & pygame.KMOD_CTRL
+        and not (mods & (pygame.KMOD_ALT | pygame.KMOD_SHIFT))
+        and not app.sim_input_mode
+    ):
         scene_keys = {
-            pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2,
-            pygame.K_4: 3, pygame.K_5: 4, pygame.K_6: 5,
-            pygame.K_7: 6, pygame.K_8: 7, pygame.K_9: 8,
+            pygame.K_1: 0,
+            pygame.K_2: 1,
+            pygame.K_3: 2,
+            pygame.K_4: 3,
+            pygame.K_5: 4,
+            pygame.K_6: 5,
+            pygame.K_7: 6,
+            pygame.K_8: 7,
+            pygame.K_9: 8,
         }
         if event.key in scene_keys:
             app._jump_to_scene(scene_keys[event.key])
             return
     # Shift+F: quick-create composites
-    if mods & pygame.KMOD_SHIFT and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)) and not app.sim_input_mode:
+    if (
+        mods & pygame.KMOD_SHIFT
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+        and not app.sim_input_mode
+    ):
         if event.key in _SHIFT_FKEY_TABLE:
             getattr(app, _SHIFT_FKEY_TABLE[event.key])()
             return
@@ -259,7 +274,12 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             app._select_same_type()
         else:
             app._select_all()
-    elif event.key == pygame.K_t and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_t
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._list_templates()
         else:
@@ -279,52 +299,102 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             app._snap_sizes_to_grid()
         else:
             app._goto_widget_prompt()
-    elif event.key == pygame.K_i and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_i
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._show_all_widgets()
         else:
             app._invert_selection()
-    elif event.key == pygame.K_b and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_b
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_bordered()
         else:
             app._select_same_color()
-    elif event.key == pygame.K_w and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_w
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._fit_scene_to_content()
         else:
             app._scene_stats()
-    elif event.key == pygame.K_h and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_h
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._hide_unselected()
         else:
             app._select_parent_panel()
-    elif event.key == pygame.K_k and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_k
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._clear_padding()
         else:
             app._select_children()
-    elif event.key == pygame.K_o and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_o
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._toggle_all_borders()
         else:
             app._copy_to_next_scene()
-    elif event.key == pygame.K_m and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_m
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._move_selection_to_origin()
         else:
             app._snap_selection_to_grid()
-    elif event.key == pygame.K_p and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_p
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_all_panels()
         else:
             app._paste_in_place()
-    elif event.key == pygame.K_q and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_q
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._quick_clone()
         else:
             app._broadcast_to_all_scenes()
-    elif event.key == pygame.K_u and mods & pygame.KMOD_CTRL and not app.sim_input_mode and not (mods & pygame.KMOD_ALT):
+    elif (
+        event.key == pygame.K_u
+        and mods & pygame.KMOD_CTRL
+        and not app.sim_input_mode
+        and not (mods & pygame.KMOD_ALT)
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_overlapping()
         else:
@@ -401,94 +471,167 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             app._select_locked()
         else:
             app._toggle_lock_selection()
-    elif event.key == pygame.K_s and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_s
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_same_style()
         else:
             app._cycle_style()
-    elif event.key == pygame.K_v and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_v
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             if app.state.selected:
                 app._inspector_start_edit("_value_range")
         else:
             app._toggle_visibility()
-    elif event.key == pygame.K_t and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_t
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             if app.state.selected:
                 app._inspector_start_edit("text_overflow")
         else:
             app._cycle_widget_type()
-    elif event.key == pygame.K_b and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_b
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             if app.state.selected:
                 app._inspector_start_edit("border_width")
         else:
             app._cycle_border_style()
-    elif event.key == pygame.K_q and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_q
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._swap_fg_bg()
         else:
             app._cycle_color_preset()
-    elif event.key == pygame.K_c and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_c
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if app.state.selected:
             if mods & pygame.KMOD_SHIFT:
                 app._inspector_start_edit("color_bg")
             else:
                 app._inspector_start_edit("color_fg")
-    elif event.key == pygame.K_u and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_u
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_same_z()
         elif app.state.selected:
             app._inspector_start_edit("z_index")
-    elif event.key == pygame.K_j and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_j
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._clear_margins()
         elif app.state.selected:
             app._inspector_start_edit("_margin")
-    elif event.key == pygame.K_d and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_d
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._array_duplicate_prompt()
         elif app.state.selected:
             app._inspector_start_edit("data_points")
-    elif event.key == pygame.K_y and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_y
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_hidden()
         else:
             app._toggle_checked()
-    elif event.key == pygame.K_f and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_f
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._make_full_height()
         elif app.state.selected:
             app._inspector_start_edit("max_lines")
-    elif event.key == pygame.K_w and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_w
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._make_full_width()
         else:
             app._toggle_border()
-    elif event.key == pygame.K_o and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_o
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._select_overflow()
         else:
             app._cycle_text_overflow()
-    elif event.key == pygame.K_a and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_a
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._cycle_valign()
         else:
             app._cycle_align()
-    elif event.key == pygame.K_m and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_m
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._mirror_selection("v")
         else:
             app._mirror_selection("h")
-    elif event.key == pygame.K_i and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_i
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._widget_info()
         elif app.state.selected:
             app._inspector_start_edit("icon_char")
-    elif event.key == pygame.K_e and not app.sim_input_mode and (mods & pygame.KMOD_SHIFT) and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_e
+        and not app.sim_input_mode
+        and (mods & pygame.KMOD_SHIFT)
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if app.state.selected:
             app._inspector_start_edit("runtime")
-    elif event.key == pygame.K_e and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_e
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         app._smart_edit()
     elif event.key == pygame.K_F8 and not app.sim_input_mode:
         app._toggle_enabled()
@@ -503,27 +646,51 @@ def on_key_down(app, event: pygame.event.Event) -> None:
         app._arrange_in_row()
     elif event.key == pygame.K_F7 and not app.sim_input_mode:
         app._arrange_in_column()
-    elif event.key == pygame.K_h and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_h
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if app.state.selected:
             if mods & pygame.KMOD_SHIFT:
                 app._inspector_start_edit("_position")
             else:
                 app._inspector_start_edit("_size")
-    elif event.key == pygame.K_r and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_r
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._auto_rename()
         elif app.state.selected:
             app._inspector_start_edit("text")
-    elif event.key == pygame.K_SLASH and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_SLASH
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         app._search_widgets_prompt()
-    elif event.key == pygame.K_k and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_k
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._set_all_spacing_prompt()
         elif app.state.selected:
             app._inspector_start_edit("_padding")
-    elif event.key == pygame.K_n and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_n
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         _cycle_widget_selection(app, 1, extend=(mods & pygame.KMOD_SHIFT) != 0)
-    elif event.key == pygame.K_p and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_p
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         _cycle_widget_selection(app, -1, extend=(mods & pygame.KMOD_SHIFT) != 0)
     elif event.key == pygame.K_HOME and not app.sim_input_mode:
         sc = app.state.current_scene()
@@ -538,9 +705,17 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             app._mark_dirty()
     elif event.key == pygame.K_F4:
         app._zoom_to_fit()
-    elif not app.sim_input_mode and event.key in _NUMBER_WIDGET_TABLE and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        not app.sim_input_mode
+        and event.key in _NUMBER_WIDGET_TABLE
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         app._add_widget(_NUMBER_WIDGET_TABLE[event.key])
-    elif not app.sim_input_mode and event.key == pygame.K_0 and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        not app.sim_input_mode
+        and event.key == pygame.K_0
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._add_widget("radiobutton")
         else:
@@ -550,32 +725,56 @@ def on_key_down(app, event: pygame.event.Event) -> None:
         app._mark_dirty()
     elif event.key == pygame.K_F12:
         app._screenshot_canvas()
-    elif event.key == pygame.K_BACKQUOTE and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_BACKQUOTE
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._toggle_z_labels()
         else:
             app._toggle_widget_ids()
-    elif event.key == pygame.K_SEMICOLON and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_SEMICOLON
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._equalize_heights()
         else:
             app._stack_vertical()
-    elif event.key == pygame.K_QUOTE and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_QUOTE
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._equalize_widths()
         else:
             app._stack_horizontal()
-    elif event.key == pygame.K_BACKSLASH and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_BACKSLASH
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._cycle_gray_bg()
         else:
             app._cycle_gray_fg()
-    elif event.key == pygame.K_COMMA and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_COMMA
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._duplicate_below()
         else:
             app._swap_positions()
-    elif event.key == pygame.K_PERIOD and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key == pygame.K_PERIOD
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         if mods & pygame.KMOD_SHIFT:
             app._duplicate_right()
         else:
@@ -591,10 +790,18 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             app._flatten_z_indices()
         else:
             app._reset_zoom()
-    elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS) and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS)
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         step = 5 if mods & pygame.KMOD_SHIFT else 1
         app._adjust_value(step)
-    elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS) and not app.sim_input_mode and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT)):
+    elif (
+        event.key in (pygame.K_MINUS, pygame.K_KP_MINUS)
+        and not app.sim_input_mode
+        and not (mods & (pygame.KMOD_CTRL | pygame.KMOD_ALT))
+    ):
         step = 5 if mods & pygame.KMOD_SHIFT else 1
         app._adjust_value(-step)
     elif app.sim_input_mode and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
@@ -966,11 +1173,13 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
                     app.state.resize_start_rect = bounds.copy()
                     app.state.drag_start_positions = {
                         i: (int(sc.widgets[i].x), int(sc.widgets[i].y))
-                        for i in new_indices if 0 <= i < len(sc.widgets)
+                        for i in new_indices
+                        if 0 <= i < len(sc.widgets)
                     }
                     app.state.drag_start_sizes = {
                         i: (int(sc.widgets[i].width), int(sc.widgets[i].height))
-                        for i in new_indices if 0 <= i < len(sc.widgets)
+                        for i in new_indices
+                        if 0 <= i < len(sc.widgets)
                     }
                 app._set_status(f"Cloned {len(new_indices)} widget(s)", ttl_sec=1.5)
         app.state.dragging = True

@@ -32,23 +32,31 @@ from ui_designer import SceneConfig, UIDesigner, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=24, height=16, text="w")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
 
-def _app(widgets: Optional[List[WidgetConfig]] = None, *, snap: bool = False,
-         extra_scenes: Optional[dict] = None):
+def _app(
+    widgets: Optional[List[WidgetConfig]] = None,
+    *,
+    snap: bool = False,
+    extra_scenes: Optional[dict] = None,
+):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     if extra_scenes:
         for name, sw in extra_scenes.items():
             designer.scenes[name] = SceneConfig(
-                name=name, width=256, height=128, widgets=list(sw),
+                name=name,
+                width=256,
+                height=128,
+                widgets=list(sw),
             )
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -448,10 +456,12 @@ class TestDuplicateBelow:
         assert app._dirty
 
     def test_duplicate_below_multiple(self):
-        app = _app([
-            _w(text="a", x=0, y=0, width=24, height=16),
-            _w(text="b", x=0, y=24, width=24, height=16),
-        ])
+        app = _app(
+            [
+                _w(text="a", x=0, y=0, width=24, height=16),
+                _w(text="b", x=0, y=24, width=24, height=16),
+            ]
+        )
         set_selection(app, [0, 1])
         duplicate_below(app)
         sc = app.state.current_scene()
@@ -493,10 +503,12 @@ class TestDuplicateRight:
         assert app._dirty
 
     def test_duplicate_right_multiple(self):
-        app = _app([
-            _w(text="a", x=0, y=0, width=24, height=16),
-            _w(text="b", x=32, y=0, width=24, height=16),
-        ])
+        app = _app(
+            [
+                _w(text="a", x=0, y=0, width=24, height=16),
+                _w(text="b", x=32, y=0, width=24, height=16),
+            ]
+        )
         set_selection(app, [0, 1])
         duplicate_right(app)
         sc = app.state.current_scene()

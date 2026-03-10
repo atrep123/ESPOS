@@ -336,8 +336,14 @@ def swap_content(app) -> None:
     wa, wb = sc.widgets[a], sc.widgets[b]
     wa.text, wb.text = str(getattr(wb, "text", "") or ""), str(getattr(wa, "text", "") or "")
     wa.value, wb.value = int(getattr(wb, "value", 0) or 0), int(getattr(wa, "value", 0) or 0)
-    wa.checked, wb.checked = bool(getattr(wb, "checked", False)), bool(getattr(wa, "checked", False))
-    wa.icon_char, wb.icon_char = str(getattr(wb, "icon_char", "") or ""), str(getattr(wa, "icon_char", "") or "")
+    wa.checked, wb.checked = (
+        bool(getattr(wb, "checked", False)),
+        bool(getattr(wa, "checked", False)),
+    )
+    wa.icon_char, wb.icon_char = (
+        str(getattr(wb, "icon_char", "") or ""),
+        str(getattr(wa, "icon_char", "") or ""),
+    )
     app._set_status("Swapped content.", ttl_sec=2.0)
     app._mark_dirty()
 

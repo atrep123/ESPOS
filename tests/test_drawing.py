@@ -91,7 +91,9 @@ class TestTextWidthPx:
         assert text_width_px(app, None) == 0
 
     def test_broken_font(self):
-        app = SimpleNamespace(pixel_font=SimpleNamespace(size=lambda t: (_ for _ in ()).throw(RuntimeError)))
+        app = SimpleNamespace(
+            pixel_font=SimpleNamespace(size=lambda t: (_ for _ in ()).throw(RuntimeError))
+        )
         assert text_width_px(app, "abc") == 0
 
 
@@ -246,7 +248,9 @@ class TestDrawBorderStyle:
     def test_unknown_falls_back(self):
         app = self._make_app()
         surface = pygame.Surface((100, 100))
-        draw_border_style(app, surface, pygame.Rect(10, 10, 50, 50), "unknown_style", (200, 200, 200))
+        draw_border_style(
+            app, surface, pygame.Rect(10, 10, 50, 50), "unknown_style", (200, 200, 200)
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -414,34 +418,28 @@ class TestDrawPixelPanelBg:
 class TestDrawScrollbar:
     def test_normal(self):
         app = _rich_app()
-        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100),
-                        scroll=10, max_scroll=50, content_h=200)
+        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100), scroll=10, max_scroll=50, content_h=200)
 
     def test_zero_scroll(self):
         app = _rich_app()
-        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100),
-                        scroll=0, max_scroll=50, content_h=200)
+        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100), scroll=0, max_scroll=50, content_h=200)
 
     def test_max_scroll(self):
         app = _rich_app()
-        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100),
-                        scroll=50, max_scroll=50, content_h=200)
+        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100), scroll=50, max_scroll=50, content_h=200)
 
     def test_zero_max_scroll(self):
         app = _rich_app()
-        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100),
-                        scroll=0, max_scroll=0, content_h=100)
+        draw_scrollbar(app, pygame.Rect(10, 10, 20, 100), scroll=0, max_scroll=0, content_h=100)
         # max_scroll <= 0 → early return, no crash
 
     def test_zero_rect(self):
         app = _rich_app()
-        draw_scrollbar(app, pygame.Rect(0, 0, 0, 0),
-                        scroll=0, max_scroll=10, content_h=100)
+        draw_scrollbar(app, pygame.Rect(0, 0, 0, 0), scroll=0, max_scroll=10, content_h=100)
 
     def test_scroll_overflow_clamped(self):
         app = _rich_app()
-        draw_scrollbar(app, pygame.Rect(0, 0, 10, 80),
-                        scroll=9999, max_scroll=50, content_h=200)
+        draw_scrollbar(app, pygame.Rect(0, 0, 10, 80), scroll=9999, max_scroll=50, content_h=200)
 
 
 # ---------------------------------------------------------------------------
@@ -499,75 +497,134 @@ class TestDrawOverflowMarker:
 class TestDrawTextClipped:
     def test_left_align(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Test",
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255),
-                          padding=2, align="left", valign="middle")
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Test",
+            pygame.Rect(10, 10, 100, 20),
+            (255, 255, 255),
+            padding=2,
+            align="left",
+            valign="middle",
+        )
 
     def test_center_align(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Test",
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255),
-                          padding=2, align="center", valign="middle")
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Test",
+            pygame.Rect(10, 10, 100, 20),
+            (255, 255, 255),
+            padding=2,
+            align="center",
+            valign="middle",
+        )
 
     def test_right_align(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Test",
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255),
-                          padding=2, align="right", valign="middle")
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Test",
+            pygame.Rect(10, 10, 100, 20),
+            (255, 255, 255),
+            padding=2,
+            align="right",
+            valign="middle",
+        )
 
     def test_valign_top(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Test",
-                          pygame.Rect(10, 10, 100, 40), (255, 255, 255),
-                          padding=2, align="left", valign="top")
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Test",
+            pygame.Rect(10, 10, 100, 40),
+            (255, 255, 255),
+            padding=2,
+            align="left",
+            valign="top",
+        )
 
     def test_valign_bottom(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Test",
-                          pygame.Rect(10, 10, 100, 40), (255, 255, 255),
-                          padding=2, align="left", valign="bottom")
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Test",
+            pygame.Rect(10, 10, 100, 40),
+            (255, 255, 255),
+            padding=2,
+            align="left",
+            valign="bottom",
+        )
 
     def test_multiline(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Line1\nLine2",
-                          pygame.Rect(10, 10, 100, 40), (255, 255, 255),
-                          padding=2, max_lines=3)
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Line1\nLine2",
+            pygame.Rect(10, 10, 100, 40),
+            (255, 255, 255),
+            padding=2,
+            max_lines=3,
+        )
 
     def test_empty_text(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "",
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255),
-                          padding=2)
+        draw_text_clipped(
+            app, app.logical_surface, "", pygame.Rect(10, 10, 100, 20), (255, 255, 255), padding=2
+        )
 
     def test_none_text(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, None,
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255),
-                          padding=2)
+        draw_text_clipped(
+            app, app.logical_surface, None, pygame.Rect(10, 10, 100, 20), (255, 255, 255), padding=2
+        )
 
     def test_zero_width_rect(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Text",
-                          pygame.Rect(10, 10, 0, 20), (255, 255, 255),
-                          padding=0)
+        draw_text_clipped(
+            app, app.logical_surface, "Text", pygame.Rect(10, 10, 0, 20), (255, 255, 255), padding=0
+        )
 
     def test_large_padding(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Text",
-                          pygame.Rect(10, 10, 20, 20), (255, 255, 255),
-                          padding=15)
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Text",
+            pygame.Rect(10, 10, 20, 20),
+            (255, 255, 255),
+            padding=15,
+        )
 
     def test_device_font_explicit(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "ABC",
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255),
-                          padding=2, use_device_font=True)
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "ABC",
+            pygame.Rect(10, 10, 100, 20),
+            (255, 255, 255),
+            padding=2,
+            use_device_font=True,
+        )
 
     def test_device_font_multiline(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        draw_text_clipped(app, app.logical_surface, "Line1\nLine2\nLine3",
-                          pygame.Rect(10, 10, 100, 50), (255, 255, 255),
-                          padding=2, use_device_font=True, max_lines=3)
+        draw_text_clipped(
+            app,
+            app.logical_surface,
+            "Line1\nLine2\nLine3",
+            pygame.Rect(10, 10, 100, 50),
+            (255, 255, 255),
+            padding=2,
+            use_device_font=True,
+            max_lines=3,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -578,59 +635,113 @@ class TestDrawTextClipped:
 class TestDrawTextInRect:
     def test_ellipsis_overflow(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=60, height=16,
-                         text="LongText", text_overflow="ellipsis")
-        draw_text_in_rect(app, app.logical_surface, "LongTextHere",
-                          pygame.Rect(10, 10, 60, 16), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=60, height=16, text="LongText", text_overflow="ellipsis"
+        )
+        draw_text_in_rect(
+            app,
+            app.logical_surface,
+            "LongTextHere",
+            pygame.Rect(10, 10, 60, 16),
+            (255, 255, 255),
+            2,
+            w,
+        )
 
     def test_wrap_overflow(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=60, height=40,
-                         text="Wrap", text_overflow="wrap")
-        draw_text_in_rect(app, app.logical_surface, "Word1 Word2 Word3",
-                          pygame.Rect(10, 10, 60, 40), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=60, height=40, text="Wrap", text_overflow="wrap"
+        )
+        draw_text_in_rect(
+            app,
+            app.logical_surface,
+            "Word1 Word2 Word3",
+            pygame.Rect(10, 10, 60, 40),
+            (255, 255, 255),
+            2,
+            w,
+        )
 
     def test_clip_overflow(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=60, height=16,
-                         text="Clip", text_overflow="clip")
-        draw_text_in_rect(app, app.logical_surface, "SomeText",
-                          pygame.Rect(10, 10, 60, 16), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=60, height=16, text="Clip", text_overflow="clip"
+        )
+        draw_text_in_rect(
+            app, app.logical_surface, "SomeText", pygame.Rect(10, 10, 60, 16), (255, 255, 255), 2, w
+        )
 
     def test_auto_overflow_short(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=200, height=16,
-                         text="Short", text_overflow="auto")
-        draw_text_in_rect(app, app.logical_surface, "Short",
-                          pygame.Rect(10, 10, 200, 16), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=200, height=16, text="Short", text_overflow="auto"
+        )
+        draw_text_in_rect(
+            app, app.logical_surface, "Short", pygame.Rect(10, 10, 200, 16), (255, 255, 255), 2, w
+        )
 
     def test_auto_overflow_long(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=60, height=40,
-                         text="Very long text", text_overflow="auto")
-        draw_text_in_rect(app, app.logical_surface, "Very long text that wraps",
-                          pygame.Rect(10, 10, 60, 40), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=60, height=40, text="Very long text", text_overflow="auto"
+        )
+        draw_text_in_rect(
+            app,
+            app.logical_surface,
+            "Very long text that wraps",
+            pygame.Rect(10, 10, 60, 40),
+            (255, 255, 255),
+            2,
+            w,
+        )
 
     def test_align_center(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=100, height=20,
-                         text="Center", align="center", valign="middle")
-        draw_text_in_rect(app, app.logical_surface, "Center",
-                          pygame.Rect(10, 10, 100, 20), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label",
+            x=0,
+            y=0,
+            width=100,
+            height=20,
+            text="Center",
+            align="center",
+            valign="middle",
+        )
+        draw_text_in_rect(
+            app, app.logical_surface, "Center", pygame.Rect(10, 10, 100, 20), (255, 255, 255), 2, w
+        )
 
     def test_max_lines(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=60, height=60,
-                         text="A B C", text_overflow="wrap", max_lines=2)
-        draw_text_in_rect(app, app.logical_surface, "A B C D E F G",
-                          pygame.Rect(10, 10, 60, 60), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label",
+            x=0,
+            y=0,
+            width=60,
+            height=60,
+            text="A B C",
+            text_overflow="wrap",
+            max_lines=2,
+        )
+        draw_text_in_rect(
+            app,
+            app.logical_surface,
+            "A B C D E F G",
+            pygame.Rect(10, 10, 60, 60),
+            (255, 255, 255),
+            2,
+            w,
+        )
 
     def test_unknown_overflow_falls_back(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        w = WidgetConfig(type="label", x=0, y=0, width=60, height=16,
-                         text="T", text_overflow="bogus")
-        draw_text_in_rect(app, app.logical_surface, "T",
-                          pygame.Rect(10, 10, 60, 16), (255, 255, 255), 2, w)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=60, height=16, text="T", text_overflow="bogus"
+        )
+        draw_text_in_rect(
+            app, app.logical_surface, "T", pygame.Rect(10, 10, 60, 16), (255, 255, 255), 2, w
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -641,12 +752,14 @@ class TestDrawTextInRect:
 class TestDrawToolbar:
     def test_no_crash(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_toolbar
+
         app = _make_app(tmp_path, monkeypatch)
         draw_toolbar(app)
         assert hasattr(app, "toolbar_hitboxes")
 
     def test_hitboxes_populated(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_toolbar
+
         app = _make_app(tmp_path, monkeypatch)
         draw_toolbar(app)
         assert len(app.toolbar_hitboxes) > 0
@@ -660,6 +773,7 @@ class TestDrawToolbar:
 class TestDrawSceneTabs:
     def test_no_crash(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_scene_tabs
+
         app = _make_app(tmp_path, monkeypatch)
         draw_scene_tabs(app)
         assert hasattr(app, "tab_hitboxes")
@@ -667,9 +781,13 @@ class TestDrawSceneTabs:
     def test_multi_scene(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_scene_tabs
         from ui_designer import SceneConfig
+
         app = _make_app(tmp_path, monkeypatch)
         app.designer.scenes["second"] = SceneConfig(
-            name="second", width=256, height=128, widgets=[],
+            name="second",
+            width=256,
+            height=128,
+            widgets=[],
         )
         draw_scene_tabs(app)
         assert len(app.tab_hitboxes) >= 2
@@ -683,6 +801,7 @@ class TestDrawSceneTabs:
 class TestDrawPalette:
     def test_no_crash(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_palette
+
         app = _make_app(tmp_path, monkeypatch)
         draw_palette(app)
         assert hasattr(app, "palette_hitboxes")
@@ -696,11 +815,13 @@ class TestDrawPalette:
 class TestDrawInspector:
     def test_no_selection(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_inspector
+
         app = _make_app(tmp_path, monkeypatch)
         draw_inspector(app)
 
     def test_with_selection(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_inspector
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=80, height=16, text="Hi"))
@@ -805,6 +926,7 @@ class TestDrawTooltip:
 
     def test_toolbar_hover(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_toolbar
+
         app = _make_app(tmp_path, monkeypatch)
         draw_toolbar(app)
         # Hover over first toolbar button
@@ -842,20 +964,25 @@ class TestDrawHelpOverlay:
 class TestDrawCanvas:
     def test_no_crash(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_canvas
+
         app = _make_app(tmp_path, monkeypatch)
         draw_canvas(app)
 
     def test_with_widgets(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_canvas
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=10, y=10, width=80, height=16, text="Hi"))
         sc.widgets.append(WidgetConfig(type="button", x=10, y=30, width=60, height=20, text="Btn"))
-        sc.widgets.append(WidgetConfig(type="checkbox", x=10, y=60, width=80, height=16, checked=True))
+        sc.widgets.append(
+            WidgetConfig(type="checkbox", x=10, y=60, width=80, height=16, checked=True)
+        )
         draw_canvas(app)
 
     def test_with_grid(self, tmp_path, monkeypatch):
         from cyberpunk_designer.drawing import draw_canvas
+
         app = _make_app(tmp_path, monkeypatch)
         app.show_grid = True
         draw_canvas(app)
@@ -869,13 +996,18 @@ class TestDrawCanvas:
 class TestDrawWidgetPreviewTypes:
     def _draw(self, app, w_type, **kw):
         from cyberpunk_designer.drawing import draw_widget_preview
+
         defaults = dict(type=w_type, x=0, y=0, width=80, height=24, text="T")
         defaults.update(kw)
         w = WidgetConfig(**defaults)
         draw_widget_preview(
-            app, app.logical_surface, w,
+            app,
+            app.logical_surface,
+            w,
             pygame.Rect(0, 0, 80, 24),
-            PALETTE["bg"], 2, False,
+            PALETTE["bg"],
+            2,
+            False,
         )
 
     def _app(self, tmp_path, monkeypatch):
@@ -900,7 +1032,9 @@ class TestDrawWidgetPreviewTypes:
         self._draw(self._app(tmp_path, monkeypatch), "radiobutton", checked=True)
 
     def test_progressbar(self, tmp_path, monkeypatch):
-        self._draw(self._app(tmp_path, monkeypatch), "progressbar", value=50, min_value=0, max_value=100)
+        self._draw(
+            self._app(tmp_path, monkeypatch), "progressbar", value=50, min_value=0, max_value=100
+        )
 
     def test_slider(self, tmp_path, monkeypatch):
         self._draw(self._app(tmp_path, monkeypatch), "slider", value=30, width=120, height=24)
@@ -943,9 +1077,9 @@ class TestDrawWidgetPreviewTypes:
 
     def test_border_styles(self, tmp_path, monkeypatch):
         for bs in ("single", "bold", "double", "rounded", "dashed"):
-            self._draw(self._app(tmp_path, monkeypatch), "label",
-                       border=True, border_style=bs)
+            self._draw(self._app(tmp_path, monkeypatch), "label", border=True, border_style=bs)
 
     def test_custom_colors(self, tmp_path, monkeypatch):
-        self._draw(self._app(tmp_path, monkeypatch), "label",
-                   color_fg="#ffffff", color_bg="#333333")
+        self._draw(
+            self._app(tmp_path, monkeypatch), "label", color_fg="#ffffff", color_bg="#333333"
+        )

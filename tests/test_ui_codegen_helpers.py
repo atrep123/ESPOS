@@ -27,6 +27,7 @@ from tools.ui_codegen import (
 
 # ── escape_c_string ──
 
+
 class TestEscapeCString:
     def test_plain(self):
         assert escape_c_string("hello") == "hello"
@@ -55,6 +56,7 @@ class TestEscapeCString:
 
 # ── as_int ──
 
+
 class TestAsInt:
     def test_int(self):
         assert as_int(5) == 5
@@ -79,6 +81,7 @@ class TestAsInt:
 
 
 # ── as_bool ──
+
 
 class TestAsBool:
     def test_true(self):
@@ -123,6 +126,7 @@ class TestAsBool:
 
 # ── _hex_to_rgb ──
 
+
 class TestHexToRgb:
     def test_white(self):
         assert _hex_to_rgb("#FFFFFF") == (255, 255, 255)
@@ -147,6 +151,7 @@ class TestHexToRgb:
 
 
 # ── _get_rgb ──
+
 
 class TestGetRgb:
     def test_named_white(self):
@@ -174,6 +179,7 @@ class TestGetRgb:
 
 # ── _rgb_to_gray4 ──
 
+
 class TestRgbToGray4:
     def test_white(self):
         assert _rgb_to_gray4(255, 255, 255) == 15
@@ -196,6 +202,7 @@ class TestRgbToGray4:
 
 # ── parse_gray4 ──
 
+
 class TestParseGray4:
     def test_white(self):
         assert parse_gray4("white", default=0) == 15
@@ -215,6 +222,7 @@ class TestParseGray4:
 
 
 # ── style_expr ──
+
 
 class TestStyleExpr:
     def test_none(self):
@@ -246,6 +254,7 @@ class TestStyleExpr:
 
 
 # ── build_string_pool ──
+
 
 class TestBuildStringPool:
     def test_basic(self):
@@ -281,6 +290,7 @@ class TestBuildStringPool:
 
 # ── sanitize_ident ──
 
+
 class TestSanitizeIdent:
     def test_simple(self):
         assert sanitize_ident("main") == "main"
@@ -302,6 +312,7 @@ class TestSanitizeIdent:
 
 
 # ── select_scene ──
+
 
 class TestSelectScene:
     def test_dict_prefer_name(self):

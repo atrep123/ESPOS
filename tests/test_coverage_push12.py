@@ -34,7 +34,7 @@ def _inspector_app(widgets=None, *, groups=None, comp_group=None, group_exact=No
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     if groups is not None:
         designer.groups = groups
@@ -94,13 +94,14 @@ def _make_comp_app(widgets, *, comp_type="card", root="myroot"):
                 if wid == rt:
                     result[str(getattr(sc.widgets[idx], "type", "") or "")] = idx
                 elif wid.startswith(prefix):
-                    role = wid[len(prefix):]
+                    role = wid[len(prefix) :]
                     if role not in result:
                         result[role] = idx
         return result
 
     app._component_role_index = role_idx
     from cyberpunk_designer.component_fields import component_field_specs
+
     app._component_field_specs = component_field_specs
     set_selection(app, list(range(len(widgets))))
     return app
@@ -553,7 +554,7 @@ class TestMultiSelectWH:
         w1 = _w(x=50, y=0, width=40, height=20)
         app = _inspector_app([w0, w1])
         resized = []
-        app._resize_selection_to = lambda w, h: (resized.append((w, h)) or True)
+        app._resize_selection_to = lambda w, h: resized.append((w, h)) or True
         set_selection(app, [0, 1])
         app.state.inspector_selected_field = "width"
         app.state.inspector_input_buffer = "100"
@@ -580,6 +581,7 @@ class TestHomeKeySelectFirst:
         app._set_selection = lambda indices, anchor_idx=None: sel.append(indices)
         monkeypatch.setattr("pygame.key.get_mods", lambda: 0)
         from cyberpunk_designer.input_handlers import on_key_down
+
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_HOME)
         on_key_down(app, event)
         assert sel == [[0]]
@@ -594,6 +596,7 @@ class TestHomeKeySelectFirst:
         app._set_selection = lambda indices, anchor_idx=None: sel.append(indices)
         monkeypatch.setattr("pygame.key.get_mods", lambda: 0)
         from cyberpunk_designer.input_handlers import on_key_down
+
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_END)
         on_key_down(app, event)
         assert sel == [[1]]
@@ -614,6 +617,7 @@ class TestCtrlPageDownJump:
         app._jump_to_scene = lambda idx: jumped.append(idx)
         monkeypatch.setattr("pygame.key.get_mods", lambda: pygame.KMOD_CTRL)
         from cyberpunk_designer.input_handlers import on_key_down
+
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEDOWN)
         on_key_down(app, event)
         assert jumped
@@ -629,6 +633,7 @@ class TestCtrlPageDownJump:
         app._jump_to_scene = lambda idx: jumped.append(idx)
         monkeypatch.setattr("pygame.key.get_mods", lambda: pygame.KMOD_CTRL)
         from cyberpunk_designer.input_handlers import on_key_down
+
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEUP)
         on_key_down(app, event)
         assert jumped
@@ -650,6 +655,7 @@ class TestFitTextMaxLinesZero:
         sc.widgets.append(w)
         set_selection(app, [0])
         from cyberpunk_designer.fit_text import fit_selection_to_text
+
         fit_selection_to_text(app)
         # Should complete without error, max_lines treated as None
 
@@ -665,6 +671,7 @@ class TestFitWidgetMaxLinesNegative:
         sc.widgets.append(w)
         set_selection(app, [0])
         from cyberpunk_designer.fit_widget import fit_selection_to_widget
+
         fit_selection_to_widget(app)
         # Should complete without error
 
@@ -687,6 +694,7 @@ class TestMoveSelectionLocked:
         statuses = []
         app._set_status = lambda msg, **kw: statuses.append(msg)
         from cyberpunk_designer.selection_ops.transforms import move_selection
+
         move_selection(app, 8, 0)
         assert any("locked" in s.lower() for s in statuses)
         # Widget didn't move
@@ -706,6 +714,7 @@ class TestMakeFullWidthLocked:
         statuses = []
         app._set_status = lambda msg, **kw: statuses.append(msg)
         from cyberpunk_designer.selection_ops.transforms import make_full_width
+
         make_full_width(app)
         assert any("locked" in s.lower() for s in statuses)
 
@@ -728,6 +737,7 @@ class TestResizeLockedWidget:
         statuses = []
         app._set_status = lambda msg, **kw: statuses.append(msg)
         from cyberpunk_designer.selection_ops.transforms import resize_selection_to
+
         result = resize_selection_to(app, 100, 100)
         assert result is False
         assert any("locked" in s.lower() for s in statuses)
@@ -740,6 +750,7 @@ class TestResizeLockedWidget:
         sc.widgets.append(w)
         set_selection(app, [0])
         from cyberpunk_designer.selection_ops.transforms import resize_selection_to
+
         result = resize_selection_to(app, 80, 40)
         assert result is True
 
@@ -760,6 +771,7 @@ class TestRemoveDegenerate:
         sc.widgets.append(bad_w)
         sc.widgets.append(_w(x=0, y=0, width=40, height=20, text="good"))
         from cyberpunk_designer.selection_ops.batch_ops import remove_degenerate_widgets
+
         remove_degenerate_widgets(app)
         assert len(sc.widgets) == 1
         assert sc.widgets[0].text == "good"
@@ -820,13 +832,14 @@ class TestFieldToStrTabsActiveBoldFallback:
                 if 0 <= idx < len(sc.widgets):
                     wid = str(getattr(sc.widgets[idx], "_widget_id", "") or "")
                     if wid.startswith(prefix):
-                        role = wid[len(prefix):]
+                        role = wid[len(prefix) :]
                         if role not in result:
                             result[role] = idx
             return result
 
         app._component_role_index = role_idx
         from cyberpunk_designer.component_fields import component_field_specs
+
         app._component_field_specs = component_field_specs
         set_selection(app, [0, 1, 2, 3])
 

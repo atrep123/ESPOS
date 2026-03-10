@@ -29,6 +29,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_widget(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=10, y=20, width=40, height=12, text="Hi")
     defaults.update(kw)
@@ -180,7 +181,9 @@ class TestApplyPresetSlot:
     def test_add_new_widget_without_xy_in_preset_is_noop(self, tmp_path):
         """WidgetConfig requires x/y; if preset strips them, construction fails silently."""
         app = _make_app(tmp_path)
-        app.widget_presets = [{"type": "label", "x": 0, "y": 0, "width": 50, "height": 20, "text": "new"}]
+        app.widget_presets = [
+            {"type": "label", "x": 0, "y": 0, "width": 50, "height": 20, "text": "new"}
+        ]
         apply_preset_slot(app, 1, add_new=True)
         sc = app.designer.scenes["main"]
         # The code strips x/y from preset dict before constructing WidgetConfig,
@@ -368,12 +371,11 @@ class TestLoadOrDefaultDeep:
         app = _make_app(tmp_path, widgets=[_make_widget(text="base")])
         app.designer.save_to_json(str(app.json_path))
         # Create autosave file so both paths exist
-        app.autosave_path.write_text(
-            app.json_path.read_text(encoding="utf-8"), encoding="utf-8"
-        )
+        app.autosave_path.write_text(app.json_path.read_text(encoding="utf-8"), encoding="utf-8")
         # Patch Path.stat to raise only after the .exists() calls
         real_stat = Path.stat
         call_count = [0]
+
         def flaky_stat(self_, *a, **kw):
             call_count[0] += 1
             # exists() calls stat twice (json_path, autosave_path),
@@ -381,6 +383,7 @@ class TestLoadOrDefaultDeep:
             if call_count[0] > 2:
                 raise OSError("flaky stat")
             return real_stat(self_, *a, **kw)
+
         monkeypatch.setattr(Path, "stat", flaky_stat)
         app.designer.scenes.clear()
         app.designer.current_scene = None
@@ -465,12 +468,15 @@ class TestSaveJsonFallback:
     def test_tempfile_failure_falls_back(self, tmp_path, monkeypatch):
         """When mkstemp fails, save_json falls back to direct save."""
         import tempfile
+
         app = _make_app(tmp_path, widgets=[_make_widget(text="fb")])
         app._dirty = True
         monkeypatch.chdir(tmp_path)
+
         # Make mkstemp raise
         def bad_mkstemp(**kwargs):
             raise OSError("mock mkstemp failure")
+
         monkeypatch.setattr(tempfile, "mkstemp", bad_mkstemp)
         save_json(app)
         assert app.json_path.exists()
@@ -484,9 +490,11 @@ class TestSaveJsonFallback:
         app = _make_app(tmp_path, widgets=[_make_widget(text="rn")])
         app._dirty = True
         monkeypatch.chdir(tmp_path)
+
         # Make os.replace raise (after temp file is written)
         def bad_replace(src, dst):
             raise OSError("mock replace failure")
+
         monkeypatch.setattr("os.replace", bad_replace)
         save_json(app)
         assert app.json_path.exists()
@@ -532,4 +540,3 @@ class TestSaveWidgetPresetsDeep:
         app.preset_path.write_text("{invalid: json", encoding="utf-8")
         result = load_widget_presets(app)
         assert result == []
-

@@ -50,6 +50,7 @@ def _key(key, mod=0, unicode=""):
 # Menu component helper — creates a full "menu" component for testing
 # ---------------------------------------------------------------------------
 
+
 def _setup_menu_component(app):
     """Set up a menu component with root 'nav', 3 items + title + scroll + panel."""
     sc = app.state.current_scene()
@@ -181,6 +182,7 @@ def _setup_list_component(app):
 # inspector_logic — component editing (comp.root rename)
 # ===========================================================================
 
+
 class TestCompRootRename:
     """Cover component root rename in inspector_commit_edit (L544-620)."""
 
@@ -192,6 +194,7 @@ class TestCompRootRename:
     def test_root_rename_success(self, tmp_path, monkeypatch):
         """Rename root from 'nav' to 'menu1'."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.root", "menu1")
@@ -204,6 +207,7 @@ class TestCompRootRename:
     def test_root_rename_unchanged(self, tmp_path, monkeypatch):
         """Root unchanged returns ok (L551)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.root", "nav")
@@ -213,6 +217,7 @@ class TestCompRootRename:
     def test_root_rename_bad_chars(self, tmp_path, monkeypatch):
         """Invalid chars in new root (L553-554)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.root", "bad!name")
@@ -222,6 +227,7 @@ class TestCompRootRename:
     def test_root_rename_empty(self, tmp_path, monkeypatch):
         """Empty root name (L548-549)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.root", "")
@@ -231,6 +237,7 @@ class TestCompRootRename:
     def test_root_rename_with_dots(self, tmp_path, monkeypatch):
         """Root with dots is invalid (L548)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.root", "nav.sub")
@@ -240,6 +247,7 @@ class TestCompRootRename:
     def test_root_rename_collision(self, tmp_path, monkeypatch):
         """Root rename collides with existing widget id (L580-581)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         sc = app.state.current_scene()
@@ -256,6 +264,7 @@ class TestCompRootRename:
 # inspector_logic — component menu_active editing
 # ===========================================================================
 
+
 class TestCompMenuActive:
     """Cover menu_active editing (L637-676)."""
 
@@ -267,6 +276,7 @@ class TestCompMenuActive:
     def test_menu_active_set(self, tmp_path, monkeypatch):
         """Set menu active item to 2 (1-based)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.active_item", "2")
@@ -280,6 +290,7 @@ class TestCompMenuActive:
     def test_menu_active_zero_based(self, tmp_path, monkeypatch):
         """Set menu active using 0-based index (L651-652)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.active_item", "0")
@@ -289,6 +300,7 @@ class TestCompMenuActive:
     def test_menu_active_out_of_range(self, tmp_path, monkeypatch):
         """Invalid menu active value (L653-655)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.active_item", "99")
@@ -298,6 +310,7 @@ class TestCompMenuActive:
     def test_menu_active_invalid_text(self, tmp_path, monkeypatch):
         """Non-integer menu active value (L644-646)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._setup_edit(app, "comp.active_item", "abc")
@@ -307,6 +320,7 @@ class TestCompMenuActive:
     def test_menu_active_no_items(self, tmp_path, monkeypatch):
         """Menu with no item widgets (L640-641)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         # Create a menu component with no items
@@ -327,6 +341,7 @@ class TestCompMenuActive:
 # inspector_logic — component tabs_active editing
 # ===========================================================================
 
+
 class TestCompTabsActive:
     """Cover tabs_active editing (L679-710)."""
 
@@ -338,6 +353,7 @@ class TestCompTabsActive:
     def test_tabs_set_active(self, tmp_path, monkeypatch):
         """Set active tab."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_tabs_component(app)
         self._setup_edit(app, "comp.active_tab", "2")
@@ -349,6 +365,7 @@ class TestCompTabsActive:
     def test_tabs_zero_based(self, tmp_path, monkeypatch):
         """Set tab using 0-based index (L692-693)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_tabs_component(app)
         self._setup_edit(app, "comp.active_tab", "0")
@@ -358,6 +375,7 @@ class TestCompTabsActive:
     def test_tabs_out_of_range(self, tmp_path, monkeypatch):
         """Invalid tab index (L694-699)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_tabs_component(app)
         self._setup_edit(app, "comp.active_tab", "99")
@@ -367,6 +385,7 @@ class TestCompTabsActive:
     def test_tabs_invalid_text(self, tmp_path, monkeypatch):
         """Non-integer tab value (L685-687)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_tabs_component(app)
         self._setup_edit(app, "comp.active_tab", "xyz")
@@ -376,6 +395,7 @@ class TestCompTabsActive:
     def test_tabs_no_tabs(self, tmp_path, monkeypatch):
         """Tabs component with no tab widgets (L681-682)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="panel", x=0, y=0, width=90, height=10)
@@ -395,6 +415,7 @@ class TestCompTabsActive:
 # inspector_logic — component list_count editing
 # ===========================================================================
 
+
 class TestCompListCount:
     """Cover list_count editing (L713-739)."""
 
@@ -406,6 +427,7 @@ class TestCompListCount:
     def test_list_count_set(self, tmp_path, monkeypatch):
         """Set list count to 5."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_list_component(app)
         self._setup_edit(app, "comp.count", "5")
@@ -415,6 +437,7 @@ class TestCompListCount:
     def test_list_count_zero(self, tmp_path, monkeypatch):
         """Set count to 0 (L726-727)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_list_component(app)
         self._setup_edit(app, "comp.count", "0")
@@ -426,6 +449,7 @@ class TestCompListCount:
     def test_list_count_shrink(self, tmp_path, monkeypatch):
         """Shrink count below visible items (L733)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_list_component(app)
         self._setup_edit(app, "comp.count", "1")
@@ -435,6 +459,7 @@ class TestCompListCount:
     def test_list_count_negative(self, tmp_path, monkeypatch):
         """Negative count (L719-720)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_list_component(app)
         self._setup_edit(app, "comp.count", "-5")
@@ -444,6 +469,7 @@ class TestCompListCount:
     def test_list_count_invalid_text(self, tmp_path, monkeypatch):
         """Non-integer count (L715-717)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_list_component(app)
         self._setup_edit(app, "comp.count", "abc")
@@ -454,6 +480,7 @@ class TestCompListCount:
 # ===========================================================================
 # inspector_logic — component choice field editing
 # ===========================================================================
+
 
 class TestCompChoiceField:
     """Cover choice:... field editing (L742-747)."""
@@ -466,6 +493,7 @@ class TestCompChoiceField:
     def test_chart_mode_choice(self, tmp_path, monkeypatch):
         """Set chart mode via choice field."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_chart_component(app)
         self._setup_edit(app, "comp.mode", "line")
@@ -477,6 +505,7 @@ class TestCompChoiceField:
     def test_chart_mode_invalid_choice(self, tmp_path, monkeypatch):
         """Invalid choice value (L744-746)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_chart_component(app)
         self._setup_edit(app, "comp.mode", "scatter")
@@ -487,6 +516,7 @@ class TestCompChoiceField:
 # ===========================================================================
 # inspector_logic — component int_list field editing
 # ===========================================================================
+
 
 class TestCompIntListField:
     """Cover int_list field editing (L749-753)."""
@@ -499,6 +529,7 @@ class TestCompIntListField:
     def test_chart_points(self, tmp_path, monkeypatch):
         """Set data_points via int_list field."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_chart_component(app)
         self._setup_edit(app, "comp.points", "5,15,25,35,45")
@@ -510,6 +541,7 @@ class TestCompIntListField:
     def test_chart_points_invalid(self, tmp_path, monkeypatch):
         """Invalid int_list (L751-752)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_chart_component(app)
         self._setup_edit(app, "comp.points", "abc,def")
@@ -520,6 +552,7 @@ class TestCompIntListField:
 # ===========================================================================
 # inspector_logic — component int field editing
 # ===========================================================================
+
 
 class TestCompIntField:
     """Cover int field editing (L755-775)."""
@@ -532,6 +565,7 @@ class TestCompIntField:
     def test_gauge_value_int(self, tmp_path, monkeypatch):
         """Set gauge value via int field."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Gauge Title")
@@ -552,6 +586,7 @@ class TestCompIntField:
     def test_gauge_max_value(self, tmp_path, monkeypatch):
         """Set gauge max_value, clamping current value (L760-767)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -573,6 +608,7 @@ class TestCompIntField:
     def test_comp_int_field_invalid(self, tmp_path, monkeypatch):
         """Invalid int field (L757-759)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -592,6 +628,7 @@ class TestCompIntField:
 # inspector_logic — component str field editing
 # ===========================================================================
 
+
 class TestCompStrField:
     """Cover str field editing (default case in comp editing)."""
 
@@ -603,6 +640,7 @@ class TestCompStrField:
     def test_card_title(self, tmp_path, monkeypatch):
         """Set card title."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Old Title")
@@ -621,6 +659,7 @@ class TestCompStrField:
     def test_comp_not_editable(self, tmp_path, monkeypatch):
         """Unknown comp field (L623-625)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -638,6 +677,7 @@ class TestCompStrField:
     def test_comp_missing_role(self, tmp_path, monkeypatch):
         """Component role widget missing (L630-631)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         # Card needs title and value roles, but we only provide title
@@ -654,6 +694,7 @@ class TestCompStrField:
     def test_comp_no_component_selected(self, tmp_path, monkeypatch):
         """No component group selected (L541-542)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -669,12 +710,14 @@ class TestCompStrField:
 # inspector_logic — inspector_field_to_str (component paths)
 # ===========================================================================
 
+
 class TestInspectorFieldToStr:
     """Cover inspector_field_to_str branches for component fields."""
 
     def test_comp_root(self, tmp_path, monkeypatch):
         """comp.root returns root prefix (L89)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         sc = app.state.current_scene()
@@ -684,6 +727,7 @@ class TestInspectorFieldToStr:
     def test_comp_menu_active_str(self, tmp_path, monkeypatch):
         """comp.active_item returns active position (L97)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         sc = app.state.current_scene()
@@ -694,6 +738,7 @@ class TestInspectorFieldToStr:
     def test_comp_tabs_active_str(self, tmp_path, monkeypatch):
         """comp.active_tab returns active tab number."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_tabs_component(app)
         sc = app.state.current_scene()
@@ -704,6 +749,7 @@ class TestInspectorFieldToStr:
     def test_comp_list_count_str(self, tmp_path, monkeypatch):
         """comp.count returns total count (L133)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_list_component(app)
         sc = app.state.current_scene()
@@ -713,6 +759,7 @@ class TestInspectorFieldToStr:
     def test_comp_int_str(self, tmp_path, monkeypatch):
         """comp field with kind=int returns int string (L138-141)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -730,6 +777,7 @@ class TestInspectorFieldToStr:
     def test_comp_int_list_str(self, tmp_path, monkeypatch):
         """comp field with kind=int_list (L143)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_chart_component(app)
         sc = app.state.current_scene()
@@ -739,6 +787,7 @@ class TestInspectorFieldToStr:
     def test_comp_choice_str(self, tmp_path, monkeypatch):
         """comp field with kind=choice:... (L145)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_chart_component(app)
         sc = app.state.current_scene()
@@ -748,6 +797,7 @@ class TestInspectorFieldToStr:
     def test_comp_no_context(self, tmp_path, monkeypatch):
         """comp.* with no component group returns empty (L147)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -758,6 +808,7 @@ class TestInspectorFieldToStr:
     def test_comp_menu_active_no_items_str(self, tmp_path, monkeypatch):
         """Menu active with no items returns empty (L97)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -776,12 +827,14 @@ class TestInspectorFieldToStr:
 # inspector_logic — compute_inspector_rows with component
 # ===========================================================================
 
+
 class TestComputeInspectorRowsComponent:
     """Cover compute_inspector_rows with component groups (L1245-1257)."""
 
     def test_rows_with_component(self, tmp_path, monkeypatch):
         """Multi-select with component group generates component rows."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         rows, warning, w = compute_inspector_rows(app)
@@ -794,6 +847,7 @@ class TestComputeInspectorRowsComponent:
     def test_rows_with_single_widget_component(self, tmp_path, monkeypatch):
         """Single widget in component group (L1245-1257 single-select path)."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -812,14 +866,17 @@ class TestComputeInspectorRowsComponent:
     def test_rows_with_warning(self, tmp_path, monkeypatch):
         """Resources over limit produces warning (L1119-1120)."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         # Monkeypatch estimate_resources to return over-limit
         original_est = app.designer.estimate_resources
+
         def fake_est(profile=None):
             r = original_est(profile=profile)
             if r:
                 r["fb_over"] = True
             return r
+
         app.designer.estimate_resources = fake_est
         rows, warning, w = compute_inspector_rows(app)
         assert warning is True
@@ -827,6 +884,7 @@ class TestComputeInspectorRowsComponent:
     def test_rows_with_live_preview(self, tmp_path, monkeypatch):
         """Live preview port displayed (L1128)."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         app.live_preview_port = "COM3"
         app.live_preview_baud = 115200
@@ -838,6 +896,7 @@ class TestComputeInspectorRowsComponent:
     def test_rows_with_groups_in_layers(self, tmp_path, monkeypatch):
         """Groups shown in layers section (L1209, L1216)."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -853,6 +912,7 @@ class TestComputeInspectorRowsComponent:
 # inspector_logic — exception branches (make _save_state throw)
 # ===========================================================================
 
+
 class TestInspectorExceptionBranches:
     """Cover except Exception: pass branches by making _save_state() throw."""
 
@@ -863,13 +923,16 @@ class TestInspectorExceptionBranches:
 
     def _make_save_throw(self, app):
         """Make designer._save_state() raise an exception."""
+
         def _broken():
             raise RuntimeError("save failed")
+
         app.designer._save_state = _broken
 
     def test_position_save_throws(self, tmp_path, monkeypatch):
         """_position quick-set with _save_state exception (L231-232)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -882,6 +945,7 @@ class TestInspectorExceptionBranches:
     def test_padding_save_throws(self, tmp_path, monkeypatch):
         """_padding quick-set with exception (L257-258)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -894,6 +958,7 @@ class TestInspectorExceptionBranches:
     def test_margin_save_throws(self, tmp_path, monkeypatch):
         """_margin quick-set with exception (L283-284)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -906,6 +971,7 @@ class TestInspectorExceptionBranches:
     def test_spacing_save_throws(self, tmp_path, monkeypatch):
         """_spacing quick-set with exception (L325-326)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -918,6 +984,7 @@ class TestInspectorExceptionBranches:
     def test_size_save_throws(self, tmp_path, monkeypatch):
         """_size quick-set with exception (L458-459)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -930,6 +997,7 @@ class TestInspectorExceptionBranches:
     def test_value_range_save_throws(self, tmp_path, monkeypatch):
         """_value_range quick-set exception (L420-421)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="slider", x=0, y=0, width=60, height=20))
@@ -942,6 +1010,7 @@ class TestInspectorExceptionBranches:
     def test_comp_root_save_throws(self, tmp_path, monkeypatch):
         """comp.root rename with save exception (L586-587)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         _setup_menu_component(app)
         self._make_save_throw(app)
@@ -952,6 +1021,7 @@ class TestInspectorExceptionBranches:
     def test_comp_field_save_throws(self, tmp_path, monkeypatch):
         """comp.title with save exception (L635-636)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Old")
@@ -970,6 +1040,7 @@ class TestInspectorExceptionBranches:
     def test_multi_color_save_throws(self, tmp_path, monkeypatch):
         """Multi-select color_fg with save exception (L813-814)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -983,6 +1054,7 @@ class TestInspectorExceptionBranches:
     def test_multi_align_save_throws(self, tmp_path, monkeypatch):
         """Multi-select align with save exception (L825-826)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -996,6 +1068,7 @@ class TestInspectorExceptionBranches:
     def test_multi_valign_save_throws(self, tmp_path, monkeypatch):
         """L837-838: valign save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1009,6 +1082,7 @@ class TestInspectorExceptionBranches:
     def test_multi_border_style_save_throws(self, tmp_path, monkeypatch):
         """L849-850: border_style save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1022,6 +1096,7 @@ class TestInspectorExceptionBranches:
     def test_multi_text_overflow_save_throws(self, tmp_path, monkeypatch):
         """L861-862: text_overflow save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1035,6 +1110,7 @@ class TestInspectorExceptionBranches:
     def test_multi_max_lines_save_throws(self, tmp_path, monkeypatch):
         """L876-877: max_lines save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1048,6 +1124,7 @@ class TestInspectorExceptionBranches:
     def test_multi_text_save_throws(self, tmp_path, monkeypatch):
         """L884-885: text save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1061,6 +1138,7 @@ class TestInspectorExceptionBranches:
     def test_multi_runtime_save_throws(self, tmp_path, monkeypatch):
         """L892-893: runtime save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1074,6 +1152,7 @@ class TestInspectorExceptionBranches:
     def test_multi_data_points_save_throws(self, tmp_path, monkeypatch):
         """L904-905: data_points save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1087,6 +1166,7 @@ class TestInspectorExceptionBranches:
     def test_multi_chart_mode_save_throws(self, tmp_path, monkeypatch):
         """L924-925: chart_mode save exception."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1100,6 +1180,7 @@ class TestInspectorExceptionBranches:
     def test_single_text_save_throws(self, tmp_path, monkeypatch):
         """Single-widget text save exception (L957-958)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1113,6 +1194,7 @@ class TestInspectorExceptionBranches:
     def test_single_runtime_save_throws(self, tmp_path, monkeypatch):
         """Single-widget runtime save exception (L964-965)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1125,6 +1207,7 @@ class TestInspectorExceptionBranches:
     def test_single_xy_save_throws(self, tmp_path, monkeypatch):
         """Single-widget x/y save exception (L970-971)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         app.snap_enabled = False
         sc = app.state.current_scene()
@@ -1138,6 +1221,7 @@ class TestInspectorExceptionBranches:
     def test_single_width_save_throws(self, tmp_path, monkeypatch):
         """Single-widget width save exception (L976-977)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1150,6 +1234,7 @@ class TestInspectorExceptionBranches:
     def test_single_value_save_throws(self, tmp_path, monkeypatch):
         """Single-widget value save exception (L985-986)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="slider", x=0, y=0, width=60, height=20))
@@ -1162,6 +1247,7 @@ class TestInspectorExceptionBranches:
     def test_single_color_fg_save_throws(self, tmp_path, monkeypatch):
         """Single-widget color_fg save exception (L1001-1002)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1174,6 +1260,7 @@ class TestInspectorExceptionBranches:
     def test_single_align_save_throws(self, tmp_path, monkeypatch):
         """Single-widget align save exception (L1018-1019)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1186,6 +1273,7 @@ class TestInspectorExceptionBranches:
     def test_single_valign_save_throws(self, tmp_path, monkeypatch):
         """Single-widget valign save exception (L1028-1029)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1198,6 +1286,7 @@ class TestInspectorExceptionBranches:
     def test_single_border_style_save_throws(self, tmp_path, monkeypatch):
         """Single-widget border_style save exception (L1038-1039)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1210,6 +1299,7 @@ class TestInspectorExceptionBranches:
     def test_single_text_overflow_save_throws(self, tmp_path, monkeypatch):
         """Single-widget text_overflow save exception (L1048-1049)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1222,6 +1312,7 @@ class TestInspectorExceptionBranches:
     def test_single_max_lines_save_throws(self, tmp_path, monkeypatch):
         """Single-widget max_lines save exception (L1058-1059)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1234,6 +1325,7 @@ class TestInspectorExceptionBranches:
     def test_single_z_index_save_throws(self, tmp_path, monkeypatch):
         """Single-widget z_index save exception (L1064-1065)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1246,6 +1338,7 @@ class TestInspectorExceptionBranches:
     def test_single_data_points_save_throws(self, tmp_path, monkeypatch):
         """Single-widget data_points save exception (L1082-1083)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1258,6 +1351,7 @@ class TestInspectorExceptionBranches:
     def test_single_chart_mode_save_throws(self, tmp_path, monkeypatch):
         """Single-widget chart_mode save exception (L1092-1093)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1272,6 +1366,7 @@ class TestInspectorExceptionBranches:
 # inspector_logic — edge cases in multi-select (invalid values, error paths)
 # ===========================================================================
 
+
 class TestMultiSelectErrorPaths:
     """Cover error paths in multi-select editing."""
 
@@ -1283,6 +1378,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_x_invalid(self, tmp_path, monkeypatch):
         """L785-787: Invalid x value in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1295,6 +1391,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_width_invalid(self, tmp_path, monkeypatch):
         """L795+: Invalid width in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1307,6 +1404,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_color_fg_invalid(self, tmp_path, monkeypatch):
         """L809-810: Invalid color in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1319,6 +1417,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_align_invalid(self, tmp_path, monkeypatch):
         """Invalid align in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1331,6 +1430,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_valign_invalid(self, tmp_path, monkeypatch):
         """Invalid valign in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1343,6 +1443,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_border_style_invalid(self, tmp_path, monkeypatch):
         """Invalid border_style in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1355,6 +1456,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_text_overflow_invalid(self, tmp_path, monkeypatch):
         """Invalid text_overflow in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1367,6 +1469,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_max_lines_invalid(self, tmp_path, monkeypatch):
         """Invalid max_lines in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1379,6 +1482,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_max_lines_to_none(self, tmp_path, monkeypatch):
         """max_lines set to None from '0' in multi-select (L873)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1391,6 +1495,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_data_points_invalid(self, tmp_path, monkeypatch):
         """Invalid data_points format in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1403,6 +1508,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_data_points_no_charts(self, tmp_path, monkeypatch):
         """data_points on non-chart widgets in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1415,6 +1521,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_chart_mode_invalid(self, tmp_path, monkeypatch):
         """Invalid chart_mode in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1427,6 +1534,7 @@ class TestMultiSelectErrorPaths:
     def test_multi_chart_mode_no_charts(self, tmp_path, monkeypatch):
         """chart_mode on non-chart widgets in multi-select."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1441,6 +1549,7 @@ class TestMultiSelectErrorPaths:
 # inspector_logic — edge cases: empty selection, widget None
 # ===========================================================================
 
+
 class TestInspectorEdgeCases:
     """Cover edge cases like empty selection for quick-set fields."""
 
@@ -1452,6 +1561,7 @@ class TestInspectorEdgeCases:
     def test_margin_empty_selection(self, tmp_path, monkeypatch):
         """L279-280: _margin with empty selection."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
         app.state.selected_idx = None
@@ -1462,6 +1572,7 @@ class TestInspectorEdgeCases:
     def test_value_range_empty_selection(self, tmp_path, monkeypatch):
         """L416-417: _value_range with empty selection."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
         app.state.selected_idx = None
@@ -1472,6 +1583,7 @@ class TestInspectorEdgeCases:
     def test_widget_none_bail(self, tmp_path, monkeypatch):
         """L528-529: widget is None, cancel edit."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         # Empty widgets but non-empty selection
         app.state.selected = [99]
@@ -1483,6 +1595,7 @@ class TestInspectorEdgeCases:
     def test_scene_name_save_throws(self, tmp_path, monkeypatch):
         """_scene_name with save exception (L499-500, L519-520)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1490,6 +1603,7 @@ class TestInspectorEdgeCases:
 
         def _broken():
             raise RuntimeError("save failed")
+
         app.designer._save_state = _broken
         self._setup_edit(app, "_scene_name", "new_name")
         result = inspector_commit_edit(app)
@@ -1500,12 +1614,14 @@ class TestInspectorEdgeCases:
 # input_handlers — on_mouse_down: sim mode click (L1015-1016)
 # ===========================================================================
 
+
 class TestMouseSimModeClick:
     """Cover on_mouse_down in sim_input_mode."""
 
     def test_sim_mode_click_focusable(self, tmp_path, monkeypatch):
         """Click focusable widget in sim mode sets focus."""
         from cyberpunk_designer.input_handlers import on_mouse_down
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         b = _w(type="button", x=10, y=10, width=40, height=20)
@@ -1518,6 +1634,7 @@ class TestMouseSimModeClick:
     def test_sim_mode_click_empty(self, tmp_path, monkeypatch):
         """Click empty area in sim mode — no crash."""
         from cyberpunk_designer.input_handlers import on_mouse_down
+
         app = _make_app(tmp_path, monkeypatch)
         app.sim_input_mode = True
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
@@ -1529,12 +1646,14 @@ class TestMouseSimModeClick:
 # input_handlers — on_mouse_down: Alt+drag clone (L949-982)
 # ===========================================================================
 
+
 class TestMouseAltDragClone:
     """Cover Alt+drag cloning in on_mouse_down."""
 
     def test_alt_drag_clone(self, tmp_path, monkeypatch):
         """Alt+click on selected widget clones it."""
         from cyberpunk_designer.input_handlers import on_mouse_down
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1551,12 +1670,14 @@ class TestMouseAltDragClone:
 # input_handlers — on_mouse_move: drag (L1130+)
 # ===========================================================================
 
+
 class TestMouseMoveDrag:
     """Cover on_mouse_move drag path."""
 
     def test_drag_widget(self, tmp_path, monkeypatch):
         """Drag selected widget."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1576,12 +1697,14 @@ class TestMouseMoveDrag:
 # input_handlers — on_mouse_move: resize (L1165+)
 # ===========================================================================
 
+
 class TestMouseMoveResize:
     """Cover on_mouse_move resize path."""
 
     def test_resize_widget(self, tmp_path, monkeypatch):
         """Resize widget by dragging handle."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1602,12 +1725,14 @@ class TestMouseMoveResize:
 # input_handlers — on_mouse_move: box select
 # ===========================================================================
 
+
 class TestMouseBoxSelect:
     """Cover rubber-band box selection."""
 
     def test_box_select(self, tmp_path, monkeypatch):
         """Draw box selection rect."""
         from cyberpunk_designer.input_handlers import on_mouse_move, on_mouse_up
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1626,12 +1751,14 @@ class TestMouseBoxSelect:
 # input_handlers — on_mouse_up: cleanup
 # ===========================================================================
 
+
 class TestMouseUp:
     """Cover on_mouse_up cleanup (L1015-1016 for regular mode)."""
 
     def test_mouse_up_cleanup(self, tmp_path, monkeypatch):
         """Mouse up resets drag/resize state."""
         from cyberpunk_designer.input_handlers import on_mouse_up
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1647,12 +1774,14 @@ class TestMouseUp:
 # input_handlers — on_mouse_move: layer drag reorder
 # ===========================================================================
 
+
 class TestMouseLayerDrag:
     """Cover layer drag reorder in on_mouse_move."""
 
     def test_layer_drag_reorder(self, tmp_path, monkeypatch):
         """Drag-reorder widgets in inspector layers."""
         from cyberpunk_designer.input_handlers import on_mouse_move
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20, text="A"))
@@ -1677,42 +1806,50 @@ class TestMouseLayerDrag:
 # _parse_pair and _parse_active_count helpers
 # ===========================================================================
 
+
 class TestHelperFunctions:
     """Cover helper function edge cases."""
 
     def test_parse_active_count_valid(self):
         from cyberpunk_designer.inspector_logic import _parse_active_count
+
         result = _parse_active_count("3/10")
         assert result == (2, 10)
 
     def test_parse_active_count_no_slash(self):
         from cyberpunk_designer.inspector_logic import _parse_active_count
+
         result = _parse_active_count("noslash")
         assert result is None
 
     def test_parse_active_count_zero_count(self):
         from cyberpunk_designer.inspector_logic import _parse_active_count
+
         result = _parse_active_count("0/0")
         assert result == (0, 0)
 
     def test_parse_active_count_invalid(self):
         from cyberpunk_designer.inspector_logic import _parse_active_count
+
         result = _parse_active_count("abc/def")
         assert result is None
 
     def test_sorted_role_indices(self):
         from cyberpunk_designer.inspector_logic import _sorted_role_indices
+
         role_idx = {"item0": 2, "item1": 3, "title": 0, "item2": 5}
         result = _sorted_role_indices(role_idx, "item")
         assert result == [(0, 2), (1, 3), (2, 5)]
 
     def test_sorted_role_indices_empty_prefix(self):
         from cyberpunk_designer.inspector_logic import _sorted_role_indices
+
         result = _sorted_role_indices({"item0": 1}, "")
         assert result == []
 
     def test_sorted_role_indices_no_match(self):
         from cyberpunk_designer.inspector_logic import _sorted_role_indices
+
         result = _sorted_role_indices({"item0": 1}, "tab")
         assert result == []
 
@@ -1720,6 +1857,7 @@ class TestHelperFunctions:
 # ===========================================================================
 # inspector_logic — single-widget _apply_int error paths
 # ===========================================================================
+
 
 class TestSingleWidgetApplyIntErrors:
     """Cover _apply_int returning False for invalid input in single-widget edits."""
@@ -1732,6 +1870,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_x_invalid(self, tmp_path, monkeypatch):
         """L991: _apply_int('x') fails for non-integer."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1743,6 +1882,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_width_invalid(self, tmp_path, monkeypatch):
         """L994: _apply_int('width') fails for non-integer."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1754,6 +1894,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_height_invalid(self, tmp_path, monkeypatch):
         """L994: _apply_int('height') fails."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1765,6 +1906,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_value_invalid(self, tmp_path, monkeypatch):
         """L1004: _apply_int('value') fails."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="slider", x=0, y=0, width=60, height=20))
@@ -1776,6 +1918,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_max_value_invalid(self, tmp_path, monkeypatch):
         """L1011: _apply_int('max_value') fails."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="slider", x=0, y=0, width=60, height=20))
@@ -1787,6 +1930,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_color_fg_invalid(self, tmp_path, monkeypatch):
         """Invalid color_fg in single widget."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1798,6 +1942,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_align_invalid(self, tmp_path, monkeypatch):
         """Invalid align in single widget."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1809,6 +1954,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_valign_invalid(self, tmp_path, monkeypatch):
         """Invalid valign in single widget."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1820,6 +1966,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_border_style_invalid(self, tmp_path, monkeypatch):
         """Invalid border_style in single widget."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1831,6 +1978,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_text_overflow_invalid(self, tmp_path, monkeypatch):
         """Invalid text_overflow in single widget."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1842,6 +1990,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_max_lines_invalid(self, tmp_path, monkeypatch):
         """Invalid max_lines in single widget."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1853,6 +2002,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_data_points_invalid(self, tmp_path, monkeypatch):
         """Invalid data_points in single chart."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1864,6 +2014,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_chart_mode_invalid(self, tmp_path, monkeypatch):
         """Invalid chart_mode in single chart."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="chart", x=0, y=0, width=80, height=40))
@@ -1875,6 +2026,7 @@ class TestSingleWidgetApplyIntErrors:
     def test_single_max_lines_negative(self, tmp_path, monkeypatch):
         """Negative max_lines becomes None (L873 equivalent)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1889,6 +2041,7 @@ class TestSingleWidgetApplyIntErrors:
 # inspector_logic — root rename with root-only widget_id and models
 # ===========================================================================
 
+
 class TestRootRenameEdgeCases:
     """Cover root rename branches for root-only widget_id and models."""
 
@@ -1900,6 +2053,7 @@ class TestRootRenameEdgeCases:
     def test_root_rename_with_root_widget(self, tmp_path, monkeypatch):
         """Root widget with _widget_id=root (L574, L595)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         # Widget whose _widget_id == root ("nav")
@@ -1924,6 +2078,7 @@ class TestRootRenameEdgeCases:
     def test_root_rename_with_sim_listmodels(self, tmp_path, monkeypatch):
         """Root rename clears _sim_listmodels cache (L616-617)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -1943,6 +2098,7 @@ class TestRootRenameEdgeCases:
     def test_root_rename_groups_exception(self, tmp_path, monkeypatch):
         """Groups attribute access exception during rename (L602-603)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -1960,6 +2116,7 @@ class TestRootRenameEdgeCases:
                 if name == "groups":
                     raise RuntimeError("broken")
                 raise AttributeError(name)
+
         self._setup_edit(app, "comp.root", "menu4")
         # Can't easily break groups access during rename since it
         # was already accessed for group lookup. Just verify rename works.
@@ -1971,12 +2128,14 @@ class TestRootRenameEdgeCases:
 # inspector_logic — tabs-active "bold" style fallback (L118-123)
 # ===========================================================================
 
+
 class TestTabsActiveBoldStyle:
     """Cover the 'bold' style fallback in inspector_field_to_str for tabs."""
 
     def test_tabs_bold_style(self, tmp_path, monkeypatch):
         """Tabs with 'bold' style (not 'highlight') (L118-123)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         # Tab1 with "bold" style (not "bold highlight")
@@ -1999,6 +2158,7 @@ class TestTabsActiveBoldStyle:
     def test_tabs_no_active(self, tmp_path, monkeypatch):
         """Tabs with no active style — defaults to first tab."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="button", x=0, y=0, width=30, height=10, text="Tab1")
@@ -2023,12 +2183,14 @@ class TestTabsActiveBoldStyle:
 # inspector_logic — list_count visible fallback (L133)
 # ===========================================================================
 
+
 class TestListCountVisible:
     """Cover list_count fallback to visible count."""
 
     def test_list_count_no_scroll_widget(self, tmp_path, monkeypatch):
         """list_count when scroll widget has no parseable text (L133)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
@@ -2058,11 +2220,13 @@ class TestListCountVisible:
 # inspector_logic — _parse_pair edge case (L22)
 # ===========================================================================
 
+
 class TestParsePairNone:
     """Cover _parse_pair returning None."""
 
     def test_non_numeric_pair(self):
         from cyberpunk_designer.inspector_logic import _parse_pair
+
         result = _parse_pair("abc,def")
         assert result is None
 
@@ -2071,12 +2235,14 @@ class TestParsePairNone:
 # inspector_logic — compute_inspector_rows misc (L1140, L1216)
 # ===========================================================================
 
+
 class TestComputeRowsMisc:
     """Cover remaining compute_inspector_rows edge cases."""
 
     def test_rows_empty_string_func(self, tmp_path, monkeypatch):
         """L1140: _mixed_str returns empty for all-empty values."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         w0 = _w(type="button", x=0, y=0, width=40, height=20)
@@ -2093,6 +2259,7 @@ class TestComputeRowsMisc:
     def test_rows_non_comp_group(self, tmp_path, monkeypatch):
         """L1216: Non-comp group in layers section."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -2106,6 +2273,7 @@ class TestComputeRowsMisc:
     def test_rows_groups_exception(self, tmp_path, monkeypatch):
         """L1288-1289: groups attribute exception."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -2123,6 +2291,7 @@ class TestComputeRowsMisc:
 # inspector_logic — multi-select bounds None for x/y
 # ===========================================================================
 
+
 class TestMultiBoundsNone:
     """Cover bounds returning None in multi-select edits (L790, L802)."""
 
@@ -2134,6 +2303,7 @@ class TestMultiBoundsNone:
     def test_multi_x_bounds_none(self, tmp_path, monkeypatch):
         """L790: Multi x/y with selection having invalid widget indices."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         # Only one widget exists but select indices 0 and 99
@@ -2147,6 +2317,7 @@ class TestMultiBoundsNone:
     def test_multi_width_bounds_none(self, tmp_path, monkeypatch):
         """L802: Multi width with invalid indices."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
+
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))

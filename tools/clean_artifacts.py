@@ -88,7 +88,9 @@ def clean(paths: Iterable[Path], globs: Iterable[str], apply: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Clean build/test artifacts (dry-run by default)")
-    parser.add_argument("--apply", action="store_true", help="Perform deletion (default is dry-run)")
+    parser.add_argument(
+        "--apply", action="store_true", help="Perform deletion (default is dry-run)"
+    )
     args = parser.parse_args()
     clean(DEFAULT_PATHS, DEFAULT_GLOBS, apply=args.apply)
 

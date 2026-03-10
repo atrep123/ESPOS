@@ -50,8 +50,15 @@ def parse_args() -> argparse.Namespace:
         choices=list(HARDWARE_PROFILES.keys()),
         help="Hardware profil (prednastavi rozliseni a barvnou hloubku)",
     )
-    parser.add_argument("--live-preview-port", help="Odesle JSON na ESP32 (USB/seriovy port) po exportu")
-    parser.add_argument("--live-preview-baud", type=int, default=115200, help="Baudrate pro live preview (default 115200)")
+    parser.add_argument(
+        "--live-preview-port", help="Odesle JSON na ESP32 (USB/seriovy port) po exportu"
+    )
+    parser.add_argument(
+        "--live-preview-baud",
+        type=int,
+        default=115200,
+        help="Baudrate pro live preview (default 115200)",
+    )
     parser.add_argument(
         "--headless",
         action="store_true",
@@ -115,7 +122,7 @@ def send_live_preview(json_path: Path, port: str, baud: int = 115200) -> None:
     if not port.strip():
         print("[WARN] Live preview port is empty; skipping.")
         return
-    if not re.match(r'^(COM\d+|/dev/tty(USB|ACM|S)\d+)$', port):
+    if not re.match(r"^(COM\d+|/dev/tty(USB|ACM|S)\d+)$", port):
         print(f"[WARN] Suspicious serial port name: {port!r}; skipping live preview.")
         return
     try:
@@ -145,7 +152,9 @@ def main() -> None:
         pinfo = HARDWARE_PROFILES[profile]
         width, height = pinfo["width"], pinfo["height"]
 
-    _apply_headless_env(enable_headless=args.headless or args.headless_export, disable_audio=args.no_audio)
+    _apply_headless_env(
+        enable_headless=args.headless or args.headless_export, disable_audio=args.no_audio
+    )
     if args.fps_limit is not None:
         os.environ["ESP32OS_FPS"] = str(max(0, args.fps_limit))
     if args.autosave:

@@ -48,8 +48,7 @@ def select_same_z(app) -> None:
         return
     target_z = int(getattr(sc.widgets[first_idx], "z_index", 0) or 0)
     matches = [
-        i for i, w in enumerate(sc.widgets)
-        if int(getattr(w, "z_index", 0) or 0) == target_z
+        i for i, w in enumerate(sc.widgets) if int(getattr(w, "z_index", 0) or 0) == target_z
     ]
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
@@ -68,7 +67,8 @@ def select_same_style(app) -> None:
         return
     target = str(getattr(sc.widgets[first_idx], "style", "default") or "default").lower()
     matches = [
-        i for i, w in enumerate(sc.widgets)
+        i
+        for i, w in enumerate(sc.widgets)
         if str(getattr(w, "style", "default") or "default").lower() == target
     ]
     if matches:
@@ -83,10 +83,7 @@ def select_hidden(app) -> None:
     if not sc.widgets:
         app._set_status("No widgets in scene.", ttl_sec=2.0)
         return
-    matches = [
-        i for i, w in enumerate(sc.widgets)
-        if not getattr(w, "visible", True)
-    ]
+    matches = [i for i, w in enumerate(sc.widgets) if not getattr(w, "visible", True)]
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
         app._set_status(f"Selected {len(matches)} hidden widget(s).", ttl_sec=2.0)
@@ -106,7 +103,8 @@ def select_same_type(app) -> None:
         return
     target_type = str(getattr(sc.widgets[first_idx], "type", "") or "").lower()
     matches = [
-        i for i, w in enumerate(sc.widgets)
+        i
+        for i, w in enumerate(sc.widgets)
         if str(getattr(w, "type", "") or "").lower() == target_type
     ]
     if matches:
@@ -122,25 +120,16 @@ def select_locked(app) -> None:
         app._set_status("No widgets in scene.", ttl_sec=2.0)
         return
     # If current selection is all locked, select unlocked instead
-    current_all_locked = (
-        app.state.selected
-        and all(
-            getattr(sc.widgets[i], "locked", False)
-            for i in app.state.selected
-            if 0 <= i < len(sc.widgets)
-        )
+    current_all_locked = app.state.selected and all(
+        getattr(sc.widgets[i], "locked", False)
+        for i in app.state.selected
+        if 0 <= i < len(sc.widgets)
     )
     if current_all_locked:
-        matches = [
-            i for i, w in enumerate(sc.widgets)
-            if not getattr(w, "locked", False)
-        ]
+        matches = [i for i, w in enumerate(sc.widgets) if not getattr(w, "locked", False)]
         label = "unlocked"
     else:
-        matches = [
-            i for i, w in enumerate(sc.widgets)
-            if getattr(w, "locked", False)
-        ]
+        matches = [i for i, w in enumerate(sc.widgets) if getattr(w, "locked", False)]
         label = "locked"
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
@@ -207,15 +196,14 @@ def select_same_color(app) -> None:
     fg = str(getattr(ref, "color_fg", "") or "").lower()
     bg = str(getattr(ref, "color_bg", "") or "").lower()
     matches = [
-        i for i, w in enumerate(sc.widgets)
+        i
+        for i, w in enumerate(sc.widgets)
         if str(getattr(w, "color_fg", "") or "").lower() == fg
         and str(getattr(w, "color_bg", "") or "").lower() == bg
     ]
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
-        app._set_status(
-            f"Selected {len(matches)} widget(s) with fg:{fg} bg:{bg}.", ttl_sec=2.0
-        )
+        app._set_status(f"Selected {len(matches)} widget(s) with fg:{fg} bg:{bg}.", ttl_sec=2.0)
     app._mark_dirty()
 
 
@@ -296,15 +284,10 @@ def select_same_size(app) -> None:
         return
     ref = sc.widgets[first_idx]
     tw, th = int(ref.width), int(ref.height)
-    matches = [
-        i for i, w in enumerate(sc.widgets)
-        if int(w.width) == tw and int(w.height) == th
-    ]
+    matches = [i for i, w in enumerate(sc.widgets) if int(w.width) == tw and int(w.height) == th]
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
-        app._set_status(
-            f"Selected {len(matches)} widget(s) sized {tw}x{th}.", ttl_sec=2.0
-        )
+        app._set_status(f"Selected {len(matches)} widget(s) sized {tw}x{th}.", ttl_sec=2.0)
     app._mark_dirty()
 
 
@@ -314,25 +297,16 @@ def select_bordered(app) -> None:
     if not sc.widgets:
         app._set_status("No widgets in scene.", ttl_sec=2.0)
         return
-    current_all_bordered = (
-        app.state.selected
-        and all(
-            getattr(sc.widgets[i], "border", True)
-            for i in app.state.selected
-            if 0 <= i < len(sc.widgets)
-        )
+    current_all_bordered = app.state.selected and all(
+        getattr(sc.widgets[i], "border", True)
+        for i in app.state.selected
+        if 0 <= i < len(sc.widgets)
     )
     if current_all_bordered:
-        matches = [
-            i for i, w in enumerate(sc.widgets)
-            if not getattr(w, "border", True)
-        ]
+        matches = [i for i, w in enumerate(sc.widgets) if not getattr(w, "border", True)]
         label = "unbordered"
     else:
-        matches = [
-            i for i, w in enumerate(sc.widgets)
-            if getattr(w, "border", True)
-        ]
+        matches = [i for i, w in enumerate(sc.widgets) if getattr(w, "border", True)]
         label = "bordered"
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
@@ -382,8 +356,7 @@ def select_all_panels(app) -> None:
         app._set_status("No widgets in scene.", ttl_sec=2.0)
         return
     matches = [
-        i for i, w in enumerate(sc.widgets)
-        if str(getattr(w, "type", "") or "").lower() == "panel"
+        i for i, w in enumerate(sc.widgets) if str(getattr(w, "type", "") or "").lower() == "panel"
     ]
     if matches:
         app._set_selection(matches, anchor_idx=matches[0])
@@ -412,10 +385,7 @@ def select_same_type_as_current(app) -> None:
 def select_unlocked(app) -> None:
     """Select all non-locked widgets in the scene."""
     sc = app.state.current_scene()
-    indices = [
-        i for i, w in enumerate(sc.widgets)
-        if not getattr(w, "locked", False)
-    ]
+    indices = [i for i, w in enumerate(sc.widgets) if not getattr(w, "locked", False)]
     if not indices:
         app._set_status("No unlocked widgets.", ttl_sec=2.0)
         return
@@ -427,10 +397,7 @@ def select_unlocked(app) -> None:
 def select_disabled(app) -> None:
     """Select all widgets with enabled=False."""
     sc = app.state.current_scene()
-    indices = [
-        i for i, w in enumerate(sc.widgets)
-        if not getattr(w, "enabled", True)
-    ]
+    indices = [i for i, w in enumerate(sc.widgets) if not getattr(w, "enabled", True)]
     if not indices:
         app._set_status("No disabled widgets.", ttl_sec=2.0)
         return

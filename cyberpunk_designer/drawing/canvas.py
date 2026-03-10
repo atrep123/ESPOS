@@ -42,9 +42,13 @@ def draw_canvas(app) -> None:
     if app.show_grid:
         grid_c = PALETTE.get("grid", app._shade(base, 14))
         for x in range(scene_rect.left, scene_rect.right, GRID):
-            pygame.draw.line(app.logical_surface, grid_c, (x, scene_rect.top), (x, scene_rect.bottom - 1))
+            pygame.draw.line(
+                app.logical_surface, grid_c, (x, scene_rect.top), (x, scene_rect.bottom - 1)
+            )
         for y in range(scene_rect.top, scene_rect.bottom, GRID):
-            pygame.draw.line(app.logical_surface, grid_c, (scene_rect.left, y), (scene_rect.right - 1, y))
+            pygame.draw.line(
+                app.logical_surface, grid_c, (scene_rect.left, y), (scene_rect.right - 1, y)
+            )
 
     # Center crosshair guides
     if getattr(app, "show_center_guides", False):
@@ -75,10 +79,20 @@ def draw_canvas(app) -> None:
             for orient, pos in guides:
                 if orient == "v":
                     x = origin_x + int(pos)
-                    pygame.draw.line(app.logical_surface, PALETTE["guide"], (x, scene_rect.top), (x, scene_rect.bottom - 1))
+                    pygame.draw.line(
+                        app.logical_surface,
+                        PALETTE["guide"],
+                        (x, scene_rect.top),
+                        (x, scene_rect.bottom - 1),
+                    )
                 elif orient == "h":
                     y = origin_y + int(pos)
-                    pygame.draw.line(app.logical_surface, PALETTE["guide"], (scene_rect.left, y), (scene_rect.right - 1, y))
+                    pygame.draw.line(
+                        app.logical_surface,
+                        PALETTE["guide"],
+                        (scene_rect.left, y),
+                        (scene_rect.right - 1, y),
+                    )
 
         for idx, w in items:
             if not getattr(w, "visible", True):
@@ -105,7 +119,9 @@ def draw_canvas(app) -> None:
         if app.state.selected and not preview:
             bounds = app._selection_bounds(app.state.selected)
             if bounds is not None:
-                sel_rect = pygame.Rect(origin_x + bounds.x, origin_y + bounds.y, bounds.width, bounds.height)
+                sel_rect = pygame.Rect(
+                    origin_x + bounds.x, origin_y + bounds.y, bounds.width, bounds.height
+                )
                 pygame.draw.rect(app.logical_surface, PALETTE["selection"], sel_rect, 2)
                 handle = pygame.Rect(sel_rect.right - GRID, sel_rect.bottom - GRID, GRID, GRID)
                 pygame.draw.rect(app.logical_surface, PALETTE["selection"], handle)
@@ -114,7 +130,9 @@ def draw_canvas(app) -> None:
                 _draw_selection_info(app, sel_rect, bounds, scene_rect)
 
         # Widget ID / z-index labels overlay
-        if not preview and (getattr(app, "show_widget_ids", False) or getattr(app, "show_z_labels", False)):
+        if not preview and (
+            getattr(app, "show_widget_ids", False) or getattr(app, "show_z_labels", False)
+        ):
             tiny = app._load_pixel_font(max(8, int(GRID * 0.9)))
             for idx, w in items:
                 if not getattr(w, "visible", True):
@@ -141,9 +159,22 @@ def draw_canvas(app) -> None:
         # Focus order overlay
         if not preview and getattr(app, "show_focus_order", False):
             tiny = app._load_pixel_font(max(8, int(GRID * 0.9)))
-            focusable = [(idx, w) for idx, w in items
-                         if getattr(w, "visible", True) and getattr(w, "enabled", True)
-                         and w.type in {"button", "checkbox", "slider", "gauge", "progressbar", "textbox", "radiobutton"}]
+            focusable = [
+                (idx, w)
+                for idx, w in items
+                if getattr(w, "visible", True)
+                and getattr(w, "enabled", True)
+                and w.type
+                in {
+                    "button",
+                    "checkbox",
+                    "slider",
+                    "gauge",
+                    "progressbar",
+                    "textbox",
+                    "radiobutton",
+                }
+            ]
             for order, (_idx, w) in enumerate(focusable):
                 wx = origin_x + int(w.x) + int(getattr(w, "width", 8) or 8) - GRID
                 wy = origin_y + int(w.y)
@@ -178,7 +209,9 @@ def draw_canvas(app) -> None:
                     ty = hr.top
                     if tx + tip_lbl.get_width() > scene_rect.right:
                         tx = hr.left - tip_lbl.get_width() - 2
-                    tip_bg = pygame.Surface((tip_lbl.get_width() + 2, tip_lbl.get_height()), pygame.SRCALPHA)
+                    tip_bg = pygame.Surface(
+                        (tip_lbl.get_width() + 2, tip_lbl.get_height()), pygame.SRCALPHA
+                    )
                     tip_bg.fill((0, 0, 0, 180))
                     app.logical_surface.blit(tip_bg, (tx, ty))
                     app.logical_surface.blit(tip_lbl, (tx + 1, ty))
@@ -208,15 +241,17 @@ def draw_canvas(app) -> None:
                     fw_w = max(GRID, int(getattr(fw, "width", GRID) or GRID))
                     fw_h = max(GRID, int(getattr(fw, "height", GRID) or GRID))
                     frect = pygame.Rect(fx, fy, fw_w, fw_h)
-                    c = PALETTE["accent_yellow"] if not app.focus_edit_value else PALETTE["accent_cyan"]
+                    c = (
+                        PALETTE["accent_yellow"]
+                        if not app.focus_edit_value
+                        else PALETTE["accent_cyan"]
+                    )
                     pygame.draw.rect(app.logical_surface, c, frect.inflate(2, 2), 2)
     finally:
         app.logical_surface.set_clip(old_clip)
 
 
-def _draw_rulers(
-    app, scene_rect: pygame.Rect, scene_w: int, scene_h: int
-) -> None:
+def _draw_rulers(app, scene_rect: pygame.Rect, scene_w: int, scene_h: int) -> None:
     """Draw pixel-coordinate rulers on the top and left edges of the scene."""
     ruler_c = PALETTE.get("muted", (100, 100, 100))
     tick_step = 16  # pixels between major ticks
@@ -245,9 +280,7 @@ def _draw_rulers(
             surf.blit(lbl, (sx + 1, y + 1))
 
 
-def _draw_selection_info(
-    app, sel_rect: pygame.Rect, bounds, scene_rect: pygame.Rect
-) -> None:
+def _draw_selection_info(app, sel_rect: pygame.Rect, bounds, scene_rect: pygame.Rect) -> None:
     """Show W×H label when resizing, or X,Y when dragging."""
     resizing = getattr(app.state, "resizing", False)
     dragging = getattr(app.state, "dragging", False)
@@ -423,7 +456,9 @@ def draw_widget_preview(
         pygame.draw.rect(surface, app._shade(bg, -10), inner)
         draw_bevel_frame(app, surface, rect, bg, pressed=True)
         if label:
-            left_w = WidgetConfig(type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="middle")
+            left_w = WidgetConfig(
+                type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="middle"
+            )
             draw_text_in_rect(app, surface, label, rect, fg, padding, left_w)
         if is_selected:
             caret_x = rect.x + padding
@@ -431,7 +466,9 @@ def draw_widget_preview(
                 shown = ellipsize_text_px(app, label, max(0, rect.width - padding * 2))
                 caret_x += app.font.size(shown)[0]
             caret_x = min(rect.right - 3, max(rect.left + 2, caret_x))
-            pygame.draw.line(surface, fg, (caret_x, rect.y + padding), (caret_x, rect.bottom - padding))
+            pygame.draw.line(
+                surface, fg, (caret_x, rect.y + padding), (caret_x, rect.bottom - padding)
+            )
     elif kind == "slider":
         pct = app._value_ratio(w)
         track = rect.inflate(-padding * 2, -padding * 2)
@@ -439,7 +476,9 @@ def draw_widget_preview(
         track_y = rect.centery - track_h // 2
         track_rect = pygame.Rect(track.left, track_y, track.width, track_h)
         pygame.draw.rect(surface, app._shade(bg, -18), track_rect)
-        fill_rect = pygame.Rect(track_rect.left, track_rect.top, int(track_rect.width * pct), track_rect.height)
+        fill_rect = pygame.Rect(
+            track_rect.left, track_rect.top, int(track_rect.width * pct), track_rect.height
+        )
         pygame.draw.rect(surface, app._shade(fg, -30), fill_rect)
         knob_w = max(GRID, GRID * 2)
         knob_x = track_rect.left + int((track_rect.width - knob_w) * pct)
@@ -453,7 +492,9 @@ def draw_widget_preview(
         if rect.width >= GRID * 5 and rect.height >= GRID * 5:
             rr = rect.inflate(-padding * 2, -padding * 2)
             pygame.draw.arc(surface, app._shade(bg, -22), rr, 3.14159 * 0.75, 3.14159 * 2.25, 2)
-            pygame.draw.arc(surface, app._shade(fg, -10), rr, 3.14159 * 0.75, 3.14159 * (0.75 + 1.5 * pct), 3)
+            pygame.draw.arc(
+                surface, app._shade(fg, -10), rr, 3.14159 * 0.75, 3.14159 * (0.75 + 1.5 * pct), 3
+            )
             if label:
                 draw_text_in_rect(app, surface, label, rect, fg, padding, w)
         else:
@@ -467,7 +508,9 @@ def draw_widget_preview(
         points = list(getattr(w, "data_points", []) or [])
         if not points:
             points = [0, 10, 5, 12, 8, 14]
-        chart_mode = style if style in {"bar", "line"} else ("bar" if "bar" in label.lower() else "line")
+        chart_mode = (
+            style if style in {"bar", "line"} else ("bar" if "bar" in label.lower() else "line")
+        )
         p_min = min(points)
         p_max = max(points)
         denom = max(1, p_max - p_min)
@@ -491,7 +534,9 @@ def draw_widget_preview(
                 pygame.draw.rect(surface, app._shade(fg, -10), pygame.Rect(x - 1, y - 1, 3, 3))
         if label:
             head = pygame.Rect(rect.x, rect.y, rect.width, GRID * 2)
-            head_w = WidgetConfig(type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="top")
+            head_w = WidgetConfig(
+                type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="top"
+            )
             draw_text_in_rect(app, surface, label, head, fg, padding, head_w)
     elif kind == "icon":
         icon = str(getattr(w, "icon_char", "") or label or "@")

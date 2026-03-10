@@ -129,7 +129,7 @@ class TestSmartEventQueueException:
 class TestTextMetricsEdge:
     def test_wrap_truncation_push_returns(self):
         """Long text with max_lines=1 triggers truncation path (line 76).
-        
+
         After truncation, subsequent paragraph _push calls should return early.
         """
         # Use multiple paragraphs so _push is called after truncation
@@ -199,6 +199,7 @@ class TestMainModule:
     def test_main_import(self):
         """Just importing __main__ to cover lines 1-6."""
         import cyberpunk_designer.__main__ as m
+
         assert hasattr(m, "main")
 
 
@@ -214,8 +215,7 @@ class TestFitWidgetEdge:
 
         w = _w(text="hello world this is long", width=40, height=10, text_overflow="wrap")
         w.max_lines = "bad"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4",
-                        widgets=[w])
+        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_widget(app)
@@ -226,8 +226,7 @@ class TestFitWidgetEdge:
 
         w = _w(text="hello world")
         w.text_overflow = "funky_mode"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4",
-                        widgets=[w])
+        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_widget(app)
@@ -236,8 +235,14 @@ class TestFitWidgetEdge:
         """_save_state raising triggers except (lines 147-148)."""
         from cyberpunk_designer.fit_widget import fit_selection_to_widget
 
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4",
-                        widgets=[_w(text="hello world this is a long text that won't fit", width=20, height=10)])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            profile="esp32os_256x128_gray4",
+            widgets=[
+                _w(text="hello world this is a long text that won't fit", width=20, height=10)
+            ],
+        )
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
@@ -256,8 +261,7 @@ class TestFitTextEdge:
 
         w = _w(text="hello world this is long", width=40, height=10, text_overflow="wrap")
         w.max_lines = "bad"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4",
-                        widgets=[w])
+        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_text(app)
@@ -268,8 +272,7 @@ class TestFitTextEdge:
 
         w = _w(text="hello world")
         w.text_overflow = "funky_mode"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4",
-                        widgets=[w])
+        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_text(app)
@@ -278,8 +281,18 @@ class TestFitTextEdge:
         """_save_state raising triggers except (lines 144-145)."""
         from cyberpunk_designer.fit_text import fit_selection_to_text
 
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4",
-                        widgets=[_w(text="hello world this is a long text that DEFINITELY won't fit", width=20, height=10)])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            profile="esp32os_256x128_gray4",
+            widgets=[
+                _w(
+                    text="hello world this is a long text that DEFINITELY won't fit",
+                    width=20,
+                    height=10,
+                )
+            ],
+        )
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
@@ -438,7 +451,9 @@ class TestIoOpsEdge:
             prefs={},
             favorite_ports=[],
         )
-        with patch("cyberpunk_designer.io_ops.PREFS_PATH", tmp_path / "no_exist_dir" / "prefs.json"):
+        with patch(
+            "cyberpunk_designer.io_ops.PREFS_PATH", tmp_path / "no_exist_dir" / "prefs.json"
+        ):
             save_prefs(app)
 
     def test_save_json_windows_rename(self, tmp_path, monkeypatch):
@@ -493,6 +508,7 @@ class TestLayoutToolsExceptions:
 
     def test_import(self):
         import cyberpunk_designer.layout_tools as lt
+
         assert hasattr(lt, "align_selection")
 
     def test_align_single_save_state_exc(self, tmp_path, monkeypatch):
@@ -563,12 +579,15 @@ class TestLayoutToolsExceptions:
         class _BadWidget:
             visible = True
             locked = False
+
             @property
             def x(self):
                 raise RuntimeError("fail")
+
             @property
             def y(self):
                 raise RuntimeError("fail")
+
             width = 20
             height = 20
 

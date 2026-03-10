@@ -143,9 +143,24 @@ def draw_scene_tabs(app) -> None:
             active_bg = app._shade(PALETTE["panel"], 20)
             pygame.draw.rect(app.logical_surface, active_bg, tab_rect)
             light = app._shade(PALETTE["panel_border"], 20)
-            pygame.draw.line(app.logical_surface, light, (tab_rect.left, tab_rect.top), (tab_rect.right - 1, tab_rect.top))
-            pygame.draw.line(app.logical_surface, light, (tab_rect.left, tab_rect.top), (tab_rect.left, tab_rect.bottom - 1))
-            pygame.draw.line(app.logical_surface, light, (tab_rect.right - 1, tab_rect.top), (tab_rect.right - 1, tab_rect.bottom - 1))
+            pygame.draw.line(
+                app.logical_surface,
+                light,
+                (tab_rect.left, tab_rect.top),
+                (tab_rect.right - 1, tab_rect.top),
+            )
+            pygame.draw.line(
+                app.logical_surface,
+                light,
+                (tab_rect.left, tab_rect.top),
+                (tab_rect.left, tab_rect.bottom - 1),
+            )
+            pygame.draw.line(
+                app.logical_surface,
+                light,
+                (tab_rect.right - 1, tab_rect.top),
+                (tab_rect.right - 1, tab_rect.bottom - 1),
+            )
             fg = PALETTE["text"]
         else:
             fg = PALETTE["muted"]

@@ -29,6 +29,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -62,11 +63,20 @@ def _sel(app, *indices):
 # copy_style / paste_style
 # ===========================================================================
 
+
 class TestCopyPasteStyle:
     def test_copy_and_paste(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, style="bold", color_fg="#ff0000", color_bg="#00ff00",
-             border=True, border_style="double", align="center", valign="top")
+        _add(
+            app,
+            style="bold",
+            color_fg="#ff0000",
+            color_bg="#00ff00",
+            border=True,
+            border_style="double",
+            align="center",
+            valign="top",
+        )
         _add(app, style="default", color_fg="white", color_bg="black")
         _sel(app, 0)
         copy_style(app)
@@ -86,7 +96,11 @@ class TestCopyPasteStyle:
         _add(app)
         _sel(app)
         copy_style(app)  # no crash
-        assert not hasattr(app, "_style_clipboard") or app._style_clipboard is None or app._style_clipboard == {}
+        assert (
+            not hasattr(app, "_style_clipboard")
+            or app._style_clipboard is None
+            or app._style_clipboard == {}
+        )
 
     def test_paste_without_copy(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -119,6 +133,7 @@ class TestCopyPasteStyle:
 # ===========================================================================
 # propagate_border
 # ===========================================================================
+
 
 class TestPropagateBorder:
     def test_copies_border_fields(self, tmp_path, monkeypatch):
@@ -153,6 +168,7 @@ class TestPropagateBorder:
 # propagate_style
 # ===========================================================================
 
+
 class TestPropagateStyle:
     def test_copies_style(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -184,6 +200,7 @@ class TestPropagateStyle:
 # clone_text
 # ===========================================================================
 
+
 class TestCloneText:
     def test_copies_text(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -211,6 +228,7 @@ class TestCloneText:
 # ===========================================================================
 # propagate_align
 # ===========================================================================
+
 
 class TestPropagateAlign:
     def test_copies_align_and_valign(self, tmp_path, monkeypatch):
@@ -244,6 +262,7 @@ class TestPropagateAlign:
 # propagate_colors
 # ===========================================================================
 
+
 class TestPropagateColors:
     def test_copies_fg_and_bg(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -264,6 +283,7 @@ class TestPropagateColors:
 # ===========================================================================
 # propagate_value
 # ===========================================================================
+
 
 class TestPropagateValue:
     def test_copies_value_and_range(self, tmp_path, monkeypatch):
@@ -287,6 +307,7 @@ class TestPropagateValue:
 # propagate_padding
 # ===========================================================================
 
+
 class TestPropagatePadding:
     def test_copies_padding(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -307,6 +328,7 @@ class TestPropagatePadding:
 # ===========================================================================
 # propagate_margin
 # ===========================================================================
+
 
 class TestPropagateMargin:
     def test_copies_margin(self, tmp_path, monkeypatch):
@@ -329,14 +351,24 @@ class TestPropagateMargin:
 # propagate_appearance
 # ===========================================================================
 
+
 class TestPropagateAppearance:
     def test_copies_all_visual_props(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, style="bold", color_fg="red", color_bg="blue",
-             border=True, border_style="double",
-             align="center", valign="top",
-             padding_x=4, padding_y=2,
-             margin_x=3, margin_y=1)
+        _add(
+            app,
+            style="bold",
+            color_fg="red",
+            color_bg="blue",
+            border=True,
+            border_style="double",
+            align="center",
+            valign="top",
+            padding_x=4,
+            padding_y=2,
+            margin_x=3,
+            margin_y=1,
+        )
         _add(app, style="default", color_fg="white", color_bg="black")
         _sel(app, 0, 1)
         propagate_appearance(app)
@@ -373,6 +405,7 @@ class TestPropagateAppearance:
 # ===========================================================================
 # propagate_text
 # ===========================================================================
+
 
 class TestPropagateText:
     def test_copies_text(self, tmp_path, monkeypatch):

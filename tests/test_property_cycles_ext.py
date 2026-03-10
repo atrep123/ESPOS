@@ -36,6 +36,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -66,6 +67,7 @@ def _sel(app, *indices):
 # ===========================================================================
 # outline_mode
 # ===========================================================================
+
 
 class TestOutlineMode:
     def test_basic(self, tmp_path, monkeypatch):
@@ -98,6 +100,7 @@ class TestOutlineMode:
 # outline_only
 # ===========================================================================
 
+
 class TestOutlineOnly:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -125,6 +128,7 @@ class TestOutlineOnly:
 # set_inverse_style
 # ===========================================================================
 
+
 class TestSetInverseStyle:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -150,6 +154,7 @@ class TestSetInverseStyle:
 # ===========================================================================
 # set_bold_style
 # ===========================================================================
+
 
 class TestSetBoldStyle:
     def test_basic(self, tmp_path, monkeypatch):
@@ -177,6 +182,7 @@ class TestSetBoldStyle:
 # set_default_style
 # ===========================================================================
 
+
 class TestSetDefaultStyle:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -202,6 +208,7 @@ class TestSetDefaultStyle:
 # ===========================================================================
 # Guard branches for cycle functions
 # ===========================================================================
+
 
 class TestCycleStyleGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
@@ -369,6 +376,7 @@ class TestCycleValignGuards:
 # smart_edit
 # ===========================================================================
 
+
 class TestSmartEdit:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -421,6 +429,7 @@ class TestSmartEdit:
 # adjust_value
 # ===========================================================================
 
+
 class TestAdjustValue:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -465,6 +474,7 @@ class TestAdjustValue:
 # toggle_enabled
 # ===========================================================================
 
+
 class TestToggleEnabled:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -481,6 +491,7 @@ class TestToggleEnabled:
 # ===========================================================================
 # toggle_checked
 # ===========================================================================
+
 
 class TestToggleChecked:
     def test_no_selection(self, tmp_path, monkeypatch):
@@ -511,6 +522,7 @@ class TestToggleChecked:
 # ===========================================================================
 # cycle_gray_fg / cycle_gray_bg
 # ===========================================================================
+
 
 class TestCycleGrayFg:
     def test_no_selection(self, tmp_path, monkeypatch):

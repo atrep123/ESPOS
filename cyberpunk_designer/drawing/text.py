@@ -46,7 +46,9 @@ def ellipsize_text_px(app, text: str, max_width_px: int, ellipsis: str = "...") 
     return s[:cut] + ellipsis
 
 
-def wrap_text_px(app, text: str, max_width_px: int, max_lines: int, ellipsis: str = "...") -> List[str]:
+def wrap_text_px(
+    app, text: str, max_width_px: int, max_lines: int, ellipsis: str = "..."
+) -> List[str]:
     s = str(text or "").replace("\t", " ").strip()
     max_width_px = int(max_width_px)
     max_lines = max(1, int(max_lines))
@@ -144,7 +146,9 @@ def draw_text_clipped(
         max_lines = max(1, int(max_lines))
         max_lines = min(max_lines, max(1, clip_rect.height // line_h))
         if max_lines > 1:
-            lines, _trunc = text_metrics.wrap_text_chars(s, max_chars=max_chars, max_lines=max_lines, ellipsis=ellipsis)
+            lines, _trunc = text_metrics.wrap_text_chars(
+                s, max_chars=max_chars, max_lines=max_lines, ellipsis=ellipsis
+            )
         else:
             flat = " ".join(s.replace("\t", " ").replace("\r", "").replace("\n", " ").split())
             lines = [text_metrics.ellipsize_chars(flat, max_chars=max_chars, ellipsis=ellipsis)]
@@ -220,9 +224,13 @@ def draw_text_in_rect(
         clip_rect = rect.inflate(-max(0, int(padding)) * 2, -max(0, int(padding)) * 2)
         if use_device:
             max_chars = max(1, int(clip_rect.width) // max(1, int(text_metrics.DEVICE_CHAR_W)))
-            use_wrap = clip_rect.height >= int(text_metrics.DEVICE_CHAR_H) * 2 and (("\n" in raw) or (len(flat) > max_chars))
+            use_wrap = clip_rect.height >= int(text_metrics.DEVICE_CHAR_H) * 2 and (
+                ("\n" in raw) or (len(flat) > max_chars)
+            )
         else:
-            use_wrap = clip_rect.height >= line_h * 2 and (("\n" in raw) or (text_width_px(app, flat) > clip_rect.width))
+            use_wrap = clip_rect.height >= line_h * 2 and (
+                ("\n" in raw) or (text_width_px(app, flat) > clip_rect.width)
+            )
 
     if use_wrap:
         clip_rect = rect.inflate(-max(0, int(padding)) * 2, -max(0, int(padding)) * 2)

@@ -31,6 +31,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -68,6 +69,7 @@ def _widget_count(app):
 # create_header_bar
 # ===========================================================================
 
+
 class TestCreateHeaderBar:
     def test_creates_panel_and_label(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -99,6 +101,7 @@ class TestCreateHeaderBar:
 # create_nav_row
 # ===========================================================================
 
+
 class TestCreateNavRow:
     def test_creates_three_buttons(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -128,6 +131,7 @@ class TestCreateNavRow:
 # ===========================================================================
 # create_form_pair
 # ===========================================================================
+
 
 class TestCreateFormPair:
     def test_creates_label_and_textbox(self, tmp_path, monkeypatch):
@@ -162,6 +166,7 @@ class TestCreateFormPair:
 # create_status_bar
 # ===========================================================================
 
+
 class TestCreateStatusBar:
     def test_creates_panel_and_label(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -190,6 +195,7 @@ class TestCreateStatusBar:
 # ===========================================================================
 # create_toggle_group
 # ===========================================================================
+
 
 class TestCreateToggleGroup:
     def test_creates_three_checkboxes(self, tmp_path, monkeypatch):
@@ -226,6 +232,7 @@ class TestCreateToggleGroup:
 # create_slider_with_label
 # ===========================================================================
 
+
 class TestCreateSliderWithLabel:
     def test_creates_three_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -258,6 +265,7 @@ class TestCreateSliderWithLabel:
 # create_gauge_panel
 # ===========================================================================
 
+
 class TestCreateGaugePanel:
     def test_creates_panel_title_gauge(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -287,6 +295,7 @@ class TestCreateGaugePanel:
 # create_progress_section
 # ===========================================================================
 
+
 class TestCreateProgressSection:
     def test_creates_label_and_progressbar(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -310,6 +319,7 @@ class TestCreateProgressSection:
 # create_icon_button_row
 # ===========================================================================
 
+
 class TestCreateIconButtonRow:
     def test_creates_four_buttons(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -330,15 +340,16 @@ class TestCreateIconButtonRow:
 # create_card_layout
 # ===========================================================================
 
+
 class TestCreateCardLayout:
     def test_creates_four_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         create_card_layout(app)
         assert _widget_count(app) == 4
         assert _w(app, 0).type == "panel"
-        assert _w(app, 1).type == "label"   # title
-        assert _w(app, 2).type == "panel"   # separator
-        assert _w(app, 3).type == "label"   # body
+        assert _w(app, 1).type == "label"  # title
+        assert _w(app, 2).type == "panel"  # separator
+        assert _w(app, 3).type == "label"  # body
 
     def test_card_title(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -354,6 +365,7 @@ class TestCreateCardLayout:
 # ===========================================================================
 # create_dashboard_grid
 # ===========================================================================
+
 
 class TestCreateDashboardGrid:
     def test_creates_twelve_widgets(self, tmp_path, monkeypatch):
@@ -382,6 +394,7 @@ class TestCreateDashboardGrid:
 # create_split_layout
 # ===========================================================================
 
+
 class TestCreateSplitLayout:
     def test_creates_four_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -409,6 +422,7 @@ class TestCreateSplitLayout:
 # wrap_in_panel
 # ===========================================================================
 
+
 class TestWrapInPanel:
     def test_wraps_single_widget(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -424,6 +438,7 @@ class TestWrapInPanel:
     def test_panel_encloses_widget_with_padding(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from cyberpunk_designer.constants import GRID
+
         _add(app, x=20, y=20, width=40, height=16)
         _sel(app, 0)
         wrap_in_panel(app)

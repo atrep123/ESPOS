@@ -40,7 +40,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None, *, snap: bool = False):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -179,9 +179,11 @@ class TestDistributeSelection:
         app._set_status.assert_called()
 
     def test_horizontal_distribute(self):
-        ws = [_w(x=0, y=0, width=10, height=10),
-              _w(x=100, y=0, width=10, height=10),
-              _w(x=200, y=0, width=10, height=10)]
+        ws = [
+            _w(x=0, y=0, width=10, height=10),
+            _w(x=100, y=0, width=10, height=10),
+            _w(x=200, y=0, width=10, height=10),
+        ]
         app = _app(ws)
         app.snap_enabled = False
         set_selection(app, [0, 1, 2])

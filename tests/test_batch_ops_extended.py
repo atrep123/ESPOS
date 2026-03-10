@@ -54,6 +54,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -91,6 +92,7 @@ def _count(app):
 # measure_selection
 # ===========================================================================
 
+
 class TestMeasureSelection:
     def test_single_widget(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -122,6 +124,7 @@ class TestMeasureSelection:
 # ===========================================================================
 # replace_text_in_scene
 # ===========================================================================
+
 
 class TestReplaceTextInScene:
     def test_first_call_sets_flag(self, tmp_path, monkeypatch):
@@ -159,6 +162,7 @@ class TestReplaceTextInScene:
 # scene_overview
 # ===========================================================================
 
+
 class TestSceneOverview:
     def test_shows_scene_info(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -170,6 +174,7 @@ class TestSceneOverview:
 # ===========================================================================
 # widget_type_summary
 # ===========================================================================
+
 
 class TestWidgetTypeSummary:
     def test_shows_type_counts(self, tmp_path, monkeypatch):
@@ -188,6 +193,7 @@ class TestWidgetTypeSummary:
 # toggle_focus_order_overlay
 # ===========================================================================
 
+
 class TestToggleFocusOrderOverlay:
     def test_toggles_on(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -205,6 +211,7 @@ class TestToggleFocusOrderOverlay:
 # ===========================================================================
 # fill_scene
 # ===========================================================================
+
 
 class TestFillScene:
     def test_fills_widget_to_scene(self, tmp_path, monkeypatch):
@@ -228,6 +235,7 @@ class TestFillScene:
 # auto_label_widgets
 # ===========================================================================
 
+
 class TestAutoLabelWidgets:
     def test_labels_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -248,6 +256,7 @@ class TestAutoLabelWidgets:
 # ===========================================================================
 # inset_widgets / outset_widgets
 # ===========================================================================
+
 
 class TestInsetWidgets:
     def test_shrinks_inward(self, tmp_path, monkeypatch):
@@ -311,6 +320,7 @@ class TestOutsetWidgets:
 # delete_hidden_widgets / delete_offscreen_widgets
 # ===========================================================================
 
+
 class TestDeleteHiddenWidgets:
     def test_removes_invisible(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -333,7 +343,7 @@ class TestDeleteOffscreenWidgets:
     def test_removes_offscreen(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         _add(app, x=10, y=10, width=40, height=16)  # inside
-        _add(app, x=300, y=0, width=40, height=16)   # outside right
+        _add(app, x=300, y=0, width=40, height=16)  # outside right
         _add(app, x=-100, y=0, width=40, height=16)  # outside left
         delete_offscreen_widgets(app)
         assert _count(app) == 1
@@ -348,6 +358,7 @@ class TestDeleteOffscreenWidgets:
 # ===========================================================================
 # tile_fill_scene
 # ===========================================================================
+
 
 class TestTileFillScene:
     def test_tiles_single_widget(self, tmp_path, monkeypatch):
@@ -376,6 +387,7 @@ class TestTileFillScene:
 # ===========================================================================
 # match_first_width / match_first_height
 # ===========================================================================
+
 
 class TestMatchFirstWidth:
     def test_sets_to_first_width(self, tmp_path, monkeypatch):
@@ -418,6 +430,7 @@ class TestMatchFirstHeight:
 # scatter_random
 # ===========================================================================
 
+
 class TestScatterRandom:
     def test_moves_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -442,6 +455,7 @@ class TestScatterRandom:
 # ===========================================================================
 # toggle_all_checked
 # ===========================================================================
+
 
 class TestToggleAllChecked:
     def test_toggles_checkboxes(self, tmp_path, monkeypatch):
@@ -470,6 +484,7 @@ class TestToggleAllChecked:
 # reset_all_values
 # ===========================================================================
 
+
 class TestResetAllValues:
     def test_resets_to_min(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -497,6 +512,7 @@ class TestResetAllValues:
 # flatten_z_index
 # ===========================================================================
 
+
 class TestFlattenZIndex:
     def test_resets_z_to_zero(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -522,6 +538,7 @@ class TestFlattenZIndex:
 # number_widget_ids
 # ===========================================================================
 
+
 class TestNumberWidgetIds:
     def test_assigns_ids(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -542,12 +559,13 @@ class TestNumberWidgetIds:
 # z_by_position
 # ===========================================================================
 
+
 class TestZByPosition:
     def test_z_order_by_position(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         _add(app, x=100, y=100)  # last in position
-        _add(app, x=0, y=0)      # first in position
-        _add(app, x=50, y=50)    # middle
+        _add(app, x=0, y=0)  # first in position
+        _add(app, x=50, y=50)  # middle
         z_by_position(app)
         assert _w(app, 1).z_index == 0  # (0,0) is first
         assert _w(app, 2).z_index == 1  # (50,50) second
@@ -561,6 +579,7 @@ class TestZByPosition:
 # ===========================================================================
 # clone_to_grid
 # ===========================================================================
+
 
 class TestCloneToGrid:
     def test_clones_into_grid(self, tmp_path, monkeypatch):
@@ -590,6 +609,7 @@ class TestCloneToGrid:
 # sort_widgets_by_z
 # ===========================================================================
 
+
 class TestSortWidgetsByZ:
     def test_sorts_by_z_index(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -613,6 +633,7 @@ class TestSortWidgetsByZ:
 # ===========================================================================
 # clamp_to_scene
 # ===========================================================================
+
 
 class TestClampToScene:
     def test_clamps_negative(self, tmp_path, monkeypatch):
@@ -651,6 +672,7 @@ class TestClampToScene:
 # snap_all_to_grid
 # ===========================================================================
 
+
 class TestSnapAllToGrid:
     def test_snaps_all_dimensions(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -676,6 +698,7 @@ class TestSnapAllToGrid:
 # ===========================================================================
 # size_to_text
 # ===========================================================================
+
 
 class TestSizeToText:
     def test_resizes_to_text_length(self, tmp_path, monkeypatch):
@@ -706,6 +729,7 @@ class TestSizeToText:
 # ===========================================================================
 # fill_parent
 # ===========================================================================
+
 
 class TestFillParent:
     def test_fills_enclosing_panel(self, tmp_path, monkeypatch):
@@ -738,6 +762,7 @@ class TestFillParent:
 # clear_all_text
 # ===========================================================================
 
+
 class TestClearAllText:
     def test_clears_text(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -760,12 +785,13 @@ class TestClearAllText:
 # number_text
 # ===========================================================================
 
+
 class TestNumberText:
     def test_numbers_by_position(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         _add(app, x=100, y=100, text="x")  # position: last
-        _add(app, x=0, y=0, text="y")       # position: first
-        _add(app, x=50, y=50, text="z")     # position: middle
+        _add(app, x=0, y=0, text="y")  # position: first
+        _add(app, x=50, y=50, text="z")  # position: middle
         _sel(app, 0, 1, 2)
         number_text(app)
         assert _w(app, 1).text == "1"  # (0,0)
@@ -783,6 +809,7 @@ class TestNumberText:
 # ===========================================================================
 # spread_values
 # ===========================================================================
+
 
 class TestSpreadValues:
     def test_linear_spread(self, tmp_path, monkeypatch):
@@ -814,6 +841,7 @@ class TestSpreadValues:
 # reset_padding
 # ===========================================================================
 
+
 class TestResetPadding:
     def test_zeros_padding_and_margin(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -843,6 +871,7 @@ class TestResetPadding:
 # ===========================================================================
 # reset_colors
 # ===========================================================================
+
 
 class TestResetColors:
     def test_resets_to_white_black(self, tmp_path, monkeypatch):

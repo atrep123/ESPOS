@@ -404,6 +404,7 @@ class TestFocusNavEdges:
 class TestCanvasEdges:
     def test_import(self):
         import cyberpunk_designer.drawing.canvas as c
+
         assert hasattr(c, "draw_canvas")
 
 
@@ -415,6 +416,7 @@ class TestCanvasEdges:
 class TestDrawTextEdges:
     def test_import(self):
         import cyberpunk_designer.drawing.text as t
+
         assert hasattr(t, "draw_text_in_rect")
 
 
@@ -426,4 +428,5 @@ class TestDrawTextEdges:
 class TestDrawPanelsEdges:
     def test_import(self):
         import cyberpunk_designer.drawing.panels as p
+
         assert hasattr(p, "draw_inspector")

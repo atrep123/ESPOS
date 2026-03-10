@@ -20,6 +20,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -271,9 +272,9 @@ class TestDrawHelpOverlay:
         # Add some widgets so estimation has data
         sc = app.state.current_scene()
         for i in range(3):
-            sc.widgets.append(WidgetConfig(
-                type="label", x=i * 10, y=0, width=24, height=16, text=f"w{i}"
-            ))
+            sc.widgets.append(
+                WidgetConfig(type="label", x=i * 10, y=0, width=24, height=16, text=f"w{i}")
+            )
         draw_help_overlay(app)
 
     def test_content_rect_zero_returns(self, tmp_path, monkeypatch):

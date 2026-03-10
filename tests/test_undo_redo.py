@@ -15,6 +15,7 @@ from shared_undo_redo import (
 # Operation dataclass
 # ---------------------------------------------------------------------------
 
+
 def test_operation_to_dict_and_back():
     op = OperationBuilder.add_widget("w1", "button", 10, 20, 80, 30, text="Go")
     op.user_id = "u1"
@@ -35,6 +36,7 @@ def test_operation_type_enum_values():
 # ---------------------------------------------------------------------------
 # OperationBuilder
 # ---------------------------------------------------------------------------
+
 
 def test_builder_add_widget():
     op = OperationBuilder.add_widget("b1", "label", 0, 0, 50, 14, text="HI")
@@ -78,6 +80,7 @@ def test_builder_group_widgets():
 # ---------------------------------------------------------------------------
 # UndoRedoManager — basic undo/redo
 # ---------------------------------------------------------------------------
+
 
 def test_initial_state():
     mgr = UndoRedoManager()
@@ -150,6 +153,7 @@ def test_new_execute_discards_redo_stack():
 # UndoRedoManager — max_history trimming
 # ---------------------------------------------------------------------------
 
+
 def test_max_history_trims_oldest():
     mgr = UndoRedoManager(max_history=5)
     for i in range(10):
@@ -162,6 +166,7 @@ def test_max_history_trims_oldest():
 # ---------------------------------------------------------------------------
 # UndoRedoManager — callbacks
 # ---------------------------------------------------------------------------
+
 
 def test_callbacks_fire():
     mgr = UndoRedoManager()
@@ -180,6 +185,7 @@ def test_callbacks_fire():
 # UndoRedoManager — clear
 # ---------------------------------------------------------------------------
 
+
 def test_clear_resets():
     mgr = UndoRedoManager()
     mgr.execute(OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10))
@@ -193,6 +199,7 @@ def test_clear_resets():
 # ---------------------------------------------------------------------------
 # UndoRedoManager — save/load state
 # ---------------------------------------------------------------------------
+
 
 def test_save_and_load_state(tmp_path):
     mgr = UndoRedoManager(user_id="u1")
@@ -226,6 +233,7 @@ def test_saved_state_is_valid_json(tmp_path):
 # UndoRedoManager — get_operation_description
 # ---------------------------------------------------------------------------
 
+
 def test_operation_descriptions():
     mgr = UndoRedoManager()
     cases = [
@@ -244,6 +252,7 @@ def test_operation_descriptions():
 # ---------------------------------------------------------------------------
 # UndoRedoManager — version tracking
 # ---------------------------------------------------------------------------
+
 
 def test_version_increments():
     mgr = UndoRedoManager()
@@ -267,6 +276,7 @@ def test_operation_gets_version_metadata():
 # ---------------------------------------------------------------------------
 # CollaborativeUndoRedo
 # ---------------------------------------------------------------------------
+
 
 def test_collaborative_execute_local():
     collab = CollaborativeUndoRedo(user_id="u1")

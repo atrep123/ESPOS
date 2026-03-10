@@ -33,29 +33,61 @@ def _warns(data, **kw):
 
 
 def test_r99_border_width_256_errors():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "border": True, "border_width": 256}])
+    d = _make(
+        [
+            {
+                "type": "box",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 20,
+                "border": True,
+                "border_width": 256,
+            }
+        ]
+    )
     es = [e for e in _errors(d) if "border_width=" in e.message and "uint8" in e.message]
     assert len(es) == 1
 
 
 def test_r99_border_width_255_ok():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "border": True, "border_width": 255}])
+    d = _make(
+        [
+            {
+                "type": "box",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 20,
+                "border": True,
+                "border_width": 255,
+            }
+        ]
+    )
     es = [e for e in _errors(d) if "border_width=" in e.message and "uint8" in e.message]
     assert len(es) == 0
 
 
 def test_r99_border_width_1000_errors():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "border": True, "border_width": 1000}])
+    d = _make(
+        [
+            {
+                "type": "box",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 20,
+                "border": True,
+                "border_width": 1000,
+            }
+        ]
+    )
     es = [e for e in _errors(d) if "uint8" in e.message]
     assert len(es) >= 1
 
 
 def test_r99_border_width_0_ok():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "border_width": 0}])
+    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "border_width": 0}])
     es = [e for e in _errors(d) if "border_width=" in e.message and "uint8" in e.message]
     assert len(es) == 0
 
@@ -64,22 +96,19 @@ def test_r99_border_width_0_ok():
 
 
 def test_r100_corner_radius_256_errors():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "corner_radius": 256}])
+    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "corner_radius": 256}])
     es = [e for e in _errors(d) if "corner_radius=" in e.message and "uint8" in e.message]
     assert len(es) == 1
 
 
 def test_r100_corner_radius_255_ok():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "corner_radius": 255}])
+    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "corner_radius": 255}])
     es = [e for e in _errors(d) if "corner_radius=" in e.message and "uint8" in e.message]
     assert len(es) == 0
 
 
 def test_r100_corner_radius_500_errors():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "corner_radius": 500}])
+    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "corner_radius": 500}])
     es = [e for e in _errors(d) if "uint8" in e.message and "corner_radius" in e.message]
     assert len(es) >= 1
 
@@ -89,24 +118,21 @@ def test_r100_corner_radius_500_errors():
 
 def test_r101_chart_129_points_warns():
     pts = list(range(129))
-    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30,
-                "data_points": pts}])
+    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30, "data_points": pts}])
     ws = [w for w in _warns(d) if "data_points has" in w.message and "129" in w.message]
     assert len(ws) == 1
 
 
 def test_r101_chart_128_points_ok():
     pts = list(range(128))
-    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30,
-                "data_points": pts}])
+    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30, "data_points": pts}])
     ws = [w for w in _warns(d) if "data_points has" in w.message and "sub-pixel" in w.message]
     assert len(ws) == 0
 
 
 def test_r101_chart_256_points_warns():
     pts = list(range(256))
-    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30,
-                "data_points": pts}])
+    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30, "data_points": pts}])
     ws = [w for w in _warns(d) if "sub-pixel" in w.message]
     assert len(ws) == 1
 
@@ -114,8 +140,7 @@ def test_r101_chart_256_points_warns():
 def test_r101_non_chart_many_points_no_warn():
     """data_points on non-chart is warned elsewhere; rule 101 only fires for chart."""
     pts = list(range(200))
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 60, "height": 30,
-                "data_points": pts}])
+    d = _make([{"type": "box", "x": 0, "y": 0, "width": 60, "height": 30, "data_points": pts}])
     ws = [w for w in _warns(d) if "sub-pixel" in w.message]
     assert len(ws) == 0
 
@@ -124,36 +149,79 @@ def test_r101_non_chart_many_points_no_warn():
 
 
 def test_r102_empty_value_warns():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 50, "height": 12,
-                "text": "hi", "runtime": "text="}])
+    d = _make(
+        [
+            {
+                "type": "label",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 12,
+                "text": "hi",
+                "runtime": "text=",
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "empty value after '='" in w.message]
     assert len(ws) == 1
 
 
 def test_r102_whitespace_value_warns():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 50, "height": 12,
-                "text": "hi", "runtime": "text=  "}])
+    d = _make(
+        [
+            {
+                "type": "label",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 12,
+                "text": "hi",
+                "runtime": "text=  ",
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "empty value after '='" in w.message]
     assert len(ws) == 1
 
 
 def test_r102_normal_value_ok():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 50, "height": 12,
-                "text": "hi", "runtime": "text=sensor.temp"}])
+    d = _make(
+        [
+            {
+                "type": "label",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 12,
+                "text": "hi",
+                "runtime": "text=sensor.temp",
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "empty value after '='" in w.message]
     assert len(ws) == 0
 
 
 def test_r102_multi_part_one_empty():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 50, "height": 12,
-                "text": "hi", "runtime": "text=ok;value="}])
+    d = _make(
+        [
+            {
+                "type": "label",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 12,
+                "text": "hi",
+                "runtime": "text=ok;value=",
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "empty value after '='" in w.message]
     assert len(ws) == 1
 
 
 def test_r102_no_runtime_ok():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 50, "height": 12,
-                "text": "hi"}])
+    d = _make([{"type": "label", "x": 0, "y": 0, "width": 50, "height": 12, "text": "hi"}])
     ws = [w for w in _warns(d) if "empty value after '='" in w.message]
     assert len(ws) == 0
 
@@ -168,22 +236,32 @@ def test_r103_chart_no_data_no_runtime_warns():
 
 
 def test_r103_chart_empty_list_no_runtime_warns():
-    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30,
-                "data_points": []}])
+    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30, "data_points": []}])
     ws = [w for w in _warns(d) if "chart has no data_points" in w.message]
     assert len(ws) == 1
 
 
 def test_r103_chart_with_data_ok():
-    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30,
-                "data_points": [1, 2, 3]}])
+    d = _make(
+        [{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30, "data_points": [1, 2, 3]}]
+    )
     ws = [w for w in _warns(d) if "chart has no data_points" in w.message]
     assert len(ws) == 0
 
 
 def test_r103_chart_with_runtime_ok():
-    d = _make([{"type": "chart", "x": 0, "y": 0, "width": 60, "height": 30,
-                "runtime": "data_points=sensor.history"}])
+    d = _make(
+        [
+            {
+                "type": "chart",
+                "x": 0,
+                "y": 0,
+                "width": 60,
+                "height": 30,
+                "runtime": "data_points=sensor.history",
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "chart has no data_points" in w.message]
     assert len(ws) == 0
 
@@ -198,29 +276,40 @@ def test_r103_non_chart_no_data_no_warn():
 
 
 def test_r104_empty_animation_warns():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "animations": ["fade", ""]}])
+    d = _make(
+        [{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "animations": ["fade", ""]}]
+    )
     ws = [w for w in _warns(d) if "empty string" in w.message]
     assert len(ws) == 1
 
 
 def test_r104_whitespace_animation_warns():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "animations": ["  ", "fade"]}])
+    d = _make(
+        [{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "animations": ["  ", "fade"]}]
+    )
     ws = [w for w in _warns(d) if "empty string" in w.message]
     assert len(ws) == 1
 
 
 def test_r104_two_empty_warns_once():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "animations": ["", ""]}])
+    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20, "animations": ["", ""]}])
     ws = [w for w in _warns(d) if "2 empty string" in w.message]
     assert len(ws) == 1
 
 
 def test_r104_all_valid_ok():
-    d = _make([{"type": "box", "x": 0, "y": 0, "width": 50, "height": 20,
-                "animations": ["fade", "slide"]}])
+    d = _make(
+        [
+            {
+                "type": "box",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 20,
+                "animations": ["fade", "slide"],
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "empty string" in w.message]
     assert len(ws) == 0
 
@@ -235,38 +324,46 @@ def test_r104_no_animations_ok():
 
 
 def test_r105_overlap_same_z_warns():
-    d = _make([
-        {"type": "box", "x": 0, "y": 0, "width": 20, "height": 10, "z_index": 5},
-        {"type": "box", "x": 10, "y": 0, "width": 20, "height": 10, "z_index": 5},
-    ])
+    d = _make(
+        [
+            {"type": "box", "x": 0, "y": 0, "width": 20, "height": 10, "z_index": 5},
+            {"type": "box", "x": 10, "y": 0, "width": 20, "height": 10, "z_index": 5},
+        ]
+    )
     ws = [w for w in _warns(d) if "same z_index" in w.message]
     assert len(ws) == 1
 
 
 def test_r105_overlap_different_z_ok():
-    d = _make([
-        {"type": "box", "x": 0, "y": 0, "width": 20, "height": 10, "z_index": 1},
-        {"type": "box", "x": 10, "y": 0, "width": 20, "height": 10, "z_index": 2},
-    ])
+    d = _make(
+        [
+            {"type": "box", "x": 0, "y": 0, "width": 20, "height": 10, "z_index": 1},
+            {"type": "box", "x": 10, "y": 0, "width": 20, "height": 10, "z_index": 2},
+        ]
+    )
     ws = [w for w in _warns(d) if "same z_index" in w.message]
     assert len(ws) == 0
 
 
 def test_r105_no_overlap_same_z_ok():
-    d = _make([
-        {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10, "z_index": 5},
-        {"type": "box", "x": 20, "y": 0, "width": 10, "height": 10, "z_index": 5},
-    ])
+    d = _make(
+        [
+            {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10, "z_index": 5},
+            {"type": "box", "x": 20, "y": 0, "width": 10, "height": 10, "z_index": 5},
+        ]
+    )
     ws = [w for w in _warns(d) if "same z_index" in w.message]
     assert len(ws) == 0
 
 
 def test_r105_overlap_default_z_warns():
     """Both widgets have default z_index=0 (omitted)."""
-    d = _make([
-        {"type": "box", "x": 0, "y": 0, "width": 20, "height": 10},
-        {"type": "box", "x": 10, "y": 0, "width": 20, "height": 10},
-    ])
+    d = _make(
+        [
+            {"type": "box", "x": 0, "y": 0, "width": 20, "height": 10},
+            {"type": "box", "x": 10, "y": 0, "width": 20, "height": 10},
+        ]
+    )
     ws = [w for w in _warns(d) if "same z_index" in w.message]
     assert len(ws) == 1
 

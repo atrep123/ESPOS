@@ -17,6 +17,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers (shared pattern with test_fit_text)
 # ---------------------------------------------------------------------------
 
+
 def _w(wtype="label", **kw) -> WidgetConfig:
     defaults = dict(type=wtype, x=0, y=0, width=20, height=10, text="Hello")
     defaults.update(kw)
@@ -46,7 +47,7 @@ def _app(
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
 
     layout = MagicMock()
@@ -84,6 +85,7 @@ def _app(
         if cur:
             lines.append(cur)
         return lines[:max_lines] if lines else [""]
+
     app._wrap_text_px = _wrap
 
     return app
@@ -197,8 +199,13 @@ class TestFitWidgetCheckbox:
 
 class TestFitWidgetWrap:
     def test_wrap_device(self):
-        w = _w("label", text="word1 word2 word3 word4 word5", width=60, height=100,
-               text_overflow="wrap")
+        w = _w(
+            "label",
+            text="word1 word2 word3 word4 word5",
+            width=60,
+            height=100,
+            text_overflow="wrap",
+        )
         app = _app([w], profile="esp32os_256x128_gray4")
         app.state.selected = [0]
         fit_selection_to_widget(app)
@@ -207,8 +214,7 @@ class TestFitWidgetWrap:
         assert sc.widgets[0].height < 100
 
     def test_wrap_pixel(self):
-        w = _w("label", text="word1 word2 word3", width=80, height=100,
-               text_overflow="wrap")
+        w = _w("label", text="word1 word2 word3", width=80, height=100, text_overflow="wrap")
         app = _app([w], profile=None, char_w=7, line_h=12)
         app.state.selected = [0]
         fit_selection_to_widget(app)
@@ -296,8 +302,14 @@ class TestFitWidgetEdgeCases:
 class TestFitWidgetDeep:
     def test_widget_with_max_lines(self):
         """Widget with max_lines exercises _parse_max_lines valid path (lines 39-40)."""
-        w = _w("label", text="AAA BBB CCC DDD EEE", width=80, height=100,
-               text_overflow="wrap", max_lines=2)
+        w = _w(
+            "label",
+            text="AAA BBB CCC DDD EEE",
+            width=80,
+            height=100,
+            text_overflow="wrap",
+            max_lines=2,
+        )
         app = _app([w], profile="esp32os_256x128_gray4")
         app.state.selected = [0]
         fit_selection_to_widget(app)
@@ -306,8 +318,7 @@ class TestFitWidgetDeep:
 
     def test_invalid_overflow_fallback(self):
         """Invalid text_overflow falls back to ellipsis (line 71)."""
-        w = _w("label", text="Short", width=200, height=100,
-               text_overflow="GARBAGE_MODE")
+        w = _w("label", text="Short", width=200, height=100, text_overflow="GARBAGE_MODE")
         app = _app([w], profile="esp32os_256x128_gray4")
         app.state.selected = [0]
         fit_selection_to_widget(app)

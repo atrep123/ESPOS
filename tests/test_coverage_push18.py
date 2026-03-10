@@ -210,6 +210,7 @@ class TestApplyColorPresetBody:
 class TestSetProfileBody:
     def test_set_profile_valid(self, tmp_path, monkeypatch):
         from ui_designer import HARDWARE_PROFILES
+
         app = _make_app(tmp_path, monkeypatch)
         keys = list(HARDWARE_PROFILES.keys())
         if keys:
@@ -606,19 +607,37 @@ class TestExecuteContextActionDeep:
         app.state.selected_idx = 0
         app._execute_context_action("edit_text")
 
-    @pytest.mark.parametrize("action", [
-        "view_grid", "view_rulers", "view_guides", "view_snap",
-        "view_ids", "view_zlabels",
-    ])
+    @pytest.mark.parametrize(
+        "action",
+        [
+            "view_grid",
+            "view_rulers",
+            "view_guides",
+            "view_snap",
+            "view_ids",
+            "view_zlabels",
+        ],
+    )
     def test_view_toggles(self, tmp_path, monkeypatch, action):
         app = _make_app(tmp_path, monkeypatch)
         app._execute_context_action(action)
 
-    @pytest.mark.parametrize("action", [
-        "add_label", "add_button", "add_panel", "add_progressbar",
-        "add_gauge", "add_slider", "add_checkbox", "add_chart",
-        "add_icon", "add_textbox", "add_radiobutton",
-    ])
+    @pytest.mark.parametrize(
+        "action",
+        [
+            "add_label",
+            "add_button",
+            "add_panel",
+            "add_progressbar",
+            "add_gauge",
+            "add_slider",
+            "add_checkbox",
+            "add_chart",
+            "add_icon",
+            "add_textbox",
+            "add_radiobutton",
+        ],
+    )
     def test_add_widget_actions(self, tmp_path, monkeypatch, action):
         app = _make_app(tmp_path, monkeypatch)
         before = len(app.state.current_scene().widgets)
@@ -638,9 +657,15 @@ class TestZoomToFit:
         app = _make_app(tmp_path, monkeypatch)
         # canvas_rect is a property, so override the layout object
         orig_cr = app.layout.canvas_rect
-        monkeypatch.setattr(type(app.layout), "canvas_rect", property(lambda self: pygame.Rect(0, 0, 0, 0)))
+        monkeypatch.setattr(
+            type(app.layout), "canvas_rect", property(lambda self: pygame.Rect(0, 0, 0, 0))
+        )
         app._zoom_to_fit()  # early return
-        monkeypatch.setattr(type(app.layout), "canvas_rect", type(app.layout).__dict__.get("canvas_rect", property(lambda self: orig_cr)))
+        monkeypatch.setattr(
+            type(app.layout),
+            "canvas_rect",
+            type(app.layout).__dict__.get("canvas_rect", property(lambda self: orig_cr)),
+        )
 
 
 # ===========================================================================
@@ -887,7 +912,9 @@ class TestSceneManagementBodies:
     def test_export_c_header_success(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         json_file = tmp_path / "test.json"
-        json_file.write_text('{"scenes": {"main": {"width": 256, "height": 128, "widgets": []}}}', encoding="utf-8")
+        json_file.write_text(
+            '{"scenes": {"main": {"width": 256, "height": 128, "widgets": []}}}', encoding="utf-8"
+        )
         app.json_path = json_file
         app._export_c_header()
 
@@ -955,6 +982,7 @@ class TestRestoredFromAutosave:
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
         json_path = tmp_path / "scene.json"
         from cyberpunk_editor import CyberpunkEditorApp
+
         app = CyberpunkEditorApp(json_path, (256, 128))
         app.show_help_overlay = False
         app._help_shown_once = True
@@ -1086,7 +1114,9 @@ class TestDispatchEventPaths:
     def test_dispatch_keydown_escape_context_menu(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         app._context_menu = {"visible": True, "pos": (0, 0), "items": []}
-        evt = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE, mod=0, unicode="\x1b", scancode=0)
+        evt = pygame.event.Event(
+            pygame.KEYDOWN, key=pygame.K_ESCAPE, mod=0, unicode="\x1b", scancode=0
+        )
         app._dispatch_event(evt)
         assert not app._context_menu["visible"]
 
@@ -1116,6 +1146,7 @@ class TestMainModule:
                 mock_instance = MagicMock()
                 MockApp.return_value = mock_instance
                 from cyberpunk_designer.app import main
+
                 main()
                 MockApp.assert_called_once()
                 mock_instance.run.assert_called_once()
@@ -1155,11 +1186,16 @@ class TestNonAppModules:
     def test_focus_nav_miss(self, tmp_path, monkeypatch):
         """focus_nav L348-349, L412, L430."""
         from cyberpunk_designer import focus_nav
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", x=0, y=0, width=40, height=16),
-            _w(type="button", x=50, y=0, width=40, height=16),
-            _w(type="button", x=0, y=20, width=40, height=16),
-        ])
+
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", x=0, y=0, width=40, height=16),
+                _w(type="button", x=50, y=0, width=40, height=16),
+                _w(type="button", x=0, y=20, width=40, height=16),
+            ],
+        )
         # Navigate in various directions using focus_move_direction
         app.focus_idx = 0
         focus_nav.focus_move_direction(app, "right")
@@ -1178,7 +1214,9 @@ class TestNonAppModules:
 
     def test_inspector_logic_miss(self, tmp_path, monkeypatch):
         """inspector_logic L22, L572, L578, L593, L1309."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(type="slider", value=50, min_value=0, max_value=100)])
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(type="slider", value=50, min_value=0, max_value=100)]
+        )
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.state.inspector_selected_field = "value"

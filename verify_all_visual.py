@@ -1,4 +1,5 @@
 """Comprehensive headless visual verification — grayscale palette aware."""
+
 import inspect  # noqa: E402
 import os
 import sys
@@ -19,6 +20,7 @@ from cyberpunk_designer.constants import PALETTE  # noqa: E402
 PASS = 0
 FAIL = 0
 
+
 def check(name, ok, detail=""):
     global PASS, FAIL
     if ok:
@@ -30,10 +32,12 @@ def check(name, ok, detail=""):
     extra = f" -- {detail}" if detail else ""
     print(f"  [{tag}] {name}{extra}")
 
+
 app = CyberpunkEditorApp(json_path=Path("main_scene.json"), profile="esp32os_256x128_gray4")
 app._pump_events = lambda: None
 surf = app.logical_surface
 W, H = surf.get_width(), surf.get_height()
+
 
 def full_draw():
     """Full redraw — writes to logical_surface."""
@@ -54,6 +58,7 @@ def canvas_draw():
     """Redraw just the canvas area (properly clears + redraws)."""
     drawing.draw_canvas(app)
 
+
 def count_bright(rect, threshold=30):
     n = 0
     for x in range(max(0, rect.x), min(W, rect.right)):
@@ -63,6 +68,7 @@ def count_bright(rect, threshold=30):
                 n += 1
     return n
 
+
 def snapshot_rect(rect):
     pixels = {}
     for x in range(max(0, rect.x), min(W, rect.right)):
@@ -71,12 +77,14 @@ def snapshot_rect(rect):
             pixels[(x, y)] = (c[0], c[1], c[2])
     return pixels
 
+
 def diff_snapshots(a, b):
     changed = 0
     for k in a:
         if k in b and a[k] != b[k]:
             changed += 1
     return changed
+
 
 sc = app.state.current_scene()
 sr = getattr(app, "scene_rect", app.layout.canvas_rect)
@@ -99,7 +107,11 @@ check("Tab hitboxes present", len(tab_hits) >= 1, f"{len(tab_hits)} tabs")
 print("\n--- 1c. PALETTE ---")
 pal_r = app.layout.palette_rect
 check("Palette has content", count_bright(pal_r) > 100, f"{count_bright(pal_r)} px")
-check("Palette hitboxes", len(getattr(app, "palette_hitboxes", [])) > 0, f"{len(getattr(app, 'palette_hitboxes', []))} hitboxes")
+check(
+    "Palette hitboxes",
+    len(getattr(app, "palette_hitboxes", [])) > 0,
+    f"{len(getattr(app, 'palette_hitboxes', []))} hitboxes",
+)
 
 print("\n--- 1d. CANVAS ---")
 check("Canvas has content", count_bright(sr) > 50, f"{count_bright(sr)} px")
@@ -163,8 +175,10 @@ print("\n=== 5. HOVER HIGHLIGHT (diff pointer on/off widget) ===")
 if len(sc.widgets) > 1:
     w1 = sc.widgets[1]
     w1_area = pygame.Rect(
-        sr.x + int(w1.x) - 5, sr.y + int(w1.y) - 5,
-        int(getattr(w1, "width", 8) or 8) + 90, int(getattr(w1, "height", 8) or 8) + 10,
+        sr.x + int(w1.x) - 5,
+        sr.y + int(w1.y) - 5,
+        int(getattr(w1, "width", 8) or 8) + 90,
+        int(getattr(w1, "height", 8) or 8) + 10,
     )
     app.state.selected = []
     app.pointer_pos = (0, 0)
@@ -193,7 +207,11 @@ if len(sc.widgets) > 1:
     app.state.resize_anchor = "br"
     canvas_draw()
     resize = snapshot_rect(sr)
-    check("Resize info diff >0", diff_snapshots(base, resize) > 0, f"{diff_snapshots(base, resize)} px")
+    check(
+        "Resize info diff >0",
+        diff_snapshots(base, resize) > 0,
+        f"{diff_snapshots(base, resize)} px",
+    )
     app.state.resizing = False
     app.state.dragging = True
     canvas_draw()
@@ -356,17 +374,29 @@ for i, w in enumerate(sc.widgets):
         visible += 1
     else:
         check(f"Widget[{i}] {w.type} ({ww}x{wh})", False, "0 bright px")
-check(f"On-screen widgets render ({visible})", visible >= 3, f"{visible} visible, {offscreen} offscreen")
+check(
+    f"On-screen widgets render ({visible})",
+    visible >= 3,
+    f"{visible} visible, {offscreen} offscreen",
+)
 
 # ══════════════════════════════════════════════
 print("\n=== 18. CURSOR ===")
 check("_update_cursor exists", hasattr(app, "_update_cursor"), "")
 app.pointer_pos = (sr.centerx, sr.centery)
 app._update_cursor()
-check("Crosshair on canvas", getattr(app, "_cursor_kind", None) == "cross", f"{getattr(app, '_cursor_kind', None)}")
+check(
+    "Crosshair on canvas",
+    getattr(app, "_cursor_kind", None) == "cross",
+    f"{getattr(app, '_cursor_kind', None)}",
+)
 app.pointer_pos = (5, 5)
 app._update_cursor()
-check("Arrow outside canvas", getattr(app, "_cursor_kind", None) == "arrow", f"{getattr(app, '_cursor_kind', None)}")
+check(
+    "Arrow outside canvas",
+    getattr(app, "_cursor_kind", None) == "arrow",
+    f"{getattr(app, '_cursor_kind', None)}",
+)
 
 # ══════════════════════════════════════════════
 print("\n=== 19. QUIT CONFIRMATION ===")
@@ -389,18 +419,30 @@ from tools.validate_design import validate_file  # noqa: E402
 issues_main = validate_file(Path("main_scene.json"), warnings_as_errors=False)
 errors_main = [i for i in issues_main if i.level == "ERROR"]
 warns_main = [i for i in issues_main if i.level == "WARN"]
-check("main_scene.json has zero validation errors", len(errors_main) == 0, f"{len(errors_main)} errors")
-check("main_scene.json warnings counted", isinstance(warns_main, list), f"{len(warns_main)} warnings")
+check(
+    "main_scene.json has zero validation errors",
+    len(errors_main) == 0,
+    f"{len(errors_main)} errors",
+)
+check(
+    "main_scene.json warnings counted", isinstance(warns_main, list), f"{len(warns_main)} warnings"
+)
 
 if Path("rc_scene.json").exists():
     issues_rc = validate_file(Path("rc_scene.json"), warnings_as_errors=False)
     errors_rc = [i for i in issues_rc if i.level == "ERROR"]
-    check("rc_scene.json has zero validation errors", len(errors_rc) == 0, f"{len(errors_rc)} errors")
+    check(
+        "rc_scene.json has zero validation errors", len(errors_rc) == 0, f"{len(errors_rc)} errors"
+    )
 
 if Path("widget_catalog.json").exists():
     issues_cat = validate_file(Path("widget_catalog.json"), warnings_as_errors=False)
     errors_cat = [i for i in issues_cat if i.level == "ERROR"]
-    check("widget_catalog.json has zero validation errors", len(errors_cat) == 0, f"{len(errors_cat)} errors")
+    check(
+        "widget_catalog.json has zero validation errors",
+        len(errors_cat) == 0,
+        f"{len(errors_cat)} errors",
+    )
 
 # ══════════════════════════════════════════════
 print("\n=== 21. PER-WIDGET-TYPE DRAW ===")
@@ -416,7 +458,10 @@ _all_types = [
     ("progressbar", dict(value=50, min_value=0, max_value=100)),
     ("slider", dict(value=50, min_value=0, max_value=100, border=False, border_style="none")),
     ("gauge", dict(value=50, min_value=0, max_value=100, border=False, border_style="none")),
-    ("chart", dict(text="C", style="bar", data_points=[10, 20, 30], border=False, border_style="none")),
+    (
+        "chart",
+        dict(text="C", style="bar", data_points=[10, 20, 30], border=False, border_style="none"),
+    ),
     ("textbox", dict(text="EDIT", border=True, border_style="single")),
     ("icon", dict(icon_char="@", border=False, border_style="none")),
     ("box", dict(border=True, border_style="single", color_bg="#303030")),
@@ -445,28 +490,32 @@ for wtype, extra in _all_types:
 print("\n=== 22. WIDGET CATALOG LOAD ===")
 if Path("widget_catalog.json").exists():
     import json
+
     with open("widget_catalog.json", encoding="utf-8") as f:
         catalog = json.load(f)
     cat_scenes = catalog.get("scenes", {})
     check("Catalog has >=3 scenes", len(cat_scenes) >= 3, f"{len(cat_scenes)} scenes")
-    total_widgets = sum(len(s.get("widgets",[])) for s in cat_scenes.values())
+    total_widgets = sum(len(s.get("widgets", [])) for s in cat_scenes.values())
     check("Catalog has >=40 widgets", total_widgets >= 40, f"{total_widgets} widgets")
     # Check all 12 types are represented
     all_types_in_catalog = set()
     for s in cat_scenes.values():
         for w in s.get("widgets", []):
             all_types_in_catalog.add(w.get("type", "").lower())
-    check("Catalog covers >=10 types", len(all_types_in_catalog) >= 10,
-          f"{sorted(all_types_in_catalog)}")
+    check(
+        "Catalog covers >=10 types",
+        len(all_types_in_catalog) >= 10,
+        f"{sorted(all_types_in_catalog)}",
+    )
 else:
     check("widget_catalog.json exists", False, "not found — run gen_widget_catalog.py")
 
 # ══════════════════════════════════════════════
-print(f"\n{'='*50}")
+print(f"\n{'=' * 50}")
 print(f"  TOTAL: {PASS + FAIL} | PASS: {PASS} | FAIL: {FAIL}")
 if FAIL:
     print(f"  *** {FAIL} FAILURES ***")
 else:
     print("  ALL CHECKS PASSED!")
-print(f"{'='*50}\n")
+print(f"{'=' * 50}\n")
 sys.exit(1 if FAIL else 0)

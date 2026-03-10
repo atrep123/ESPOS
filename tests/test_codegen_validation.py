@@ -48,6 +48,7 @@ from tools.ui_codegen import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _write_json(tmp_path: Path, scenes: dict) -> Path:
     p = tmp_path / "design.json"
     p.write_text(json.dumps({"scenes": scenes}), encoding="utf-8")
@@ -328,25 +329,32 @@ class TestSelectSceneFallback:
 class TestZIndexSorting:
     def test_widgets_sorted_by_z_index(self, tmp_path):
         """Verify generate_scenes_header sorts widgets by z_index."""
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [
-                _w(_widget_id="back", z_index=10),
-                _w(_widget_id="front", z_index=1),
-                _w(_widget_id="mid", z_index=5),
-            ]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {
+                    "width": 64,
+                    "height": 32,
+                    "widgets": [
+                        _w(_widget_id="back", z_index=10),
+                        _w(_widget_id="front", z_index=1),
+                        _w(_widget_id="mid", z_index=5),
+                    ],
+                },
+            },
+        )
         h = generate_scenes_header(p, guard="G", source_name="t", generated_ts="now")
         # Extract widget array section only (between widgets[] = { and closing };)
         arr_start = h.index("sc_widgets[]")
         arr_section = h[arr_start:]
         # In the widget array, [0] should be front(z=1), [1] mid(z=5), [2] back(z=10)
-        entries = re.findall(r'/\* \[(\d+)\]', arr_section)
-        assert entries == ['0', '1', '2']
+        entries = re.findall(r"/\* \[(\d+)\]", arr_section)
+        assert entries == ["0", "1", "2"]
         # Verify front (z=1) is at index 0 by checking the .id ref order
         # The pool builds in input order before sort, so check the widget text refs
-        front_pool = [ln for ln in h.splitlines() if 'front' in ln and 'const char' in ln]
-        mid_pool = [ln for ln in h.splitlines() if 'mid' in ln and 'const char' in ln]
-        back_pool = [ln for ln in h.splitlines() if 'back' in ln and 'const char' in ln]
+        front_pool = [ln for ln in h.splitlines() if "front" in ln and "const char" in ln]
+        mid_pool = [ln for ln in h.splitlines() if "mid" in ln and "const char" in ln]
+        back_pool = [ln for ln in h.splitlines() if "back" in ln and "const char" in ln]
         assert len(front_pool) == 1
         assert len(mid_pool) == 1
         assert len(back_pool) == 1
@@ -355,39 +363,53 @@ class TestZIndexSorting:
         mid_sym = mid_pool[0].split()[3]
         back_sym = back_pool[0].split()[3]
         # In the widget array, first widget's .id should reference front's symbol
-        id_refs = re.findall(r'\.id = (ui_str_\d+)', arr_section)
-        assert id_refs[0] == front_sym.rstrip('[],')
-        assert id_refs[1] == mid_sym.rstrip('[],')
-        assert id_refs[2] == back_sym.rstrip('[],')
+        id_refs = re.findall(r"\.id = (ui_str_\d+)", arr_section)
+        assert id_refs[0] == front_sym.rstrip("[],")
+        assert id_refs[1] == mid_sym.rstrip("[],")
+        assert id_refs[2] == back_sym.rstrip("[],")
 
     def test_z_index_non_numeric_no_crash(self, tmp_path):
         """Non-numeric z_index should not crash (caught by except)."""
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [
-                _w(text="a", z_index="bad"),
-                _w(text="b", z_index=1),
-            ]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {
+                    "width": 64,
+                    "height": 32,
+                    "widgets": [
+                        _w(text="a", z_index="bad"),
+                        _w(text="b", z_index=1),
+                    ],
+                },
+            },
+        )
         h = generate_scenes_header(p, guard="G", source_name="t", generated_ts="now")
         assert "a" in h
         assert "b" in h
 
     def test_z_index_missing_defaults_zero(self, tmp_path):
         """Widgets without z_index should sort as z=0."""
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [
-                _w(_widget_id="hi_z", z_index=5),
-                _w(_widget_id="no_z"),
-            ]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {
+                    "width": 64,
+                    "height": 32,
+                    "widgets": [
+                        _w(_widget_id="hi_z", z_index=5),
+                        _w(_widget_id="no_z"),
+                    ],
+                },
+            },
+        )
         h = generate_scenes_header(p, guard="G", source_name="t", generated_ts="now")
         # In sorted widget array, no_z (z=0) should come before hi_z (z=5)
         arr_start = h.index("sc_widgets[]")
         arr_section = h[arr_start:]
-        id_refs = re.findall(r'\.id = (ui_str_\d+)', arr_section)
+        id_refs = re.findall(r"\.id = (ui_str_\d+)", arr_section)
         # Find which pool symbol corresponds to which id
-        no_z_pool = [ln for ln in h.splitlines() if 'no_z' in ln and 'const char' in ln]
-        no_z_sym = no_z_pool[0].split()[3].rstrip('[],')
+        no_z_pool = [ln for ln in h.splitlines() if "no_z" in ln and "const char" in ln]
+        no_z_sym = no_z_pool[0].split()[3].rstrip("[],")
         assert id_refs[0] == no_z_sym  # no_z should be first widget
 
 
@@ -492,10 +514,12 @@ class TestWriteIfChanged:
 # ===========================================================================
 class TestLoadScenesExtended:
     def test_list_format_with_names(self, tmp_path):
-        data = {"scenes": [
-            {"name": "main", "width": 128, "height": 64, "widgets": []},
-            {"name": "settings", "width": 128, "height": 64, "widgets": []},
-        ]}
+        data = {
+            "scenes": [
+                {"name": "main", "width": 128, "height": 64, "widgets": []},
+                {"name": "settings", "width": 128, "height": 64, "widgets": []},
+            ]
+        }
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = load_scenes(p)
@@ -503,10 +527,12 @@ class TestLoadScenesExtended:
         assert "settings" in result
 
     def test_list_format_with_ids(self, tmp_path):
-        data = {"scenes": [
-            {"id": "sc1", "widgets": []},
-            {"id": "sc2", "widgets": []},
-        ]}
+        data = {
+            "scenes": [
+                {"id": "sc1", "widgets": []},
+                {"id": "sc2", "widgets": []},
+            ]
+        }
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = load_scenes(p)
@@ -532,17 +558,23 @@ class TestLoadScenesExtended:
 # ===========================================================================
 class TestGeneratePairFallback:
     def test_prefer_name_not_matching_uses_first(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "alpha": {"width": 64, "height": 32, "widgets": [_w(text="AlphaText")]},
-            "beta": {"width": 128, "height": 64, "widgets": [_w(text="BetaText")]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "alpha": {"width": 64, "height": 32, "widgets": [_w(text="AlphaText")]},
+                "beta": {"width": 128, "height": 64, "widgets": [_w(text="BetaText")]},
+            },
+        )
         src, _ = generate_ui_design_pair(p, scene_name="nonexistent", source_label="t")
         assert "AlphaText" in src
 
     def test_scene_width_height_used(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "main": {"width": 320, "height": 240, "widgets": []},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "main": {"width": 320, "height": 240, "widgets": []},
+            },
+        )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert ".width = 320" in src
         assert ".height = 240" in src
@@ -600,33 +632,43 @@ class TestCollectWidgetStringsExtended:
 # ===========================================================================
 class TestFullPipelineFieldTypes:
     def test_all_fields_in_output(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "main": {"width": 256, "height": 128, "widgets": [
-                {
-                    "type": "slider",
-                    "x": 10, "y": 20, "width": 100, "height": 14,
-                    "_widget_id": "vol_slider",
-                    "text": "Volume",
-                    "color_fg": "#ffffff",
-                    "color_bg": "#000000",
-                    "border": True,
-                    "border_style": "double",
-                    "align": "center",
-                    "valign": "bottom",
-                    "text_overflow": "wrap",
-                    "max_lines": 3,
-                    "style": "bold",
-                    "visible": True,
-                    "enabled": False,
-                    "value": 75,
-                    "min_value": 0,
-                    "max_value": 100,
-                    "checked": True,
-                    "constraints_json": '{"bind":"volume"}',
-                    "animations_csv": "fade_in;slide",
+        p = _write_json(
+            tmp_path,
+            {
+                "main": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [
+                        {
+                            "type": "slider",
+                            "x": 10,
+                            "y": 20,
+                            "width": 100,
+                            "height": 14,
+                            "_widget_id": "vol_slider",
+                            "text": "Volume",
+                            "color_fg": "#ffffff",
+                            "color_bg": "#000000",
+                            "border": True,
+                            "border_style": "double",
+                            "align": "center",
+                            "valign": "bottom",
+                            "text_overflow": "wrap",
+                            "max_lines": 3,
+                            "style": "bold",
+                            "visible": True,
+                            "enabled": False,
+                            "value": 75,
+                            "min_value": 0,
+                            "max_value": 100,
+                            "checked": True,
+                            "constraints_json": '{"bind":"volume"}',
+                            "animations_csv": "fade_in;slide",
+                        },
+                    ],
                 },
-            ]},
-        })
+            },
+        )
         src, hdr = generate_ui_design_multi_pair(p, source_label="test")
         assert "UIW_SLIDER" in src
         assert ".x = 10" in src
@@ -653,11 +695,14 @@ class TestFullPipelineFieldTypes:
 
     def test_multi_scene_ordering(self, tmp_path):
         """Verify scene index macros match insertion order."""
-        p = _write_json(tmp_path, {
-            "home": {"width": 128, "height": 64, "widgets": []},
-            "settings": {"width": 128, "height": 64, "widgets": []},
-            "about": {"width": 128, "height": 64, "widgets": []},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "home": {"width": 128, "height": 64, "widgets": []},
+                "settings": {"width": 128, "height": 64, "widgets": []},
+                "about": {"width": 128, "height": 64, "widgets": []},
+            },
+        )
         _, hdr = generate_ui_design_multi_pair(p, source_label="t")
         assert "#define UI_SCENE_IDX_HOME 0" in hdr
         assert "#define UI_SCENE_IDX_SETTINGS 1" in hdr
@@ -666,32 +711,45 @@ class TestFullPipelineFieldTypes:
 
     def test_string_pool_dedup_across_scenes(self, tmp_path):
         """Same string in different scenes should use one pool entry."""
-        p = _write_json(tmp_path, {
-            "s1": {"width": 64, "height": 32, "widgets": [_w(text="Shared")]},
-            "s2": {"width": 64, "height": 32, "widgets": [_w(text="Shared")]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "s1": {"width": 64, "height": 32, "widgets": [_w(text="Shared")]},
+                "s2": {"width": 64, "height": 32, "widgets": [_w(text="Shared")]},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
-        pool_lines = [ln for ln in src.splitlines()
-                      if "Shared" in ln and "const char" in ln.lower()]
+        pool_lines = [
+            ln for ln in src.splitlines() if "Shared" in ln and "const char" in ln.lower()
+        ]
         assert len(pool_lines) == 1
 
     def test_radiobutton_type(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [_w(type="radiobutton")]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {"width": 64, "height": 32, "widgets": [_w(type="radiobutton")]},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert "UIW_RADIOBUTTON" in src
 
     def test_textbox_type(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [_w(type="textbox")]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {"width": 64, "height": 32, "widgets": [_w(type="textbox")]},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert "UIW_TEXTBOX" in src
 
     def test_box_type(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [_w(type="box")]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {"width": 64, "height": 32, "widgets": [_w(type="box")]},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert "UIW_BOX" in src

@@ -80,7 +80,9 @@ _NAMED_COLORS: Dict[str, Tuple[int, int, int]] = {
 }
 
 
-def color_to_rgb(value: object, default: Tuple[int, int, int] = (255, 255, 255)) -> Tuple[int, int, int]:
+def color_to_rgb(
+    value: object, default: Tuple[int, int, int] = (255, 255, 255)
+) -> Tuple[int, int, int]:
     s = str(value or "").strip()
     if not s:
         return default

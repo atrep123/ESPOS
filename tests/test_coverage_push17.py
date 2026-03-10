@@ -566,10 +566,22 @@ class TestSceneManagementDeep:
 
 
 class TestAddWidget:
-    @pytest.mark.parametrize("kind", [
-        "label", "button", "panel", "progressbar", "gauge",
-        "slider", "checkbox", "textbox", "chart", "icon", "box",
-    ])
+    @pytest.mark.parametrize(
+        "kind",
+        [
+            "label",
+            "button",
+            "panel",
+            "progressbar",
+            "gauge",
+            "slider",
+            "checkbox",
+            "textbox",
+            "chart",
+            "icon",
+            "box",
+        ],
+    )
     def test_add_widget_type(self, kind, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         before = len(app.state.current_scene().widgets)
@@ -918,7 +930,10 @@ class TestIsValidColor:
     def test_named_color(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         # Check a known named color
-        assert app._is_valid_color_str("white") is True or app._is_valid_color_str("unknown_color_xyz") is False
+        assert (
+            app._is_valid_color_str("white") is True
+            or app._is_valid_color_str("unknown_color_xyz") is False
+        )
 
 
 # ===========================================================================

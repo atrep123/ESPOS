@@ -6,8 +6,7 @@ from cyberpunk_designer.input_handlers import _cycle_widget_selection
 
 
 def _widget(name="w"):
-    return SimpleNamespace(type="label", x=0, y=0, width=50, height=12, text=name,
-                           visible=True)
+    return SimpleNamespace(type="label", x=0, y=0, width=50, height=12, text=name, visible=True)
 
 
 def _app(n_widgets=3, selected_idx=None, selected=None):

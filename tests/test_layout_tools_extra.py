@@ -27,6 +27,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers (mirrors test_layout_tools.py)
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=20, height=10, text="w")
     defaults.update(kw)
@@ -37,7 +38,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None, *, snap: bool = False):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -178,9 +179,7 @@ class TestAlignLockedSingle:
 
 class TestDistributeVertical:
     def test_vertical_distribute(self):
-        ws = [_w(x=0, y=0, height=10),
-              _w(x=0, y=50, height=10),
-              _w(x=0, y=100, height=10)]
+        ws = [_w(x=0, y=0, height=10), _w(x=0, y=50, height=10), _w(x=0, y=100, height=10)]
         app = _app(ws)
         app.snap_enabled = False
         set_selection(app, [0, 1, 2])
@@ -191,10 +190,12 @@ class TestDistributeVertical:
         assert 45 <= ys[1] <= 55
 
     def test_vertical_4_widgets(self):
-        ws = [_w(x=0, y=0, height=10),
-              _w(x=0, y=30, height=10),
-              _w(x=0, y=60, height=10),
-              _w(x=0, y=90, height=10)]
+        ws = [
+            _w(x=0, y=0, height=10),
+            _w(x=0, y=30, height=10),
+            _w(x=0, y=60, height=10),
+            _w(x=0, y=90, height=10),
+        ]
         app = _app(ws)
         app.snap_enabled = False
         set_selection(app, [0, 1, 2, 3])
@@ -301,7 +302,11 @@ class TestMatchSizeAnchorEdges:
 
     def test_match_with_locked_skipped(self):
         """Locked widgets are skipped, message reflects that."""
-        ws = [_w(width=40, height=10), _w(width=20, height=10, locked=True), _w(width=20, height=10)]
+        ws = [
+            _w(width=40, height=10),
+            _w(width=20, height=10, locked=True),
+            _w(width=20, height=10),
+        ]
         app = _app(ws)
         app.snap_enabled = False
         set_selection(app, [0, 1, 2])
@@ -404,14 +409,17 @@ class TestClearGuidesException:
     def test_clear_guides_exception_silenced(self):
         """Exception in clear_active_guides is silenced (lines 353-354)."""
         app = _app()
+
         # Make state.active_guides un-settable
         class ReadOnlyState:
             @property
             def active_guides(self):
                 return []
+
             @active_guides.setter
             def active_guides(self, val):
                 raise RuntimeError("read-only")
+
         app.state = ReadOnlyState()
         clear_active_guides(app)  # Should not raise
 
@@ -425,8 +433,10 @@ class TestSnapDragGuidesDeep:
     def test_invisible_widget_skipped(self):
         """Invisible widgets are skipped in guide computation (line 377)."""
         # Widget 0 is selected, widget 1 is invisible → should not contribute guides
-        ws = [_w(x=10, y=10, width=20, height=10),
-              _w(x=50, y=50, width=20, height=10, visible=False)]
+        ws = [
+            _w(x=10, y=10, width=20, height=10),
+            _w(x=50, y=50, width=20, height=10, visible=False),
+        ]
         app = _app(ws)
         app.snap_enabled = False
         set_selection(app, [0])
@@ -444,8 +454,7 @@ class TestSnapDragGuidesDeep:
         # Dragged widget (selected): width=20, center = desired_x + 10
         # To snap center to 80: desired_x = 70
         # Edges: cand_left=70, cand_right=90 — NOT near any edges (50, 110)
-        ws = [_w(x=50, y=10, width=60, height=10),
-              _w(x=0, y=0, width=20, height=10)]
+        ws = [_w(x=50, y=10, width=60, height=10), _w(x=0, y=0, width=20, height=10)]
         app = _app(ws)
         app.snap_enabled = False
         set_selection(app, [1])

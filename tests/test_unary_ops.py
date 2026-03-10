@@ -28,4 +28,3 @@ def test_negative_width_clamped_in_distribution(width):
     scene.widgets.append(w)
     designer.distribute_widgets("horizontal", [0], scene_name=scene.name)
     assert isinstance(scene.widgets[0].x, int)
-

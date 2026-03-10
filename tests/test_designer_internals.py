@@ -22,6 +22,7 @@ def _widget(
 # _diff_states
 # ===========================================================================
 
+
 class TestDiffStates:
     def test_identical_states(self):
         d = _designer()
@@ -74,6 +75,7 @@ class TestDiffStates:
 # _widget_diff_entry / _widget_diff_keys
 # ===========================================================================
 
+
 class TestWidgetDiffEntry:
     def test_no_changes(self):
         d = _designer()
@@ -103,6 +105,7 @@ class TestWidgetDiffEntry:
 # _collect_added_removed
 # ===========================================================================
 
+
 class TestCollectAddedRemoved:
     def test_no_change(self):
         d = _designer()
@@ -128,6 +131,7 @@ class TestCollectAddedRemoved:
 # _get_scene
 # ===========================================================================
 
+
 class TestGetScene:
     def test_by_name(self):
         d = _designer()
@@ -149,6 +153,7 @@ class TestGetScene:
 # ===========================================================================
 # _coerce_groups
 # ===========================================================================
+
 
 class TestCoerceGroups:
     def test_valid_groups(self):
@@ -198,6 +203,7 @@ class TestCoerceGroups:
 # _update_snap_tolerance
 # ===========================================================================
 
+
 class TestUpdateSnapTolerance:
     def test_default(self):
         d = _designer()
@@ -226,12 +232,16 @@ class TestUpdateSnapTolerance:
 # _axis_candidates_x / _axis_candidates_y
 # ===========================================================================
 
+
 class TestAxisCandidates:
     def _bounds(self, x=0, y=0, w=40, h=14):
         return {
-            "left": x, "right": x + w,
-            "top": y, "bottom": y + h,
-            "cx": x + w // 2, "cy": y + h // 2,
+            "left": x,
+            "right": x + w,
+            "top": y,
+            "bottom": y + h,
+            "cx": x + w // 2,
+            "cy": y + h // 2,
         }
 
     def test_x_edges_only(self):
@@ -309,12 +319,16 @@ class TestAxisCandidates:
 # _best_for_axis
 # ===========================================================================
 
+
 class TestBestForAxis:
     def _bounds(self, x=0, y=0, w=40, h=14):
         return {
-            "left": x, "right": x + w,
-            "top": y, "bottom": y + h,
-            "cx": x + w // 2, "cy": y + h // 2,
+            "left": x,
+            "right": x + w,
+            "top": y,
+            "bottom": y + h,
+            "cx": x + w // 2,
+            "cy": y + h // 2,
         }
 
     def test_within_tolerance_matches(self):
@@ -355,6 +369,7 @@ class TestBestForAxis:
 # _find_best_snaps
 # ===========================================================================
 
+
 class TestFindBestSnaps:
     def test_no_other_widgets(self):
         d = _designer()
@@ -391,6 +406,7 @@ class TestFindBestSnaps:
 # ===========================================================================
 # _align_axis
 # ===========================================================================
+
 
 class TestAlignAxis:
     def test_left(self):
@@ -441,6 +457,7 @@ class TestAlignAxis:
 # _responsive_size
 # ===========================================================================
 
+
 class TestResponsiveSize:
     def test_no_scaling(self):
         d = _designer()
@@ -474,6 +491,7 @@ class TestResponsiveSize:
 # ===========================================================================
 # _clamp_responsive
 # ===========================================================================
+
 
 class TestClampResponsive:
     def test_within_bounds(self):
@@ -510,6 +528,7 @@ class TestClampResponsive:
 # _responsive_position
 # ===========================================================================
 
+
 class TestResponsivePosition:
     def test_left_top(self):
         d = _designer()
@@ -542,6 +561,7 @@ class TestResponsivePosition:
 # _current_scene_state
 # ===========================================================================
 
+
 class TestCurrentSceneState:
     def test_returns_dict(self):
         d = _designer()
@@ -567,6 +587,7 @@ class TestCurrentSceneState:
 # ===========================================================================
 # _set_default_constraints
 # ===========================================================================
+
 
 class TestSetDefaultConstraints:
     def test_sets_all_defaults(self):
@@ -599,6 +620,7 @@ class TestSetDefaultConstraints:
 # _resolve_scene
 # ===========================================================================
 
+
 class TestResolveScene:
     def test_by_name(self):
         d = _designer()
@@ -619,6 +641,7 @@ class TestResolveScene:
 # ===========================================================================
 # _responsive_base_dims
 # ===========================================================================
+
 
 class TestResponsiveBaseDims:
     def test_uses_base_if_set(self):

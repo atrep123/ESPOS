@@ -27,6 +27,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -59,6 +60,7 @@ def _sel(app, *indices):
 # ===========================================================================
 # auto_flow_layout
 # ===========================================================================
+
 
 class TestAutoFlowLayout:
     def test_wraps_widgets(self, tmp_path, monkeypatch):
@@ -102,11 +104,12 @@ class TestAutoFlowLayout:
 # space_evenly_h
 # ===========================================================================
 
+
 class TestSpaceEvenlyH:
     def test_spaces_three_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, x=0, width=20, height=16)    # center = 10
-        _add(app, x=50, width=20, height=16)   # center = 60
+        _add(app, x=0, width=20, height=16)  # center = 10
+        _add(app, x=50, width=20, height=16)  # center = 60
         _add(app, x=200, width=20, height=16)  # center = 210
         _sel(app, 0, 1, 2)
         space_evenly_h(app)
@@ -114,6 +117,7 @@ class TestSpaceEvenlyH:
         # center0=10, center2=210, step=100
         # middle should center at 110 → x = snap(110 - 10) = snap(100) = 100
         from cyberpunk_designer.constants import snap
+
         expected_mid_x = snap(110 - 10)
         assert _w(app, 1).x == expected_mid_x
 
@@ -137,17 +141,19 @@ class TestSpaceEvenlyH:
 # space_evenly_v
 # ===========================================================================
 
+
 class TestSpaceEvenlyV:
     def test_spaces_three_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, y=0, height=16)    # center = 8
-        _add(app, y=30, height=16)   # center = 38
+        _add(app, y=0, height=16)  # center = 8
+        _add(app, y=30, height=16)  # center = 38
         _add(app, y=100, height=16)  # center = 108
         _sel(app, 0, 1, 2)
         space_evenly_v(app)
         # First center=8, last center=108, step=50
         # middle: snap(58 - 8) = snap(50) = 48
         from cyberpunk_designer.constants import snap
+
         expected_mid_y = snap(58 - 8)
         assert _w(app, 1).y == expected_mid_y
 
@@ -163,6 +169,7 @@ class TestSpaceEvenlyV:
 # ===========================================================================
 # shrink_to_content
 # ===========================================================================
+
 
 class TestShrinkToContent:
     def test_shrinks_panel_to_children(self, tmp_path, monkeypatch):
@@ -209,6 +216,7 @@ class TestShrinkToContent:
 # distribute_columns
 # ===========================================================================
 
+
 class TestDistributeColumns:
     def test_distributes_into_two_columns(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -245,6 +253,7 @@ class TestDistributeColumns:
 # distribute_rows
 # ===========================================================================
 
+
 class TestDistributeRows:
     def test_distributes_into_two_rows(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -269,6 +278,7 @@ class TestDistributeRows:
 # ===========================================================================
 # pack_left
 # ===========================================================================
+
 
 class TestPackLeft:
     def test_packs_touching_edges(self, tmp_path, monkeypatch):
@@ -303,6 +313,7 @@ class TestPackLeft:
 # pack_top
 # ===========================================================================
 
+
 class TestPackTop:
     def test_packs_touching_edges(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -336,6 +347,7 @@ class TestPackTop:
 # cascade_arrange
 # ===========================================================================
 
+
 class TestCascadeArrange:
     def test_diagonal_pattern(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -360,6 +372,7 @@ class TestCascadeArrange:
 # ===========================================================================
 # distribute_columns_3
 # ===========================================================================
+
 
 class TestDistributeColumns3:
     def test_three_columns(self, tmp_path, monkeypatch):

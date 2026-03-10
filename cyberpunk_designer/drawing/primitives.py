@@ -43,8 +43,12 @@ def draw_pixel_frame(app, rect: pygame.Rect, pressed: bool = False, hover: bool 
     br = light if pressed else dark
     pygame.draw.line(app.logical_surface, tl, (rect.left, rect.top), (rect.right - 1, rect.top))
     pygame.draw.line(app.logical_surface, tl, (rect.left, rect.top), (rect.left, rect.bottom - 1))
-    pygame.draw.line(app.logical_surface, br, (rect.right - 1, rect.top), (rect.right - 1, rect.bottom - 1))
-    pygame.draw.line(app.logical_surface, br, (rect.left, rect.bottom - 1), (rect.right - 1, rect.bottom - 1))
+    pygame.draw.line(
+        app.logical_surface, br, (rect.right - 1, rect.top), (rect.right - 1, rect.bottom - 1)
+    )
+    pygame.draw.line(
+        app.logical_surface, br, (rect.left, rect.bottom - 1), (rect.right - 1, rect.bottom - 1)
+    )
 
 
 def draw_pixel_panel_bg(app, rect: pygame.Rect) -> None:

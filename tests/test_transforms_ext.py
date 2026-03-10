@@ -34,6 +34,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -66,6 +67,7 @@ def _sel(app, *indices):
 # mirror_scene_horizontal
 # ===========================================================================
 
+
 class TestMirrorSceneHorizontal:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -92,6 +94,7 @@ class TestMirrorSceneHorizontal:
 # mirror_scene_vertical
 # ===========================================================================
 
+
 class TestMirrorSceneVertical:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -117,6 +120,7 @@ class TestMirrorSceneVertical:
 # ===========================================================================
 # move_to_origin
 # ===========================================================================
+
 
 class TestMoveToOrigin:
     def test_basic(self, tmp_path, monkeypatch):
@@ -159,6 +163,7 @@ class TestMoveToOrigin:
 # ===========================================================================
 # make_square
 # ===========================================================================
+
 
 class TestMakeSquare:
     def test_wider_than_tall(self, tmp_path, monkeypatch):
@@ -215,6 +220,7 @@ class TestMakeSquare:
 # scale_up
 # ===========================================================================
 
+
 class TestScaleUp:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -252,6 +258,7 @@ class TestScaleUp:
 # scale_down
 # ===========================================================================
 
+
 class TestScaleDown:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -288,6 +295,7 @@ class TestScaleDown:
 # ===========================================================================
 # move_selection — guard branches
 # ===========================================================================
+
 
 class TestMoveSelectionGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
@@ -338,6 +346,7 @@ class TestMoveSelectionGuards:
 # resize_selection_to — guard branches
 # ===========================================================================
 
+
 class TestResizeSelectionGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -382,6 +391,7 @@ class TestResizeSelectionGuards:
 # mirror_selection — guard branches
 # ===========================================================================
 
+
 class TestMirrorSelectionGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -415,6 +425,7 @@ class TestMirrorSelectionGuards:
 # swap_fg_bg — guard branches
 # ===========================================================================
 
+
 class TestSwapFgBgGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -436,6 +447,7 @@ class TestSwapFgBgGuards:
 # ===========================================================================
 # make_full_width — guard branches
 # ===========================================================================
+
 
 class TestMakeFullWidthGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
@@ -465,6 +477,7 @@ class TestMakeFullWidthGuards:
 # make_full_height — guard branches
 # ===========================================================================
 
+
 class TestMakeFullHeightGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -493,6 +506,7 @@ class TestMakeFullHeightGuards:
 # swap_dimensions — guard branches
 # ===========================================================================
 
+
 class TestSwapDimensionsGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -512,6 +526,7 @@ class TestSwapDimensionsGuards:
 # ===========================================================================
 # move_selection_to_origin — guard branches
 # ===========================================================================
+
 
 class TestMoveSelectionToOriginGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
@@ -534,6 +549,7 @@ class TestMoveSelectionToOriginGuards:
 # ===========================================================================
 # swap_positions — guard branches
 # ===========================================================================
+
 
 class TestSwapPositionsGuards:
     def test_not_two_selected(self, tmp_path, monkeypatch):
@@ -563,6 +579,7 @@ class TestSwapPositionsGuards:
 # flip_vertical — guard branches
 # ===========================================================================
 
+
 class TestFlipVerticalGuards:
     def test_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -584,6 +601,7 @@ class TestFlipVerticalGuards:
 # ===========================================================================
 # swap_content — guard branches
 # ===========================================================================
+
 
 class TestSwapContentGuards:
     def test_not_two_selected(self, tmp_path, monkeypatch):
@@ -614,6 +632,7 @@ class TestSwapContentGuards:
 # ===========================================================================
 # flip_horizontal — guard branches
 # ===========================================================================
+
 
 class TestFlipHorizontalGuards:
     def test_no_selection(self, tmp_path, monkeypatch):

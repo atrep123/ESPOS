@@ -390,6 +390,7 @@ class TestCopyToNextScene:
         _add(app, text="CopyMe")
         # Create a second scene
         from ui_designer import SceneConfig
+
         app.designer.scenes["second"] = SceneConfig(
             name="second", width=256, height=128, widgets=[]
         )
@@ -410,6 +411,7 @@ class TestBroadcastToAllScenes:
         app = _make_app(tmp_path, monkeypatch)
         _add(app, text="Shared")
         from ui_designer import SceneConfig
+
         app.designer.scenes["s2"] = SceneConfig(name="s2", width=256, height=128, widgets=[])
         app.designer.scenes["s3"] = SceneConfig(name="s3", width=256, height=128, widgets=[])
         _sel(app, 0)
@@ -423,6 +425,7 @@ class TestPasteInPlace:
         app = _make_app(tmp_path, monkeypatch)
         w = _add(app, x=50, y=30, text="Orig")
         from dataclasses import asdict
+
         app.clipboard = [WidgetConfig(**asdict(w))]
         paste_in_place(app)
         sc = app.state.current_scene()

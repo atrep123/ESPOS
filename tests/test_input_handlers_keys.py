@@ -19,6 +19,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -61,6 +62,7 @@ ALT = pygame.KMOD_ALT
 # Help overlay / inspector editing
 # ===========================================================================
 
+
 class TestHelpOverlayKeys:
     def test_escape_dismisses_pinned_help(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -102,6 +104,7 @@ class TestInspectorEditing:
 # ===========================================================================
 # Ctrl+key shortcuts
 # ===========================================================================
+
 
 class TestCtrlShortcuts:
     def test_ctrl_s_saves(self, tmp_path, monkeypatch):
@@ -532,6 +535,7 @@ class TestCtrlShortcuts:
 # Ctrl+F-key shortcuts
 # ===========================================================================
 
+
 class TestCtrlFKeyShortcuts:
     def test_ctrl_f6_auto_flow(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -634,6 +638,7 @@ class TestCtrlFKeyShortcuts:
 # ===========================================================================
 # Plain letter keys (no Ctrl)
 # ===========================================================================
+
 
 class TestPlainKeyShortcuts:
     def test_g_toggles_grid(self, tmp_path, monkeypatch):
@@ -927,13 +932,18 @@ class TestPlainKeyShortcuts:
 # Number keys → widget creation
 # ===========================================================================
 
+
 class TestNumberKeyWidgetCreation:
     def test_number_1_through_9(self, tmp_path, monkeypatch):
         keys = [
-            (pygame.K_1, "label"), (pygame.K_2, "button"),
-            (pygame.K_3, "panel"), (pygame.K_4, "progressbar"),
-            (pygame.K_5, "gauge"), (pygame.K_6, "slider"),
-            (pygame.K_7, "checkbox"), (pygame.K_8, "chart"),
+            (pygame.K_1, "label"),
+            (pygame.K_2, "button"),
+            (pygame.K_3, "panel"),
+            (pygame.K_4, "progressbar"),
+            (pygame.K_5, "gauge"),
+            (pygame.K_6, "slider"),
+            (pygame.K_7, "checkbox"),
+            (pygame.K_8, "chart"),
             (pygame.K_9, "icon"),
         ]
         for key, expected_type in keys:
@@ -964,6 +974,7 @@ class TestNumberKeyWidgetCreation:
 # ===========================================================================
 # Z-order bracket keys
 # ===========================================================================
+
 
 class TestZOrderKeys:
     def test_left_bracket_step_back(self, tmp_path, monkeypatch):
@@ -1003,6 +1014,7 @@ class TestZOrderKeys:
 # Escape behavior
 # ===========================================================================
 
+
 class TestEscKey:
     def test_escape_deselects_first(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -1022,6 +1034,7 @@ class TestEscKey:
 # ===========================================================================
 # Sim / input mode
 # ===========================================================================
+
 
 class TestSimInputMode:
     def test_f2_toggles_sim_mode(self, tmp_path, monkeypatch):
@@ -1093,6 +1106,7 @@ class TestSimInputMode:
 # Arrow keys in normal mode
 # ===========================================================================
 
+
 class TestArrowKeysNormal:
     def test_arrow_moves_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -1126,6 +1140,7 @@ class TestArrowKeysNormal:
 # ===========================================================================
 # Tab, Home, End, F keys
 # ===========================================================================
+
 
 class TestMiscKeys:
     def test_tab_toggles_panels(self, tmp_path, monkeypatch):
@@ -1335,10 +1350,12 @@ class TestMiscKeys:
 # Ctrl+Alt shortcuts
 # ===========================================================================
 
+
 class TestCtrlAltShortcuts:
     def test_ctrl_alt_left(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from cyberpunk_designer import layout_tools
+
         called = []
         monkeypatch.setattr(layout_tools, "align_selection", lambda a, d: called.append(d))
         monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL | ALT)
@@ -1348,6 +1365,7 @@ class TestCtrlAltShortcuts:
     def test_ctrl_alt_h_distribute(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         from cyberpunk_designer import layout_tools
+
         called = []
         monkeypatch.setattr(layout_tools, "distribute_selection", lambda a, d: called.append(d))
         monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL | ALT)
@@ -1370,6 +1388,7 @@ class TestCtrlAltShortcuts:
 # ===========================================================================
 # Shift+Fkey creators
 # ===========================================================================
+
 
 class TestShiftFKeys:
     def test_shift_f1_still_toggles_help(self, tmp_path, monkeypatch):
@@ -1401,6 +1420,7 @@ class TestShiftFKeys:
 # ===========================================================================
 # _cycle_widget_selection
 # ===========================================================================
+
 
 class TestCycleWidgetSelection:
     def test_forward(self, tmp_path, monkeypatch):
@@ -1464,6 +1484,7 @@ class TestCycleWidgetSelection:
 # ===========================================================================
 # Ctrl+1..9 jump to scene
 # ===========================================================================
+
 
 class TestCtrlNumberSceneJump:
     def test_ctrl_1_jumps_to_first_scene(self, tmp_path, monkeypatch):

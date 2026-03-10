@@ -9,10 +9,24 @@ SC = SimpleNamespace(width=256, height=128)
 SC_SMALL = SimpleNamespace(width=128, height=64)
 
 ALL_NAMES = [
-    "card", "toast", "modal", "dialog_confirm", "notification",
-    "chart_bar", "chart_line", "gauge_hud", "dashboard_256x128",
-    "status_bar", "tabs", "list", "menu_list", "list_item",
-    "setting_int", "setting_bool", "setting_enum", "dialog",
+    "card",
+    "toast",
+    "modal",
+    "dialog_confirm",
+    "notification",
+    "chart_bar",
+    "chart_line",
+    "gauge_hud",
+    "dashboard_256x128",
+    "status_bar",
+    "tabs",
+    "list",
+    "menu_list",
+    "list_item",
+    "setting_int",
+    "setting_bool",
+    "setting_enum",
+    "dialog",
 ]
 
 

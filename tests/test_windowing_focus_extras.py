@@ -26,11 +26,16 @@ def _make_app(tmp_path, monkeypatch, *, width=256, height=128, profile=None):
     return CyberpunkEditorApp(json_path, (width, height), profile=profile)
 
 
-def _widget(wtype="button", x=0, y=0, w=40, h=14, text="btn",
-            visible=True, enabled=True, **kw):
+def _widget(wtype="button", x=0, y=0, w=40, h=14, text="btn", visible=True, enabled=True, **kw):
     return SimpleNamespace(
-        type=wtype, x=x, y=y, width=w, height=h,
-        text=text, visible=visible, enabled=enabled,
+        type=wtype,
+        x=x,
+        y=y,
+        width=w,
+        height=h,
+        text=text,
+        visible=visible,
+        enabled=enabled,
         _widget_id=kw.get("_widget_id", ""),
         value=kw.get("value", 0),
         min_value=kw.get("min_value", 0),
@@ -68,6 +73,7 @@ def _focus_app(widgets, focus_idx=None, sim_input_mode=False):
 # ===========================================================================
 # toggle_fullscreen
 # ===========================================================================
+
 
 class TestToggleFullscreen:
     def test_enter_fullscreen(self, tmp_path, monkeypatch):
@@ -109,6 +115,7 @@ class TestToggleFullscreen:
 # ===========================================================================
 # focus_move_direction — beam scoring (overlapping axis)
 # ===========================================================================
+
 
 class TestFocusMoveBeamScoring:
     """Test that beam candidates (sharing axis overlap) are preferred."""
@@ -164,6 +171,7 @@ class TestFocusMoveBeamScoring:
 # focus_move_direction — loose fallback (no beam overlap)
 # ===========================================================================
 
+
 class TestFocusMoveLooseFallback:
     """Test loose fallback when no beam candidate exists."""
 
@@ -209,15 +217,16 @@ class TestFocusMoveLooseFallback:
 # focus_move_direction — grid layout (multiple rows/columns)
 # ===========================================================================
 
+
 class TestFocusMoveGrid:
     """Test navigation across a 2x2 grid of buttons."""
 
     def _grid_widgets(self):
         return [
-            _widget("button", x=0, y=0, w=40, h=14, text="TL"),     # 0
-            _widget("button", x=60, y=0, w=40, h=14, text="TR"),    # 1
-            _widget("button", x=0, y=30, w=40, h=14, text="BL"),    # 2
-            _widget("button", x=60, y=30, w=40, h=14, text="BR"),   # 3
+            _widget("button", x=0, y=0, w=40, h=14, text="TL"),  # 0
+            _widget("button", x=60, y=0, w=40, h=14, text="TR"),  # 1
+            _widget("button", x=0, y=30, w=40, h=14, text="BL"),  # 2
+            _widget("button", x=60, y=30, w=40, h=14, text="BR"),  # 3
         ]
 
     def test_grid_down_from_top_left(self):
@@ -252,6 +261,7 @@ class TestFocusMoveGrid:
 # focus_move_direction — with unfocusable widgets
 # ===========================================================================
 
+
 class TestFocusMoveSkipsUnfocusable:
     def test_skips_label_between_buttons(self):
         widgets = [
@@ -277,6 +287,7 @@ class TestFocusMoveSkipsUnfocusable:
 # ===========================================================================
 # activate_focused — edge cases
 # ===========================================================================
+
 
 class TestActivateFocusedExtras:
     def test_activate_button_sets_status(self):
@@ -308,6 +319,7 @@ class TestActivateFocusedExtras:
 # ===========================================================================
 # adjust_focused_value — edge cases
 # ===========================================================================
+
 
 class TestAdjustFocusedValueExtras:
     def test_non_slider_does_nothing(self):

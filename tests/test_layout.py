@@ -62,7 +62,9 @@ class TestCanvasRect:
         assert r.height == 768 - 24 - 18  # 726
 
     def test_with_tabs(self):
-        lay = Layout(1024, 768, palette_w=100, inspector_w=150, toolbar_h=24, status_h=18, scene_tabs_h=20)
+        lay = Layout(
+            1024, 768, palette_w=100, inspector_w=150, toolbar_h=24, status_h=18, scene_tabs_h=20
+        )
         r = lay.canvas_rect
         assert r.x == 100
         assert r.y == 44  # 24 + 20
@@ -111,5 +113,12 @@ class TestLayoutEdgeCases:
 
     def test_all_returns_pygame_rect(self):
         lay = Layout(1024, 768)
-        for prop in ("canvas_rect", "palette_rect", "inspector_rect", "toolbar_rect", "scene_tabs_rect", "status_rect"):
+        for prop in (
+            "canvas_rect",
+            "palette_rect",
+            "inspector_rect",
+            "toolbar_rect",
+            "scene_tabs_rect",
+            "status_rect",
+        ):
             assert isinstance(getattr(lay, prop), pygame.Rect)

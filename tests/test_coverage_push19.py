@@ -23,6 +23,7 @@ GRID = 8
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
@@ -35,6 +36,7 @@ def _make_app(tmp_path, monkeypatch, *, widgets=None, extra_scenes=False):
     monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     json_path = tmp_path / "scene.json"
     from cyberpunk_editor import CyberpunkEditorApp
+
     app = CyberpunkEditorApp(json_path, (256, 128))
     app.show_help_overlay = False
     app._help_shown_once = True
@@ -113,8 +115,11 @@ class TestGroupHelperPropertyErrors:
     def test_groups_for_index_except(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         with patch.object(
-            type(app.designer), "groups", create=True,
-            new_callable=PropertyMock, side_effect=TypeError("boom"),
+            type(app.designer),
+            "groups",
+            create=True,
+            new_callable=PropertyMock,
+            side_effect=TypeError("boom"),
         ):
             result = app._groups_for_index(0)
         assert result == []
@@ -122,8 +127,11 @@ class TestGroupHelperPropertyErrors:
     def test_group_members_except(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         with patch.object(
-            type(app.designer), "groups", create=True,
-            new_callable=PropertyMock, side_effect=TypeError("boom"),
+            type(app.designer),
+            "groups",
+            create=True,
+            new_callable=PropertyMock,
+            side_effect=TypeError("boom"),
         ):
             result = app._group_members("g1")
         assert result == []
@@ -156,8 +164,11 @@ class TestGroupHelperPropertyErrors:
     def test_next_group_name_except(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         with patch.object(
-            type(app.designer), "groups", create=True,
-            new_callable=PropertyMock, side_effect=TypeError("boom"),
+            type(app.designer),
+            "groups",
+            create=True,
+            new_callable=PropertyMock,
+            side_effect=TypeError("boom"),
         ):
             result = app._next_group_name("group")
         assert result == "group1"
@@ -168,8 +179,11 @@ class TestGroupHelperPropertyErrors:
         app.state.selected = [0]
         app.state.selected_idx = 0
         with patch.object(
-            type(app.designer), "groups", create=True,
-            new_callable=PropertyMock, side_effect=TypeError("boom"),
+            type(app.designer),
+            "groups",
+            create=True,
+            new_callable=PropertyMock,
+            side_effect=TypeError("boom"),
         ):
             app._ungroup_selection()
         # Should complete without error (no group found)
@@ -214,6 +228,7 @@ class TestAutosaveRestoredPrint:
         time.sleep(0.05)
         autosave_path.write_text(json.dumps(scene_data), encoding="utf-8")
         from cyberpunk_editor import CyberpunkEditorApp
+
         app = CyberpunkEditorApp(json_path, (256, 128))
         assert app._restored_from_autosave is True
 
@@ -223,9 +238,13 @@ class TestAutosaveRestoredPrint:
 # ===================================================================
 class TestDrawOverflowMarker:
     def test_draw_overflow_marker_called(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(x=0, y=0, width=300, height=200, text="overflow"),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(x=0, y=0, width=300, height=200, text="overflow"),
+            ],
+        )
         app.overflow_warnings = True
         surface = pygame.Surface((256, 128))
         rect = pygame.Rect(0, 0, 256, 128)
@@ -415,6 +434,7 @@ class TestOverlaysWideHelp:
         app.show_help_overlay = True
         app.logical_surface = surface
         from cyberpunk_designer.drawing import overlays
+
         # draw_help_overlay(app) reads surface/layout from app
         # Provide a layout with wide dimensions
         app.layout._width = wide + 40
@@ -430,6 +450,7 @@ class TestTextWrapEdgeCases:
         """L60: paras = [s] when text has no visible lines."""
         app = _make_app(tmp_path, monkeypatch)
         from cyberpunk_designer.drawing.text import wrap_text_px
+
         # Empty string with max_lines > 1 → paras falls through to [s]
         result = wrap_text_px(app, "   ", max_width_px=200, max_lines=5)
         assert isinstance(result, list)
@@ -438,6 +459,7 @@ class TestTextWrapEdgeCases:
         """L68-69, L110: more lines than max_lines → truncated + ellipsis."""
         app = _make_app(tmp_path, monkeypatch)
         from cyberpunk_designer.drawing.text import wrap_text_px
+
         long_text = "\n".join(["word " * 20] * 10)
         result = wrap_text_px(app, long_text, max_width_px=80, max_lines=2)
         assert len(result) <= 2
@@ -451,6 +473,7 @@ class TestTextClipException:
         """L181-182: clip_rect.clip(old_clip) raises → new_clip = clip_rect."""
         app = _make_app(tmp_path, monkeypatch)
         from cyberpunk_designer.drawing.text import draw_text_clipped
+
         # Use a mock surface (pygame.Surface C extension can't be patched)
         mock_surface = MagicMock()
         # Use a bare object() — it has no rect/sequence protocol so
@@ -508,11 +531,16 @@ class TestFocusCycleNotInFocusables:
     def test_focus_idx_not_in_focusables(self, tmp_path, monkeypatch):
         """L348-349: cur not in focusables → set_focus(focusables[0])."""
         from cyberpunk_designer import focus_nav
+
         # Widgets must be focusable (type="button"); labels are NOT focusable
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", x=10, y=10, width=40, height=20),
-            _w(type="button", x=60, y=10, width=40, height=20),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", x=10, y=10, width=40, height=20),
+                _w(type="button", x=60, y=10, width=40, height=20),
+            ],
+        )
         # Set focus to an invalid index not in focusables
         app.focus_idx = 999
         focus_nav.focus_cycle(app, 1)
@@ -526,21 +554,31 @@ class TestFocusMoveDirectionGap:
     def test_left_gap_zero(self, tmp_path, monkeypatch):
         """L407-412: horizontally overlapping widgets → gap = 0."""
         from cyberpunk_designer import focus_nav
+
         # Widgets must be focusable (type=button)
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", x=10, y=10, width=50, height=20),
-            _w(type="button", x=30, y=10, width=50, height=20),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", x=10, y=10, width=50, height=20),
+                _w(type="button", x=30, y=10, width=50, height=20),
+            ],
+        )
         app.focus_idx = 0
         focus_nav.focus_move_direction(app, "right")
 
     def test_up_gap_zero(self, tmp_path, monkeypatch):
         """L425-430: vertically overlapping widgets → gap = 0."""
         from cyberpunk_designer import focus_nav
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", x=10, y=10, width=40, height=30),
-            _w(type="button", x=10, y=20, width=40, height=30),
-        ])
+
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", x=10, y=10, width=40, height=30),
+                _w(type="button", x=10, y=20, width=40, height=30),
+            ],
+        )
         app.focus_idx = 1
         focus_nav.focus_move_direction(app, "up")
 
@@ -553,10 +591,9 @@ class TestInputHandlersShortcuts:
         # on_key_down reads mods via pygame.key.get_mods(), not event.mod
         if monkeypatch is not None:
             monkeypatch.setattr(pygame.key, "get_mods", lambda: mods)
-        event = pygame.event.Event(
-            pygame.KEYDOWN, key=key, mod=mods, unicode="", scancode=0
-        )
+        event = pygame.event.Event(pygame.KEYDOWN, key=key, mod=mods, unicode="", scancode=0)
         from cyberpunk_designer import input_handlers
+
         input_handlers.on_key_down(app, event)
 
     def test_ctrl_f10_scene_overview(self, tmp_path, monkeypatch):
@@ -614,6 +651,7 @@ class TestCanvasDistanceLinesZeroScene:
         sc.width = 0  # zero width
         scene_rect = pygame.Rect(0, 0, 256, 128)
         from cyberpunk_designer.drawing.canvas import _draw_distance_indicators
+
         _draw_distance_indicators(app, sc, 0, 0, scene_rect)
 
 
@@ -627,6 +665,7 @@ class TestQuerySelectNoWidgets:
         sc = app.state.current_scene()
         sc.widgets.clear()
         from cyberpunk_designer.selection_ops.query_select import select_overflow
+
         select_overflow(app)
 
 
@@ -640,9 +679,11 @@ class TestTransformsZeroBounds:
         app.state.selected = [0]
         app.state.selected_idx = 0
         from cyberpunk_designer.selection_ops import transforms
+
         # selection_bounds clamps to GRID, so we mock it to return zero-width
         monkeypatch.setattr(
-            transforms, "selection_bounds",
+            transforms,
+            "selection_bounds",
             lambda _app, _indices: pygame.Rect(10, 10, 0, 20),
         )
         result = transforms.resize_selection_to(app, new_w=50, new_h=50)
@@ -656,6 +697,7 @@ class TestTransformsZeroBounds:
         app.state.selected = [0]
         app.state.selected_idx = 0
         from cyberpunk_designer.selection_ops.transforms import resize_selection_to
+
         result = resize_selection_to(app, new_w=50, new_h=50)
         assert result is True
 
@@ -667,9 +709,14 @@ class TestFocusCycleBranchCurNotInFocusables:
     def test_mock_ensure_focus_noop(self, tmp_path, monkeypatch):
         """L348-349: after ensure_focus, cur still not in focusables."""
         from cyberpunk_designer import focus_nav
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", x=0, y=0, width=40, height=20),
-        ])
+
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", x=0, y=0, width=40, height=20),
+            ],
+        )
         app.focus_idx = 999
         # Prevent ensure_focus from correcting focus_idx
         monkeypatch.setattr(focus_nav, "ensure_focus", lambda _a: None)
@@ -689,6 +736,7 @@ class TestSnapUpZeroGrid:
         sc = app.designer.scenes.pop("main")
         app.designer.scenes["scene_2"] = sc
         from copy import copy
+
         app.designer.scenes["scene_3"] = copy(sc)
         app.designer.current_scene = "scene_2"
         # scenes = {'scene_2', 'scene_3'}, len=2, idx=3 → collision → idx=4
@@ -703,6 +751,7 @@ class TestFitSnapUpZero:
     def test_fit_text_snap_up_zero(self, tmp_path, monkeypatch):
         """fit_text.py L28: _snap_up(v, 0) → v."""
         from cyberpunk_designer import fit_text
+
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hello")])
         app.state.selected = [0]
         app.state.selected_idx = 0
@@ -715,9 +764,14 @@ class TestFitSnapUpZero:
     def test_fit_widget_snap_up_zero(self, tmp_path, monkeypatch):
         """fit_widget.py L31: exercise normal fit path."""
         from cyberpunk_designer import fit_widget
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", x=0, y=0, width=40, height=20),
-        ])
+
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", x=0, y=0, width=40, height=20),
+            ],
+        )
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_widget.fit_selection_to_widget(app)
@@ -730,6 +784,7 @@ class TestWrapTextPxBranches:
     def test_whitespace_only_paras(self, tmp_path, monkeypatch):
         """L60: all paras empty after strip → paras = [s]."""
         from cyberpunk_designer.drawing.text import wrap_text_px
+
         app = _make_app(tmp_path, monkeypatch)
         result = wrap_text_px(app, "  \n  ", 200, max_lines=3)
         assert isinstance(result, list)
@@ -737,6 +792,7 @@ class TestWrapTextPxBranches:
     def test_truncation_triggers_ellipsis(self, tmp_path, monkeypatch):
         """L68-69, L110: text exceeds max_lines → truncated=True and last line ellipsized."""
         from cyberpunk_designer.drawing.text import wrap_text_px
+
         app = _make_app(tmp_path, monkeypatch)
         # Use very long text with narrow width to force multi-line wrapping and truncation
         long_text = "abcdefghijklmnopqrstuvwxyz " * 50
@@ -752,6 +808,7 @@ class TestTextMetricsTruncation:
     def test_push_after_truncation(self, tmp_path, monkeypatch):
         """text_metrics.py L76: _push called after truncation already set."""
         from cyberpunk_designer import text_metrics
+
         lines, trunc = text_metrics.wrap_text_chars(
             "aaa bbb ccc ddd eee fff ggg hhh iii jjj", max_chars=5, max_lines=2
         )
@@ -769,6 +826,7 @@ class TestIoOpsSaveReplace:
         app = _make_app(tmp_path, monkeypatch)
         app.json_path = json_path
         from cyberpunk_designer import io_ops
+
         io_ops.save_json(app)
         assert json_path.exists()
         # Second save triggers os.replace (file already exists)
@@ -783,14 +841,17 @@ class TestParsePairNoSeparator:
     def test_no_separator_found(self, tmp_path, monkeypatch):
         """inspector_logic.py L20-21: no separator found → return None."""
         from cyberpunk_designer.inspector_logic import _parse_pair
+
         assert _parse_pair("nosep") is None
 
     def test_valid_pair(self, tmp_path, monkeypatch):
         from cyberpunk_designer.inspector_logic import _parse_pair
+
         assert _parse_pair("10,20") == (10, 20)
 
     def test_invalid_values(self, tmp_path, monkeypatch):
         from cyberpunk_designer.inspector_logic import _parse_pair
+
         assert _parse_pair("abc,def") is None
 
 
@@ -802,17 +863,22 @@ class TestInspectorRootRename:
         """L572, L593: widgets with empty _widget_id are skipped."""
         # 3-part group comp:mytype:X returns root=comp_type="mytype"
         # so widget IDs need to use "mytype" as root prefix
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(_widget_id="mytype"),
-            _w(_widget_id="mytype.child"),
-            _w(_widget_id=""),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(_widget_id="mytype"),
+                _w(_widget_id="mytype.child"),
+                _w(_widget_id=""),
+            ],
+        )
         app.state.selected = [0, 1, 2]
         app.state.selected_idx = 0
         app.designer.groups = {"comp:mytype:mytype": [0, 1, 2]}
         app.state.inspector_selected_field = "comp.root"
         app.state.inspector_input_buffer = "newroot"
         from cyberpunk_designer import inspector_logic
+
         inspector_logic.inspector_commit_edit(app)
         # Empty-ID widget at index 2 should be unchanged
         sc = app.state.current_scene()
@@ -822,16 +888,21 @@ class TestInspectorRootRename:
 
     def test_root_rename_collision(self, tmp_path, monkeypatch):
         """L578: rename collides with existing widget id."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(_widget_id="mytype"),
-            _w(_widget_id="existing"),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(_widget_id="mytype"),
+                _w(_widget_id="existing"),
+            ],
+        )
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer.groups = {"comp:mytype:mytype": [0]}
         app.state.inspector_selected_field = "comp.root"
         app.state.inspector_input_buffer = "existing"
         from cyberpunk_designer import inspector_logic
+
         result = inspector_logic.inspector_commit_edit(app)
         assert result is False  # Collision should prevent rename
 
@@ -847,6 +918,7 @@ class TestOverlaysTwoColumnHelp:
         app = _make_app(tmp_path, monkeypatch)
         app.show_help_overlay = True
         from cyberpunk_designer.drawing import overlays
+
         surface = pygame.Surface((400, 300))
         app.logical_surface = surface
         app.layout.width = 400
@@ -860,10 +932,14 @@ class TestOverlaysTwoColumnHelp:
 class TestSelectedComponentGroupMatch:
     def test_returns_component_info(self, tmp_path, monkeypatch):
         """app.py L1172: all selected in one group → returns group info."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(_widget_id="btn.label"),
-            _w(_widget_id="btn.icon"),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(_widget_id="btn.label"),
+                _w(_widget_id="btn.icon"),
+            ],
+        )
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         app.designer.groups = {"comp:button:btn": [0, 1]}
@@ -878,11 +954,20 @@ class TestSelectedComponentGroupMatch:
 class TestQuerySelectComponentGroup:
     def test_select_overflow_with_widgets(self, tmp_path, monkeypatch):
         """query_select.py L161-163: exercise select_overflow with widgets."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="label", text="A very long text that definitely overflows widget bounds" * 5,
-               width=10, height=10),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(
+                    type="label",
+                    text="A very long text that definitely overflows widget bounds" * 5,
+                    width=10,
+                    height=10,
+                ),
+            ],
+        )
         from cyberpunk_designer.selection_ops.query_select import select_overflow
+
         select_overflow(app)
 
 
@@ -897,6 +982,7 @@ class TestPanelsSceneTabLabel:
         app.logical_surface = surface
         app.show_help_overlay = False
         from cyberpunk_designer.drawing import panels
+
         panels.draw_status(app)
 
 
@@ -910,6 +996,7 @@ class TestIoOpsSaveFallback:
         app = _make_app(tmp_path, monkeypatch)
         app.json_path = json_path
         from cyberpunk_designer import io_ops
+
         call_count = [0]
         orig_save = app.designer.save_to_json
 
@@ -930,15 +1017,20 @@ class TestIoOpsSaveFallback:
 class TestInspectorGroupedLayers:
     def test_grouped_widgets_in_layers(self, tmp_path, monkeypatch):
         """inspector_logic.py L1310-1315: grouped widgets shown indented."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[
-            _w(type="button", _widget_id="btn.label"),
-            _w(type="button", _widget_id="btn.icon"),
-            _w(type="label"),
-        ])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[
+                _w(type="button", _widget_id="btn.label"),
+                _w(type="button", _widget_id="btn.icon"),
+                _w(type="label"),
+            ],
+        )
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer.groups = {"mygroup": [0, 1]}
         from cyberpunk_designer import inspector_logic
+
         rows, _warning, _w2 = inspector_logic.compute_inspector_rows(app)
         layer_keys = [k for k, _ in rows if k.startswith("layer:")]
         group_keys = [k for k, _ in rows if k.startswith("group:")]
@@ -955,7 +1047,6 @@ class TestRunOneIteration:
         app = _make_app(tmp_path, monkeypatch)
         exit_calls = []
         monkeypatch.setattr(sys, "exit", lambda code=0: exit_calls.append(code))
-
 
         def stop_after_events():
             app.running = False
@@ -1064,6 +1155,7 @@ class TestLoadPixelFontNonHeadless:
             return "C:\\__nonexistent_font_path__.ttf"
 
         monkeypatch.setattr(pygame.font, "match_font", bad_match)
+
         # Wrap Font to raise on invalid paths but succeed on None (fallback)
         def font_wrapper(path_or_none, size=None):
             if path_or_none and "nonexistent" in str(path_or_none):

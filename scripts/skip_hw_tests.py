@@ -70,9 +70,7 @@ def main() -> int:
     if not hw_env:
         hw_env = "esp32-s3-devkitm-1"
     suggested_cmd = (
-        f"pio run -t upload -e {hw_env}"
-        if want == "upload"
-        else f"pio test -e {hw_env}"
+        f"pio run -t upload -e {hw_env}" if want == "upload" else f"pio test -e {hw_env}"
     )
     action_label = "hardware upload" if want == "upload" else "hardware tests"
 

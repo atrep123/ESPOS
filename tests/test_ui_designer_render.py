@@ -14,6 +14,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make(n_widgets=0, w=128, h=64):
     d = UIDesigner(w, h)
     d.snap_to_grid = False
@@ -35,21 +36,36 @@ def _canvas_text(d, scene_name=None):
 # Rendering: draw_icon
 # ===========================================================================
 
+
 class TestDrawIcon:
     def test_icon_renders(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="icon", x=2, y=2, width=6, height=5, text="@",
-            border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="icon",
+                x=2,
+                y=2,
+                width=6,
+                height=5,
+                text="@",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "@" in txt
 
     def test_icon_no_text(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="icon", x=2, y=2, width=6, height=5, text="",
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="icon",
+                x=2,
+                y=2,
+                width=6,
+                height=5,
+                text="",
+            )
+        )
         _canvas_text(d)  # should not crash
 
     def test_icon_char_attribute(self):
@@ -65,24 +81,37 @@ class TestDrawIcon:
 # Rendering: draw_chart
 # ===========================================================================
 
+
 class TestDrawChart:
     def test_chart_with_data(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="chart", x=2, y=2, width=20, height=10,
-            data_points=[10, 20, 30, 40, 50],
-            border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="chart",
+                x=2,
+                y=2,
+                width=20,
+                height=10,
+                data_points=[10, 20, 30, 40, 50],
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "#" in txt
 
     def test_chart_empty_data(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="chart", x=2, y=2, width=20, height=10,
-            data_points=[],
-            border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="chart",
+                x=2,
+                y=2,
+                width=20,
+                height=10,
+                data_points=[],
+                border=True,
+            )
+        )
         _canvas_text(d)  # no crash
 
 
@@ -90,22 +119,39 @@ class TestDrawChart:
 # Rendering: draw_checkbox
 # ===========================================================================
 
+
 class TestDrawCheckbox:
     def test_checked(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="checkbox", x=2, y=2, width=12, height=5,
-            checked=True, text="On", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="checkbox",
+                x=2,
+                y=2,
+                width=12,
+                height=5,
+                checked=True,
+                text="On",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "X" in txt
 
     def test_unchecked(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="checkbox", x=2, y=2, width=12, height=5,
-            checked=False, text="Off", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="checkbox",
+                x=2,
+                y=2,
+                width=12,
+                height=5,
+                checked=False,
+                text="Off",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Off" in txt
 
@@ -114,22 +160,39 @@ class TestDrawCheckbox:
 # Rendering: draw_slider
 # ===========================================================================
 
+
 class TestDrawSlider:
     def test_slider_midpoint(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="slider", x=2, y=2, width=20, height=5,
-            value=50, max_value=100, border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider",
+                x=2,
+                y=2,
+                width=20,
+                height=5,
+                value=50,
+                max_value=100,
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "#" in txt and "-" in txt
 
     def test_slider_zero(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="slider", x=2, y=2, width=20, height=5,
-            value=0, max_value=100, border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="slider",
+                x=2,
+                y=2,
+                width=20,
+                height=5,
+                value=0,
+                max_value=100,
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "-" in txt
 
@@ -138,22 +201,41 @@ class TestDrawSlider:
 # Rendering: segmented progress bar
 # ===========================================================================
 
+
 class TestDrawSegmentedBar:
     def test_segmented_style(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="progressbar", x=2, y=2, width=30, height=5,
-            value=60, max_value=100, border=True, style="segmented",
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="progressbar",
+                x=2,
+                y=2,
+                width=30,
+                height=5,
+                value=60,
+                max_value=100,
+                border=True,
+                style="segmented",
+            )
+        )
         txt = _canvas_text(d)
         assert "#" in txt
 
     def test_default_style(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="progressbar", x=2, y=2, width=30, height=5,
-            value=30, max_value=100, border=True, style="default",
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="progressbar",
+                x=2,
+                y=2,
+                width=30,
+                height=5,
+                value=30,
+                max_value=100,
+                border=True,
+                style="default",
+            )
+        )
         txt = _canvas_text(d)
         assert "." in txt
 
@@ -162,13 +244,22 @@ class TestDrawSegmentedBar:
 # Rendering: draw_gauge
 # ===========================================================================
 
+
 class TestDrawGauge:
     def test_gauge_partial(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="gauge", x=2, y=2, width=8, height=12,
-            value=50, max_value=100, border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="gauge",
+                x=2,
+                y=2,
+                width=8,
+                height=12,
+                value=50,
+                max_value=100,
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "#" in txt
 
@@ -177,52 +268,89 @@ class TestDrawGauge:
 # Rendering: draw_text with wrap / clip / auto modes
 # ===========================================================================
 
+
 class TestDrawText:
     def test_wrap_mode(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=12,
-            text="This is a long text that should wrap",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=12,
+                text="This is a long text that should wrap",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "This" in txt
 
     def test_clip_mode(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=12, height=5,
-            text="VeryLongTextThatShouldBeClipped",
-            text_overflow="clip", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=12,
+                height=5,
+                text="VeryLongTextThatShouldBeClipped",
+                text_overflow="clip",
+                border=True,
+            )
+        )
         _canvas_text(d)
 
     def test_auto_mode_short_text(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=5,
-            text="Short", text_overflow="auto", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=5,
+                text="Short",
+                text_overflow="auto",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Short" in txt
 
     def test_auto_mode_multiline(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=12,
-            text="Line1\nLine2\nLine3",
-            text_overflow="auto", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=12,
+                text="Line1\nLine2\nLine3",
+                text_overflow="auto",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Line1" in txt
 
     def test_ellipsis_mode(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=12, height=5,
-            text="SomeVeryLongTextLabel",
-            text_overflow="ellipsis", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=12,
+                height=5,
+                text="SomeVeryLongTextLabel",
+                text_overflow="ellipsis",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "..." in txt
 
@@ -230,6 +358,7 @@ class TestDrawText:
 # ===========================================================================
 # Rendering: _draw_widget_index (show_indices mode)
 # ===========================================================================
+
 
 class TestDrawWidgetIndex:
     def test_widget_index_shown(self):
@@ -244,31 +373,53 @@ class TestDrawWidgetIndex:
 # Border chars
 # ===========================================================================
 
+
 class TestBorderChars:
     def test_double_border(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="box", x=2, y=2, width=10, height=6,
-            border=True, border_style="double",
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="box",
+                x=2,
+                y=2,
+                width=10,
+                height=6,
+                border=True,
+                border_style="double",
+            )
+        )
         txt = _canvas_text(d)
         assert "=" in txt
 
     def test_bold_border(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="box", x=2, y=2, width=10, height=6,
-            border=True, border_style="bold",
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="box",
+                x=2,
+                y=2,
+                width=10,
+                height=6,
+                border=True,
+                border_style="bold",
+            )
+        )
         txt = _canvas_text(d)
         assert "#" in txt
 
     def test_rounded_border(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="box", x=2, y=2, width=10, height=6,
-            border=True, border_style="rounded",
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="box",
+                x=2,
+                y=2,
+                width=10,
+                height=6,
+                border=True,
+                border_style="rounded",
+            )
+        )
         txt = _canvas_text(d)
         assert "(" in txt
 
@@ -276,6 +427,7 @@ class TestBorderChars:
 # ===========================================================================
 # Alignment helpers
 # ===========================================================================
+
 
 class TestAlignment:
     def test_align_left(self):
@@ -335,6 +487,7 @@ class TestAlignment:
 # Distribute widgets
 # ===========================================================================
 
+
 class TestDistribute:
     def test_distribute_horizontal(self):
         d, sc = _make()
@@ -362,6 +515,7 @@ class TestDistribute:
 # ===========================================================================
 # Responsive helpers
 # ===========================================================================
+
 
 class TestResponsive:
     def test_set_responsive_base(self):
@@ -402,6 +556,7 @@ class TestResponsive:
 # ===========================================================================
 # Animation helpers
 # ===========================================================================
+
 
 class TestAnimations:
     def test_anim_bounce(self):
@@ -465,6 +620,7 @@ class TestAnimations:
 # _reindex_groups_after_delete
 # ===========================================================================
 
+
 class TestReindexGroupsAfterDelete:
     def test_reindex_on_delete(self):
         d, sc = _make(n_widgets=4)
@@ -484,6 +640,7 @@ class TestReindexGroupsAfterDelete:
 # ===========================================================================
 # State overrides applied in rendering
 # ===========================================================================
+
 
 class TestStateOverrides:
     def test_apply_state_overrides_inplace(self):
@@ -507,12 +664,14 @@ class TestStateOverrides:
 # save_to_json / load_from_json round-trip
 # ===========================================================================
 
+
 class TestSaveLoad:
     def test_round_trip(self, tmp_path):
         d, sc = _make(n_widgets=2)
         sc.widgets[0].text = "Hello"
         fpath = str(tmp_path / "test.json")
         import os
+
         os.environ["ESP32OS_AUTO_EXPORT"] = "0"
         try:
             d.save_to_json(fpath)
@@ -529,6 +688,7 @@ class TestSaveLoad:
         d.groups = {"g1": [0, 1]}
         fpath = str(tmp_path / "test2.json")
         import os
+
         os.environ["ESP32OS_AUTO_EXPORT"] = "0"
         try:
             d.save_to_json(fpath)
@@ -540,6 +700,7 @@ class TestSaveLoad:
 # ===========================================================================
 # _ellipsize_text edge cases
 # ===========================================================================
+
 
 class TestEllipsize:
     def test_short_text(self):
@@ -570,23 +731,27 @@ class TestEllipsize:
 # _calc_fill_ratio / _calc_progress_value / _calc_slider_pos
 # ===========================================================================
 
+
 class TestCalcHelpers:
     def test_fill_ratio_zero(self):
         d, _ = _make()
-        w = WidgetConfig(type="progressbar", x=0, y=0, width=10, height=5,
-                         value=0, min_value=0, max_value=100)
+        w = WidgetConfig(
+            type="progressbar", x=0, y=0, width=10, height=5, value=0, min_value=0, max_value=100
+        )
         assert d._calc_fill_ratio(w) == 0.0
 
     def test_fill_ratio_full(self):
         d, _ = _make()
-        w = WidgetConfig(type="progressbar", x=0, y=0, width=10, height=5,
-                         value=100, min_value=0, max_value=100)
+        w = WidgetConfig(
+            type="progressbar", x=0, y=0, width=10, height=5, value=100, min_value=0, max_value=100
+        )
         assert d._calc_fill_ratio(w) == 1.0
 
     def test_fill_ratio_half(self):
         d, _ = _make()
-        w = WidgetConfig(type="progressbar", x=0, y=0, width=10, height=5,
-                         value=50, min_value=0, max_value=100)
+        w = WidgetConfig(
+            type="progressbar", x=0, y=0, width=10, height=5, value=50, min_value=0, max_value=100
+        )
         assert d._calc_fill_ratio(w) == pytest.approx(0.5)
 
     def test_progress_value(self):
@@ -605,6 +770,7 @@ class TestCalcHelpers:
 # ===========================================================================
 # _inner_box
 # ===========================================================================
+
 
 class TestInnerBox:
     def test_with_border(self):
@@ -630,25 +796,31 @@ class TestInnerBox:
 # _clamp_int (module-level helper)
 # ===========================================================================
 
+
 class TestClampInt:
     def test_normal(self):
         from ui_designer import _clamp_int
+
         assert _clamp_int(5, 0, 10) == 5
 
     def test_below_min(self):
         from ui_designer import _clamp_int
+
         assert _clamp_int(-3, 0, 10) == 0
 
     def test_above_max(self):
         from ui_designer import _clamp_int
+
         assert _clamp_int(15, 0, 10) == 10
 
     def test_none_value(self):
         from ui_designer import _clamp_int
+
         assert _clamp_int(None, 5) == 5
 
     def test_string_value(self):
         from ui_designer import _clamp_int
+
         assert _clamp_int("abc", 0) == 0
 
 
@@ -656,15 +828,18 @@ class TestClampInt:
 # _border_chars cached lookup
 # ===========================================================================
 
+
 class TestBorderCharsFunc:
     def test_known_styles(self):
         from ui_designer import _border_chars
+
         for s in ("single", "double", "rounded", "bold", "dashed"):
             chars = _border_chars(s)
             assert "h" in chars and "v" in chars
 
     def test_unknown_fallback(self):
         from ui_designer import _border_chars
+
         chars = _border_chars("unknown_style")
         assert chars == _border_chars("single")
 
@@ -672,6 +847,7 @@ class TestBorderCharsFunc:
 # ===========================================================================
 # Redo with meta restoration
 # ===========================================================================
+
 
 class TestRedoMeta:
     def test_redo_restores_meta(self):
@@ -688,9 +864,11 @@ class TestRedoMeta:
 # _write_backup_snapshot (exercises the BACKUP_DIR path)
 # ===========================================================================
 
+
 class TestBackupSnapshot:
     def test_write_backup(self, tmp_path, monkeypatch):
         import ui_designer
+
         monkeypatch.setattr(ui_designer, "BACKUP_DIR", tmp_path / "backups")
         d, sc = _make(n_widgets=1)
         d._save_state()  # triggers _write_backup_snapshot
@@ -703,6 +881,7 @@ class TestBackupSnapshot:
 # ===========================================================================
 # snap_position
 # ===========================================================================
+
 
 class TestSnapPosition:
     def test_snap_enabled(self):
@@ -724,40 +903,75 @@ class TestSnapPosition:
 # Text rendering: valign and align branches
 # ===========================================================================
 
+
 class TestTextValignAlign:
     def test_valign_top(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=16,
-            text="Top", valign="top", align="left", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=16,
+                text="Top",
+                valign="top",
+                align="left",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Top" in txt
 
     def test_valign_bottom(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=16,
-            text="Bot", valign="bottom", align="left", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=16,
+                text="Bot",
+                valign="bottom",
+                align="left",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Bot" in txt
 
     def test_align_center(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=5,
-            text="C", align="center", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=5,
+                text="C",
+                align="center",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "C" in txt
 
     def test_align_right(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=5,
-            text="R", align="right", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=5,
+                text="R",
+                align="right",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "R" in txt
 
@@ -766,25 +980,40 @@ class TestTextValignAlign:
 # Text wrap with very long words (character splitting)
 # ===========================================================================
 
+
 class TestTextWrapLongWord:
     def test_long_word_split(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=20,
-            text="ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=20,
+                text="ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         # Should render without crash, splitting the word
         assert "A" in txt
 
     def test_wrap_truncated_ellipsis(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=16, height=10,
-            text="Word1 Word2 Word3 Word4 Word5 Word6",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=16,
+                height=10,
+                text="Word1 Word2 Word3 Word4 Word5 Word6",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Word1" in txt
 
@@ -792,6 +1021,7 @@ class TestTextWrapLongWord:
 # ===========================================================================
 # Layout: grid layout
 # ===========================================================================
+
 
 class TestLayoutGrid:
     def test_grid_layout(self):
@@ -816,22 +1046,35 @@ class TestLayoutGrid:
 # Preflight checks (module-level functions)
 # ===========================================================================
 
+
 class TestPreflightChecks:
     def test_preflight_clean_scene(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=8, y=8, width=32, height=16, text="OK"),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=8, y=8, width=32, height=16, text="OK"),
+            ],
+        )
         result = _preflight_scene(sc)
         assert result["ok"]
 
     def test_preflight_invalid_size(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=10, height=10),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=0, y=0, width=10, height=10),
+            ],
+        )
         # Force-set invalid size (bypass property coercion)
         object.__setattr__(sc.widgets[0], "_width", 0)
         result = _preflight_scene(sc)
@@ -841,18 +1084,30 @@ class TestPreflightChecks:
     def test_preflight_off_canvas(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=200, y=200, width=50, height=50),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=200, y=200, width=50, height=50),
+            ],
+        )
         result = _preflight_scene(sc)
         assert result["counts"]["issues"] > 0
 
     def test_preflight_off_canvas_minor(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=120, y=0, width=20, height=10),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=120, y=0, width=20, height=10),
+            ],
+        )
         result = _preflight_scene(sc)
         # Minor off-canvas should produce issue + hint
         assert any("off-canvas" in m for m in result["issues"])
@@ -860,82 +1115,158 @@ class TestPreflightChecks:
     def test_preflight_min_size_warning(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="progressbar", x=0, y=0, width=50, height=1, value=50),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="progressbar", x=0, y=0, width=50, height=1, value=50),
+            ],
+        )
         result = _preflight_scene(sc)
         assert result["counts"]["warnings"] > 0
 
     def test_preflight_empty_button_text(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="button", x=8, y=8, width=40, height=16, text=""),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="button", x=8, y=8, width=40, height=16, text=""),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("empty text" in w for w in result["warnings"])
 
     def test_preflight_text_overflow_ellipsis(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=30, height=16,
-                         text="ThisIsAVeryLongTextThatWillNotFitAtAll",
-                         text_overflow="ellipsis", border=True),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=30,
+                    height=16,
+                    text="ThisIsAVeryLongTextThatWillNotFitAtAll",
+                    text_overflow="ellipsis",
+                    border=True,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("truncated" in w for w in result["warnings"])
 
     def test_preflight_text_overflow_clip(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=30, height=16,
-                         text="ThisIsAVeryLongTextThatWillNotFitAtAll",
-                         text_overflow="clip", border=True),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=30,
+                    height=16,
+                    text="ThisIsAVeryLongTextThatWillNotFitAtAll",
+                    text_overflow="clip",
+                    border=True,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("clipped" in w for w in result["warnings"])
 
     def test_preflight_text_overflow_wrap_truncated(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=30, height=16,
-                         text="Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8",
-                         text_overflow="wrap", border=True),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=30,
+                    height=16,
+                    text="Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8",
+                    text_overflow="wrap",
+                    border=True,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("truncated" in w for w in result["warnings"])
 
     def test_preflight_text_overflow_wrap_long_word(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=24, height=16,
-                         text="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-                         text_overflow="wrap", border=True),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=24,
+                    height=16,
+                    text="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+                    text_overflow="wrap",
+                    border=True,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("truncated" in w for w in result["warnings"])
 
     def test_preflight_overlap(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=50, height=20),
-            WidgetConfig(type="label", x=10, y=5, width=50, height=20),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=0, y=0, width=50, height=20),
+                WidgetConfig(type="label", x=10, y=5, width=50, height=20),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("overlaps" in w for w in result["warnings"])
 
     def test_preflight_overlap_panel_ignored(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="panel", x=0, y=0, width=100, height=50),
-            WidgetConfig(type="label", x=10, y=10, width=30, height=10),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="panel", x=0, y=0, width=100, height=50),
+                WidgetConfig(type="label", x=10, y=10, width=30, height=10),
+            ],
+        )
         result = _preflight_scene(sc)
         overlap_warnings = [w for w in result["warnings"] if "overlaps" in w]
         assert len(overlap_warnings) == 0
@@ -943,9 +1274,15 @@ class TestPreflightChecks:
     def test_preflight_pixel_grid_misaligned(self):
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="test", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=3, y=5, width=11, height=9),
-        ])
+
+        sc = SC(
+            name="test",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=3, y=5, width=11, height=9),
+            ],
+        )
         result = _preflight_scene(sc)
         # Default grid_size=8 on SceneConfig; position 3,5 is not aligned
         all_text = " ".join(result["hints"] + result["warnings"])
@@ -955,6 +1292,7 @@ class TestPreflightChecks:
 # ===========================================================================
 # export_code
 # ===========================================================================
+
 
 class TestExportCode:
     def test_export_code_creates_file(self, tmp_path):
@@ -972,6 +1310,7 @@ class TestExportCode:
 # ===========================================================================
 # move_widget / resize_widget / delete_widget with locked widgets
 # ===========================================================================
+
 
 class TestLockedWidgetOps:
     def test_move_locked_widget_ignored(self):
@@ -1014,9 +1353,11 @@ class TestLockedWidgetOps:
 # add_widget with WidgetType enum and keyword args
 # ===========================================================================
 
+
 class TestAddWidgetByType:
     def test_add_by_widget_type_enum(self):
         from ui_designer import WidgetType
+
         d, sc = _make()
         d.add_widget(WidgetType.LABEL, x=0, y=0, width=40, height=10, text="Hello")
         assert len(sc.widgets) == 1
@@ -1052,6 +1393,7 @@ class TestAddWidgetByType:
 # load_from_json edge cases
 # ===========================================================================
 
+
 class TestLoadEdgeCases:
     def test_load_nonexistent_file(self, capsys):
         d, _ = _make()
@@ -1069,6 +1411,7 @@ class TestLoadEdgeCases:
 
     def test_load_empty_scenes(self, tmp_path):
         import json as js
+
         f = tmp_path / "empty.json"
         f.write_text(js.dumps({"width": 128, "height": 64, "scenes": {}}), encoding="utf-8")
         d, _ = _make()
@@ -1081,10 +1424,12 @@ class TestLoadEdgeCases:
 # _diff_states
 # ===========================================================================
 
+
 class TestDiffStates:
     def test_same_state(self):
         d, sc = _make(n_widgets=2)
         from dataclasses import asdict
+
         state = asdict(sc)
         diff = d._diff_states(state, state)
         assert diff["size"]["a"] == diff["size"]["b"]
@@ -1092,6 +1437,7 @@ class TestDiffStates:
     def test_different_widget_count(self):
         d, sc = _make(n_widgets=2)
         from dataclasses import asdict
+
         state_a = asdict(sc)
         sc.widgets.append(WidgetConfig(type="button", x=0, y=0, width=10, height=10))
         state_b = asdict(sc)
@@ -1103,6 +1449,7 @@ class TestDiffStates:
 # ===========================================================================
 # Undo stack overflow / max_undo
 # ===========================================================================
+
 
 class TestUndoMaxLimit:
     def test_undo_stack_limited(self):
@@ -1118,9 +1465,11 @@ class TestUndoMaxLimit:
 # _auto_preflight_and_export
 # ===========================================================================
 
+
 class TestAutoPreflightAndExport:
     def test_auto_preflight_called(self, tmp_path, capsys):
         import os
+
         os.environ["ESP32OS_AUTO_EXPORT"] = "1"
         try:
             d, sc = _make(n_widgets=1)
@@ -1136,6 +1485,7 @@ class TestAutoPreflightAndExport:
 # Preflight text overflow: deeper code paths
 # ===========================================================================
 
+
 class TestPreflightTextOverflowDeep:
     """Edge cases to reach wrap word-break, no-space, auto, unknown overflow."""
 
@@ -1143,10 +1493,15 @@ class TestPreflightTextOverflowDeep:
         """Widget so tiny (3x3 with border) → no inner space → warning."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="t", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=3, height=3,
-                         text="Hello", border=True),
-        ])
+
+        sc = SC(
+            name="t",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(type="label", x=0, y=0, width=3, height=3, text="Hello", border=True),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("no space" in w for w in result["warnings"])
 
@@ -1154,11 +1509,25 @@ class TestPreflightTextOverflowDeep:
         """text_overflow='auto' with long text + tall widget → auto-wrap."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="t", width=256, height=128, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=60, height=30,
-                         text="Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8",
-                         text_overflow="auto", border=True, padding_x=0),
-        ])
+
+        sc = SC(
+            name="t",
+            width=256,
+            height=128,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=60,
+                    height=30,
+                    text="Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8",
+                    text_overflow="auto",
+                    border=True,
+                    padding_x=0,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         # Should detect truncation via wrap
         assert any("truncated" in w for w in result["warnings"])
@@ -1167,11 +1536,24 @@ class TestPreflightTextOverflowDeep:
         """Unknown overflow type → treated as ellipsis."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="t", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=30, height=16,
-                         text="VeryLongTextThatOverflows",
-                         text_overflow="unknown_mode", border=True),
-        ])
+
+        sc = SC(
+            name="t",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=30,
+                    height=16,
+                    text="VeryLongTextThatOverflows",
+                    text_overflow="unknown_mode",
+                    border=True,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("truncated" in w for w in result["warnings"])
 
@@ -1179,11 +1561,25 @@ class TestPreflightTextOverflowDeep:
         """Widget wide enough for short words → normal word-break path."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="t", width=256, height=128, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=72, height=26,
-                         text="AAA BBB CCC DDD EEE FFF GGG HHH III JJJ",
-                         text_overflow="wrap", border=True, padding_x=0),
-        ])
+
+        sc = SC(
+            name="t",
+            width=256,
+            height=128,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=72,
+                    height=26,
+                    text="AAA BBB CCC DDD EEE FFF GGG HHH III JJJ",
+                    text_overflow="wrap",
+                    border=True,
+                    padding_x=0,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("truncated" in w for w in result["warnings"])
 
@@ -1191,12 +1587,26 @@ class TestPreflightTextOverflowDeep:
         """Text that exactly fits in wrap mode → no warning."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
+
         # inner_w=68, inner_h=24 → max_chars=11, max_lines=3
-        sc = SC(name="t", width=256, height=128, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=72, height=28,
-                         text="Short text",
-                         text_overflow="wrap", border=True, padding_x=0),
-        ])
+        sc = SC(
+            name="t",
+            width=256,
+            height=128,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=72,
+                    height=28,
+                    text="Short text",
+                    text_overflow="wrap",
+                    border=True,
+                    padding_x=0,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         truncated = [w for w in result["warnings"] if "truncated" in w]
         assert len(truncated) == 0
@@ -1205,12 +1615,26 @@ class TestPreflightTextOverflowDeep:
         """Wrap with max_lines=1 forces truncation."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="t", width=256, height=128, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=72, height=28,
-                         text="Word1 Word2 Word3 Word4",
-                         text_overflow="wrap", border=True, padding_x=0,
-                         max_lines=1),
-        ])
+
+        sc = SC(
+            name="t",
+            width=256,
+            height=128,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=72,
+                    height=28,
+                    text="Word1 Word2 Word3 Word4",
+                    text_overflow="wrap",
+                    border=True,
+                    padding_x=0,
+                    max_lines=1,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("truncated" in w for w in result["warnings"])
 
@@ -1218,11 +1642,25 @@ class TestPreflightTextOverflowDeep:
         """Widget without border → border_pad=0 path."""
         from ui_designer import _preflight_scene
         from ui_models import SceneConfig as SC
-        sc = SC(name="t", width=128, height=64, widgets=[
-            WidgetConfig(type="label", x=0, y=0, width=30, height=16,
-                         text="VeryLongTextThatWillNotFitHere",
-                         text_overflow="clip", border=False, padding_x=0),
-        ])
+
+        sc = SC(
+            name="t",
+            width=128,
+            height=64,
+            widgets=[
+                WidgetConfig(
+                    type="label",
+                    x=0,
+                    y=0,
+                    width=30,
+                    height=16,
+                    text="VeryLongTextThatWillNotFitHere",
+                    text_overflow="clip",
+                    border=False,
+                    padding_x=0,
+                ),
+            ],
+        )
         result = _preflight_scene(sc)
         assert any("clipped" in w for w in result["warnings"])
 
@@ -1230,6 +1668,7 @@ class TestPreflightTextOverflowDeep:
 # ===========================================================================
 # No-scene paths for move/resize/delete/clone
 # ===========================================================================
+
 
 class TestNoScenePaths:
     def test_move_widget_no_scene(self):
@@ -1267,6 +1706,7 @@ class TestNoScenePaths:
 # _coerce_groups edge cases
 # ===========================================================================
 
+
 class TestCoerceGroups:
     def test_non_dict_returns_empty(self):
         d, sc = _make()
@@ -1301,6 +1741,7 @@ class TestCoerceGroups:
 # _reindex_after_delete: selected_widget > deleted
 # ===========================================================================
 
+
 class TestReindexAfterDelete:
     def test_selected_adjusted_after_delete(self):
         d, sc = _make(n_widgets=4)
@@ -1318,6 +1759,7 @@ class TestReindexAfterDelete:
 # ===========================================================================
 # history_snapshot with corrupt data
 # ===========================================================================
+
 
 class TestHistorySnapshot:
     def test_snapshot_out_of_range(self):
@@ -1341,6 +1783,7 @@ class TestHistorySnapshot:
 # ===========================================================================
 # redo with meta restoration (extended)
 # ===========================================================================
+
 
 class TestRedoMetaExtended:
     def test_redo_restores_meta(self):
@@ -1374,6 +1817,7 @@ class TestRedoMetaExtended:
 # group_set_lock / group_set_visible no-scene paths
 # ===========================================================================
 
+
 class TestGroupNoScene:
     def test_group_set_lock_no_scene(self):
         d = UIDesigner(128, 64)
@@ -1392,10 +1836,12 @@ class TestGroupNoScene:
 # save_to_json error path
 # ===========================================================================
 
+
 class TestSaveErrors:
     def test_save_to_invalid_path(self, capsys):
         d, sc = _make(n_widgets=1)
         import os
+
         os.environ["ESP32OS_AUTO_EXPORT"] = "0"
         try:
             d.save_to_json("/nonexistent_zxy/bad/path.json")
@@ -1407,73 +1853,127 @@ class TestSaveErrors:
 # draw_text valign/align edge: border=False label rendering
 # ===========================================================================
 
+
 class TestDrawTextBranches:
     def test_valign_top_tall(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=20,
-            text="T", valign="top", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=20,
+                text="T",
+                valign="top",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "T" in txt
 
     def test_valign_bottom_tall(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=20,
-            text="B", valign="bottom", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=20,
+                text="B",
+                valign="bottom",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "B" in txt
 
     def test_align_center_wide(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=40, height=5,
-            text="C", align="center", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=40,
+                height=5,
+                text="C",
+                align="center",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "C" in txt
 
     def test_align_right_wide(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=40, height=5,
-            text="R", align="right", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=40,
+                height=5,
+                text="R",
+                align="right",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "R" in txt
 
     def test_wrap_long_word_render(self):
         """Render a widget with wrap mode and a very long word."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=20,
-            text="ABCDEFGHIJKLMNOPQ",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=20,
+                text="ABCDEFGHIJKLMNOPQ",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "A" in txt
 
     def test_auto_overflow_render(self):
         """Render a widget with auto text_overflow."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=20,
-            text="Hello World From Here",
-            text_overflow="auto", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=20,
+                text="Hello World From Here",
+                text_overflow="auto",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Hello" in txt
 
     def test_clip_render(self):
         """Render label with clip overflow."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=10,
-            text="ThisTextIsWayTooLong",
-            text_overflow="clip", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=10,
+                text="ThisTextIsWayTooLong",
+                text_overflow="clip",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert len(txt) > 0
 
@@ -1482,28 +1982,43 @@ class TestDrawTextBranches:
 # Deep _draw_text paths: wrap with char-splitting, valign, multi-para
 # ===========================================================================
 
+
 class TestDrawTextDeep:
     """Tests targeting uncovered lines 2461-2580 in _draw_text."""
 
     def test_wrap_char_split_single_long_word(self):
         """A single word longer than inner_w triggers char-by-char splitting."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=10, height=10,
-            text="ABCDEFGHIJKLMNO",  # 15 chars, inner_w ~8
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+                text="ABCDEFGHIJKLMNO",  # 15 chars, inner_w ~8
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "A" in txt
 
     def test_wrap_multiline_paragraph(self):
         """Multiple paragraphs (newlines) in wrap mode."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=20,
-            text="Line1\nLine2\nLine3",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=20,
+                text="Line1\nLine2\nLine3",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Line1" in txt
         assert "Line2" in txt
@@ -1511,11 +2026,18 @@ class TestDrawTextDeep:
     def test_wrap_truncation_with_ellipsis(self):
         """Wrap with too many lines → last line gets ellipsis."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=15, height=5,
-            text="AAAA BBBB CCCC DDDD EEEE FFFF",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=15,
+                height=5,
+                text="AAAA BBBB CCCC DDDD EEEE FFFF",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         # At inner_h=3, it can hold 3 lines; 6 words at ~4 chars each
         # needs more than 3 lines, so truncation happens
@@ -1524,63 +2046,109 @@ class TestDrawTextDeep:
     def test_wrap_max_lines_param(self):
         """max_lines limits the number of lines in wrap mode."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=20,
-            text="AA BB CC DD EE FF GG HH II JJ",
-            text_overflow="wrap", border=True, max_lines=2,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=20,
+                text="AA BB CC DD EE FF GG HH II JJ",
+                text_overflow="wrap",
+                border=True,
+                max_lines=2,
+            )
+        )
         txt = _canvas_text(d)
         assert "AA" in txt
 
     def test_auto_switches_to_wrap(self):
         """auto mode with multi-line height and long text → wraps."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=10,
-            text="Word1 Word2 Word3 Word4 Word5",
-            text_overflow="auto", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=10,
+                text="Word1 Word2 Word3 Word4 Word5",
+                text_overflow="auto",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Word1" in txt
 
     def test_auto_stays_single_line(self):
         """auto mode with short text → no wrap needed."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=5,
-            text="Hi",
-            text_overflow="auto", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=5,
+                text="Hi",
+                text_overflow="auto",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Hi" in txt
 
     def test_valign_top_in_tall_widget(self):
         """valign=top → text starts at y0."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=12,
-            text="T", valign="top", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=12,
+                text="T",
+                valign="top",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "T" in txt
 
     def test_valign_bottom_in_tall_widget(self):
         """valign=bottom → text at y1."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=12,
-            text="B", valign="bottom", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=12,
+                text="B",
+                valign="bottom",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "B" in txt
 
     def test_align_center_in_wide_widget(self):
         """align=center → centered text."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=5,
-            text="X", align="center", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=5,
+                text="X",
+                align="center",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         lines = txt.split("\n")
         # 'X' should be roughly centered in the ~ 28-char inner width
@@ -1592,10 +2160,18 @@ class TestDrawTextDeep:
     def test_align_right_in_wide_widget(self):
         """align=right → right-aligned text."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=5,
-            text="R", align="right", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=5,
+                text="R",
+                align="right",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         lines = txt.split("\n")
         for line in lines:
@@ -1606,10 +2182,17 @@ class TestDrawTextDeep:
     def test_empty_text_no_render(self):
         """Empty text → _draw_text returns early."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=5,
-            text="", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=5,
+                text="",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         # Just the border, no crash
         assert len(txt) > 0
@@ -1617,42 +2200,72 @@ class TestDrawTextDeep:
     def test_wrap_with_tab_chars(self):
         """Tabs replaced with spaces in wrap mode."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=10,
-            text="Hello\tWorld\tWrap",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=10,
+                text="Hello\tWorld\tWrap",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Hello" in txt
 
     def test_padding_shrinks_inner_space(self):
         """padding_x/padding_y reduce inner area."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=10,
-            text="Padded", padding_x=3, padding_y=1, border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=10,
+                text="Padded",
+                padding_x=3,
+                padding_y=1,
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Padded" in txt
 
     def test_no_inner_space_returns_early(self):
         """Widget so small no inner space → early return."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=2, height=2,
-            text="X", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=2,
+                height=2,
+                text="X",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert len(txt) > 0  # Renders border but no text
 
     def test_wrap_multiline_newlines_in_text(self):
         """Explicit newlines in text treated as paragraphs in wrap."""
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=30, height=15,
-            text="Para1 words\nPara2 words\nPara3",
-            text_overflow="wrap", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=30,
+                height=15,
+                text="Para1 words\nPara2 words\nPara3",
+                text_overflow="wrap",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "Para1" in txt
 
@@ -1660,6 +2273,7 @@ class TestDrawTextDeep:
 # ===========================================================================
 # Alignment: unknown alignment type (lines 1927, 1931)
 # ===========================================================================
+
 
 class TestAlignUnknown:
     def test_unknown_alignment_ignored(self):
@@ -1679,32 +2293,46 @@ class TestAlignUnknown:
 # Preflight: deeper no-space and edge paths
 # ===========================================================================
 
+
 class TestPreflightDeeper:
     def test_widget_no_inner_space_for_text(self):
         """Tiny widget with text → 'no space' warning."""
         from ui_designer import _check_text_overflow
+
         warnings: list = []
-        w = WidgetConfig(type="label", x=0, y=0, width=4, height=4,
-                         text="Hello", border=True, padding_x=0)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=4, height=4, text="Hello", border=True, padding_x=0
+        )
         _check_text_overflow(0, w, warnings)
         assert any("no space" in w for w in warnings)
 
     def test_widget_max_chars_zero(self):
         """Widget where inner_w < char_w → no space."""
         from ui_designer import _check_text_overflow
+
         warnings: list = []
-        w = WidgetConfig(type="label", x=0, y=0, width=7, height=12,
-                         text="Hello", border=True, padding_x=0)
+        w = WidgetConfig(
+            type="label", x=0, y=0, width=7, height=12, text="Hello", border=True, padding_x=0
+        )
         _check_text_overflow(0, w, warnings)
         assert any("no space" in w for w in warnings)
 
     def test_auto_overflow_multiline_in_preflight(self):
         """text_overflow=auto with tall widget triggers wrap path in preflight."""
         from ui_designer import _check_text_overflow
+
         warnings: list = []
-        w = WidgetConfig(type="label", x=0, y=0, width=50, height=30,
-                         text="Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8 Word9",
-                         text_overflow="auto", border=True, padding_x=0)
+        w = WidgetConfig(
+            type="label",
+            x=0,
+            y=0,
+            width=50,
+            height=30,
+            text="Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8 Word9",
+            text_overflow="auto",
+            border=True,
+            padding_x=0,
+        )
         _check_text_overflow(0, w, warnings)
         # Should detect truncation via auto→wrap path
         # (or not, depending on how many fit; just confirm no crash)
@@ -1712,16 +2340,26 @@ class TestPreflightDeeper:
     def test_wrap_long_word_chunking_in_preflight(self):
         """Very long single word → chunk splitting in preflight."""
         from ui_designer import _check_text_overflow
+
         warnings: list = []
-        w = WidgetConfig(type="label", x=0, y=0, width=30, height=20,
-                         text="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDEFGHIJK",
-                         text_overflow="wrap", border=True, padding_x=0)
+        w = WidgetConfig(
+            type="label",
+            x=0,
+            y=0,
+            width=30,
+            height=20,
+            text="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDEFGHIJK",
+            text_overflow="wrap",
+            border=True,
+            padding_x=0,
+        )
         _check_text_overflow(0, w, warnings)
         assert any("truncated" in w for w in warnings)
 
     def test_log_preflight_with_hints(self, capsys):
         """_log_preflight with all three categories populated."""
         from ui_designer import _log_preflight
+
         result = {
             "issues": ["[0] label: off-canvas"],
             "warnings": ["[1] button: text clipped"],
@@ -1737,6 +2375,7 @@ class TestPreflightDeeper:
     def test_log_preflight_clean(self, capsys):
         """_log_preflight with no issues."""
         from ui_designer import _log_preflight
+
         result = {
             "issues": [],
             "warnings": [],
@@ -1752,6 +2391,7 @@ class TestPreflightDeeper:
 # ===========================================================================
 # Responsive: profile-based resource estimation edge paths
 # ===========================================================================
+
 
 class TestResourceEstimation:
     def test_estimate_with_profile(self):
@@ -1786,9 +2426,11 @@ class TestResourceEstimation:
 # Checkpoint: save / rollback paths
 # ===========================================================================
 
+
 class TestCheckpoints:
     def test_create_and_list_checkpoints(self, tmp_path):
         import os
+
         os.environ["ESP32OS_CHECKPOINT_DIR"] = str(tmp_path)
         try:
             d, sc = _make(n_widgets=2)
@@ -1812,40 +2454,69 @@ class TestCheckpoints:
 # draw_icon / draw_chart edge paths
 # ===========================================================================
 
+
 class TestDrawIconChart:
     def test_icon_no_char(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="icon", x=0, y=0, width=8, height=5,
-            icon_char="", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="icon",
+                x=0,
+                y=0,
+                width=8,
+                height=5,
+                icon_char="",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert len(txt) > 0
 
     def test_icon_at_edge(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="icon", x=120, y=0, width=8, height=5,
-            icon_char="*", border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="icon",
+                x=120,
+                y=0,
+                width=8,
+                height=5,
+                icon_char="*",
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert len(txt) > 0
 
     def test_chart_few_points(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="chart", x=0, y=0, width=20, height=8,
-            data_points=[10, 50], border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="chart",
+                x=0,
+                y=0,
+                width=20,
+                height=8,
+                data_points=[10, 50],
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert len(txt) > 0
 
     def test_chart_no_points(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="chart", x=0, y=0, width=20, height=8,
-            data_points=[], border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="chart",
+                x=0,
+                y=0,
+                width=20,
+                height=8,
+                data_points=[],
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert len(txt) > 0
 
@@ -1853,6 +2524,7 @@ class TestDrawIconChart:
 # ===========================================================================
 # distribute_widgets vertical + guides rendering
 # ===========================================================================
+
 
 class TestDistributeAndGuides:
     def test_distribute_vertical(self):
@@ -1894,9 +2566,11 @@ class TestDistributeAndGuides:
 # load_from_json with scenes as list format
 # ===========================================================================
 
+
 class TestLoadScenesAsList:
     def test_load_scenes_as_list(self, tmp_path):
         import json as js
+
         data = {
             "width": 128,
             "height": 64,
@@ -1907,8 +2581,14 @@ class TestLoadScenesAsList:
                     "width": 128,
                     "height": 64,
                     "widgets": [
-                        {"type": "label", "x": 10, "y": 10, "width": 30, "height": 12,
-                         "text": "Hello"}
+                        {
+                            "type": "label",
+                            "x": 10,
+                            "y": 10,
+                            "width": 30,
+                            "height": 12,
+                            "text": "Hello",
+                        }
                     ],
                 }
             ],
@@ -1923,6 +2603,7 @@ class TestLoadScenesAsList:
 # ===========================================================================
 # rollback_checkpoint success path
 # ===========================================================================
+
 
 class TestRollbackCheckpoint:
     def test_rollback_success(self):
@@ -1948,12 +2629,21 @@ class TestRollbackCheckpoint:
 # invisible widget skipped in draw
 # ===========================================================================
 
+
 class TestInvisibleWidget:
     def test_invisible_not_rendered(self):
         d, sc = _make()
-        sc.widgets.append(WidgetConfig(
-            type="label", x=0, y=0, width=20, height=5,
-            text="HIDDEN", visible=False, border=True,
-        ))
+        sc.widgets.append(
+            WidgetConfig(
+                type="label",
+                x=0,
+                y=0,
+                width=20,
+                height=5,
+                text="HIDDEN",
+                visible=False,
+                border=True,
+            )
+        )
         txt = _canvas_text(d)
         assert "HIDDEN" not in txt

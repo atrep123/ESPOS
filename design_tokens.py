@@ -11,11 +11,12 @@ Centralized source of truth for:
 
 Usage:
     from design_tokens import tokens
-    
+
     bg_color = tokens.colors.surface
     spacing = tokens.spacing.md
     duration = tokens.animation.base
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -61,12 +62,12 @@ class ColorTokens:
 class SpacingTokens:
     """Spacing scale (4px base unit)."""
 
-    xs: int = 4   # 4px
-    sm: int = 8   # 8px
+    xs: int = 4  # 4px
+    sm: int = 8  # 8px
     md: int = 16  # 16px (base)
     lg: int = 24  # 24px
     xl: int = 32  # 32px
-    xxl: int = 48 # 48px
+    xxl: int = 48  # 48px
 
     # Component-specific
     button_padding_x: int = 16
@@ -121,22 +122,10 @@ class ElevationTokens:
 
     def __post_init__(self):
         # Shadow blur mapping
-        object.__setattr__(self, 'shadow_blur', {
-            0: 0,
-            1: 2,
-            2: 4,
-            3: 8,
-            4: 12
-        })
+        object.__setattr__(self, "shadow_blur", {0: 0, 1: 2, 2: 4, 3: 8, 4: 12})
 
         # ASCII shading characters (for terminal rendering)
-        object.__setattr__(self, 'ascii_shading', {
-            0: '',
-            1: '░',
-            2: '▒',
-            3: '▓',
-            4: '█'
-        })
+        object.__setattr__(self, "ascii_shading", {0: "", 1: "░", 2: "▒", 3: "▓", 4: "█"})
 
 
 @dataclass(frozen=True)
@@ -144,9 +133,9 @@ class AnimationTokens:
     """Animation durations and easing."""
 
     # Durations (ms)
-    fast: int = 80      # Quick interactions
-    base: int = 160     # Standard transitions
-    slow: int = 240     # Modal/overlay animations
+    fast: int = 80  # Quick interactions
+    base: int = 160  # Standard transitions
+    slow: int = 240  # Modal/overlay animations
 
     # Easing curves (cubic-bezier values)
     ease_in: str = "cubic-bezier(0.4, 0.0, 1.0, 1.0)"
@@ -161,15 +150,17 @@ class AnimationTokens:
 @dataclass(frozen=True)
 class ResponsiveBreakpoints:
     """Viewport width breakpoints (columns/pixels depending on context)."""
-    tiny: int = 40     # <40 cols: minimal UI
-    small: int = 80    # 40-79: compact UI
+
+    tiny: int = 40  # <40 cols: minimal UI
+    small: int = 80  # 40-79: compact UI
     medium: int = 120  # 80-119: comfortable default
-    wide: int = 160    # >=120: spacious layouts
+    wide: int = 160  # >=120: spacious layouts
 
 
 @dataclass(frozen=True)
 class ResponsiveTier:
     """Resolved responsive tier with convenience flags."""
+
     name: str
     is_tiny: bool
     is_small: bool
@@ -469,7 +460,7 @@ def apply_tokens(target: Any, mapping: Mapping[str, str]) -> Any:
 # Helper functions for compatibility with existing codebase
 def rgb_to_terminal_color_name(rgb: Tuple[int, int, int]) -> str:
     """Convert RGB tuple to terminal color name (approximation).
-    
+
     Used for compatibility with existing string-based color system.
     Maps design token RGB values to nearest ANSI color name.
     """
@@ -499,10 +490,10 @@ def rgb_to_terminal_color_name(rgb: Tuple[int, int, int]) -> str:
 
 def get_semantic_color(semantic_name: str) -> Tuple[int, int, int]:
     """Get RGB color for semantic token name.
-    
+
     Args:
         semantic_name: Token name like 'primary', 'surface', 'success', etc.
-        
+
     Returns:
         RGB tuple (r, g, b)
     """

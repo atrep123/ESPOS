@@ -109,6 +109,4 @@ def test_all_glyph_rows_are_6bit():
     """Each row should use at most 6 bits (bit5..bit0)."""
     for ch, glyph in _GLYPHS.items():
         for i, row in enumerate(glyph):
-            assert row & ~0x3F == 0, (
-                f"glyph {ch!r} row {i}: 0x{row:02x} uses bits above 5"
-            )
+            assert row & ~0x3F == 0, f"glyph {ch!r} row {i}: 0x{row:02x} uses bits above 5"

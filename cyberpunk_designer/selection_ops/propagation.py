@@ -309,5 +309,5 @@ def propagate_text(app) -> None:
         if 0 <= idx < len(sc.widgets):
             sc.widgets[idx].text = text
             count += 1
-    app._set_status(f"Set text \"{text}\" on {count} widget(s).", ttl_sec=2.0)
+    app._set_status(f'Set text "{text}" on {count} widget(s).', ttl_sec=2.0)
     app._mark_dirty()

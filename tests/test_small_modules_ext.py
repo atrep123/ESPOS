@@ -34,7 +34,7 @@ def _app(widgets=None, *, snap=False):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -113,7 +113,10 @@ class TestLivePreview:
             _set_status=MagicMock(),
         )
         send_live_preview(app)
-        assert "set" in app._set_status.call_args[0][0].lower() or "port" in app._set_status.call_args[0][0].lower()
+        assert (
+            "set" in app._set_status.call_args[0][0].lower()
+            or "port" in app._set_status.call_args[0][0].lower()
+        )
 
     def test_send_no_pyserial(self):
         """Port set but pyserial missing (lines 44-46)."""
@@ -123,7 +126,10 @@ class TestLivePreview:
         )
         with patch.dict("sys.modules", {"serial": None}):
             send_live_preview(app)
-            assert "pyserial" in app._set_status.call_args[0][0].lower() or "missing" in app._set_status.call_args[0][0].lower()
+            assert (
+                "pyserial" in app._set_status.call_args[0][0].lower()
+                or "missing" in app._set_status.call_args[0][0].lower()
+            )
 
     def test_send_serial_write_fails(self, tmp_path):
         """Serial write fails (lines 56-57)."""
@@ -167,7 +173,9 @@ class TestLivePreview:
             available_ports_idx=-1,
             _set_status=MagicMock(),
         )
-        with patch.dict("sys.modules", {"serial": None, "serial.tools": None, "serial.tools.list_ports": None}):
+        with patch.dict(
+            "sys.modules", {"serial": None, "serial.tools": None, "serial.tools.list_ports": None}
+        ):
             refresh_available_ports(app)
             assert app.available_ports == []
 
@@ -184,11 +192,14 @@ class TestLivePreview:
             available_ports_idx=-1,
             _set_status=MagicMock(),
         )
-        with patch.dict("sys.modules", {
-            "serial": mock_serial,
-            "serial.tools": mock_serial_tools,
-            "serial.tools.list_ports": mock_list_ports,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "serial": mock_serial,
+                "serial.tools": mock_serial_tools,
+                "serial.tools.list_ports": mock_list_ports,
+            },
+        ):
             refresh_available_ports(app)
             assert app.available_ports == ["/dev/ttyUSB0"]
             assert app.available_ports_idx == 0
@@ -241,7 +252,16 @@ class TestAddComponentEdge:
     def test_bad_z_in_blueprint(self, mock_bp):
         """Non-int z triggers except in z parsing (lines 91-92)."""
         mock_bp.return_value = [
-            {"type": "label", "role": "t", "x": 0, "y": 0, "width": 50, "height": 10, "text": "T", "z": "bad"},
+            {
+                "type": "label",
+                "role": "t",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 10,
+                "text": "T",
+                "z": "bad",
+            },
         ]
         app = _app()
         add_component(app, "card")
@@ -255,7 +275,9 @@ class TestAddComponentEdge:
             {"type": "label", "role": "t", "x": 0, "y": 0, "width": 50, "height": 10, "text": "T"},
         ]
         app = _app()
-        with patch("cyberpunk_designer.component_insert.WidgetConfig", side_effect=TypeError("fail")):
+        with patch(
+            "cyberpunk_designer.component_insert.WidgetConfig", side_effect=TypeError("fail")
+        ):
             add_component(app, "card")
         # Widget creation failed, so no widgets added
 
@@ -278,7 +300,9 @@ class TestAddComponentEdge:
             {"type": "label", "role": "t", "x": 0, "y": 0, "width": 50, "height": 10, "text": "T"},
         ]
         app = _app()
-        with patch("cyberpunk_designer.component_insert.WidgetConfig", side_effect=TypeError("fail")):
+        with patch(
+            "cyberpunk_designer.component_insert.WidgetConfig", side_effect=TypeError("fail")
+        ):
             add_component(app, "card")
             app._set_status.assert_called()
 
@@ -286,7 +310,15 @@ class TestAddComponentEdge:
     def test_modal_origin_zero(self, mock_bp):
         """Modal components use origin (0,0)."""
         mock_bp.return_value = [
-            {"type": "panel", "role": "overlay", "x": 0, "y": 0, "width": 200, "height": 100, "text": ""},
+            {
+                "type": "panel",
+                "role": "overlay",
+                "x": 0,
+                "y": 0,
+                "width": 200,
+                "height": 100,
+                "text": "",
+            },
         ]
         app = _app()
         add_component(app, "modal")
@@ -300,7 +332,15 @@ class TestAddComponentEdge:
         """create_group raising → except branch (lines 147-148)."""
         mock_bp.return_value = [
             {"type": "panel", "role": "bg", "x": 0, "y": 0, "width": 100, "height": 50, "text": ""},
-            {"type": "label", "role": "title", "x": 2, "y": 2, "width": 96, "height": 10, "text": "T"},
+            {
+                "type": "label",
+                "role": "title",
+                "x": 2,
+                "y": 2,
+                "width": 96,
+                "height": 10,
+                "text": "T",
+            },
         ]
         app = _app()
         app.designer.create_group = MagicMock(side_effect=RuntimeError("fail"))
@@ -313,7 +353,15 @@ class TestAddComponentEdge:
         """create_group returns False (line 146)."""
         mock_bp.return_value = [
             {"type": "panel", "role": "bg", "x": 0, "y": 0, "width": 100, "height": 50, "text": ""},
-            {"type": "label", "role": "title", "x": 2, "y": 2, "width": 96, "height": 10, "text": "T"},
+            {
+                "type": "label",
+                "role": "title",
+                "x": 2,
+                "y": 2,
+                "width": 96,
+                "height": 10,
+                "text": "T",
+            },
         ]
         app = _app()
         app.designer.create_group = MagicMock(return_value=False)
@@ -329,6 +377,7 @@ class TestAddComponentEdge:
 
 class _BadScene:
     """Scene mock that raises on width/height access."""
+
     @property
     def width(self):
         raise AttributeError("no width")
@@ -422,6 +471,7 @@ def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
     monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     from cyberpunk_editor import CyberpunkEditorApp
+
     json_path = tmp_path / "scene.json"
     return CyberpunkEditorApp(json_path, (256, 128))
 
@@ -430,6 +480,7 @@ class TestWindowing:
     def test_hardware_accelerated_scale(self, tmp_path, monkeypatch):
         """Exercise hardware_accelerated_scale (lines 60-62)."""
         from cyberpunk_designer.windowing import hardware_accelerated_scale
+
         app = _make_app(tmp_path, monkeypatch)
         # Ensure we have a real window and logical_surface
         if app.window is not None and app.logical_surface is not None:
@@ -439,11 +490,13 @@ class TestWindowing:
     def test_handle_video_resize(self, tmp_path, monkeypatch):
         """Exercise handle_video_resize (lines 79-80)."""
         from cyberpunk_designer.windowing import handle_video_resize
+
         app = _make_app(tmp_path, monkeypatch)
         handle_video_resize(app, 512, 256)
 
     def test_handle_video_resize_with_scale_locked(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import handle_video_resize
+
         app = _make_app(tmp_path, monkeypatch)
         app._scale_locked = True
         app.scale = 2
@@ -452,6 +505,7 @@ class TestWindowing:
     def test_toggle_fullscreen_on(self, tmp_path, monkeypatch):
         """Exercise toggle_fullscreen entering fullscreen (line 91)."""
         from cyberpunk_designer.windowing import toggle_fullscreen
+
         app = _make_app(tmp_path, monkeypatch)
         app.fullscreen = False
         toggle_fullscreen(app)
@@ -460,6 +514,7 @@ class TestWindowing:
     def test_toggle_fullscreen_off(self, tmp_path, monkeypatch):
         """Exercise toggle_fullscreen leaving fullscreen (lines 102-103)."""
         from cyberpunk_designer.windowing import toggle_fullscreen
+
         app = _make_app(tmp_path, monkeypatch)
         app.fullscreen = True
         app._default_palette_w = 120
@@ -469,6 +524,7 @@ class TestWindowing:
 
     def test_toggle_fullscreen_with_scale_locked(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import toggle_fullscreen
+
         app = _make_app(tmp_path, monkeypatch)
         app._scale_locked = True
         app.scale = 2
@@ -478,6 +534,7 @@ class TestWindowing:
     def test_set_scale_with_window(self, tmp_path, monkeypatch):
         """Exercise set_scale with a window (lines 127-128)."""
         from cyberpunk_designer.windowing import set_scale
+
         app = _make_app(tmp_path, monkeypatch)
         app.max_auto_scale = 4
         set_scale(app, 2)
@@ -486,6 +543,7 @@ class TestWindowing:
     def test_set_scale_no_window(self, tmp_path, monkeypatch):
         """set_scale with no window -> _mark_dirty."""
         from cyberpunk_designer.windowing import set_scale
+
         app = _make_app(tmp_path, monkeypatch)
         app.max_auto_scale = 4
         app.window = None
@@ -494,6 +552,7 @@ class TestWindowing:
     def test_set_scale_window_get_size_raises(self, tmp_path, monkeypatch):
         """set_scale where window.get_size() raises."""
         from cyberpunk_designer.windowing import set_scale
+
         app = _make_app(tmp_path, monkeypatch)
         app.max_auto_scale = 4
         app.window = MagicMock()
@@ -502,6 +561,7 @@ class TestWindowing:
 
     def test_recompute_scale_for_window(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import recompute_scale_for_window
+
         app = _make_app(tmp_path, monkeypatch)
         recompute_scale_for_window(app, 800, 600)
         assert app.scale >= 1
@@ -509,22 +569,26 @@ class TestWindowing:
     def test_rebuild_layout_no_window_size(self, tmp_path, monkeypatch):
         """rebuild_layout without window_size (lines 197-198)."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         rebuild_layout(app, window_size=None)
 
     def test_rebuild_layout_with_window_size(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         rebuild_layout(app, window_size=(800, 600))
 
     def test_rebuild_layout_panels_collapsed(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         app.panels_collapsed = True
         rebuild_layout(app, window_size=(512, 256))
 
     def test_rebuild_layout_with_lock_scale(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         rebuild_layout(app, window_size=(800, 600), lock_scale=2)
         assert app.scale >= 1
@@ -532,6 +596,7 @@ class TestWindowing:
     def test_rebuild_layout_large_scene(self, tmp_path, monkeypatch):
         """Rebuild with scene larger than canvas to hit centering branches."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         app.designer._width = 256
         app.designer._height = 128
@@ -540,11 +605,13 @@ class TestWindowing:
     def test_rebuild_layout_tiny_window(self, tmp_path, monkeypatch):
         """Very small window to exercise edge cases in scene_rect computation."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         rebuild_layout(app, window_size=(100, 50))
 
     def test_screen_to_logical(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import screen_to_logical
+
         app = _make_app(tmp_path, monkeypatch)
         lx, ly = screen_to_logical(app, 100, 50)
         assert isinstance(lx, int)
@@ -552,12 +619,14 @@ class TestWindowing:
 
     def test_compute_scale(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import compute_scale
+
         app = _make_app(tmp_path, monkeypatch)
         s = compute_scale(app, force_window=(800, 600))
         assert s >= 1
 
     def test_compute_scale_no_force(self, tmp_path, monkeypatch):
         from cyberpunk_designer.windowing import compute_scale
+
         app = _make_app(tmp_path, monkeypatch)
         s = compute_scale(app)
         assert s >= 1
@@ -569,33 +638,39 @@ class TestWindowingMock:
     def test_hw_scale_transform_fails(self, tmp_path, monkeypatch):
         """hardware_accelerated_scale fallback when transform.scale raises (lines 60-62)."""
         from cyberpunk_designer.windowing import hardware_accelerated_scale
+
         app = _make_app(tmp_path, monkeypatch)
         if app.window is None:
             return  # skip in headless
         orig_scale = pygame.transform.scale
         call_count = [0]
+
         def failing_scale(surface, size):
             call_count[0] += 1
             if call_count[0] == 1:
                 raise pygame.error("test error")
             return orig_scale(surface, size)
+
         monkeypatch.setattr(pygame.transform, "scale", failing_scale)
         hardware_accelerated_scale(app)
 
     def test_handle_resize_scale_locked_raises(self, tmp_path, monkeypatch):
         """handle_video_resize when _scale_locked bool() raises (lines 79-80)."""
         from cyberpunk_designer.windowing import handle_video_resize
+
         app = _make_app(tmp_path, monkeypatch)
 
         class BadBool:
             def __bool__(self):
                 raise RuntimeError("bad bool")
+
         app._scale_locked = BadBool()
         handle_video_resize(app, 512, 256)
 
     def test_toggle_fullscreen_zero_display(self, tmp_path, monkeypatch):
         """toggle_fullscreen when display.Info() returns zero dims (line 91)."""
         from cyberpunk_designer.windowing import toggle_fullscreen
+
         app = _make_app(tmp_path, monkeypatch)
         app.fullscreen = False
         mock_info = MagicMock(current_w=0, current_h=0)
@@ -605,6 +680,7 @@ class TestWindowingMock:
     def test_toggle_fullscreen_off_scale_locked_raises(self, tmp_path, monkeypatch):
         """toggle_fullscreen off when _scale_locked bool() raises (lines 102-103)."""
         from cyberpunk_designer.windowing import toggle_fullscreen
+
         app = _make_app(tmp_path, monkeypatch)
         app.fullscreen = True
         app._default_palette_w = 120
@@ -613,12 +689,14 @@ class TestWindowingMock:
         class BadBool:
             def __bool__(self):
                 raise RuntimeError("bad bool")
+
         app._scale_locked = BadBool()
         toggle_fullscreen(app)
 
     def test_rebuild_state_scene_raises(self, tmp_path, monkeypatch):
         """rebuild_layout where state.current_scene() raises (lines 197-198)."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         app.state = MagicMock()
         app.state.current_scene.side_effect = RuntimeError("no scene")
@@ -627,6 +705,7 @@ class TestWindowingMock:
     def test_rebuild_scene_larger_than_view(self, tmp_path, monkeypatch):
         """rebuild_layout with scene larger than view (lines 208, 212)."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         # Designer width small so layout/canvas is small, but scene width large
         app.designer.width = 50
@@ -639,6 +718,7 @@ class TestWindowingMock:
     def test_rebuild_mark_dirty_fails(self, tmp_path, monkeypatch):
         """rebuild_layout when _mark_dirty raises (lines 229-230)."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         app._mark_dirty = MagicMock(side_effect=RuntimeError("fail"))
         rebuild_layout(app, window_size=(800, 600))
@@ -646,15 +726,18 @@ class TestWindowingMock:
     def test_rebuild_state_layout_assign_fails(self, tmp_path, monkeypatch):
         """rebuild_layout when state.layout assignment raises (lines 224-225)."""
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
 
         class BadState:
             @property
             def layout(self):
                 return None
+
             @layout.setter
             def layout(self, val):
                 raise RuntimeError("fail")
+
             def current_scene(self):
                 return SimpleNamespace(width=256, height=128)
 
@@ -665,11 +748,14 @@ class TestWindowingMock:
         """rebuild_layout where canvas_rect access triggers exception (lines 218-219)."""
         from cyberpunk_designer.layout import Layout
         from cyberpunk_designer.windowing import rebuild_layout
+
         app = _make_app(tmp_path, monkeypatch)
         # Patch Layout so canvas_rect raises
         orig_init = Layout.__init__
+
         def patched_init(self, *args, **kwargs):
             orig_init(self, *args, **kwargs)
+
         monkeypatch.setattr(Layout, "__init__", patched_init)
 
         class BrokenRect:

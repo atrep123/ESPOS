@@ -23,7 +23,13 @@ def _base_layout_size(app, palette_w: int, inspector_w: int) -> Tuple[int, int]:
     canvas_w = int(getattr(app.designer, "width", 0) or 0)
     canvas_h = int(getattr(app.designer, "height", 0) or 0)
     base_w = max(1, canvas_w + int(palette_w) + int(inspector_w))
-    base_h = max(1, canvas_h + int(getattr(app, "toolbar_h", 0) or 0) + int(getattr(app, "scene_tabs_h", 0) or 0) + int(getattr(app, "status_h", 0) or 0))
+    base_h = max(
+        1,
+        canvas_h
+        + int(getattr(app, "toolbar_h", 0) or 0)
+        + int(getattr(app, "scene_tabs_h", 0) or 0)
+        + int(getattr(app, "status_h", 0) or 0),
+    )
     return base_w, base_h
 
 
@@ -86,13 +92,22 @@ def toggle_fullscreen(app) -> None:
     app.fullscreen = not app.fullscreen
     if app.fullscreen:
         info = pygame.display.Info()
-        win_w, win_h = int(getattr(info, "current_w", 0) or 0), int(getattr(info, "current_h", 0) or 0)
+        win_w, win_h = (
+            int(getattr(info, "current_w", 0) or 0),
+            int(getattr(info, "current_h", 0) or 0),
+        )
         if win_w <= 0 or win_h <= 0:
             win_w, win_h = app.window.get_size()
     else:
         # Restore to a reasonable windowed size based on current layout/scale.
         base_w, base_h = _base_layout_size(app, app._default_palette_w, app._default_inspector_w)
-        scale = max(1, min(int(getattr(app, "scale", SCALE) or SCALE), int(getattr(app, "max_auto_scale", 4) or 4)))
+        scale = max(
+            1,
+            min(
+                int(getattr(app, "scale", SCALE) or SCALE),
+                int(getattr(app, "max_auto_scale", 4) or 4),
+            ),
+        )
         win_w, win_h = base_w * scale, base_h * scale
 
     lock = None
@@ -101,13 +116,19 @@ def toggle_fullscreen(app) -> None:
             lock = int(getattr(app, "scale", 1) or 1)
     except Exception:
         lock = None
-    rebuild_layout(app, window_size=(int(win_w), int(win_h)), force_scene_size=False, lock_scale=lock)
+    rebuild_layout(
+        app, window_size=(int(win_w), int(win_h)), force_scene_size=False, lock_scale=lock
+    )
 
 
 def compute_scale(app, force_window: Optional[Tuple[int, int]] = None) -> int:
     """Compute scale."""
-    palette_w = 0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_palette_w", 0)
-    inspector_w = 0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_inspector_w", 0)
+    palette_w = (
+        0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_palette_w", 0)
+    )
+    inspector_w = (
+        0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_inspector_w", 0)
+    )
     base_w, base_h = _base_layout_size(app, int(palette_w), int(inspector_w))
     margin_w, margin_h = 24, 64
     if force_window:
@@ -134,8 +155,12 @@ def set_scale(app, new_scale: int) -> None:
 
 def recompute_scale_for_window(app, win_w: int, win_h: int) -> None:
     """Recompute scale for window."""
-    palette_w = 0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_palette_w", 0)
-    inspector_w = 0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_inspector_w", 0)
+    palette_w = (
+        0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_palette_w", 0)
+    )
+    inspector_w = (
+        0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_inspector_w", 0)
+    )
     base_w, base_h = _base_layout_size(app, int(palette_w), int(inspector_w))
     app.scale = _fit_scale(app, int(win_w), int(win_h), base_w, base_h)
 
@@ -147,8 +172,16 @@ def rebuild_layout(
     lock_scale: Optional[int] = None,
 ) -> None:
     """Rebuild UI layout."""
-    palette_w = 0 if getattr(app, "panels_collapsed", False) else int(getattr(app, "_default_palette_w", 0) or 0)
-    inspector_w = 0 if getattr(app, "panels_collapsed", False) else int(getattr(app, "_default_inspector_w", 0) or 0)
+    palette_w = (
+        0
+        if getattr(app, "panels_collapsed", False)
+        else int(getattr(app, "_default_palette_w", 0) or 0)
+    )
+    inspector_w = (
+        0
+        if getattr(app, "panels_collapsed", False)
+        else int(getattr(app, "_default_inspector_w", 0) or 0)
+    )
 
     base_w, base_h = _base_layout_size(app, palette_w, inspector_w)
 

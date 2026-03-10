@@ -51,6 +51,7 @@ def _key(key, mod=0, unicode=""):
 # on_key_down — Ctrl+Alt+S (L111-113)
 # ===========================================================================
 
+
 class TestCtrlAltS:
     def test_ctrl_alt_s_fit_to_widget(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -64,6 +65,7 @@ class TestCtrlAltS:
             raising=False,
         )
         from cyberpunk_designer import input_handlers
+
         getattr(input_handlers, "fit_selection_to_widget", None)
         # Patch via module-level import cached in on_key_down
         monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL | ALT)
@@ -76,6 +78,7 @@ class TestCtrlAltS:
 # ===========================================================================
 # on_key_down — Ctrl+F1 widget_type_summary (L142-143)
 # ===========================================================================
+
 
 class TestCtrlF1:
     def test_ctrl_f1_toggles_help_not_summary(self, tmp_path, monkeypatch):
@@ -91,6 +94,7 @@ class TestCtrlF1:
 # ===========================================================================
 # on_key_down — F2 sim mode toggle with focus (L176)
 # ===========================================================================
+
 
 class TestF2SimModeWithFocus:
     def test_f2_enters_sim_mode_with_focusable(self, tmp_path, monkeypatch):
@@ -110,6 +114,7 @@ class TestF2SimModeWithFocus:
 # ===========================================================================
 # on_key_down — sim mode Escape/Backspace with focus_edit_value (L187-188, L201-202)
 # ===========================================================================
+
 
 class TestSimModeEditValueExit:
     def test_escape_exits_edit_value_in_sim(self, tmp_path, monkeypatch):
@@ -134,6 +139,7 @@ class TestSimModeEditValueExit:
 # ===========================================================================
 # on_key_down — undo/redo success paths (L230-232, L235-237, L242-244)
 # ===========================================================================
+
 
 class TestUndoRedoSuccess:
     def test_ctrl_shift_z_redo_succeeds(self, tmp_path, monkeypatch):
@@ -180,6 +186,7 @@ class TestUndoRedoSuccess:
 # on_key_down — Ctrl+Tab / Ctrl+PgUp/PgDn scene navigation (L378-401)
 # ===========================================================================
 
+
 class TestSceneNavigation:
     def _add_second_scene(self, app):
         app._add_new_scene()
@@ -216,6 +223,7 @@ class TestSceneNavigation:
 # ===========================================================================
 # on_key_down — Single-letter shift variants that start editor (L414-526)
 # ===========================================================================
+
 
 class TestLetterShiftEditorStart:
     """Cover shift+letter keys that start inspector edits."""
@@ -459,6 +467,7 @@ class TestLetterShiftEditorStart:
 # on_key_down — Sim mode Shift+Enter (L609)
 # ===========================================================================
 
+
 class TestSimShiftEnter:
     def test_shift_enter_in_sim_mode(self, tmp_path, monkeypatch):
         """L609: Shift+Enter in sim mode shows hold status."""
@@ -474,6 +483,7 @@ class TestSimShiftEnter:
 # ===========================================================================
 # on_key_down — Sim mode arrows with focus_edit_value (L627-629)
 # ===========================================================================
+
 
 class TestSimArrowEditValue:
     def test_up_adjusts_value_in_sim_edit(self, tmp_path, monkeypatch):
@@ -502,6 +512,7 @@ class TestSimArrowEditValue:
 # ===========================================================================
 # on_key_down — Arrow key variants (L653, L657, L661, L664-667)
 # ===========================================================================
+
 
 class TestArrowKeyVariants:
     def test_left_arrow_moves(self, tmp_path, monkeypatch):
@@ -554,6 +565,7 @@ class TestArrowKeyVariants:
 # on_key_down — PageUp/PageDown without Ctrl, not covered (L545, L547)
 # ===========================================================================
 
+
 class TestPageUpDownScene:
     def test_ctrl_pagedown_single_scene_noop(self, tmp_path, monkeypatch):
         """L391-395 & L545-547 are in same elif chain; second is dead code.
@@ -567,6 +579,7 @@ class TestPageUpDownScene:
 # ===========================================================================
 # focus_nav — L264 (_sim_try_scroll_list visible<=0)
 # ===========================================================================
+
 
 class TestFocusNavL264:
     def test_sim_scroll_visible_zero(self, tmp_path, monkeypatch):
@@ -592,6 +605,7 @@ class TestFocusNavL264:
 # focus_nav — L363 (focus_move_direction cur is None)
 # ===========================================================================
 
+
 class TestFocusNavL363:
     def test_focus_move_no_focusables(self, tmp_path, monkeypatch):
         """L363: cur is None because no focusable widgets exist."""
@@ -609,6 +623,7 @@ class TestFocusNavL363:
 # focus_nav — L474 (activate_focused idx is None)
 # ===========================================================================
 
+
 class TestFocusNavL474:
     def test_activate_focused_no_focusables(self, tmp_path, monkeypatch):
         """L474: return when idx is None (no focusable widgets)."""
@@ -624,6 +639,7 @@ class TestFocusNavL474:
 # ===========================================================================
 # inspector_logic — single-widget edit fields (L809-1019)
 # ===========================================================================
+
 
 class TestInspectorSingleEdit:
     """Cover single-widget edit branches in inspector_commit_edit."""
@@ -864,6 +880,7 @@ class TestInspectorSingleEdit:
 # inspector_logic — multi-select edit branches (L715-790)
 # ===========================================================================
 
+
 class TestInspectorMultiEdit:
     """Cover multi-widget edit paths in inspector_commit_edit."""
 
@@ -994,6 +1011,7 @@ class TestInspectorMultiEdit:
 # inspector_logic — position/size/value quick edits
 # ===========================================================================
 
+
 class TestInspectorQuickEdits:
     """Cover _position, _padding, _margin, _size, _value_range, _spacing."""
 
@@ -1091,6 +1109,7 @@ class TestInspectorQuickEdits:
 # inspector_logic — compute_inspector_rows
 # ===========================================================================
 
+
 class TestComputeInspectorRows:
     def test_single_widget_rows(self, tmp_path, monkeypatch):
         """L1209+: compute_inspector_rows with chart and checkbox."""
@@ -1134,6 +1153,7 @@ class TestComputeInspectorRows:
 # inspector_logic — _parse_pair edge cases
 # ===========================================================================
 
+
 class TestParsePair:
     def test_no_separator(self, tmp_path, monkeypatch):
         """L22: _parse_pair returns None when no separator."""
@@ -1163,6 +1183,7 @@ class TestParsePair:
 # inspector_logic — _commit_epilogue exception branch (L35-36)
 # ===========================================================================
 
+
 class TestCommitEpilogue:
     def test_epilogue_handles_keyboard_exception(self, tmp_path, monkeypatch):
         """L35-36: _commit_epilogue catches pygame keyboard errors."""
@@ -1176,6 +1197,11 @@ class TestCommitEpilogue:
         app.state.inspector_input_buffer = "new"
         app.state.inspector_raw_input = "new"
         # Make stop_text_input raise
-        monkeypatch.setattr(pygame.key, "stop_text_input", lambda: (_ for _ in ()).throw(RuntimeError("no keyboard")), raising=False)
+        monkeypatch.setattr(
+            pygame.key,
+            "stop_text_input",
+            lambda: (_ for _ in ()).throw(RuntimeError("no keyboard")),
+            raising=False,
+        )
         result = inspector_commit_edit(app)
         assert result is True

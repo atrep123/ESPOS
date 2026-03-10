@@ -38,6 +38,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -69,6 +70,7 @@ def _sel(app, *indices):
 # select_same_type_as_current
 # ===========================================================================
 
+
 class TestSelectSameTypeAsCurrent:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -92,6 +94,7 @@ class TestSelectSameTypeAsCurrent:
 # select_unlocked
 # ===========================================================================
 
+
 class TestSelectUnlocked:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -112,6 +115,7 @@ class TestSelectUnlocked:
 # ===========================================================================
 # select_disabled
 # ===========================================================================
+
 
 class TestSelectDisabled:
     def test_basic(self, tmp_path, monkeypatch):
@@ -134,6 +138,7 @@ class TestSelectDisabled:
 # select_largest
 # ===========================================================================
 
+
 class TestSelectLargest:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -152,6 +157,7 @@ class TestSelectLargest:
 # select_smallest
 # ===========================================================================
 
+
 class TestSelectSmallest:
     def test_basic(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -169,6 +175,7 @@ class TestSelectSmallest:
 # ===========================================================================
 # Guard branches for existing functions
 # ===========================================================================
+
 
 class TestSearchWidgetsGuards:
     def test_empty_query(self, tmp_path, monkeypatch):

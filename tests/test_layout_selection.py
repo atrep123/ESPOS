@@ -59,8 +59,13 @@ def _make_app(tmp_path, monkeypatch):
 def _add(app, wtype="label", **kw):
     """Append a widget and return its index."""
     defaults = dict(
-        type=wtype, x=0, y=0, width=32, height=16,
-        color_fg="#f0f0f0", color_bg="#000000",
+        type=wtype,
+        x=0,
+        y=0,
+        width=32,
+        height=16,
+        color_fg="#f0f0f0",
+        color_bg="#000000",
     )
     defaults.update(kw)
     sc = app.state.current_scene()

@@ -15,6 +15,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Round-trip: create → save → load → verify
 # ---------------------------------------------------------------------------
 
+
 class TestRoundTrip:
     def test_save_load_preserves_all_widget_types(self, tmp_path):
         """Every widget type survives a save→load round-trip."""
@@ -23,14 +24,28 @@ class TestRoundTrip:
         designer.current_scene = scene.name
 
         types_to_test = [
-            "label", "box", "button", "gauge", "progressbar",
-            "checkbox", "radiobutton", "slider", "textbox", "panel",
+            "label",
+            "box",
+            "button",
+            "gauge",
+            "progressbar",
+            "checkbox",
+            "radiobutton",
+            "slider",
+            "textbox",
+            "panel",
         ]
         for i, wtype in enumerate(types_to_test):
-            scene.widgets.append(WidgetConfig(
-                type=wtype, x=i * 20, y=10,
-                width=18, height=12, text=f"W{i}",
-            ))
+            scene.widgets.append(
+                WidgetConfig(
+                    type=wtype,
+                    x=i * 20,
+                    y=10,
+                    width=18,
+                    height=12,
+                    text=f"W{i}",
+                )
+            )
 
         path = tmp_path / "allwidgets.json"
         designer.save_to_json(str(path))
@@ -50,7 +65,11 @@ class TestRoundTrip:
         designer.current_scene = scene.name
 
         w = WidgetConfig(
-            type="label", x=5, y=5, width=50, height=10,
+            type="label",
+            x=5,
+            y=5,
+            width=50,
+            height=10,
             text="Styled",
         )
         w.fg = "#FFFFFF"
@@ -92,6 +111,7 @@ class TestRoundTrip:
 # JSON → C codegen pipeline
 # ---------------------------------------------------------------------------
 
+
 class TestCodegenPipeline:
     def _make_scene_json(self, tmp_path, widgets, *, width=128, height=64, name="test"):
         data = {
@@ -112,10 +132,13 @@ class TestCodegenPipeline:
 
     def test_codegen_produces_valid_c_header_and_source(self, tmp_path):
         """Codegen outputs both .h and .c content."""
-        path = self._make_scene_json(tmp_path, [
-            {"type": "label", "x": 0, "y": 0, "width": 40, "height": 8, "text": "Hello"},
-            {"type": "button", "x": 0, "y": 10, "width": 40, "height": 10, "text": "OK"},
-        ])
+        path = self._make_scene_json(
+            tmp_path,
+            [
+                {"type": "label", "x": 0, "y": 0, "width": 40, "height": 8, "text": "Hello"},
+                {"type": "button", "x": 0, "y": 10, "width": 40, "height": 10, "text": "OK"},
+            ],
+        )
         c_src, h_src = generate_ui_design_pair(path, scene_name="test", source_label="test")
         assert "UiWidget" in c_src
         assert "UiScene" in c_src
@@ -126,10 +149,15 @@ class TestCodegenPipeline:
     def test_codegen_handles_all_widget_types(self, tmp_path):
         """All widget types produce valid C enum references."""
         type_map = {
-            "label": "UIW_LABEL", "box": "UIW_BOX", "button": "UIW_BUTTON",
-            "gauge": "UIW_GAUGE", "progressbar": "UIW_PROGRESSBAR",
-            "checkbox": "UIW_CHECKBOX", "radiobutton": "UIW_RADIOBUTTON",
-            "slider": "UIW_SLIDER", "panel": "UIW_PANEL",
+            "label": "UIW_LABEL",
+            "box": "UIW_BOX",
+            "button": "UIW_BUTTON",
+            "gauge": "UIW_GAUGE",
+            "progressbar": "UIW_PROGRESSBAR",
+            "checkbox": "UIW_CHECKBOX",
+            "radiobutton": "UIW_RADIOBUTTON",
+            "slider": "UIW_SLIDER",
+            "panel": "UIW_PANEL",
         }
         widgets = [
             {"type": wtype, "x": i * 10, "y": 0, "width": 10, "height": 10}
@@ -148,28 +176,49 @@ class TestCodegenPipeline:
 
     def test_codegen_text_with_special_chars(self, tmp_path):
         """Text with quotes and newlines is properly escaped in C."""
-        path = self._make_scene_json(tmp_path, [
-            {"type": "label", "x": 0, "y": 0, "width": 60, "height": 8,
-             "text": 'Say "hello"'},
-        ])
+        path = self._make_scene_json(
+            tmp_path,
+            [
+                {"type": "label", "x": 0, "y": 0, "width": 60, "height": 8, "text": 'Say "hello"'},
+            ],
+        )
         c_src, _ = generate_ui_design_pair(path, scene_name="test", source_label="test")
-        assert r'\"hello\"' in c_src
+        assert r"\"hello\"" in c_src
 
     def test_codegen_border_styles(self, tmp_path):
         """Border style names map to C enums."""
-        path = self._make_scene_json(tmp_path, [
-            {"type": "box", "x": 0, "y": 0, "width": 20, "height": 20,
-             "border_style": "double"},
-        ])
+        path = self._make_scene_json(
+            tmp_path,
+            [
+                {
+                    "type": "box",
+                    "x": 0,
+                    "y": 0,
+                    "width": 20,
+                    "height": 20,
+                    "border_style": "double",
+                },
+            ],
+        )
         c_src, _ = generate_ui_design_pair(path, scene_name="test", source_label="test")
         assert "UI_BORDER_DOUBLE" in c_src
 
     def test_codegen_gray4_colors(self, tmp_path):
         """fg/bg color values are converted to 4-bit grayscale in C."""
-        path = self._make_scene_json(tmp_path, [
-            {"type": "label", "x": 0, "y": 0, "width": 30, "height": 8,
-             "fg": "#FFFFFF", "bg": "#000000"},
-        ])
+        path = self._make_scene_json(
+            tmp_path,
+            [
+                {
+                    "type": "label",
+                    "x": 0,
+                    "y": 0,
+                    "width": 30,
+                    "height": 8,
+                    "fg": "#FFFFFF",
+                    "bg": "#000000",
+                },
+            ],
+        )
         c_src, _ = generate_ui_design_pair(path, scene_name="test", source_label="test")
         assert ".fg" in c_src or "15" in c_src  # white = gray4 level 15
 
@@ -177,6 +226,7 @@ class TestCodegenPipeline:
 # ---------------------------------------------------------------------------
 # Designer → C codegen full pipeline
 # ---------------------------------------------------------------------------
+
 
 class TestDesignerToCodegen:
     def test_designer_save_then_codegen(self, tmp_path):
@@ -186,13 +236,19 @@ class TestDesignerToCodegen:
         designer.current_scene = scene.name
 
         scene.widgets.append(WidgetConfig(type="label", x=10, y=5, width=80, height=10, text="CPU"))
-        scene.widgets.append(WidgetConfig(type="progressbar", x=10, y=20, width=80, height=8, text="cpu_bar"))
-        scene.widgets.append(WidgetConfig(type="button", x=10, y=35, width=40, height=12, text="Reset"))
+        scene.widgets.append(
+            WidgetConfig(type="progressbar", x=10, y=20, width=80, height=8, text="cpu_bar")
+        )
+        scene.widgets.append(
+            WidgetConfig(type="button", x=10, y=35, width=40, height=12, text="Reset")
+        )
 
         json_path = tmp_path / "dashboard.json"
         designer.save_to_json(str(json_path))
 
-        c_src, h_src = generate_ui_design_pair(json_path, scene_name="dashboard", source_label="test")
+        c_src, h_src = generate_ui_design_pair(
+            json_path, scene_name="dashboard", source_label="test"
+        )
         assert "UIW_LABEL" in c_src
         assert "UIW_PROGRESSBAR" in c_src
         assert "UIW_BUTTON" in c_src
@@ -204,7 +260,9 @@ class TestDesignerToCodegen:
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("test")
         designer.current_scene = scene.name
-        scene.widgets.append(WidgetConfig(type="label", x=0, y=0, width=40, height=8, text="Before"))
+        scene.widgets.append(
+            WidgetConfig(type="label", x=0, y=0, width=40, height=8, text="Before")
+        )
 
         json_path = tmp_path / "test.json"
         designer.save_to_json(str(json_path))
@@ -225,6 +283,7 @@ class TestDesignerToCodegen:
 # JSON schema validation
 # ---------------------------------------------------------------------------
 
+
 class TestJsonValidation:
     def test_main_scene_json_is_valid(self):
         """The project's main_scene.json is valid JSON with expected structure."""
@@ -242,7 +301,9 @@ class TestJsonValidation:
             pytest.skip("main_scene.json not found")
         data = json.loads(main_json.read_text(encoding="utf-8"))
         scene_name = data.get("name", "main")
-        c_src, h_src = generate_ui_design_pair(main_json, scene_name=scene_name, source_label="test")
+        c_src, h_src = generate_ui_design_pair(
+            main_json, scene_name=scene_name, source_label="test"
+        )
         assert len(c_src) > 0
         assert len(h_src) > 0
 
@@ -251,13 +312,16 @@ class TestJsonValidation:
 # Widget manipulation edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestWidgetManipulation:
     def test_move_widget_and_verify(self, tmp_path):
         """Move a widget, save, reload — new position preserved."""
         designer = UIDesigner(128, 64)
         scene = designer.create_scene("move")
         designer.current_scene = scene.name
-        scene.widgets.append(WidgetConfig(type="button", x=10, y=10, width=20, height=10, text="Btn"))
+        scene.widgets.append(
+            WidgetConfig(type="button", x=10, y=10, width=20, height=10, text="Btn")
+        )
 
         scene.widgets[0].x = 50
         scene.widgets[0].y = 40

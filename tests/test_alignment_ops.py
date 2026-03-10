@@ -32,6 +32,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -64,6 +65,7 @@ def _sel(app, *indices):
 # ===========================================================================
 # snap_selection_to_grid
 # ===========================================================================
+
 
 class TestSnapSelectionToGrid:
     def test_snaps_misaligned_widgets(self, tmp_path, monkeypatch):
@@ -112,6 +114,7 @@ class TestSnapSelectionToGrid:
 # center_in_scene
 # ===========================================================================
 
+
 class TestCenterInScene:
     def test_centers_single_widget(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -149,6 +152,7 @@ class TestCenterInScene:
 # align_to_scene_top
 # ===========================================================================
 
+
 class TestAlignToSceneTop:
     def test_moves_to_y_zero(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -179,6 +183,7 @@ class TestAlignToSceneTop:
 # align_to_scene_bottom
 # ===========================================================================
 
+
 class TestAlignToSceneBottom:
     def test_moves_bottom_edge_to_128(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -208,6 +213,7 @@ class TestAlignToSceneBottom:
 # align_to_scene_left
 # ===========================================================================
 
+
 class TestAlignToSceneLeft:
     def test_moves_to_x_zero(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -228,6 +234,7 @@ class TestAlignToSceneLeft:
 # ===========================================================================
 # align_to_scene_right
 # ===========================================================================
+
 
 class TestAlignToSceneRight:
     def test_moves_right_edge_to_256(self, tmp_path, monkeypatch):
@@ -258,6 +265,7 @@ class TestAlignToSceneRight:
 # center_horizontal
 # ===========================================================================
 
+
 class TestCenterHorizontal:
     def test_centers_each_widget(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -282,6 +290,7 @@ class TestCenterHorizontal:
 # ===========================================================================
 # center_vertical
 # ===========================================================================
+
 
 class TestCenterVertical:
     def test_centers_each_widget(self, tmp_path, monkeypatch):
@@ -308,6 +317,7 @@ class TestCenterVertical:
 # center_in_parent
 # ===========================================================================
 
+
 class TestCenterInParent:
     def test_centers_in_enclosing_panel(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -322,6 +332,7 @@ class TestCenterInParent:
         # x = snap(0 + (100 - 20) // 2) = snap(40) = 40
         # y = snap(0 + (60 - 10) // 2) = snap(25) = 24 (snap to 8)
         from cyberpunk_designer.constants import snap
+
         expected_x = snap(0 + (100 - 20) // 2)
         expected_y = snap(0 + (60 - 10) // 2)
         assert w.x == expected_x
@@ -348,6 +359,7 @@ class TestCenterInParent:
         center_in_parent(app)
         # Should center in the small panel (10,10,60,40)
         from cyberpunk_designer.constants import snap
+
         expected_x = snap(10 + (60 - 10) // 2)
         expected_y = snap(10 + (40 - 8) // 2)
         assert _w(app, 2).x == expected_x
@@ -364,14 +376,16 @@ class TestCenterInParent:
 # align_h_centers
 # ===========================================================================
 
+
 class TestAlignHCenters:
     def test_aligns_to_first_center(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, x=10, width=80)   # center = 50
-        _add(app, x=0, width=40)    # center = 20 → should become 30
+        _add(app, x=10, width=80)  # center = 50
+        _add(app, x=0, width=40)  # center = 20 → should become 30
         _sel(app, 0, 1)
         align_h_centers(app)
         from cyberpunk_designer.constants import snap
+
         ref_cx = 10 + 80 // 2  # 50
         expected_x = snap(ref_cx - 40 // 2)  # snap(30) = 32
         assert _w(app, 1).x == expected_x
@@ -387,12 +401,13 @@ class TestAlignHCenters:
 
     def test_three_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, x=10, width=80)   # ref center 50
+        _add(app, x=10, width=80)  # ref center 50
         _add(app, x=0, width=20)
         _add(app, x=100, width=60)
         _sel(app, 0, 1, 2)
         align_h_centers(app)
         from cyberpunk_designer.constants import snap
+
         ref_cx = 50
         assert _w(app, 1).x == snap(ref_cx - 20 // 2)
         assert _w(app, 2).x == snap(ref_cx - 60 // 2)
@@ -402,14 +417,16 @@ class TestAlignHCenters:
 # align_v_centers
 # ===========================================================================
 
+
 class TestAlignVCenters:
     def test_aligns_to_first_center(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, y=20, height=40)   # center = 40
-        _add(app, y=0, height=16)    # should align to center 40
+        _add(app, y=20, height=40)  # center = 40
+        _add(app, y=0, height=16)  # should align to center 40
         _sel(app, 0, 1)
         align_v_centers(app)
         from cyberpunk_designer.constants import snap
+
         ref_cy = 20 + 40 // 2  # 40
         expected_y = snap(ref_cy - 16 // 2)  # snap(32) = 32
         assert _w(app, 1).y == expected_y
@@ -426,6 +443,7 @@ class TestAlignVCenters:
 # ===========================================================================
 # align_left_edges
 # ===========================================================================
+
 
 class TestAlignLeftEdges:
     def test_aligns_to_first_x(self, tmp_path, monkeypatch):
@@ -451,6 +469,7 @@ class TestAlignLeftEdges:
 # align_top_edges
 # ===========================================================================
 
+
 class TestAlignTopEdges:
     def test_aligns_to_first_y(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -474,11 +493,12 @@ class TestAlignTopEdges:
 # align_right_edges
 # ===========================================================================
 
+
 class TestAlignRightEdges:
     def test_aligns_right_edge_to_first(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, x=20, width=80)   # right = 100
-        _add(app, x=50, width=40)   # right = 90 → x should become 60
+        _add(app, x=20, width=80)  # right = 100
+        _add(app, x=50, width=40)  # right = 90 → x should become 60
         _sel(app, 0, 1)
         align_right_edges(app)
         ref_right = 20 + 80  # 100
@@ -487,9 +507,9 @@ class TestAlignRightEdges:
 
     def test_three_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, x=10, width=90)   # right = 100
-        _add(app, x=0, width=30)    # → x = 70
-        _add(app, x=0, width=50)    # → x = 50
+        _add(app, x=10, width=90)  # right = 100
+        _add(app, x=0, width=30)  # → x = 70
+        _add(app, x=0, width=50)  # → x = 50
         _sel(app, 0, 1, 2)
         align_right_edges(app)
         assert _w(app, 1).x == 70
@@ -507,11 +527,12 @@ class TestAlignRightEdges:
 # align_bottom_edges
 # ===========================================================================
 
+
 class TestAlignBottomEdges:
     def test_aligns_bottom_edge_to_first(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        _add(app, y=10, height=40)   # bottom = 50
-        _add(app, y=20, height=16)   # bottom = 36 → y should become 34
+        _add(app, y=10, height=40)  # bottom = 50
+        _add(app, y=20, height=16)  # bottom = 36 → y should become 34
         _sel(app, 0, 1)
         align_bottom_edges(app)
         ref_bottom = 10 + 40  # 50

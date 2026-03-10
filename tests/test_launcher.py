@@ -68,6 +68,7 @@ class TestMain:
     def test_keyboard_interrupt(self, monkeypatch, capsys):
         def raise_interrupt(_):
             raise KeyboardInterrupt
+
         monkeypatch.setattr("builtins.input", raise_interrupt)
         main()
         out = capsys.readouterr().out

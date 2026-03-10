@@ -82,14 +82,25 @@ class TestExportHeader:
                     "width": 128,
                     "height": 64,
                     "bg_color": "#000",
-                    "widgets": [{"type": "label", "x": 0, "y": 0, "width": 50, "height": 10, "text": "Home"}],
+                    "widgets": [
+                        {"type": "label", "x": 0, "y": 0, "width": 50, "height": 10, "text": "Home"}
+                    ],
                 },
                 "settings": {
                     "name": "settings",
                     "width": 128,
                     "height": 64,
                     "bg_color": "#000",
-                    "widgets": [{"type": "label", "x": 0, "y": 0, "width": 50, "height": 10, "text": "Settings"}],
+                    "widgets": [
+                        {
+                            "type": "label",
+                            "x": 0,
+                            "y": 0,
+                            "width": 50,
+                            "height": 10,
+                            "text": "Settings",
+                        }
+                    ],
                 },
             },
         }

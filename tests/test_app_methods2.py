@@ -20,6 +20,7 @@ from ui_template_manager import Template, TemplateMetadata
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -58,9 +59,11 @@ class TestApplyTemplate:
     def test_replaces_widgets(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         _add(app, text="old")
-        tpl = _make_template([
-            {"type": "button", "x": 0, "y": 0, "width": 40, "height": 16, "text": "new"},
-        ])
+        tpl = _make_template(
+            [
+                {"type": "button", "x": 0, "y": 0, "width": 40, "height": 16, "text": "new"},
+            ]
+        )
         app._apply_template(tpl)
         sc = app.state.current_scene()
         assert len(sc.widgets) == 1
@@ -68,9 +71,11 @@ class TestApplyTemplate:
 
     def test_sets_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        tpl = _make_template([
-            {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "a"},
-        ])
+        tpl = _make_template(
+            [
+                {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "a"},
+            ]
+        )
         app._apply_template(tpl)
         assert app.state.selected_idx == 0
         assert app.state.selected == [0]
@@ -87,10 +92,12 @@ class TestApplyTemplate:
 
     def test_skips_invalid_widget_dicts(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        tpl = _make_template([
-            {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "ok"},
-            {"invalid": True},  # should be skipped
-        ])
+        tpl = _make_template(
+            [
+                {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "ok"},
+                {"invalid": True},  # should be skipped
+            ]
+        )
         app._apply_template(tpl)
         # Only valid widget survives
         assert len(app.state.current_scene().widgets) == 1
@@ -104,9 +111,11 @@ class TestApplyTemplate:
 class TestApplyFirstTemplate:
     def test_applies_first(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        tpl = _make_template([
-            {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "first"},
-        ])
+        tpl = _make_template(
+            [
+                {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "first"},
+            ]
+        )
         app.template_library.templates = [tpl]
         app._apply_first_template()
         assert app.state.current_scene().widgets[0].text == "first"

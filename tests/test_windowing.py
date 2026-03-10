@@ -97,38 +97,41 @@ def _layout_app(canvas_w=256, canvas_h=128, toolbar_h=20, scene_tabs_h=16, statu
 
 class TestBaseLayoutSize:
     def test_basic(self):
-        app = _layout_app(canvas_w=256, canvas_h=128, toolbar_h=20,
-                          scene_tabs_h=16, status_h=12)
+        app = _layout_app(canvas_w=256, canvas_h=128, toolbar_h=20, scene_tabs_h=16, status_h=12)
         w, h = _base_layout_size(app, palette_w=60, inspector_w=120)
         assert w == 256 + 60 + 120
         assert h == 128 + 20 + 16 + 12
 
     def test_zero_canvas(self):
-        app = _layout_app(canvas_w=0, canvas_h=0, toolbar_h=0,
-                          scene_tabs_h=0, status_h=0)
+        app = _layout_app(canvas_w=0, canvas_h=0, toolbar_h=0, scene_tabs_h=0, status_h=0)
         w, h = _base_layout_size(app, palette_w=0, inspector_w=0)
         assert w >= 1
         assert h >= 1
 
     def test_only_palette(self):
-        app = _layout_app(canvas_w=100, canvas_h=50, toolbar_h=0,
-                          scene_tabs_h=0, status_h=0)
+        app = _layout_app(canvas_w=100, canvas_h=50, toolbar_h=0, scene_tabs_h=0, status_h=0)
         w, h = _base_layout_size(app, palette_w=40, inspector_w=0)
         assert w == 140
         assert h == 50
 
     def test_large_inspector(self):
-        app = _layout_app(canvas_w=128, canvas_h=64, toolbar_h=10,
-                          scene_tabs_h=10, status_h=10)
+        app = _layout_app(canvas_w=128, canvas_h=64, toolbar_h=10, scene_tabs_h=10, status_h=10)
         w, h = _base_layout_size(app, palette_w=50, inspector_w=200)
         assert w == 378
         assert h == 94
 
 
-def _recompute_app(canvas_w=256, canvas_h=128, toolbar_h=20,
-                   scene_tabs_h=16, status_h=12,
-                   max_auto_scale=4, panels_collapsed=False,
-                   palette_w=60, inspector_w=120):
+def _recompute_app(
+    canvas_w=256,
+    canvas_h=128,
+    toolbar_h=20,
+    scene_tabs_h=16,
+    status_h=12,
+    max_auto_scale=4,
+    panels_collapsed=False,
+    palette_w=60,
+    inspector_w=120,
+):
     designer = SimpleNamespace(width=canvas_w, height=canvas_h)
     return SimpleNamespace(
         designer=designer,
@@ -145,17 +148,29 @@ def _recompute_app(canvas_w=256, canvas_h=128, toolbar_h=20,
 
 class TestRecomputeScaleForWindow:
     def test_exact_1x(self):
-        app = _recompute_app(canvas_w=256, canvas_h=128, toolbar_h=20,
-                             scene_tabs_h=16, status_h=12,
-                             palette_w=60, inspector_w=120)
+        app = _recompute_app(
+            canvas_w=256,
+            canvas_h=128,
+            toolbar_h=20,
+            scene_tabs_h=16,
+            status_h=12,
+            palette_w=60,
+            inspector_w=120,
+        )
         # base_w = 256+60+120 = 436, base_h = 128+20+16+12 = 176
         recompute_scale_for_window(app, 436, 176)
         assert app.scale == 1
 
     def test_double_window(self):
-        app = _recompute_app(canvas_w=256, canvas_h=128, toolbar_h=20,
-                             scene_tabs_h=16, status_h=12,
-                             palette_w=60, inspector_w=120)
+        app = _recompute_app(
+            canvas_w=256,
+            canvas_h=128,
+            toolbar_h=20,
+            scene_tabs_h=16,
+            status_h=12,
+            palette_w=60,
+            inspector_w=120,
+        )
         recompute_scale_for_window(app, 872, 352)
         assert app.scale == 2
 

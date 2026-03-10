@@ -47,7 +47,10 @@ class EventManager:
                 fallback(ev)
 
     def _is_debounced(self, event: pygame.event.Event) -> bool:
-        if getattr(event, "type", None) == pygame.MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+        if (
+            getattr(event, "type", None) == pygame.MOUSEBUTTONDOWN
+            and getattr(event, "button", None) == 1
+        ):
             now = self._monotonic()
             if self._last_click_ts >= 0 and (now - self._last_click_ts) < self._debounce_click_s:
                 return True

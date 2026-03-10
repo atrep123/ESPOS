@@ -649,7 +649,11 @@ class TestMouseUpEdges:
         from cyberpunk_designer.input_handlers import on_mouse_up
 
         app = _make_app(tmp_path, monkeypatch)
-        monkeypatch.setattr(layout_tools, "clear_active_guides", lambda a: (_ for _ in ()).throw(RuntimeError("broken")))
+        monkeypatch.setattr(
+            layout_tools,
+            "clear_active_guides",
+            lambda a: (_ for _ in ()).throw(RuntimeError("broken")),
+        )
         on_mouse_up(app, (100, 100))
         assert not app.state.dragging
 
@@ -670,6 +674,7 @@ class TestInspectorRemaining:
     def test_parse_pair_none(self, tmp_path, monkeypatch):
         """_parse_pair with single value returns None (L22)."""
         from cyberpunk_designer.inspector_logic import _parse_pair
+
         assert _parse_pair("abc") is None
 
     def test_multi_text_save_throws(self, tmp_path, monkeypatch):
@@ -681,7 +686,9 @@ class TestInspectorRemaining:
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20, text="a"))
         sc.widgets.append(_w(type="button", x=50, y=0, width=40, height=20, text="b"))
         _sel(app, 0, 1)
-        monkeypatch.setattr(app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken")))
+        monkeypatch.setattr(
+            app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken"))
+        )
         self._setup_edit(app, "text", "new_text")
         result = inspector_commit_edit(app)
         assert result is True
@@ -696,7 +703,9 @@ class TestInspectorRemaining:
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         sc.widgets.append(_w(type="button", x=50, y=0, width=40, height=20))
         _sel(app, 0, 1)
-        monkeypatch.setattr(app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken")))
+        monkeypatch.setattr(
+            app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken"))
+        )
         self._setup_edit(app, "runtime", "store.val")
         result = inspector_commit_edit(app)
         assert result is True
@@ -920,7 +929,9 @@ class TestInspectorToggleEdges:
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
-        monkeypatch.setattr(app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken")))
+        monkeypatch.setattr(
+            app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken"))
+        )
         ir = app.layout.inspector_rect
         hit_rect = pygame.Rect(ir.x + 2, ir.y + 70, ir.width - 4, 16)
         app.inspector_section_hitboxes = []
@@ -1086,7 +1097,9 @@ class TestCanvasClickEdges:
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
-        monkeypatch.setattr(app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken")))
+        monkeypatch.setattr(
+            app.designer, "_save_state", lambda: (_ for _ in ()).throw(RuntimeError("broken"))
+        )
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         pos = (sr.x + 20, sr.y + 20)
         on_mouse_down(app, pos)
@@ -1167,7 +1180,11 @@ class TestMouseMoveMore:
         handle_y = sr.y + 10 + 20 - 4
         on_mouse_down(app, (handle_x, handle_y))
         assert app.state.resizing
-        monkeypatch.setattr(layout_tools, "clear_active_guides", lambda a: (_ for _ in ()).throw(RuntimeError("broken")))
+        monkeypatch.setattr(
+            layout_tools,
+            "clear_active_guides",
+            lambda a: (_ for _ in ()).throw(RuntimeError("broken")),
+        )
         on_mouse_move(app, (sr.x + 80, sr.y + 60), (1, 0, 0))
 
     def test_resize_sx_sy_exception(self, tmp_path, monkeypatch):

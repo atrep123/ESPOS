@@ -182,11 +182,21 @@ def _ensure_sim_listmodel(app, sc, root: str) -> Optional[_SimListModel]:
         if has_value_cols:
             label_idx = _find_by_widget_id(sc, f"{root}.item{i}.label")
             value_idx = _find_by_widget_id(sc, f"{root}.item{i}.value")
-            seed_labels.append(str(getattr(sc.widgets[label_idx], "text", "") or "") if label_idx is not None else "")
-            seed_values.append(str(getattr(sc.widgets[value_idx], "text", "") or "") if value_idx is not None else "")
+            seed_labels.append(
+                str(getattr(sc.widgets[label_idx], "text", "") or "")
+                if label_idx is not None
+                else ""
+            )
+            seed_values.append(
+                str(getattr(sc.widgets[value_idx], "text", "") or "")
+                if value_idx is not None
+                else ""
+            )
         else:
             btn_idx = _find_by_widget_id(sc, f"{root}.item{i}")
-            seed_labels.append(str(getattr(sc.widgets[btn_idx], "text", "") or "") if btn_idx is not None else "")
+            seed_labels.append(
+                str(getattr(sc.widgets[btn_idx], "text", "") or "") if btn_idx is not None else ""
+            )
             seed_values.append("")
 
     m = _SimListModel(
@@ -480,14 +490,18 @@ def activate_focused(app) -> None:
             w.checked = not bool(getattr(w, "checked", False))
         except Exception:
             pass
-        app._set_status(f"checkbox: {'on' if bool(getattr(w, 'checked', False)) else 'off'}", ttl_sec=1.2)
+        app._set_status(
+            f"checkbox: {'on' if bool(getattr(w, 'checked', False)) else 'off'}", ttl_sec=1.2
+        )
         app._mark_dirty()
         return
 
     if wtype == "slider":
         app.focus_edit_value = not app.focus_edit_value
         app._set_status(
-            "slider: edit (Up/Down adjust, Enter done)" if app.focus_edit_value else "slider: focus",
+            "slider: edit (Up/Down adjust, Enter done)"
+            if app.focus_edit_value
+            else "slider: focus",
             ttl_sec=2.0,
         )
         app._mark_dirty()

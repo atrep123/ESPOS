@@ -14,6 +14,7 @@ from ui_designer import WidgetConfig
 # font6x8 — glyph lookup
 # ---------------------------------------------------------------------------
 
+
 def test_glyph_constants():
     assert CHAR_W == 6
     assert CHAR_H == 8
@@ -49,6 +50,7 @@ def test_glyph_empty_returns_qmark():
 # ---------------------------------------------------------------------------
 # font6x8 — render_text
 # ---------------------------------------------------------------------------
+
 
 def test_render_text_surface_size():
     surf = render_text("ABC", (255, 255, 255))
@@ -95,6 +97,7 @@ def test_render_text_caching():
 # text_metrics — is_device_profile
 # ---------------------------------------------------------------------------
 
+
 def test_is_device_profile_oled():
     assert is_device_profile("oled_128x64") is True
     assert is_device_profile("oled_72x40") is True
@@ -116,6 +119,7 @@ def test_is_device_profile_none():
 # ---------------------------------------------------------------------------
 # text_metrics — inner_text_area_px
 # ---------------------------------------------------------------------------
+
 
 def test_inner_text_area_label():
     w = WidgetConfig(type="label", x=0, y=0, width=40, height=14, border=True)
@@ -156,6 +160,7 @@ def test_inner_text_area_zero_dims():
 # ---------------------------------------------------------------------------
 # text_metrics — ellipsize_chars
 # ---------------------------------------------------------------------------
+
 
 def test_ellipsize_short_text():
     assert ellipsize_chars("HI", 10) == "HI"
@@ -265,6 +270,7 @@ def test_ellipsize_no_ellipsis():
 # text_metrics — wrap_text_chars
 # ---------------------------------------------------------------------------
 
+
 def test_wrap_single_line():
     lines, trunc = wrap_text_chars("HELLO", max_chars=10, max_lines=3)
     assert lines == ["HELLO"]
@@ -312,6 +318,7 @@ def test_wrap_preserves_newlines():
 # text_metrics — text_truncates_in_widget
 # ---------------------------------------------------------------------------
 
+
 def test_truncates_short_text():
     w = WidgetConfig(type="label", x=0, y=0, width=60, height=14, border=True)
     assert not text_truncates_in_widget(w, "HI")
@@ -328,7 +335,6 @@ def test_truncates_empty_text():
 
 
 def test_truncates_with_wrap_overflow():
-    w = WidgetConfig(type="label", x=0, y=0, width=40, height=14,
-                     text_overflow="wrap")
+    w = WidgetConfig(type="label", x=0, y=0, width=40, height=14, text_overflow="wrap")
     # Only 1 line fits in height 14, "WRAP THIS" is 9 chars, fits ~5 chars per line
     assert text_truncates_in_widget(w, "WRAP THIS LONG TEXT")

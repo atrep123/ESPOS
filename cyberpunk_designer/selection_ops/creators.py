@@ -12,15 +12,30 @@ def create_header_bar(app) -> None:
     sw = int(sc.width)
     bar_h = 24
     panel = WidgetConfig(
-        type="panel", x=0, y=0, width=sw, height=bar_h,
-        text="", border=True, border_style="single",
-        color_fg="white", color_bg="black",
+        type="panel",
+        x=0,
+        y=0,
+        width=sw,
+        height=bar_h,
+        text="",
+        border=True,
+        border_style="single",
+        color_fg="white",
+        color_bg="black",
     )
     label = WidgetConfig(
-        type="label", x=2, y=4, width=sw - 4, height=16,
-        text="Header", border=False,
-        style="bold", align="center", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=2,
+        y=4,
+        width=sw - 4,
+        height=16,
+        text="Header",
+        border=False,
+        style="bold",
+        align="center",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(panel)
@@ -49,10 +64,19 @@ def create_nav_row(app) -> None:
     for i in range(btn_count):
         bx = gap + i * (btn_w + gap)
         btn = WidgetConfig(
-            type="button", x=bx, y=y, width=btn_w, height=btn_h,
-            text=labels[i], border=True, border_style="rounded",
-            style="bold", align="center", valign="middle",
-            color_fg="white", color_bg="black",
+            type="button",
+            x=bx,
+            y=y,
+            width=btn_w,
+            height=btn_h,
+            text=labels[i],
+            border=True,
+            border_style="rounded",
+            style="bold",
+            align="center",
+            valign="middle",
+            color_fg="white",
+            color_bg="black",
         )
         sc.widgets.append(btn)
     app.state.selected = list(range(base, base + btn_count))
@@ -79,16 +103,31 @@ def create_form_pair(app) -> None:
             y = bounds.bottom + GRID
 
     lbl = WidgetConfig(
-        type="label", x=gap, y=y + 4, width=label_w, height=16,
-        text="Label:", border=False,
-        align="right", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=gap,
+        y=y + 4,
+        width=label_w,
+        height=16,
+        text="Label:",
+        border=False,
+        align="right",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     txt = WidgetConfig(
-        type="textbox", x=gap + label_w + gap, y=y, width=input_w, height=row_h,
-        text="value", border=True, border_style="single",
-        align="left", valign="middle",
-        color_fg="white", color_bg="black",
+        type="textbox",
+        x=gap + label_w + gap,
+        y=y,
+        width=input_w,
+        height=row_h,
+        text="value",
+        border=True,
+        border_style="single",
+        align="left",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(lbl)
@@ -107,15 +146,30 @@ def create_status_bar(app) -> None:
     sh = int(sc.height)
     bar_h = 16
     panel = WidgetConfig(
-        type="panel", x=0, y=sh - bar_h, width=sw, height=bar_h,
-        text="", border=True, border_style="single",
-        color_fg="white", color_bg="black",
+        type="panel",
+        x=0,
+        y=sh - bar_h,
+        width=sw,
+        height=bar_h,
+        text="",
+        border=True,
+        border_style="single",
+        color_fg="white",
+        color_bg="black",
     )
     label = WidgetConfig(
-        type="label", x=2, y=sh - bar_h + 2, width=sw - 4, height=12,
-        text="Status: ready", border=False,
-        style="default", align="left", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=2,
+        y=sh - bar_h + 2,
+        width=sw - 4,
+        height=12,
+        text="Status: ready",
+        border=False,
+        style="default",
+        align="left",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(panel)
@@ -150,10 +204,17 @@ def create_toggle_group(app) -> None:
     for i in range(cb_count):
         cx = start_x + i * (cb_w + gap)
         cb = WidgetConfig(
-            type="checkbox", x=cx, y=y, width=cb_w, height=cb_h,
-            text=labels[i], border=False,
-            align="left", valign="middle",
-            color_fg="white", color_bg="black",
+            type="checkbox",
+            x=cx,
+            y=y,
+            width=cb_w,
+            height=cb_h,
+            text=labels[i],
+            border=False,
+            align="left",
+            valign="middle",
+            color_fg="white",
+            color_bg="black",
             checked=(i == 0),
         )
         sc.widgets.append(cb)
@@ -183,23 +244,45 @@ def create_slider_with_label(app) -> None:
             y = bounds.bottom + GRID
 
     lbl = WidgetConfig(
-        type="label", x=gap, y=y + 4, width=label_w, height=16,
-        text="Volume:", border=False,
-        align="right", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=gap,
+        y=y + 4,
+        width=label_w,
+        height=16,
+        text="Volume:",
+        border=False,
+        align="right",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     slider = WidgetConfig(
-        type="slider", x=gap + label_w + gap, y=y, width=slider_w, height=row_h,
-        text="", border=True, border_style="single",
-        value=50, min_value=0, max_value=100,
-        color_fg="white", color_bg="black",
+        type="slider",
+        x=gap + label_w + gap,
+        y=y,
+        width=slider_w,
+        height=row_h,
+        text="",
+        border=True,
+        border_style="single",
+        value=50,
+        min_value=0,
+        max_value=100,
+        color_fg="white",
+        color_bg="black",
     )
     val_lbl = WidgetConfig(
-        type="label", x=gap + label_w + gap + slider_w + gap, y=y + 4,
-        width=value_w, height=16,
-        text="50", border=False,
-        align="left", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=gap + label_w + gap + slider_w + gap,
+        y=y + 4,
+        width=value_w,
+        height=16,
+        text="50",
+        border=False,
+        align="left",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(lbl)
@@ -228,22 +311,44 @@ def create_gauge_panel(app) -> None:
             y = bounds.bottom + GRID
 
     panel = WidgetConfig(
-        type="panel", x=gap, y=y, width=panel_w, height=panel_h,
-        text="", border=True, border_style="rounded",
-        color_fg="white", color_bg="black",
+        type="panel",
+        x=gap,
+        y=y,
+        width=panel_w,
+        height=panel_h,
+        text="",
+        border=True,
+        border_style="rounded",
+        color_fg="white",
+        color_bg="black",
     )
     title = WidgetConfig(
-        type="label", x=gap + 2, y=y + 2, width=panel_w - 4, height=12,
-        text="Speed", border=False,
-        style="bold", align="center", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=gap + 2,
+        y=y + 2,
+        width=panel_w - 4,
+        height=12,
+        text="Speed",
+        border=False,
+        style="bold",
+        align="center",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     gauge = WidgetConfig(
-        type="gauge", x=gap + (panel_w - gauge_sz) // 2, y=y + 16,
-        width=gauge_sz, height=gauge_sz,
-        text="", border=False,
-        value=70, min_value=0, max_value=100,
-        color_fg="white", color_bg="black",
+        type="gauge",
+        x=gap + (panel_w - gauge_sz) // 2,
+        y=y + 16,
+        width=gauge_sz,
+        height=gauge_sz,
+        text="",
+        border=False,
+        value=70,
+        min_value=0,
+        max_value=100,
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(panel)
@@ -273,17 +378,32 @@ def create_progress_section(app) -> None:
             y = bounds.bottom + GRID
 
     lbl = WidgetConfig(
-        type="label", x=gap, y=y, width=label_w, height=row_h,
-        text="Loading:", border=False,
-        align="right", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=gap,
+        y=y,
+        width=label_w,
+        height=row_h,
+        text="Loading:",
+        border=False,
+        align="right",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     bar = WidgetConfig(
-        type="progressbar", x=gap + label_w + gap, y=y,
-        width=bar_w, height=row_h,
-        text="", border=True, border_style="single",
-        value=65, min_value=0, max_value=100,
-        color_fg="white", color_bg="black",
+        type="progressbar",
+        x=gap + label_w + gap,
+        y=y,
+        width=bar_w,
+        height=row_h,
+        text="",
+        border=True,
+        border_style="single",
+        value=65,
+        min_value=0,
+        max_value=100,
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(lbl)
@@ -316,10 +436,19 @@ def create_icon_button_row(app) -> None:
     for i in range(btn_count):
         bx = start_x + i * (btn_sz + gap)
         btn = WidgetConfig(
-            type="button", x=bx, y=y, width=btn_sz, height=btn_sz,
-            text=icons[i], border=True, border_style="rounded",
-            style="bold", align="center", valign="middle",
-            color_fg="white", color_bg="black",
+            type="button",
+            x=bx,
+            y=y,
+            width=btn_sz,
+            height=btn_sz,
+            text=icons[i],
+            border=True,
+            border_style="rounded",
+            style="bold",
+            align="center",
+            valign="middle",
+            color_fg="white",
+            color_bg="black",
         )
         sc.widgets.append(btn)
     app.state.selected = list(range(base, base + btn_count))
@@ -347,26 +476,55 @@ def create_card_layout(app) -> None:
     cx = max(gap, (sw - card_w) // 2)
 
     panel = WidgetConfig(
-        type="panel", x=cx, y=y, width=card_w, height=card_h,
-        text="", border=True, border_style="rounded",
-        color_fg="white", color_bg="black",
+        type="panel",
+        x=cx,
+        y=y,
+        width=card_w,
+        height=card_h,
+        text="",
+        border=True,
+        border_style="rounded",
+        color_fg="white",
+        color_bg="black",
     )
     title = WidgetConfig(
-        type="label", x=cx + 4, y=y + 4, width=card_w - 8, height=14,
-        text="Card Title", border=False,
-        style="bold", align="left", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=cx + 4,
+        y=y + 4,
+        width=card_w - 8,
+        height=14,
+        text="Card Title",
+        border=False,
+        style="bold",
+        align="left",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     separator = WidgetConfig(
-        type="panel", x=cx + 2, y=y + 20, width=card_w - 4, height=sep_h,
-        text="", border=False,
-        color_fg="white", color_bg="white",
+        type="panel",
+        x=cx + 2,
+        y=y + 20,
+        width=card_w - 4,
+        height=sep_h,
+        text="",
+        border=False,
+        color_fg="white",
+        color_bg="white",
     )
     body = WidgetConfig(
-        type="label", x=cx + 4, y=y + 24, width=card_w - 8, height=card_h - 28,
-        text="Body content goes here.", border=False,
-        style="default", align="left", valign="top",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=cx + 4,
+        y=y + 24,
+        width=card_w - 8,
+        height=card_h - 28,
+        text="Body content goes here.",
+        border=False,
+        style="default",
+        align="left",
+        valign="top",
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(panel)
@@ -402,27 +560,56 @@ def create_dashboard_grid(app) -> None:
             px = gap + c * (cell_w + gap)
             py = gap + r * (cell_h + gap)
             # Panel
-            sc.widgets.append(WidgetConfig(
-                type="panel", x=px, y=py, width=cell_w, height=cell_h,
-                text="", border=True, border_style="single",
-                color_fg="white", color_bg="black",
-            ))
+            sc.widgets.append(
+                WidgetConfig(
+                    type="panel",
+                    x=px,
+                    y=py,
+                    width=cell_w,
+                    height=cell_h,
+                    text="",
+                    border=True,
+                    border_style="single",
+                    color_fg="white",
+                    color_bg="black",
+                )
+            )
             # Title
-            sc.widgets.append(WidgetConfig(
-                type="label", x=px + 2, y=py + 2, width=cell_w - 4, height=12,
-                text=titles[idx], border=False,
-                style="bold", align="center", valign="middle",
-                color_fg="white", color_bg="black",
-            ))
+            sc.widgets.append(
+                WidgetConfig(
+                    type="label",
+                    x=px + 2,
+                    y=py + 2,
+                    width=cell_w - 4,
+                    height=12,
+                    text=titles[idx],
+                    border=False,
+                    style="bold",
+                    align="center",
+                    valign="middle",
+                    color_fg="white",
+                    color_bg="black",
+                )
+            )
             # Gauge
             gx = px + (cell_w - gauge_sz) // 2
             gy = py + 16
-            sc.widgets.append(WidgetConfig(
-                type="gauge", x=gx, y=gy, width=gauge_sz, height=gauge_sz,
-                text="", border=False,
-                value=values[idx], min_value=0, max_value=100,
-                color_fg="white", color_bg="black",
-            ))
+            sc.widgets.append(
+                WidgetConfig(
+                    type="gauge",
+                    x=gx,
+                    y=gy,
+                    width=gauge_sz,
+                    height=gauge_sz,
+                    text="",
+                    border=False,
+                    value=values[idx],
+                    min_value=0,
+                    max_value=100,
+                    color_fg="white",
+                    color_bg="black",
+                )
+            )
     total = cols * rows * 3  # 3 widgets per cell
     app.state.selected = list(range(base, base + total))
     app.state.selected_idx = base
@@ -443,26 +630,56 @@ def create_split_layout(app) -> None:
     pane_h = sh - gap * 2
 
     left_panel = WidgetConfig(
-        type="panel", x=gap, y=gap, width=left_w, height=pane_h,
-        text="", border=True, border_style="single",
-        color_fg="white", color_bg="black",
+        type="panel",
+        x=gap,
+        y=gap,
+        width=left_w,
+        height=pane_h,
+        text="",
+        border=True,
+        border_style="single",
+        color_fg="white",
+        color_bg="black",
     )
     left_label = WidgetConfig(
-        type="label", x=gap + 4, y=gap + 4, width=left_w - 8, height=14,
-        text="Left Pane", border=False,
-        style="bold", align="center", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=gap + 4,
+        y=gap + 4,
+        width=left_w - 8,
+        height=14,
+        text="Left Pane",
+        border=False,
+        style="bold",
+        align="center",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     right_panel = WidgetConfig(
-        type="panel", x=split, y=gap, width=right_w, height=pane_h,
-        text="", border=True, border_style="single",
-        color_fg="white", color_bg="black",
+        type="panel",
+        x=split,
+        y=gap,
+        width=right_w,
+        height=pane_h,
+        text="",
+        border=True,
+        border_style="single",
+        color_fg="white",
+        color_bg="black",
     )
     right_label = WidgetConfig(
-        type="label", x=split + 4, y=gap + 4, width=right_w - 8, height=14,
-        text="Right Pane", border=False,
-        style="bold", align="center", valign="middle",
-        color_fg="white", color_bg="black",
+        type="label",
+        x=split + 4,
+        y=gap + 4,
+        width=right_w - 8,
+        height=14,
+        text="Right Pane",
+        border=False,
+        style="bold",
+        align="center",
+        valign="middle",
+        color_fg="white",
+        color_bg="black",
     )
     base = len(sc.widgets)
     sc.widgets.append(left_panel)
@@ -488,10 +705,15 @@ def wrap_in_panel(app) -> None:
     pad = GRID
     panel = WidgetConfig(
         type="panel",
-        x=bounds.x - pad, y=bounds.y - pad,
-        width=bounds.width + pad * 2, height=bounds.height + pad * 2,
-        text="", border=True, border_style="single",
-        color_fg="white", color_bg="black",
+        x=bounds.x - pad,
+        y=bounds.y - pad,
+        width=bounds.width + pad * 2,
+        height=bounds.height + pad * 2,
+        text="",
+        border=True,
+        border_style="single",
+        color_fg="white",
+        color_bg="black",
     )
     # Insert panel just before the first selected widget so it's behind them
     insert_at = min(app.state.selected)

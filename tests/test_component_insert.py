@@ -39,7 +39,7 @@ def _app(widgets=None):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
 
     layout = MagicMock()
@@ -71,11 +71,13 @@ def _app(widgets=None):
 
 class TestExistingRoots:
     def test_basic(self):
-        sc = _scene([
-            _w(_widget_id="card.title"),
-            _w(_widget_id="card.value"),
-            _w(_widget_id="toast.message"),
-        ])
+        sc = _scene(
+            [
+                _w(_widget_id="card.title"),
+                _w(_widget_id="card.value"),
+                _w(_widget_id="toast.message"),
+            ]
+        )
         roots = _existing_roots(sc)
         assert roots == {"card", "toast"}
 
@@ -107,10 +109,12 @@ class TestUniqueRoot:
         assert _unique_root(sc, "card") == "card_2"
 
     def test_multiple_collisions(self):
-        sc = _scene([
-            _w(_widget_id="card.title"),
-            _w(_widget_id="card_2.title"),
-        ])
+        sc = _scene(
+            [
+                _w(_widget_id="card.title"),
+                _w(_widget_id="card_2.title"),
+            ]
+        )
         assert _unique_root(sc, "card") == "card_3"
 
     def test_empty_base(self):
@@ -131,8 +135,24 @@ class TestAddComponent:
     @patch("cyberpunk_designer.component_insert.component_blueprints")
     def test_inserts_widgets(self, mock_bp):
         mock_bp.return_value = [
-            {"type": "panel", "role": "panel", "x": 0, "y": 0, "width": 100, "height": 50, "text": ""},
-            {"type": "label", "role": "title", "x": 2, "y": 2, "width": 96, "height": 10, "text": "Hello"},
+            {
+                "type": "panel",
+                "role": "panel",
+                "x": 0,
+                "y": 0,
+                "width": 100,
+                "height": 50,
+                "text": "",
+            },
+            {
+                "type": "label",
+                "role": "title",
+                "x": 2,
+                "y": 2,
+                "width": 96,
+                "height": 10,
+                "text": "Hello",
+            },
         ]
         app = _app()
         add_component(app, "card")
@@ -151,7 +171,15 @@ class TestAddComponent:
     @patch("cyberpunk_designer.component_insert.component_blueprints")
     def test_unique_root_on_collision(self, mock_bp):
         mock_bp.return_value = [
-            {"type": "label", "role": "title", "x": 0, "y": 0, "width": 50, "height": 10, "text": "T"},
+            {
+                "type": "label",
+                "role": "title",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 10,
+                "text": "T",
+            },
         ]
         # Pre-populate with a card root
         app = _app([_w(_widget_id="card.title")])

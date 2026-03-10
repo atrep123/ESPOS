@@ -72,7 +72,9 @@ class TestDrawingTextEdges:
 
         app = _make_app(tmp_path, monkeypatch)
         # Very long word that must be broken char-by-char, with max_lines=1
-        result = wrap_text_px(app, "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", max_width_px=40, max_lines=1)
+        result = wrap_text_px(
+            app, "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", max_width_px=40, max_lines=1
+        )
         assert len(result) == 1
 
     def test_wrap_text_px_truncate_with_ellipsis(self, tmp_path, monkeypatch):
@@ -385,11 +387,13 @@ class TestDrawingOverlaysEdges:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.show_help_overlay = True
         # Return est with bad values
-        app.designer.estimate_resources = MagicMock(return_value={
-            "framebuffer_kb": "not_a_number",
-            "flash_kb": None,
-            "overlaps": "bad",
-        })
+        app.designer.estimate_resources = MagicMock(
+            return_value={
+                "framebuffer_kb": "not_a_number",
+                "flash_kb": None,
+                "overlaps": "bad",
+            }
+        )
         draw_help_overlay(app)
 
     def test_help_overlay_two_column(self, tmp_path, monkeypatch):
@@ -426,8 +430,9 @@ class TestDrawingCanvasEdges:
         """L121,138-139: widget ID labels + exception branch."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(x=10, y=10), _w(x=50, y=50, visible=False)])
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(x=10, y=10), _w(x=50, y=50, visible=False)]
+        )
         app.show_widget_ids = True
         draw_canvas(app)
 
@@ -435,8 +440,7 @@ class TestDrawingCanvasEdges:
         """L138-139: z-index labels."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(x=10, y=10, z_index=5)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10, z_index=5)])
         app.show_z_labels = True
         draw_canvas(app)
 
@@ -444,8 +448,9 @@ class TestDrawingCanvasEdges:
         """L156-157: focus order overlay."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(type="button", x=10, y=10, enabled=True)])
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(type="button", x=10, y=10, enabled=True)]
+        )
         app.show_focus_order = True
         draw_canvas(app)
 
@@ -453,8 +458,7 @@ class TestDrawingCanvasEdges:
         """L180: tooltip flipped to left when too close to right edge."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(x=220, y=10, width=30, height=20)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=220, y=10, width=30, height=20)])
         # Put pointer over the widget near right edge
         scene_rect = getattr(app, "scene_rect", None)
         if scene_rect is None:
@@ -482,8 +486,7 @@ class TestDrawingCanvasEdges:
         """L267,269: selection info label positioned to left/top when near edge."""
         from cyberpunk_designer.drawing.canvas import _draw_selection_info
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(x=220, y=110, width=30, height=20)])
+        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=220, y=110, width=30, height=20)])
         app.state.selected = [0]
         app.state.dragging = True
         bounds = SimpleNamespace(x=220, y=110, width=30, height=20)
@@ -509,9 +512,11 @@ class TestDrawingCanvasEdges:
         """L553: overflow marker for device profile with truncating text."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(x=10, y=10, width=20, height=10,
-                                    text="Very long text that overflows")])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[_w(x=10, y=10, width=20, height=10, text="Very long text that overflows")],
+        )
         app.hardware_profile = "esp32os_256x128_gray4"
         app.show_overflow_warnings = True
         draw_canvas(app)
@@ -537,9 +542,11 @@ class TestDrawingCanvasEdges:
         """L553: icon widget overflow marker uses icon_char."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(type="icon", icon_char="XXXXX", x=10, y=10,
-                                    width=12, height=10)])
+        app = _make_app(
+            tmp_path,
+            monkeypatch,
+            widgets=[_w(type="icon", icon_char="XXXXX", x=10, y=10, width=12, height=10)],
+        )
         app.hardware_profile = "esp32os_256x128_gray4"
         app.show_overflow_warnings = True
         draw_canvas(app)
@@ -581,8 +588,9 @@ class TestDrawingCanvasEdges:
         """L156-157: focus order label render exception."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = _make_app(tmp_path, monkeypatch,
-                        widgets=[_w(type="button", x=10, y=10, enabled=True)])
+        app = _make_app(
+            tmp_path, monkeypatch, widgets=[_w(type="button", x=10, y=10, enabled=True)]
+        )
         app.show_focus_order = True
         bad_font = MagicMock()
         bad_font.render = MagicMock(side_effect=RuntimeError("fail"))
@@ -634,13 +642,16 @@ class TestDrawingPanelsStatusEdges:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         # scenes.keys() must work for current_scene, but list() on the result fails
         real_scenes = app.designer.scenes
+
         class TrickyScenes(dict):
             _keys_call = 0
+
             def keys(self):
                 self._keys_call += 1
                 if self._keys_call > 2:  # fail on later calls (status bar)
                     raise RuntimeError("bad")
                 return super().keys()
+
         ts = TrickyScenes(real_scenes)
         app.designer.scenes = ts
         draw_status(app)
@@ -790,8 +801,7 @@ class TestDrawingTextExtraEdges:
         surf = pygame.Surface((200, 100))
         # Padding so large that clip_rect width is tiny → wrap returns []
         rect = pygame.Rect(10, 10, 8, 80)
-        draw_text_clipped(app, surf, "hello world test", rect, (255, 255, 255), 3,
-                          max_lines=5)
+        draw_text_clipped(app, surf, "hello world test", rect, (255, 255, 255), 3, max_lines=5)
 
     # L181-182: clip_rect.clip(old_clip) exception — cannot monkeypatch
     # immutable pygame.Rect.clip. Branch is defensive guard for corrupted clip state.
@@ -809,7 +819,9 @@ class TestDrawingTextExtraEdges:
         w.text_overflow = "auto"
         w.max_lines = 3
         # Long text with newlines that forces device auto mode to choose wrap
-        draw_text_in_rect(app, surf, "Very long line text\nMore text here", rect, (255, 255, 255), 2, w)
+        draw_text_in_rect(
+            app, surf, "Very long line text\nMore text here", rect, (255, 255, 255), 2, w
+        )
 
     def test_draw_text_in_rect_wrap_max_lines_bad(self, tmp_path, monkeypatch):
         """L249-250: max_lines attribute exception."""

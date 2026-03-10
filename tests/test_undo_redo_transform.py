@@ -12,8 +12,9 @@ from shared_undo_redo import (
 )
 
 
-def _make_op(op_type: OperationType, widget_id: str, user_id: str,
-             timestamp: float, **data_kw) -> Operation:
+def _make_op(
+    op_type: OperationType, widget_id: str, user_id: str, timestamp: float, **data_kw
+) -> Operation:
     return Operation(
         type=op_type,
         timestamp=timestamp,
@@ -26,6 +27,7 @@ def _make_op(op_type: OperationType, widget_id: str, user_id: str,
 # ---------------------------------------------------------------------------
 # _transform: no concurrent local ops  —  passthrough
 # ---------------------------------------------------------------------------
+
 
 class TestTransformPassthrough:
     def test_no_local_ops_returns_unchanged(self):
@@ -40,8 +42,7 @@ class TestTransformPassthrough:
         local_op = OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10)
         collab.execute_local(local_op)
         # Remote op with a much newer timestamp => no concurrent ops
-        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2",
-                          time.time() + 9999, x=50, y=50)
+        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2", time.time() + 9999, x=50, y=50)
         result = collab._transform(remote)
         assert result is remote
 
@@ -50,8 +51,7 @@ class TestTransformPassthrough:
         local_op = OperationBuilder.move_widget("w1", 0, 0, 10, 10)
         collab.execute_local(local_op)
         # Remote op on *different* widget
-        remote = _make_op(OperationType.MOVE_WIDGET, "w_other", "u2",
-                          0.0, x=50, y=50)
+        remote = _make_op(OperationType.MOVE_WIDGET, "w_other", "u2", 0.0, x=50, y=50)
         result = collab._transform(remote)
         # Even though local is concurrent, widget_id doesn't match
         assert "deleted" not in result.data
@@ -62,13 +62,13 @@ class TestTransformPassthrough:
 # _transform: MOVE vs MOVE  —  last writer wins (remote passes through)
 # ---------------------------------------------------------------------------
 
+
 class TestTransformMoveVsMove:
     def test_both_move_same_widget_remote_passes_through(self):
         collab = CollaborativeUndoRedo(user_id="u1")
         local_op = OperationBuilder.move_widget("w1", 0, 0, 10, 10)
         collab.execute_local(local_op)
-        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2",
-                          0.0, x=99, y=99)
+        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2", 0.0, x=99, y=99)
         result = collab._transform(remote)
         # "last writer wins" — remote passes through unchanged
         assert result.data["x"] == 99
@@ -88,20 +88,19 @@ class TestTransformMoveVsMove:
 # _transform: remote DELETE with concurrent local ops
 # ---------------------------------------------------------------------------
 
+
 class TestTransformRemoteDelete:
     def test_remote_delete_sets_deleted_flag(self):
         collab = CollaborativeUndoRedo(user_id="u1")
         collab.execute_local(OperationBuilder.move_widget("w1", 0, 0, 10, 10))
-        remote = _make_op(OperationType.DELETE_WIDGET, "w1", "u2",
-                          0.0, state={"type": "box"})
+        remote = _make_op(OperationType.DELETE_WIDGET, "w1", "u2", 0.0, state={"type": "box"})
         result = collab._transform(remote)
         assert result.data.get("deleted") is True
 
     def test_remote_delete_preserves_original_data(self):
         collab = CollaborativeUndoRedo(user_id="u1")
         collab.execute_local(OperationBuilder.move_widget("w1", 0, 0, 10, 10))
-        remote = _make_op(OperationType.DELETE_WIDGET, "w1", "u2",
-                          0.0, state={"type": "label"})
+        remote = _make_op(OperationType.DELETE_WIDGET, "w1", "u2", 0.0, state={"type": "label"})
         result = collab._transform(remote)
         assert result.data["state"] == {"type": "label"}
         assert result.data["deleted"] is True
@@ -109,8 +108,7 @@ class TestTransformRemoteDelete:
     def test_remote_delete_different_widget_no_deleted_flag(self):
         collab = CollaborativeUndoRedo(user_id="u1")
         collab.execute_local(OperationBuilder.move_widget("w1", 0, 0, 10, 10))
-        remote = _make_op(OperationType.DELETE_WIDGET, "w_other", "u2",
-                          0.0, state={})
+        remote = _make_op(OperationType.DELETE_WIDGET, "w_other", "u2", 0.0, state={})
         result = collab._transform(remote)
         assert "deleted" not in result.data
 
@@ -119,34 +117,26 @@ class TestTransformRemoteDelete:
 # _transform: local DELETE vs remote op
 # ---------------------------------------------------------------------------
 
+
 class TestTransformLocalDelete:
     def test_local_delete_marks_remote_no_op(self):
         collab = CollaborativeUndoRedo(user_id="u1")
-        collab.execute_local(
-            OperationBuilder.delete_widget("w1", {"type": "box", "x": 0})
-        )
-        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2",
-                          0.0, x=50, y=50)
+        collab.execute_local(OperationBuilder.delete_widget("w1", {"type": "box", "x": 0}))
+        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2", 0.0, x=50, y=50)
         result = collab._transform(remote)
         assert result.data.get("no_op") is True
 
     def test_local_delete_marks_remote_resize_no_op(self):
         collab = CollaborativeUndoRedo(user_id="u1")
-        collab.execute_local(
-            OperationBuilder.delete_widget("w1", {"type": "box"})
-        )
-        remote = _make_op(OperationType.RESIZE_WIDGET, "w1", "u2",
-                          0.0, width=100, height=200)
+        collab.execute_local(OperationBuilder.delete_widget("w1", {"type": "box"}))
+        remote = _make_op(OperationType.RESIZE_WIDGET, "w1", "u2", 0.0, width=100, height=200)
         result = collab._transform(remote)
         assert result.data.get("no_op") is True
 
     def test_local_delete_different_widget_no_no_op(self):
         collab = CollaborativeUndoRedo(user_id="u1")
-        collab.execute_local(
-            OperationBuilder.delete_widget("w1", {"type": "box"})
-        )
-        remote = _make_op(OperationType.MOVE_WIDGET, "w_other", "u2",
-                          0.0, x=10, y=10)
+        collab.execute_local(OperationBuilder.delete_widget("w1", {"type": "box"}))
+        remote = _make_op(OperationType.MOVE_WIDGET, "w_other", "u2", 0.0, x=10, y=10)
         result = collab._transform(remote)
         assert "no_op" not in result.data
 
@@ -155,15 +145,13 @@ class TestTransformLocalDelete:
 # _transform: multiple concurrent local ops
 # ---------------------------------------------------------------------------
 
+
 class TestTransformMultipleConcurrent:
     def test_move_then_delete_sets_no_op(self):
         collab = CollaborativeUndoRedo(user_id="u1")
         collab.execute_local(OperationBuilder.move_widget("w1", 0, 0, 10, 10))
-        collab.execute_local(
-            OperationBuilder.delete_widget("w1", {"type": "box"})
-        )
-        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2",
-                          0.0, x=50, y=50)
+        collab.execute_local(OperationBuilder.delete_widget("w1", {"type": "box"}))
+        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2", 0.0, x=50, y=50)
         result = collab._transform(remote)
         assert result.data.get("no_op") is True
 
@@ -171,8 +159,7 @@ class TestTransformMultipleConcurrent:
         collab = CollaborativeUndoRedo(user_id="u1")
         collab.execute_local(OperationBuilder.move_widget("w1", 0, 0, 10, 10))
         collab.execute_local(OperationBuilder.move_widget("w1", 10, 10, 20, 20))
-        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2",
-                          0.0, x=99, y=99)
+        remote = _make_op(OperationType.MOVE_WIDGET, "w1", "u2", 0.0, x=99, y=99)
         result = collab._transform(remote)
         # Multiple MOVE vs MOVE → still passes through (last writer wins)
         assert result.data["x"] == 99
@@ -183,6 +170,7 @@ class TestTransformMultipleConcurrent:
 # ---------------------------------------------------------------------------
 # execute_local edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestExecuteLocalEdgeCases:
     def test_execute_local_without_broadcast(self):
@@ -207,6 +195,7 @@ class TestExecuteLocalEdgeCases:
 # ---------------------------------------------------------------------------
 # receive_remote edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestReceiveRemoteEdgeCases:
     def test_receive_remote_creates_user_entry(self):
@@ -237,6 +226,7 @@ class TestReceiveRemoteEdgeCases:
 # ---------------------------------------------------------------------------
 # merge_history edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestMergeHistoryEdgeCases:
     def test_skip_local_user_ops(self):
@@ -271,6 +261,7 @@ class TestMergeHistoryEdgeCases:
 # get_all_operations edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestGetAllOperationsEdgeCases:
     def test_empty(self):
         collab = CollaborativeUndoRedo(user_id="u1")
@@ -302,6 +293,7 @@ class TestGetAllOperationsEdgeCases:
 # ---------------------------------------------------------------------------
 # CollaborativeUndoRedo init
 # ---------------------------------------------------------------------------
+
 
 class TestCollaborativeInit:
     def test_default_max_history(self):

@@ -111,8 +111,15 @@ class TestComponentFieldSpecs:
         assert specs["gauge_value"][2] == "int"
 
     def test_kinds_are_valid(self):
-        valid_prefixes = {"str", "int", "int_list", "choice:", "tabs_active",
-                          "list_count", "menu_active"}
+        valid_prefixes = {
+            "str",
+            "int",
+            "int_list",
+            "choice:",
+            "tabs_active",
+            "list_count",
+            "menu_active",
+        }
         for comp in _KNOWN_COMPONENTS:
             specs = component_field_specs(comp)
             for key, (_, _, kind) in specs.items():

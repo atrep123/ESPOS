@@ -31,6 +31,7 @@ def _warns(data, **kw):
 
 # ── Rule 43: locked must be boolean ──
 
+
 def test_rule43_locked_string_error():
     w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14, "locked": "yes"}]
     errs = _errors(_make(w))
@@ -63,8 +64,11 @@ def test_rule43_no_locked_field_ok():
 
 # ── Rule 44: state_overrides must be dict of dicts ──
 
+
 def test_rule44_state_overrides_list_error():
-    w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14, "state_overrides": ["a", "b"]}]
+    w = [
+        {"type": "label", "x": 0, "y": 0, "width": 40, "height": 14, "state_overrides": ["a", "b"]}
+    ]
     errs = _errors(_make(w))
     assert any("state_overrides must be a dict" in e.message for e in errs)
 
@@ -76,15 +80,31 @@ def test_rule44_state_overrides_string_error():
 
 
 def test_rule44_state_overrides_inner_not_dict():
-    w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14,
-          "state_overrides": {"hover": "red"}}]
+    w = [
+        {
+            "type": "label",
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 14,
+            "state_overrides": {"hover": "red"},
+        }
+    ]
     errs = _errors(_make(w))
     assert any("state_overrides['hover']" in e.message for e in errs)
 
 
 def test_rule44_state_overrides_valid():
-    w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14,
-          "state_overrides": {"hover": {"color_fg": "red"}}}]
+    w = [
+        {
+            "type": "label",
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 14,
+            "state_overrides": {"hover": {"color_fg": "red"}},
+        }
+    ]
     errs = _errors(_make(w))
     assert not any("state_overrides" in e.message for e in errs)
 
@@ -102,6 +122,7 @@ def test_rule44_no_state_overrides_ok():
 
 
 # ── Rule 45: Scene dimensions overflow uint16 ──
+
 
 def test_rule45_scene_dim_overflow():
     w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14}]
@@ -123,6 +144,7 @@ def test_rule45_scene_dim_max_ok():
 
 # ── Rule 46: Textbox minimum size ──
 
+
 def test_rule46_textbox_too_small():
     w = [{"type": "textbox", "x": 0, "y": 0, "width": 10, "height": 8}]
     warns = _warns(_make(w))
@@ -137,31 +159,65 @@ def test_rule46_textbox_ok():
 
 # ── Rule 47: Panel with no border and no bg ──
 
+
 def test_rule47_panel_no_border_no_bg():
-    w = [{"type": "panel", "x": 0, "y": 0, "width": 40, "height": 30, "border": False, "color_bg": ""}]
+    w = [
+        {
+            "type": "panel",
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 30,
+            "border": False,
+            "color_bg": "",
+        }
+    ]
     warns = _warns(_make(w))
     assert any("panel" in i.message and "no border" in i.message for i in warns)
 
 
 def test_rule47_panel_with_border_ok():
-    w = [{"type": "panel", "x": 0, "y": 0, "width": 40, "height": 30, "border": True, "color_bg": ""}]
+    w = [
+        {"type": "panel", "x": 0, "y": 0, "width": 40, "height": 30, "border": True, "color_bg": ""}
+    ]
     warns = _warns(_make(w))
     assert not any("panel" in i.message and "no border" in i.message for i in warns)
 
 
 def test_rule47_panel_with_bg_ok():
-    w = [{"type": "panel", "x": 0, "y": 0, "width": 40, "height": 30, "border": False, "color_bg": "#333333"}]
+    w = [
+        {
+            "type": "panel",
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 30,
+            "border": False,
+            "color_bg": "#333333",
+        }
+    ]
     warns = _warns(_make(w))
     assert not any("panel" in i.message and "no border" in i.message for i in warns)
 
 
 def test_rule47_non_panel_no_warn():
-    w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14, "border": False, "color_bg": ""}]
+    w = [
+        {
+            "type": "label",
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 14,
+            "border": False,
+            "color_bg": "",
+        }
+    ]
     warns = _warns(_make(w))
     assert not any("panel" in i.message and "no border" in i.message for i in warns)
 
 
 # ── Rule 48: z_index extreme range ──
+
 
 def test_rule48_z_index_too_high():
     w = [{"type": "label", "x": 0, "y": 0, "width": 40, "height": 14, "z_index": 500}]
@@ -195,6 +251,7 @@ def test_rule48_z_index_boundary_high_ok():
 
 # ── Rule 49: Duplicate text in scene ──
 
+
 def test_rule49_duplicate_text_4_times():
     w = [
         {"type": "label", "x": 0, "y": i * 16, "width": 40, "height": 14, "text": "Hello World"}
@@ -224,6 +281,7 @@ def test_rule49_short_text_not_flagged():
 
 
 # ── Rule 50: icon_char length check ──
+
 
 def test_rule50_icon_char_too_long():
     w = [{"type": "icon", "x": 0, "y": 0, "width": 20, "height": 20, "icon_char": "AB"}]

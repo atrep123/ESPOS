@@ -29,15 +29,21 @@ def export_header(json_path: Path, out_path: Path) -> None:
     if guard[0].isdigit():
         guard = "_" + guard
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    text = generate_scenes_header(json_path, guard=guard, source_name=json_path.name, generated_ts=ts)
+    text = generate_scenes_header(
+        json_path, guard=guard, source_name=json_path.name, generated_ts=ts
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Export ESP32OS design JSON to C header (ui_scene.h schema)")
+    p = argparse.ArgumentParser(
+        description="Export ESP32OS design JSON to C header (ui_scene.h schema)"
+    )
     p.add_argument("json", type=Path, help="Input design JSON (from the designer)")
-    p.add_argument("-o", "--output", type=Path, required=True, help="Output header path (e.g. output/ui.h)")
+    p.add_argument(
+        "-o", "--output", type=Path, required=True, help="Output header path (e.g. output/ui.h)"
+    )
     args = p.parse_args()
 
     for name in ("json", "output"):
@@ -52,4 +58,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

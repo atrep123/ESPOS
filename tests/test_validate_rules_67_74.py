@@ -33,7 +33,9 @@ def _warns(data, **kw):
 
 
 def test_r67_theme_fg_role_string_ok():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "theme_fg_role": "primary"}])
+    d = _make(
+        [{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "theme_fg_role": "primary"}]
+    )
     errs = [e for e in _errors(d) if "theme_fg_role" in e.message]
     assert errs == []
 
@@ -57,13 +59,17 @@ def test_r67_theme_fg_role_bool():
 
 
 def test_r67_theme_bg_role_string_ok():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "theme_bg_role": "surface"}])
+    d = _make(
+        [{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "theme_bg_role": "surface"}]
+    )
     errs = [e for e in _errors(d) if "theme_bg_role" in e.message]
     assert errs == []
 
 
 def test_r67_theme_bg_role_list():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "theme_bg_role": ["bg"]}])
+    d = _make(
+        [{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "theme_bg_role": ["bg"]}]
+    )
     errs = [e for e in _errors(d) if "theme_bg_role" in e.message]
     assert len(errs) == 1
 
@@ -120,13 +126,17 @@ def test_r69_max_lines_none_ok():
 
 
 def test_r70_text_color_valid_hex():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "text_color": "#ff0000"}])
+    d = _make(
+        [{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "text_color": "#ff0000"}]
+    )
     errs = [e for e in _errors(d) if "text_color" in e.message]
     assert errs == []
 
 
 def test_r70_text_color_invalid():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "text_color": "banana"}])
+    d = _make(
+        [{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "text_color": "banana"}]
+    )
     errs = [e for e in _errors(d) if "text_color" in e.message]
     assert len(errs) == 1
 
@@ -204,22 +214,48 @@ def test_r72_text_only_no_warn():
 
 
 def test_r72_runtime_only_no_warn():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "runtime": "bind=x;kind=str"}])
+    d = _make(
+        [{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14, "runtime": "bind=x;kind=str"}]
+    )
     ws = [w for w in _warns(d) if "runtime may override" in w.message]
     assert ws == []
 
 
 def test_r72_text_and_runtime_warn():
-    d = _make([{"type": "label", "x": 0, "y": 0, "width": 60, "height": 14,
-                "text": "HELLO", "runtime": "bind=x;kind=str"}])
+    d = _make(
+        [
+            {
+                "type": "label",
+                "x": 0,
+                "y": 0,
+                "width": 60,
+                "height": 14,
+                "text": "HELLO",
+                "runtime": "bind=x;kind=str",
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "runtime may override" in w.message]
     assert len(ws) == 1
 
 
 def test_r72_non_text_type_no_warn():
-    d = _make([{"type": "gauge", "x": 0, "y": 0, "width": 40, "height": 40,
-                "text": "X", "runtime": "bind=v;kind=int;min=0;max=100",
-                "value": 0, "min_value": 0, "max_value": 100}])
+    d = _make(
+        [
+            {
+                "type": "gauge",
+                "x": 0,
+                "y": 0,
+                "width": 40,
+                "height": 40,
+                "text": "X",
+                "runtime": "bind=v;kind=int;min=0;max=100",
+                "value": 0,
+                "min_value": 0,
+                "max_value": 100,
+            }
+        ]
+    )
     ws = [w for w in _warns(d) if "runtime may override" in w.message]
     assert ws == []
 
@@ -229,19 +265,31 @@ def test_r72_non_text_type_no_warn():
 
 def test_r73_icon_sufficient_size():
     d = _make([{"type": "icon", "x": 0, "y": 0, "width": 10, "height": 10, "icon_char": "A"}])
-    ws = [w for w in _warns(d) if "too small" in w.message and "icon" in w.message and "min 6" in w.message]
+    ws = [
+        w
+        for w in _warns(d)
+        if "too small" in w.message and "icon" in w.message and "min 6" in w.message
+    ]
     assert ws == []
 
 
 def test_r73_icon_too_narrow():
     d = _make([{"type": "icon", "x": 0, "y": 0, "width": 4, "height": 10, "icon_char": "A"}])
-    ws = [w for w in _warns(d) if "too small" in w.message and "icon" in w.message and "min 6" in w.message]
+    ws = [
+        w
+        for w in _warns(d)
+        if "too small" in w.message and "icon" in w.message and "min 6" in w.message
+    ]
     assert len(ws) == 1
 
 
 def test_r73_icon_too_short():
     d = _make([{"type": "icon", "x": 0, "y": 0, "width": 10, "height": 6, "icon_char": "A"}])
-    ws = [w for w in _warns(d) if "too small" in w.message and "icon" in w.message and "min 6" in w.message]
+    ws = [
+        w
+        for w in _warns(d)
+        if "too small" in w.message and "icon" in w.message and "min 6" in w.message
+    ]
     assert len(ws) == 1
 
 

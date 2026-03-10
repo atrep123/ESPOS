@@ -21,6 +21,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -68,6 +69,7 @@ def _start_edit(app, field, buf=""):
 # ===========================================================================
 # Pure utility functions
 # ===========================================================================
+
 
 class TestParsePair:
     def test_comma_separated(self):
@@ -125,6 +127,7 @@ class TestSortedRoleIndices:
 # ===========================================================================
 # inspector_field_to_str
 # ===========================================================================
+
 
 class TestInspectorFieldToStr:
     def test_text_field(self, tmp_path, monkeypatch):
@@ -229,6 +232,7 @@ class TestInspectorFieldToStr:
 # ===========================================================================
 # inspector_commit_edit — special fields
 # ===========================================================================
+
 
 class TestCommitPosition:
     def test_valid_position(self, tmp_path, monkeypatch):
@@ -499,6 +503,7 @@ class TestCommitSearch:
 # inspector_commit_edit — single widget fields
 # ===========================================================================
 
+
 class TestCommitSingleWidget:
     def test_text(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -744,6 +749,7 @@ class TestCommitSingleWidget:
 # inspector_commit_edit — multi-widget fields
 # ===========================================================================
 
+
 class TestCommitMultiWidget:
     def test_multi_x(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -956,6 +962,7 @@ class TestCommitMultiWidget:
 # ===========================================================================
 # compute_inspector_rows
 # ===========================================================================
+
 
 class TestComputeInspectorRows:
     def test_no_selection(self, tmp_path, monkeypatch):

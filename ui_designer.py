@@ -42,6 +42,7 @@ class WidgetValidationError(Exception):
 class SceneLoadError(Exception):
     """Raised when a scene JSON cannot be loaded or parsed."""
 
+
 # CLI message constants
 MSG_INVALID_INDEX = "Invalid index"
 MSG_NO_SCENE = "No scene loaded"
@@ -1605,8 +1606,10 @@ class UIDesigner:
             if self.scenes:
                 self.current_scene = list(self.scenes.keys())[0]
             raw_groups = data.get("groups")
-            if isinstance(raw_groups, dict) and raw_groups and all(
-                isinstance(v, dict) for v in raw_groups.values()
+            if (
+                isinstance(raw_groups, dict)
+                and raw_groups
+                and all(isinstance(v, dict) for v in raw_groups.values())
             ):
                 scene_groups = raw_groups.get(self.current_scene, {})
                 self.groups = self._coerce_groups(scene_groups)
@@ -2228,7 +2231,11 @@ class UIDesigner:
 
     def _draw_icon(self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int):
         """Render icon glyph (single char) centered in its box."""
-        glyph = str(getattr(widget, "icon_char", "") or getattr(widget, "text", "") or "?").replace("\n", " ").strip()
+        glyph = (
+            str(getattr(widget, "icon_char", "") or getattr(widget, "text", "") or "?")
+            .replace("\n", " ")
+            .strip()
+        )
         if not glyph:
             return
 
@@ -2921,9 +2928,7 @@ def _preflight_overlap_checks(scene: SceneConfig, warnings: List[str]) -> List[s
             if at in {"panel", "box"} or bt in {"panel", "box"}:
                 continue
             if overlap(a, b):
-                warnings.append(
-                    f"[{i}] {a.type} overlaps [{j}] {b.type}"
-                )
+                warnings.append(f"[{i}] {a.type} overlaps [{j}] {b.type}")
     return warnings
 
 
@@ -3219,7 +3224,17 @@ if __name__ == "__main__":
 
 # Re-export for backward compatibility
 __all__ = [
-    "UIDesigner", "WidgetConfig", "WidgetType", "BorderStyle", "Scene", "SceneConfig",
-    "create_cli_interface", "show_command_help", "get_widget_help",
-    "_NAMED_COLORS", "_parse_color", "_rel_lum", "_contrast_ratio",
+    "UIDesigner",
+    "WidgetConfig",
+    "WidgetType",
+    "BorderStyle",
+    "Scene",
+    "SceneConfig",
+    "create_cli_interface",
+    "show_command_help",
+    "get_widget_help",
+    "_NAMED_COLORS",
+    "_parse_color",
+    "_rel_lum",
+    "_contrast_ratio",
 ]

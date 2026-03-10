@@ -255,71 +255,93 @@ class CyberpunkEditorApp:
         # Each section: (section_name, items_list)
         # Section names starting with "" (empty) are always expanded.
         self.palette_sections = [
-            ("Add Widget", [
-                ("Label", lambda: self._add_widget("label")),
-                ("Button", lambda: self._add_widget("button")),
-                ("Panel", lambda: self._add_widget("panel")),
-                ("Progress", lambda: self._add_widget("progressbar")),
-                ("Gauge", lambda: self._add_widget("gauge")),
-                ("Slider", lambda: self._add_widget("slider")),
-                ("Checkbox", lambda: self._add_widget("checkbox")),
-                ("Textbox", lambda: self._add_widget("textbox")),
-                ("Chart", lambda: self._add_widget("chart")),
-                ("Icon", lambda: self._add_widget("icon")),
-            ]),
+            (
+                "Add Widget",
+                [
+                    ("Label", lambda: self._add_widget("label")),
+                    ("Button", lambda: self._add_widget("button")),
+                    ("Panel", lambda: self._add_widget("panel")),
+                    ("Progress", lambda: self._add_widget("progressbar")),
+                    ("Gauge", lambda: self._add_widget("gauge")),
+                    ("Slider", lambda: self._add_widget("slider")),
+                    ("Checkbox", lambda: self._add_widget("checkbox")),
+                    ("Textbox", lambda: self._add_widget("textbox")),
+                    ("Chart", lambda: self._add_widget("chart")),
+                    ("Icon", lambda: self._add_widget("icon")),
+                ],
+            ),
             ("Templates", self._build_template_actions()),
-            ("Colors", [
-                ("White / Black", lambda: self._apply_color_preset("#f5f5f5", "#000000")),
-                ("White / Panel", lambda: self._apply_color_preset("#f5f5f5", "#101010")),
-                ("LightGray / Dark", lambda: self._apply_color_preset("#e0e0e0", "#080808")),
-                ("Gray / Dark", lambda: self._apply_color_preset("#b0b0b0", "#080808")),
-            ]),
-            ("Components", [
-                ("Dashboard 256x128", lambda: self._add_component("dashboard_256x128")),
-                ("Status Bar", lambda: self._add_component("status_bar")),
-                ("Tabs", lambda: self._add_component("tabs")),
-                ("Menu", lambda: self._add_component("menu")),
-                ("Menu List", lambda: self._add_component("menu_list")),
-                ("List", lambda: self._add_component("list")),
-                ("List Item", lambda: self._add_component("list_item")),
-                ("Setting (int)", lambda: self._add_component("setting_int")),
-                ("Setting (bool)", lambda: self._add_component("setting_bool")),
-                ("Setting (enum)", lambda: self._add_component("setting_enum")),
-                ("Dialog", lambda: self._add_component("dialog")),
-                ("Card", lambda: self._add_component("card")),
-                ("Notification", lambda: self._add_component("notification")),
-                ("Modal", lambda: self._add_component("modal")),
-                ("Chart Bar", lambda: self._add_component("chart_bar")),
-                ("Chart Line", lambda: self._add_component("chart_line")),
-                ("Gauge HUD", lambda: self._add_component("gauge_hud")),
-                ("Dialog Confirm", lambda: self._add_component("dialog_confirm")),
-                ("Toast", lambda: self._add_component("toast")),
-            ]),
-            ("Layout", [
-                ("Align Left", lambda: layout_tools.align_selection(self, "left")),
-                ("Align H Center", lambda: layout_tools.align_selection(self, "hcenter")),
-                ("Align Right", lambda: layout_tools.align_selection(self, "right")),
-                ("Align Top", lambda: layout_tools.align_selection(self, "top")),
-                ("Align V Center", lambda: layout_tools.align_selection(self, "vcenter")),
-                ("Align Bottom", lambda: layout_tools.align_selection(self, "bottom")),
-                ("Distribute H", lambda: layout_tools.distribute_selection(self, "h")),
-                ("Distribute V", lambda: layout_tools.distribute_selection(self, "v")),
-                ("Match Width", lambda: layout_tools.match_size_selection(self, "width")),
-                ("Match Height", lambda: layout_tools.match_size_selection(self, "height")),
-                ("Center", lambda: layout_tools.center_selection_in_scene(self, "both")),
-            ]),
-            ("Profiles", [
-                ("ESP32 OS 256x128", lambda: self._set_profile("esp32os_256x128_gray4")),
-                ("ESP32 OS 240x128 1b", lambda: self._set_profile("esp32os_240x128_mono")),
-                ("ESP32 OS 240x128 RGB", lambda: self._set_profile("esp32os_240x128_rgb565")),
-                ("OLED 128x64", lambda: self._set_profile("oled_128x64")),
-                ("TFT 320x240", lambda: self._set_profile("tft_320x240")),
-                ("TFT 480x320", lambda: self._set_profile("tft_480x320")),
-            ]),
+            (
+                "Colors",
+                [
+                    ("White / Black", lambda: self._apply_color_preset("#f5f5f5", "#000000")),
+                    ("White / Panel", lambda: self._apply_color_preset("#f5f5f5", "#101010")),
+                    ("LightGray / Dark", lambda: self._apply_color_preset("#e0e0e0", "#080808")),
+                    ("Gray / Dark", lambda: self._apply_color_preset("#b0b0b0", "#080808")),
+                ],
+            ),
+            (
+                "Components",
+                [
+                    ("Dashboard 256x128", lambda: self._add_component("dashboard_256x128")),
+                    ("Status Bar", lambda: self._add_component("status_bar")),
+                    ("Tabs", lambda: self._add_component("tabs")),
+                    ("Menu", lambda: self._add_component("menu")),
+                    ("Menu List", lambda: self._add_component("menu_list")),
+                    ("List", lambda: self._add_component("list")),
+                    ("List Item", lambda: self._add_component("list_item")),
+                    ("Setting (int)", lambda: self._add_component("setting_int")),
+                    ("Setting (bool)", lambda: self._add_component("setting_bool")),
+                    ("Setting (enum)", lambda: self._add_component("setting_enum")),
+                    ("Dialog", lambda: self._add_component("dialog")),
+                    ("Card", lambda: self._add_component("card")),
+                    ("Notification", lambda: self._add_component("notification")),
+                    ("Modal", lambda: self._add_component("modal")),
+                    ("Chart Bar", lambda: self._add_component("chart_bar")),
+                    ("Chart Line", lambda: self._add_component("chart_line")),
+                    ("Gauge HUD", lambda: self._add_component("gauge_hud")),
+                    ("Dialog Confirm", lambda: self._add_component("dialog_confirm")),
+                    ("Toast", lambda: self._add_component("toast")),
+                ],
+            ),
+            (
+                "Layout",
+                [
+                    ("Align Left", lambda: layout_tools.align_selection(self, "left")),
+                    ("Align H Center", lambda: layout_tools.align_selection(self, "hcenter")),
+                    ("Align Right", lambda: layout_tools.align_selection(self, "right")),
+                    ("Align Top", lambda: layout_tools.align_selection(self, "top")),
+                    ("Align V Center", lambda: layout_tools.align_selection(self, "vcenter")),
+                    ("Align Bottom", lambda: layout_tools.align_selection(self, "bottom")),
+                    ("Distribute H", lambda: layout_tools.distribute_selection(self, "h")),
+                    ("Distribute V", lambda: layout_tools.distribute_selection(self, "v")),
+                    ("Match Width", lambda: layout_tools.match_size_selection(self, "width")),
+                    ("Match Height", lambda: layout_tools.match_size_selection(self, "height")),
+                    ("Center", lambda: layout_tools.center_selection_in_scene(self, "both")),
+                ],
+            ),
+            (
+                "Profiles",
+                [
+                    ("ESP32 OS 256x128", lambda: self._set_profile("esp32os_256x128_gray4")),
+                    ("ESP32 OS 240x128 1b", lambda: self._set_profile("esp32os_240x128_mono")),
+                    ("ESP32 OS 240x128 RGB", lambda: self._set_profile("esp32os_240x128_rgb565")),
+                    ("OLED 128x64", lambda: self._set_profile("oled_128x64")),
+                    ("TFT 320x240", lambda: self._set_profile("tft_320x240")),
+                    ("TFT 480x320", lambda: self._set_profile("tft_480x320")),
+                ],
+            ),
             ("Presets", self._build_widget_presets_actions()),
         ]
         # Sections collapsed by default (all except "Add Widget")
-        self.palette_collapsed: set = {"Templates", "Colors", "Components", "Layout", "Profiles", "Presets"}
+        self.palette_collapsed: set = {
+            "Templates",
+            "Colors",
+            "Components",
+            "Layout",
+            "Profiles",
+            "Presets",
+        }
         # Inspector sections collapsed by default (Layers collapsed, Info+Selection open)
         self.inspector_collapsed: set = {"Layers"}
         # Build flat palette_actions for backward-compat with click handler
@@ -1345,7 +1367,7 @@ class CyberpunkEditorApp:
         current_section: str | None = None
         for key, _text in rows:
             if isinstance(key, str) and key.startswith("_section:"):
-                current_section = key[len("_section:"):]
+                current_section = key[len("_section:") :]
                 count += 1  # section header always visible
                 continue
             if current_section and current_section in collapsed:
@@ -1503,7 +1525,11 @@ class CyberpunkEditorApp:
             items.append(("---", "", None))
             items.append(("Close Scene", "MidClick", "tab_close"))
             items.append(("Close Others", "", "tab_close_others"))
-            cur_idx = names.index(self.designer.current_scene) if self.designer.current_scene in names else 0
+            cur_idx = (
+                names.index(self.designer.current_scene)
+                if self.designer.current_scene in names
+                else 0
+            )
             if cur_idx < len(names) - 1:
                 items.append(("Close Right", "", "tab_close_right"))
         self._context_menu = {"visible": True, "pos": pos, "items": items}
@@ -1715,7 +1741,9 @@ class CyberpunkEditorApp:
                 cleaned.append((lbl, sc, act))
         while cleaned and cleaned[-1][2] is None:  # pragma: no cover — list always ends non-None
             cleaned.pop()
-        while cleaned and cleaned[0][2] is None:  # pragma: no cover — loop above strips leading None
+        while (
+            cleaned and cleaned[0][2] is None
+        ):  # pragma: no cover — loop above strips leading None
             cleaned.pop(0)
 
         self._context_menu = {"visible": True, "pos": pos, "items": cleaned}
@@ -2661,7 +2689,7 @@ class CyberpunkEditorApp:
     def _tile_fill_scene(self) -> None:
         selection_ops.tile_fill_scene(self)
 
-    # R51 transform helpers\n    def _match_first_width(self) -> None:
+        # R51 transform helpers\n    def _match_first_width(self) -> None:
         selection_ops.match_first_width(self)
 
     def _match_first_height(self) -> None:
@@ -2804,7 +2832,9 @@ class CyberpunkEditorApp:
         """Jump to scene by 0-based index."""
         names = list(self.designer.scenes.keys())
         if index >= len(names):
-            self._set_status(f"Scene #{index + 1} does not exist ({len(names)} scenes).", ttl_sec=2.0)
+            self._set_status(
+                f"Scene #{index + 1} does not exist ({len(names)} scenes).", ttl_sec=2.0
+            )
             return
         self.designer.current_scene = names[index]
         self.state.selected = []
@@ -2823,6 +2853,7 @@ class CyberpunkEditorApp:
         for idx in self.state.selected:
             if 0 <= idx < len(sc.widgets):
                 from dataclasses import asdict
+
                 widgets.append(asdict(sc.widgets[idx]))
         if not widgets:
             return
@@ -2876,7 +2907,7 @@ class CyberpunkEditorApp:
         names = list(self.designer.scenes.keys())
         cur = self.designer.current_scene
         idx = names.index(cur) if cur in names else 0
-        to_remove = names[idx + 1:]
+        to_remove = names[idx + 1 :]
         if not to_remove:
             return
         for n in to_remove:
@@ -2968,6 +2999,7 @@ class CyberpunkEditorApp:
             return
         try:
             import sys
+
             repo_root = json_path.resolve().parent
             if str(repo_root) not in sys.path:
                 sys.path.insert(0, str(repo_root))
@@ -2985,11 +3017,14 @@ class CyberpunkEditorApp:
         out_path = out_dir / "ui_design_export.h"
         try:
             from datetime import datetime
+
             guard = "UI_DESIGN_EXPORT_H"
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             text = generate_scenes_header(
-                json_path, guard=guard,
-                source_name=json_path.name, generated_ts=ts,
+                json_path,
+                guard=guard,
+                source_name=json_path.name,
+                generated_ts=ts,
             )
             out_path.write_text(text, encoding="utf-8", newline="\n")
             self._set_status(f"Exported: {out_path.name}", ttl_sec=3.0)

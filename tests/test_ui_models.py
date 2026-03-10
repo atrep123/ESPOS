@@ -14,6 +14,7 @@ from ui_models import (
 
 # ── _normalize_int_list ──
 
+
 class TestNormalizeIntList:
     def test_ints(self):
         assert _normalize_int_list([1, 2, 3]) == [1, 2, 3]
@@ -38,6 +39,7 @@ class TestNormalizeIntList:
 
 
 # ── _coerce_bool_flag ──
+
 
 class TestCoerceBoolFlag:
     def test_none_returns_default_true(self):
@@ -85,6 +87,7 @@ class TestCoerceBoolFlag:
 
 # ── _coerce_choice ──
 
+
 class TestCoerceChoice:
     def test_valid_choice(self):
         assert _coerce_choice("a", ["a", "b", "c"], "b") == "a"
@@ -101,6 +104,7 @@ class TestCoerceChoice:
 
 # ── _coerce_int ──
 
+
 class TestCoerceInt:
     def test_int(self):
         assert _coerce_int(5) == 5
@@ -116,6 +120,7 @@ class TestCoerceInt:
 
 
 # ── _make_baseline ──
+
 
 class TestMakeBaseline:
     def test_basic(self):
@@ -137,11 +142,23 @@ class TestMakeBaseline:
 
 # ── WidgetType enum ──
 
+
 class TestWidgetType:
     def test_all_types(self):
-        expected = {"label", "box", "button", "gauge", "progressbar",
-                    "checkbox", "radiobutton", "slider", "textbox",
-                    "panel", "icon", "chart"}
+        expected = {
+            "label",
+            "box",
+            "button",
+            "gauge",
+            "progressbar",
+            "checkbox",
+            "radiobutton",
+            "slider",
+            "textbox",
+            "panel",
+            "icon",
+            "chart",
+        }
         values = {wt.value for wt in WidgetType}
         assert values == expected
 
@@ -151,6 +168,7 @@ class TestWidgetType:
 
 # ── BorderStyle enum ──
 
+
 class TestBorderStyle:
     def test_all_styles(self):
         expected = {"none", "single", "double", "rounded", "bold", "dashed"}
@@ -159,6 +177,7 @@ class TestBorderStyle:
 
 
 # ── WidgetConfig ──
+
 
 class TestWidgetConfig:
     def test_basic_creation(self):
@@ -257,8 +276,10 @@ class TestWidgetConfig:
 
     def test_non_enum_value_attr_type_normalized(self):
         """Lines 273-275: object with .value attribute (not Enum) is normalized."""
+
         class FakeType:
             value = "slider"
+
         wc = WidgetConfig(type=FakeType(), x=0, y=0)
         assert wc.type == "slider"
 
@@ -337,17 +358,21 @@ class TestWidgetConfig:
 
 # ── _coerce_bool_flag exception path ──
 
+
 class TestCoerceBoolFlagException:
     def test_bool_raises_returns_default(self):
         """Lines 38-39: object whose __bool__ raises returns default."""
+
         class BadBool:
             def __bool__(self):
                 raise ValueError("no bool")
+
         assert _coerce_bool_flag(BadBool(), True) is True
         assert _coerce_bool_flag(BadBool(), False) is False
 
 
 # ── Scene backward-compat shim ──
+
 
 class TestScene:
     def test_basic_creation(self):

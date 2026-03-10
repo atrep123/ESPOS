@@ -570,7 +570,7 @@ class TestSelectParentPanel:
     def test_finds_smallest_enclosing(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         _add(app, type="panel", x=0, y=0, width=250, height=120)  # big
-        _add(app, type="panel", x=5, y=5, width=100, height=50)   # small
+        _add(app, type="panel", x=5, y=5, width=100, height=50)  # small
         _add(app, type="label", x=10, y=10, width=40, height=16)
         _sel(app, 2)
         select_parent_panel(app)

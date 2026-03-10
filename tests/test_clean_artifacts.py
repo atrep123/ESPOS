@@ -1,6 +1,5 @@
 """Tests for tools/clean_artifacts.py — remove_path and clean logic."""
 
-
 from tools.clean_artifacts import (
     DEFAULT_EXCLUDE_DIRS,
     DEFAULT_GLOBS,

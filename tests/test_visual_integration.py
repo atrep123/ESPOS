@@ -1,4 +1,5 @@
 """Integration: run verify_all_visual.py headless and check exit-code."""
+
 import subprocess
 import sys
 from pathlib import Path
@@ -37,15 +38,15 @@ def test_validate_widget_catalog():
             cwd=str(REPO),
         )
     result = subprocess.run(
-        [sys.executable, str(REPO / "tools" / "validate_design.py"),
-         str(catalog)],
+        [sys.executable, str(REPO / "tools" / "validate_design.py"), str(catalog)],
         cwd=str(REPO),
         capture_output=True,
         text=True,
         timeout=30,
     )
-    assert result.returncode == 0 or "[WARN]" in result.stdout, \
+    assert result.returncode == 0 or "[WARN]" in result.stdout, (
         f"Validation failed:\n{result.stdout}\n{result.stderr}"
+    )
 
 
 def test_validate_rc_scene():
@@ -57,12 +58,10 @@ def test_validate_rc_scene():
             cwd=str(REPO),
         )
     result = subprocess.run(
-        [sys.executable, str(REPO / "tools" / "validate_design.py"),
-         str(rc)],
+        [sys.executable, str(REPO / "tools" / "validate_design.py"), str(rc)],
         cwd=str(REPO),
         capture_output=True,
         text=True,
         timeout=30,
     )
-    assert "[FAIL]" not in result.stdout, \
-        f"rc_scene.json validation failed:\n{result.stdout}"
+    assert "[FAIL]" not in result.stdout, f"rc_scene.json validation failed:\n{result.stdout}"

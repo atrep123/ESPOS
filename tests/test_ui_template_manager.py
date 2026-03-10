@@ -160,10 +160,12 @@ def test_persistence_reload(tmp_path: Path):
     storage = tmp_path / "templates.json"
     lib1 = TemplateLibrary(storage_path=str(storage))
     initial_count = len(lib1.templates)
-    lib1.add_template(Template(
-        metadata=TemplateMetadata(name="Persist", category="Custom", description=""),
-        scene=DummyScene(),
-    ))
+    lib1.add_template(
+        Template(
+            metadata=TemplateMetadata(name="Persist", category="Custom", description=""),
+            scene=DummyScene(),
+        )
+    )
     assert len(lib1.templates) == initial_count + 1
     # Reload from same file
     lib2 = TemplateLibrary(storage_path=str(storage))
@@ -226,6 +228,7 @@ def test_save_failure_does_not_crash(tmp_path: Path):
 def test_make_scene_creates_scene_like():
     """Line 286: _make_scene returns object with _raw_data."""
     from ui_template_manager import _make_scene
+
     scene = _make_scene({"name": "test", "widgets": []})
     assert hasattr(scene, "_raw_data")
     assert scene._raw_data["name"] == "test"

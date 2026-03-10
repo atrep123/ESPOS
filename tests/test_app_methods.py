@@ -254,10 +254,7 @@ class TestIntelligentAutoArrange:
             _add(app, x=0, y=0, width=40, height=16)
         app._intelligent_auto_arrange()
         sc = app.state.current_scene()
-        rects = [
-            pygame.Rect(int(w.x), int(w.y), int(w.width), int(w.height))
-            for w in sc.widgets
-        ]
+        rects = [pygame.Rect(int(w.x), int(w.y), int(w.width), int(w.height)) for w in sc.widgets]
         # Check no pair overlaps
         for i in range(len(rects)):
             for j in range(i + 1, len(rects)):

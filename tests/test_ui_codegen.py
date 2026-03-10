@@ -62,8 +62,8 @@ def test_generate_ui_design_multi_pair_smoke(tmp_path):
     assert "const UiScene ui_scenes[]" in c_text
     assert "alpha_widgets" in c_text
     assert "beta_widgets" in c_text
-    assert 'UIW_LABEL' in c_text
-    assert 'UIW_BUTTON' in c_text
+    assert "UIW_LABEL" in c_text
+    assert "UIW_BUTTON" in c_text
     assert '"Hello"' in c_text
     assert '"OK"' in c_text
 
@@ -73,6 +73,7 @@ def test_generate_ui_design_multi_pair_rc_scene():
     rc = Path("rc_scene.json")
     if not rc.exists():
         import pytest
+
         pytest.skip("rc_scene.json not found")
     c_text, h_text = generate_ui_design_multi_pair(rc, source_label="rc_scene.json")
     assert "#define UI_SCENE_COUNT 9" in h_text
@@ -83,4 +84,3 @@ def test_generate_ui_design_multi_pair_rc_scene():
     assert "rc_main_widgets" in c_text
     assert "rc_channels_widgets" in c_text
     assert "rc_telemetry_widgets" in c_text
-

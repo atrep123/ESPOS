@@ -30,7 +30,7 @@ def _inspector_app(widgets=None, *, groups=None, comp_group=None):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     if groups is not None:
         designer.groups = groups
@@ -79,6 +79,7 @@ def _make_app(tmp_path, monkeypatch, *, widgets=None):
     monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     json_path = tmp_path / "scene.json"
     from cyberpunk_editor import CyberpunkEditorApp
+
     app = CyberpunkEditorApp(json_path, (256, 128))
     if not hasattr(app, "_save_undo_state"):
         app._save_undo_state = lambda: None
@@ -123,6 +124,7 @@ class TestFitTextMaxLinesException:
         sc = app.state.current_scene()
         sc.widgets.append(w)
         from cyberpunk_designer.fit_text import fit_selection_to_text
+
         app.state.selected = [len(sc.widgets) - 1]
         # Should not crash — max_lines parsed as None
         fit_selection_to_text(app)
@@ -143,6 +145,7 @@ class TestFitWidgetMaxLinesException:
         sc = app.state.current_scene()
         sc.widgets.append(w)
         from cyberpunk_designer.fit_widget import fit_selection_to_widget
+
         app.state.selected = [len(sc.widgets) - 1]
         # Should not crash
         fit_selection_to_widget(app)
@@ -229,8 +232,15 @@ class TestAutoSaveBadDimensions:
 
         # Write autosave with negative dimensions (survives load_from_json)
         data = {
-            "scenes": {"main": {"name": "main", "width": -1, "height": -1,
-                                "bg_color": "#000", "widgets": []}},
+            "scenes": {
+                "main": {
+                    "name": "main",
+                    "width": -1,
+                    "height": -1,
+                    "bg_color": "#000",
+                    "widgets": [],
+                }
+            },
             "current_scene": "main",
         }
         autosave_path.write_text(json.dumps(data))
@@ -378,16 +388,23 @@ class TestSelectOverflowImportFailure:
     def test_import_fails(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hello")])
 
-
         # Patch the import inside select_overflow to raise
         # Instead of faking the import, test the normal overflow path.
         # select_overflow checks for text that truncates.
         # The import doesn't fail in our test env, so test the normal path
         # with a widget whose text overflows.
         from cyberpunk_designer.selection_ops.query_select import select_overflow
+
         sc = app.state.current_scene()
         # Make a label with very long text in a tiny widget
-        w = _w(type="label", x=0, y=0, width=8, height=8, text="This is very long text that will overflow")
+        w = _w(
+            type="label",
+            x=0,
+            y=0,
+            width=8,
+            height=8,
+            text="This is very long text that will overflow",
+        )
         sc.widgets.clear()
         sc.widgets.append(w)
         select_overflow(app)

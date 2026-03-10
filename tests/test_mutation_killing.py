@@ -27,6 +27,7 @@ from ui_designer import UIDesigner, WidgetConfig
 
 # ── helpers ──────────────────────────────────────────────────────────
 
+
 def _w(wtype="button", **kw) -> WidgetConfig:
     defaults = dict(type=wtype, x=0, y=0, width=30, height=12, text="w")
     defaults.update(kw)
@@ -37,7 +38,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -66,6 +67,7 @@ def _app(widgets: Optional[List[WidgetConfig]] = None):
 # focus_nav.py — direction gates (dy >= 0 / dy <= 0 / dx >= 0 / dx <= 0)
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestFocusMoveDirectionGates:
     """Kill mutants that flip >= to > or <= to < in the direction gate checks."""
 
@@ -75,7 +77,7 @@ class TestFocusMoveDirectionGates:
         # w2 below (valid target)
         w0 = _w(x=0, y=50, width=30, height=10)
         w1 = _w(x=60, y=50, width=30, height=10)  # same y
-        w2 = _w(x=0, y=80, width=30, height=10)    # below
+        w2 = _w(x=0, y=80, width=30, height=10)  # below
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "down")
@@ -86,7 +88,7 @@ class TestFocusMoveDirectionGates:
         """dy == 0 → must be rejected by `dy >= 0`.  Mutant: `dy > 0`."""
         w0 = _w(x=0, y=50, width=30, height=10)
         w1 = _w(x=60, y=50, width=30, height=10)  # same y
-        w2 = _w(x=0, y=10, width=30, height=10)    # above
+        w2 = _w(x=0, y=10, width=30, height=10)  # above
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "up")
@@ -96,7 +98,7 @@ class TestFocusMoveDirectionGates:
         """dx == 0 → must be rejected by `dx <= 0`.  Mutant: `dx < 0`."""
         w0 = _w(x=50, y=0, width=30, height=10)
         w1 = _w(x=50, y=60, width=30, height=10)  # same x
-        w2 = _w(x=100, y=0, width=30, height=10)   # to the right
+        w2 = _w(x=100, y=0, width=30, height=10)  # to the right
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "right")
@@ -106,7 +108,7 @@ class TestFocusMoveDirectionGates:
         """dx == 0 → must be rejected by `dx >= 0`.  Mutant: `dx > 0`."""
         w0 = _w(x=50, y=0, width=30, height=10)
         w1 = _w(x=50, y=60, width=30, height=10)  # same x
-        w2 = _w(x=10, y=0, width=30, height=10)    # to the left
+        w2 = _w(x=10, y=0, width=30, height=10)  # to the left
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "left")
@@ -122,7 +124,7 @@ class TestFocusMoveOverlapVsNoOverlap:
         # w0 at (0,0).  w1 directly below and overlapping horizontally.
         # w2 below but far to the right (no overlap).
         w0 = _w(x=0, y=0, width=40, height=10)
-        w1 = _w(x=5, y=20, width=40, height=10)   # overlaps w0's x-range
+        w1 = _w(x=5, y=20, width=40, height=10)  # overlaps w0's x-range
         w2 = _w(x=200, y=15, width=40, height=10)  # no overlap, slightly closer y
         app = _app([w0, w1, w2])
         set_focus(app, 0)
@@ -134,7 +136,7 @@ class TestFocusMoveOverlapVsNoOverlap:
         # Widgets side-by-side: w0.right == w1.left → overlap = 0
         w0 = _w(x=0, y=0, width=40, height=10)
         w1 = _w(x=40, y=20, width=40, height=10)  # right at boundary
-        w2 = _w(x=0, y=20, width=40, height=10)    # fully overlapping
+        w2 = _w(x=0, y=20, width=40, height=10)  # fully overlapping
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "down")
@@ -149,9 +151,9 @@ class TestFocusMoveScoreWeights:
         """Kill mutant: 10_000 → 1_000 (secondary becomes competitive)."""
         # Both below w0 and overlapping horizontally. w1 closer y, w2 farther y.
         # w0 x-span: 50..90, w1 x-span: 50..90 (exact overlap), w2 x-span: 50..90
-        w0 = _w(x=50, y=0, width=40, height=10)    # center_y=5
-        w1 = _w(x=50, y=15, width=40, height=10)   # center_y=20, closer
-        w2 = _w(x=50, y=80, width=40, height=10)   # center_y=85, farther
+        w0 = _w(x=50, y=0, width=40, height=10)  # center_y=5
+        w1 = _w(x=50, y=15, width=40, height=10)  # center_y=20, closer
+        w2 = _w(x=50, y=80, width=40, height=10)  # center_y=85, farther
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "down")
@@ -160,9 +162,9 @@ class TestFocusMoveScoreWeights:
     def test_horizontal_primary_distance_dominates(self):
         """Same as above but for horizontal movement."""
         # All on same y-band so they overlap vertically
-        w0 = _w(x=0, y=50, width=10, height=40)    # center_x=5
-        w1 = _w(x=15, y=50, width=10, height=40)   # center_x=20, closer
-        w2 = _w(x=80, y=50, width=10, height=40)   # center_x=85, farther
+        w0 = _w(x=0, y=50, width=10, height=40)  # center_x=5
+        w1 = _w(x=15, y=50, width=10, height=40)  # center_x=20, closer
+        w2 = _w(x=80, y=50, width=10, height=40)  # center_x=85, farther
         app = _app([w0, w1, w2])
         set_focus(app, 0)
         focus_move_direction(app, "right")
@@ -175,7 +177,7 @@ class TestFocusMoveWrapAround:
     def test_down_wraps_via_forward_cycle(self):
         """When no widget is below, cycle forward (direction=1)."""
         w0 = _w(x=0, y=100, width=30, height=10)  # bottom-most
-        w1 = _w(x=0, y=0, width=30, height=10)     # top
+        w1 = _w(x=0, y=0, width=30, height=10)  # top
         app = _app([w0, w1])
         set_focus(app, 0)
         focus_move_direction(app, "down")
@@ -183,8 +185,8 @@ class TestFocusMoveWrapAround:
 
     def test_up_wraps_via_backward_cycle(self):
         """When no widget is above, cycle backward (direction=-1)."""
-        w0 = _w(x=0, y=0, width=30, height=10)     # top-most
-        w1 = _w(x=0, y=100, width=30, height=10)   # bottom
+        w0 = _w(x=0, y=0, width=30, height=10)  # top-most
+        w1 = _w(x=0, y=100, width=30, height=10)  # bottom
         app = _app([w0, w1])
         set_focus(app, 0)
         focus_move_direction(app, "up")
@@ -194,6 +196,7 @@ class TestFocusMoveWrapAround:
 # ═══════════════════════════════════════════════════════════════════════
 # text_metrics.py — boundary conditions
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestEllipsizeCharsBoundaries:
     """Kill mutants in ellipsize_chars boundary checks."""
@@ -341,11 +344,13 @@ class TestInnerTextAreaPx:
 # layout.py — layout rectangle calculations
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestLayoutCalculations:
     """Kill mutants in layout.py region calculations."""
 
     def _make_layout(self, width=800, height=600):
         from cyberpunk_designer.layout import Layout
+
         return Layout(width, height)
 
     def test_body_top_is_toolbar_plus_tabs(self):
@@ -398,5 +403,6 @@ class TestLayoutCalculations:
     def test_nonzero_scene_tabs_shifts_body_down(self):
         """Kill mutant: scene_tabs_h not included in _body_top."""
         from cyberpunk_designer.layout import Layout
+
         lm = Layout(800, 600, scene_tabs_h=20)
         assert lm._body_top == lm.toolbar_h + 20

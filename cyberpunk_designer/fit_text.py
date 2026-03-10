@@ -80,19 +80,29 @@ def fit_selection_to_text(app) -> None:
             wrap_mode = overflow in {"wrap", "auto"}
             if wrap_mode:
                 if use_device:
-                    avail_w = max(1, int(cur_w - 2 * (1 + (1 if bool(getattr(w, "border", True)) else 0))))
+                    avail_w = max(
+                        1, int(cur_w - 2 * (1 + (1 if bool(getattr(w, "border", True)) else 0)))
+                    )
                     max_chars = avail_w // DEVICE_CHAR_W
                 else:
                     avail_w = max(1, int(cur_w - pad * 2))
                 max_lines = _parse_max_lines(w) or 9999
                 if use_device:
-                    lines, _trunc = wrap_text_chars(text, max_chars=max(1, max_chars), max_lines=max_lines, ellipsis="...")
+                    lines, _trunc = wrap_text_chars(
+                        text, max_chars=max(1, max_chars), max_lines=max_lines, ellipsis="..."
+                    )
                     line_count = max(1, len(lines))
                 else:
                     lines = app._wrap_text_px(text, max_width_px=avail_w, max_lines=max_lines)
                     line_count = max(1, len(lines))
                 if use_device:
-                    needed_h = max(cur_h, int(line_count * DEVICE_CHAR_H + 2 * (1 + (1 if bool(getattr(w, "border", True)) else 0))))
+                    needed_h = max(
+                        cur_h,
+                        int(
+                            line_count * DEVICE_CHAR_H
+                            + 2 * (1 + (1 if bool(getattr(w, "border", True)) else 0))
+                        ),
+                    )
                 else:
                     needed_h = max(cur_h, int(line_count * line_h + pad * 2))
             else:
@@ -133,7 +143,12 @@ def fit_selection_to_text(app) -> None:
         x = max(0, min(max_x, x))
         y = max(0, min(max_y, y))
 
-        if (int(getattr(w, "x", 0) or 0), int(getattr(w, "y", 0) or 0), cur_w, cur_h) == (x, y, new_w, new_h):
+        if (int(getattr(w, "x", 0) or 0), int(getattr(w, "y", 0) or 0), cur_w, cur_h) == (
+            x,
+            y,
+            new_w,
+            new_h,
+        ):
             continue
 
         if not saved:

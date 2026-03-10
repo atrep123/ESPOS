@@ -54,8 +54,12 @@ def draw_pixel_frame(app, rect: pygame.Rect, pressed: bool = False, hover: bool 
     br = light if pressed else dark
     pygame.draw.line(app.logical_surface, tl, (rect.left, rect.top), (rect.right - 1, rect.top))
     pygame.draw.line(app.logical_surface, tl, (rect.left, rect.top), (rect.left, rect.bottom - 1))
-    pygame.draw.line(app.logical_surface, br, (rect.right - 1, rect.top), (rect.right - 1, rect.bottom - 1))
-    pygame.draw.line(app.logical_surface, br, (rect.left, rect.bottom - 1), (rect.right - 1, rect.bottom - 1))
+    pygame.draw.line(
+        app.logical_surface, br, (rect.right - 1, rect.top), (rect.right - 1, rect.bottom - 1)
+    )
+    pygame.draw.line(
+        app.logical_surface, br, (rect.left, rect.bottom - 1), (rect.right - 1, rect.bottom - 1)
+    )
 
 
 def draw_pixel_panel_bg(app, rect: pygame.Rect) -> None:
@@ -170,7 +174,9 @@ def draw_toolbar(app) -> None:
 def draw_palette(app) -> None:
     r = app.layout.palette_rect
     draw_pixel_panel_bg(app, r)
-    title = render_pixel_text(app, "Widgets", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24))
+    title = render_pixel_text(
+        app, "Widgets", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24)
+    )
     app.logical_surface.blit(title, (r.x + app.pixel_padding, r.y + (app.pixel_padding // 2)))
 
     row_h = int(app.pixel_row_height)
@@ -183,7 +189,9 @@ def draw_palette(app) -> None:
     view_h = max(0, int(content_rect.height))
     max_scroll = max(0, content_h - view_h)
     try:
-        app.state.palette_scroll = max(0, min(max_scroll, int(getattr(app.state, "palette_scroll", 0) or 0)))
+        app.state.palette_scroll = max(
+            0, min(max_scroll, int(getattr(app.state, "palette_scroll", 0) or 0))
+        )
     except Exception:
         app.state.palette_scroll = 0
 
@@ -294,9 +302,13 @@ def draw_canvas(app) -> None:
     if app.show_grid:
         grid_c = PALETTE.get("grid", app._shade(base, 14))
         for x in range(scene_rect.left, scene_rect.right, GRID):
-            pygame.draw.line(app.logical_surface, grid_c, (x, scene_rect.top), (x, scene_rect.bottom - 1))
+            pygame.draw.line(
+                app.logical_surface, grid_c, (x, scene_rect.top), (x, scene_rect.bottom - 1)
+            )
         for y in range(scene_rect.top, scene_rect.bottom, GRID):
-            pygame.draw.line(app.logical_surface, grid_c, (scene_rect.left, y), (scene_rect.right - 1, y))
+            pygame.draw.line(
+                app.logical_surface, grid_c, (scene_rect.left, y), (scene_rect.right - 1, y)
+            )
 
     origin_x = int(scene_rect.x)
     origin_y = int(scene_rect.y)
@@ -312,10 +324,20 @@ def draw_canvas(app) -> None:
         for orient, pos in guides:
             if orient == "v":
                 x = origin_x + int(pos)
-                pygame.draw.line(app.logical_surface, PALETTE["guide"], (x, scene_rect.top), (x, scene_rect.bottom - 1))
+                pygame.draw.line(
+                    app.logical_surface,
+                    PALETTE["guide"],
+                    (x, scene_rect.top),
+                    (x, scene_rect.bottom - 1),
+                )
             elif orient == "h":
                 y = origin_y + int(pos)
-                pygame.draw.line(app.logical_surface, PALETTE["guide"], (scene_rect.left, y), (scene_rect.right - 1, y))
+                pygame.draw.line(
+                    app.logical_surface,
+                    PALETTE["guide"],
+                    (scene_rect.left, y),
+                    (scene_rect.right - 1, y),
+                )
 
         for idx, w in items:
             if not getattr(w, "visible", True):
@@ -341,7 +363,9 @@ def draw_canvas(app) -> None:
         if app.state.selected:
             bounds = app._selection_bounds(app.state.selected)
             if bounds is not None:
-                sel_rect = pygame.Rect(origin_x + bounds.x, origin_y + bounds.y, bounds.width, bounds.height)
+                sel_rect = pygame.Rect(
+                    origin_x + bounds.x, origin_y + bounds.y, bounds.width, bounds.height
+                )
                 pygame.draw.rect(app.logical_surface, PALETTE["selection"], sel_rect, 2)
                 handle = pygame.Rect(sel_rect.right - GRID, sel_rect.bottom - GRID, GRID, GRID)
                 pygame.draw.rect(app.logical_surface, PALETTE["selection"], handle)
@@ -356,7 +380,11 @@ def draw_canvas(app) -> None:
                     fw_w = max(GRID, int(getattr(fw, "width", GRID) or GRID))
                     fw_h = max(GRID, int(getattr(fw, "height", GRID) or GRID))
                     frect = pygame.Rect(fx, fy, fw_w, fw_h)
-                    c = PALETTE["accent_yellow"] if not app.focus_edit_value else PALETTE["accent_cyan"]
+                    c = (
+                        PALETTE["accent_yellow"]
+                        if not app.focus_edit_value
+                        else PALETTE["accent_cyan"]
+                    )
                     pygame.draw.rect(app.logical_surface, c, frect.inflate(2, 2), 2)
     finally:
         app.logical_surface.set_clip(old_clip)
@@ -457,7 +485,9 @@ def ellipsize_text_px(app, text: str, max_width_px: int, ellipsis: str = "...") 
     return s[:cut] + ellipsis
 
 
-def wrap_text_px(app, text: str, max_width_px: int, max_lines: int, ellipsis: str = "...") -> List[str]:
+def wrap_text_px(
+    app, text: str, max_width_px: int, max_lines: int, ellipsis: str = "..."
+) -> List[str]:
     s = str(text or "").replace("\t", " ").strip()
     max_width_px = int(max_width_px)
     max_lines = max(1, int(max_lines))
@@ -555,7 +585,9 @@ def draw_text_clipped(
         max_lines = max(1, int(max_lines))
         max_lines = min(max_lines, max(1, clip_rect.height // line_h))
         if max_lines > 1:
-            lines, _trunc = text_metrics.wrap_text_chars(s, max_chars=max_chars, max_lines=max_lines, ellipsis=ellipsis)
+            lines, _trunc = text_metrics.wrap_text_chars(
+                s, max_chars=max_chars, max_lines=max_lines, ellipsis=ellipsis
+            )
         else:
             flat = " ".join(s.replace("\t", " ").replace("\r", "").replace("\n", " ").split())
             lines = [text_metrics.ellipsize_chars(flat, max_chars=max_chars, ellipsis=ellipsis)]
@@ -633,9 +665,13 @@ def draw_text_in_rect(
         clip_rect = rect.inflate(-max(0, int(padding)) * 2, -max(0, int(padding)) * 2)
         if use_device:
             max_chars = max(1, int(clip_rect.width) // max(1, int(text_metrics.DEVICE_CHAR_W)))
-            use_wrap = clip_rect.height >= int(text_metrics.DEVICE_CHAR_H) * 2 and (("\n" in raw) or (len(flat) > max_chars))
+            use_wrap = clip_rect.height >= int(text_metrics.DEVICE_CHAR_H) * 2 and (
+                ("\n" in raw) or (len(flat) > max_chars)
+            )
         else:
-            use_wrap = clip_rect.height >= line_h * 2 and (("\n" in raw) or (text_width_px(app, flat) > clip_rect.width))
+            use_wrap = clip_rect.height >= line_h * 2 and (
+                ("\n" in raw) or (text_width_px(app, flat) > clip_rect.width)
+            )
 
     if use_wrap:
         clip_rect = rect.inflate(-max(0, int(padding)) * 2, -max(0, int(padding)) * 2)
@@ -726,7 +762,9 @@ def draw_widget_preview(
                 clip_rect = rect.inflate(-padding * 2, -padding * 2)
                 if clip_rect.width > 0 and clip_rect.height > 0:
                     max_chars = max(1, int(clip_rect.width) // max(1, int(font6x8.CHAR_W)))
-                    flat = " ".join(str(label).replace("\t", " ").replace("\r", "").replace("\n", " ").split())
+                    flat = " ".join(
+                        str(label).replace("\t", " ").replace("\r", "").replace("\n", " ").split()
+                    )
                     line = text_metrics.ellipsize_chars(flat, max_chars=max_chars, ellipsis="...")
                     txt = font6x8.render_text(line, fg)
                     if align == "center":
@@ -804,7 +842,9 @@ def draw_widget_preview(
         pygame.draw.rect(surface, app._shade(bg, -10), inner)
         draw_bevel_frame(app, surface, rect, bg, pressed=True)
         if label:
-            left_w = WidgetConfig(type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="middle")
+            left_w = WidgetConfig(
+                type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="middle"
+            )
             draw_text_in_rect(app, surface, label, rect, fg, padding, left_w)
         if is_selected:
             caret_x = rect.x + padding
@@ -812,7 +852,9 @@ def draw_widget_preview(
                 shown = ellipsize_text_px(app, label, max(0, rect.width - padding * 2))
                 caret_x += app.font.size(shown)[0]
             caret_x = min(rect.right - 3, max(rect.left + 2, caret_x))
-            pygame.draw.line(surface, fg, (caret_x, rect.y + padding), (caret_x, rect.bottom - padding))
+            pygame.draw.line(
+                surface, fg, (caret_x, rect.y + padding), (caret_x, rect.bottom - padding)
+            )
     elif kind == "slider":
         pct = app._value_ratio(w)
         track = rect.inflate(-padding * 2, -padding * 2)
@@ -820,7 +862,9 @@ def draw_widget_preview(
         track_y = rect.centery - track_h // 2
         track_rect = pygame.Rect(track.left, track_y, track.width, track_h)
         pygame.draw.rect(surface, app._shade(bg, -18), track_rect)
-        fill_rect = pygame.Rect(track_rect.left, track_rect.top, int(track_rect.width * pct), track_rect.height)
+        fill_rect = pygame.Rect(
+            track_rect.left, track_rect.top, int(track_rect.width * pct), track_rect.height
+        )
         pygame.draw.rect(surface, app._shade(fg, -30), fill_rect)
         knob_w = max(GRID, GRID * 2)
         knob_x = track_rect.left + int((track_rect.width - knob_w) * pct)
@@ -834,7 +878,9 @@ def draw_widget_preview(
         if rect.width >= GRID * 5 and rect.height >= GRID * 5:
             rr = rect.inflate(-padding * 2, -padding * 2)
             pygame.draw.arc(surface, app._shade(bg, -22), rr, 3.14159 * 0.75, 3.14159 * 2.25, 2)
-            pygame.draw.arc(surface, app._shade(fg, -10), rr, 3.14159 * 0.75, 3.14159 * (0.75 + 1.5 * pct), 3)
+            pygame.draw.arc(
+                surface, app._shade(fg, -10), rr, 3.14159 * 0.75, 3.14159 * (0.75 + 1.5 * pct), 3
+            )
             if label:
                 draw_text_in_rect(app, surface, label, rect, fg, padding, w)
         else:
@@ -848,7 +894,9 @@ def draw_widget_preview(
         points = list(getattr(w, "data_points", []) or [])
         if not points:
             points = [0, 10, 5, 12, 8, 14]
-        chart_mode = style if style in {"bar", "line"} else ("bar" if "bar" in label.lower() else "line")
+        chart_mode = (
+            style if style in {"bar", "line"} else ("bar" if "bar" in label.lower() else "line")
+        )
         p_min = min(points)
         p_max = max(points)
         denom = max(1, p_max - p_min)
@@ -872,7 +920,9 @@ def draw_widget_preview(
                 pygame.draw.rect(surface, app._shade(fg, -10), pygame.Rect(x - 1, y - 1, 3, 3))
         if label:
             head = pygame.Rect(rect.x, rect.y, rect.width, GRID * 2)
-            head_w = WidgetConfig(type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="top")
+            head_w = WidgetConfig(
+                type="label", x=0, y=0, width=0, height=0, text=label, align="left", valign="top"
+            )
             draw_text_in_rect(app, surface, label, head, fg, padding, head_w)
     elif kind == "icon":
         icon = str(getattr(w, "icon_char", "") or label or "@")
@@ -938,7 +988,9 @@ def draw_inspector(app) -> None:
     view_h = max(0, int(content_rect.height))
     max_scroll = max(0, content_h - view_h)
     try:
-        app.state.inspector_scroll = max(0, min(max_scroll, int(getattr(app.state, "inspector_scroll", 0) or 0)))
+        app.state.inspector_scroll = max(
+            0, min(max_scroll, int(getattr(app.state, "inspector_scroll", 0) or 0))
+        )
     except Exception:
         app.state.inspector_scroll = 0
 
@@ -946,7 +998,9 @@ def draw_inspector(app) -> None:
     app.inspector_hitboxes = []
     alt_stride = False
 
-    title = render_pixel_text(app, "Inspector", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24))
+    title = render_pixel_text(
+        app, "Inspector", PALETTE["text"], shadow=app._shade(PALETTE["panel_border"], -24)
+    )
     app.logical_surface.blit(title, (r.x + app.pixel_padding, r.y + (app.pixel_padding // 2)))
 
     edit_key = app.state.inspector_selected_field
@@ -1225,7 +1279,12 @@ def draw_help_overlay(app) -> None:
     if use_cols:
         col_w = max(GRID * 18, (content_rect.width - gap) // 2)
         left = pygame.Rect(content_rect.x, content_rect.y, col_w, content_rect.height)
-        right = pygame.Rect(content_rect.x + col_w + gap, content_rect.y, content_rect.width - col_w - gap, content_rect.height)
+        right = pygame.Rect(
+            content_rect.x + col_w + gap,
+            content_rect.y,
+            content_rect.width - col_w - gap,
+            content_rect.height,
+        )
 
         header_h = min(row_h, max(1, content_rect.height // 6))
         left_header = pygame.Rect(left.x, left.y, left.width, header_h)

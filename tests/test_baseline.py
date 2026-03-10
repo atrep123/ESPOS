@@ -23,4 +23,3 @@ def test_make_baseline_optional_dims(w, h, bw, bh, expected_w, expected_h):
     assert b["y"] == 2
     assert b["width"] == expected_w
     assert b["height"] == expected_h
-

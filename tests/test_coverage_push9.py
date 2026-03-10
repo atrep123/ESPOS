@@ -238,7 +238,9 @@ class TestDrawTextClippedEdges:
         app = _make_app(tmp_path, monkeypatch)
         surf = pygame.Surface((256, 128))
         clip = pygame.Rect(0, 0, 100, 8)  # Very short height
-        draw_text_clipped(app, surf, "Hello World", clip, fg=(255, 255, 255), padding=2, max_lines=5)
+        draw_text_clipped(
+            app, surf, "Hello World", clip, fg=(255, 255, 255), padding=2, max_lines=5
+        )
 
     def test_whitespace_only_text_returns_empty_lines(self, tmp_path, monkeypatch):
         """draw_text_clipped with whitespace-only text — lines=[] → return (L165)."""
@@ -272,7 +274,9 @@ class TestWidgetTextOverflow:
 
         app = _make_app(tmp_path, monkeypatch)
         surf = pygame.Surface((256, 128))
-        w = _w(type="label", x=0, y=0, width=60, height=40, text="Long text that should wrap around")
+        w = _w(
+            type="label", x=0, y=0, width=60, height=40, text="Long text that should wrap around"
+        )
         w.text_overflow = "auto"
         rect = pygame.Rect(0, 0, 60, 40)
         draw_text_in_rect(app, surf, w.text, rect, (255, 255, 255), 2, w)
@@ -287,8 +291,14 @@ class TestWidgetTextOverflow:
         # rect must collide with canvas_rect for use_device=True
         cr = app.layout.canvas_rect
         rect = pygame.Rect(cr.x, cr.y, 60, 40)
-        w = _w(type="label", x=cr.x, y=cr.y, width=60, height=40,
-               text="Long text that should auto-wrap on device")
+        w = _w(
+            type="label",
+            x=cr.x,
+            y=cr.y,
+            width=60,
+            height=40,
+            text="Long text that should auto-wrap on device",
+        )
         w.text_overflow = "auto"
         draw_text_in_rect(app, surf, w.text, rect, (255, 255, 255), 2, w)
 
@@ -301,8 +311,14 @@ class TestWidgetTextOverflow:
         surf = pygame.Surface((256, 128))
         cr = app.layout.canvas_rect
         rect = pygame.Rect(cr.x, cr.y, 60, 40)
-        w = _w(type="label", x=cr.x, y=cr.y, width=60, height=40,
-               text="Some long text that wraps on device")
+        w = _w(
+            type="label",
+            x=cr.x,
+            y=cr.y,
+            width=60,
+            height=40,
+            text="Some long text that wraps on device",
+        )
         w.text_overflow = "wrap"
         draw_text_in_rect(app, surf, w.text, rect, (255, 255, 255), 2, w)
 
@@ -425,6 +441,7 @@ class TestInspectorPanelHover:
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         _sel(app, 0)
+
         # Monkey-patch app._compute_inspector_rows to return a warning
         def mock_rows():
             rows = [
@@ -432,5 +449,6 @@ class TestInspectorPanelHover:
                 ("resources", "Resources: 1 issue"),
             ]
             return rows, "Warning: resource issue", sc.widgets[0]
+
         app._compute_inspector_rows = mock_rows
         draw_inspector(app)

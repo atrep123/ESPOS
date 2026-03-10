@@ -37,8 +37,16 @@ _BORDER_STYLE_MAP: dict[str, str] = {
     "dashed": "UI_BORDER_DASHED",
 }
 
-_ALIGN_MAP: dict[str, str] = {"left": "UI_ALIGN_LEFT", "center": "UI_ALIGN_CENTER", "right": "UI_ALIGN_RIGHT"}
-_VALIGN_MAP: dict[str, str] = {"top": "UI_VALIGN_TOP", "middle": "UI_VALIGN_MIDDLE", "bottom": "UI_VALIGN_BOTTOM"}
+_ALIGN_MAP: dict[str, str] = {
+    "left": "UI_ALIGN_LEFT",
+    "center": "UI_ALIGN_CENTER",
+    "right": "UI_ALIGN_RIGHT",
+}
+_VALIGN_MAP: dict[str, str] = {
+    "top": "UI_VALIGN_TOP",
+    "middle": "UI_VALIGN_MIDDLE",
+    "bottom": "UI_VALIGN_BOTTOM",
+}
 _OVERFLOW_MAP: dict[str, str] = {
     "ellipsis": "UI_TEXT_OVERFLOW_ELLIPSIS",
     "wrap": "UI_TEXT_OVERFLOW_WRAP",
@@ -69,7 +77,13 @@ class StringPool:
 
 
 def escape_c_string(text: object) -> str:
-    return str(text or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
+    return (
+        str(text or "")
+        .replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
 
 
 def as_int(v: object, default: int = 0) -> int:
@@ -228,12 +242,15 @@ def align_for(widget: dict[str, Any]) -> str:
 
 
 def valign_for(widget: dict[str, Any]) -> str:
-    return _VALIGN_MAP.get(str(widget.get("valign", "middle") or "middle").lower(), "UI_VALIGN_MIDDLE")
+    return _VALIGN_MAP.get(
+        str(widget.get("valign", "middle") or "middle").lower(), "UI_VALIGN_MIDDLE"
+    )
 
 
 def overflow_for(widget: dict[str, Any]) -> str:
     return _OVERFLOW_MAP.get(
-        str(widget.get("text_overflow", "ellipsis") or "ellipsis").lower(), "UI_TEXT_OVERFLOW_ELLIPSIS"
+        str(widget.get("text_overflow", "ellipsis") or "ellipsis").lower(),
+        "UI_TEXT_OVERFLOW_ELLIPSIS",
     )
 
 
@@ -249,7 +266,9 @@ def write_if_changed(path: Path, content: str) -> bool:
     return True
 
 
-def generate_ui_design_pair(json_path: Path, *, scene_name: str, source_label: str) -> tuple[str, str]:
+def generate_ui_design_pair(
+    json_path: Path, *, scene_name: str, source_label: str
+) -> tuple[str, str]:
     data = json.loads(json_path.read_text(encoding="utf-8"))
     selected_name, scene = select_scene(data, scene_name)
     widgets = scene.get("widgets", [])
@@ -269,7 +288,9 @@ def generate_ui_design_pair(json_path: Path, *, scene_name: str, source_label: s
     # Header
     h_lines: list[str] = []
     h_lines.append("/* Auto-generated: UI design for ESP32OS */")
-    h_lines.append(f"/* Source: {escape_c_string(source_label)} (scene: {escape_c_string(selected_name)}) */")
+    h_lines.append(
+        f"/* Source: {escape_c_string(source_label)} (scene: {escape_c_string(selected_name)}) */"
+    )
     h_lines.append("#ifndef UI_DESIGN_H")
     h_lines.append("#define UI_DESIGN_H")
     h_lines.append("")
@@ -297,7 +318,9 @@ def generate_ui_design_pair(json_path: Path, *, scene_name: str, source_label: s
     # C
     c_lines: list[str] = []
     c_lines.append("/* Auto-generated: UI design for ESP32OS */")
-    c_lines.append(f"/* Source: {escape_c_string(source_label)} (scene: {escape_c_string(selected_name)}) */")
+    c_lines.append(
+        f"/* Source: {escape_c_string(source_label)} (scene: {escape_c_string(selected_name)}) */"
+    )
     c_lines.append('#include "ui_design.h"')
     c_lines.append("")
     c_lines.append("/* String pool */")
@@ -355,7 +378,9 @@ def generate_ui_design_pair(json_path: Path, *, scene_name: str, source_label: s
         c_lines.append(f"        .type = {wtype},")
         c_lines.append(f"        .x = {x}, .y = {y}, .width = {ww}, .height = {hh},")
         c_lines.append(f"        .border = {border}, .checked = {checked},")
-        c_lines.append(f"        .value = {value}, .min_value = {min_value}, .max_value = {max_value},")
+        c_lines.append(
+            f"        .value = {value}, .min_value = {min_value}, .max_value = {max_value},"
+        )
         c_lines.append(f"        .id = {id_ref if id_ref else 'NULL'},")
         c_lines.append(f"        .text = {text_ref if text_ref else 'NULL'},")
         c_lines.append(f"        .constraints_json = {c_ref if c_ref else 'NULL'},")
@@ -388,7 +413,8 @@ def load_scenes(json_path: Path) -> dict[str, Any]:
     scenes_raw = data.get("scenes", {})
     if isinstance(scenes_raw, list):
         return {
-            str(scene.get("id") or scene.get("name") or f"scene_{i}"): scene for i, scene in enumerate(scenes_raw)
+            str(scene.get("id") or scene.get("name") or f"scene_{i}"): scene
+            for i, scene in enumerate(scenes_raw)
         }
     if isinstance(scenes_raw, dict):
         return scenes_raw
@@ -490,7 +516,9 @@ def generate_scenes_header(
             lines.append(f"        .type = {wtype},")
             lines.append(f"        .x = {x}, .y = {y}, .width = {ww}, .height = {hh},")
             lines.append(f"        .border = {border}, .checked = {checked},")
-            lines.append(f"        .value = {value}, .min_value = {min_value}, .max_value = {max_value},")
+            lines.append(
+                f"        .value = {value}, .min_value = {min_value}, .max_value = {max_value},"
+            )
             lines.append(f"        .id = {id_ref if id_ref else 'NULL'},")
             lines.append(f"        .text = {text_ref if text_ref else 'NULL'},")
             lines.append(f"        .constraints_json = {c_ref if c_ref else 'NULL'},")
@@ -507,7 +535,9 @@ def generate_scenes_header(
         lines.append(f"static const UiScene {safe}_scene = {{")
         lines.append(f'    .name = "{escape_c_string(scene_name)}",')
         lines.append(f"    .width = {width}, .height = {height},")
-        lines.append(f"    .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),")
+        lines.append(
+            f"    .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),"
+        )
         lines.append(f"    .widgets = {safe}_widgets,")
         lines.append("};")
         lines.append("")
@@ -602,7 +632,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     pool = build_string_pool(collect_scenes_strings(scenes), symbol_prefix="str_")
 
     scene_names: list[str] = []  # sanitised C identifiers
-    scene_keys: list[str] = []   # original names
+    scene_keys: list[str] = []  # original names
 
     # === Header (.h) ===
     h: list[str] = []
@@ -664,10 +694,12 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
             widgets = []
         width = as_int(scene_data.get("width", 128), 128)
         height = as_int(scene_data.get("height", 64), 64)
-        c.append(f'    {{ /* {escape_c_string(key)} */')
+        c.append(f"    {{ /* {escape_c_string(key)} */")
         c.append(f'        .name = "{escape_c_string(key)}",')
         c.append(f"        .width = {width}, .height = {height},")
-        c.append(f"        .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),")
+        c.append(
+            f"        .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),"
+        )
         c.append(f"        .widgets = {safe}_widgets,")
         c.append("    },")
     c.append("};")
@@ -694,4 +726,3 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     h.append("")
 
     return "\n".join(c), "\n".join(h)
-

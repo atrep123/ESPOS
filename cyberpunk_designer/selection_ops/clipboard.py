@@ -312,7 +312,9 @@ def duplicate_below(app) -> None:
         orig = sc.widgets[i]
         d = asdict(orig)
         d["y"] = int(orig.y) + offset_y
-        new_w = WidgetConfig(**{k: v for k, v in d.items() if k in WidgetConfig.__dataclass_fields__})
+        new_w = WidgetConfig(
+            **{k: v for k, v in d.items() if k in WidgetConfig.__dataclass_fields__}
+        )
         sc.widgets.append(new_w)
         new_indices.append(len(sc.widgets) - 1)
     app.state.selected = new_indices
@@ -341,7 +343,9 @@ def duplicate_right(app) -> None:
         orig = sc.widgets[i]
         d = asdict(orig)
         d["x"] = int(orig.x) + offset_x
-        new_w = WidgetConfig(**{k: v for k, v in d.items() if k in WidgetConfig.__dataclass_fields__})
+        new_w = WidgetConfig(
+            **{k: v for k, v in d.items() if k in WidgetConfig.__dataclass_fields__}
+        )
         sc.widgets.append(new_w)
         new_indices.append(len(sc.widgets) - 1)
     app.state.selected = new_indices

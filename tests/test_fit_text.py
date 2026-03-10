@@ -17,6 +17,7 @@ from ui_designer import UIDesigner, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(wtype="label", **kw) -> WidgetConfig:
     defaults = dict(type=wtype, x=0, y=0, width=20, height=10, text="Hello")
     defaults.update(kw)
@@ -25,6 +26,7 @@ def _w(wtype="label", **kw) -> WidgetConfig:
 
 class _FakeFont:
     """Minimal stand-in for pygame.font.Font."""
+
     def __init__(self, char_w=7, line_h=12):
         self._char_w = char_w
         self._line_h = line_h
@@ -47,7 +49,7 @@ def _app(
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
 
     layout = MagicMock()
@@ -71,6 +73,7 @@ def _app(
 
     # Pixel-based text width (non-device path)
     app._text_width_px = lambda txt: len(txt) * char_w
+
     # Pixel-based text wrap (non-device path)
     def _wrap(text, max_width_px=100, max_lines=9999):
         words = text.replace("\n", " ").split()
@@ -87,6 +90,7 @@ def _app(
         if cur:
             lines.append(cur)
         return lines[:max_lines] if lines else [""]
+
     app._wrap_text_px = _wrap
 
     return app
@@ -137,8 +141,7 @@ class TestFitTextDeviceProfile:
         assert sc.widgets[0].height >= 30
 
     def test_wrap_mode(self):
-        w = _w("label", text="word1 word2 word3 word4", width=50, height=10,
-               text_overflow="wrap")
+        w = _w("label", text="word1 word2 word3 word4", width=50, height=10, text_overflow="wrap")
         app = _app([w], profile="esp32os_256x128_gray4")
         app.state.selected = [0]
         fit_selection_to_text(app)
@@ -179,8 +182,7 @@ class TestFitTextPixelFont:
         assert sc.widgets[0].height >= 12
 
     def test_wrap_mode_pixel(self):
-        w = _w("label", text="one two three four five", width=50, height=10,
-               text_overflow="wrap")
+        w = _w("label", text="one two three four five", width=50, height=10, text_overflow="wrap")
         app = _app([w], profile=None, char_w=7, line_h=12)
         app.state.selected = [0]
         fit_selection_to_text(app)
@@ -226,8 +228,14 @@ class TestFitTextEdgeCases:
 class TestFitTextDeep:
     def test_widget_with_max_lines(self):
         """Widget with max_lines exercises _parse_max_lines valid path (lines 36-37)."""
-        w = _w("label", text="AAA BBB CCC DDD EEE", width=40, height=10,
-               text_overflow="wrap", max_lines=3)
+        w = _w(
+            "label",
+            text="AAA BBB CCC DDD EEE",
+            width=40,
+            height=10,
+            text_overflow="wrap",
+            max_lines=3,
+        )
         app = _app([w], profile="esp32os_256x128_gray4")
         app.state.selected = [0]
         fit_selection_to_text(app)
@@ -237,8 +245,13 @@ class TestFitTextDeep:
 
     def test_invalid_overflow_fallback(self):
         """Invalid text_overflow falls back to ellipsis (line 63)."""
-        w = _w("label", text="Some very long label text", width=20, height=10,
-               text_overflow="INVALID_MODE")
+        w = _w(
+            "label",
+            text="Some very long label text",
+            width=20,
+            height=10,
+            text_overflow="INVALID_MODE",
+        )
         app = _app([w], profile="esp32os_256x128_gray4")
         app.state.selected = [0]
         fit_selection_to_text(app)

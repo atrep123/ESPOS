@@ -29,6 +29,8 @@ def test_strict_critical_promotes_overlap_warning() -> None:
 
 
 def test_demo_scene_passes_strict_critical() -> None:
-    issues = validate_file(REPO_ROOT / "demo_scene.json", warnings_as_errors=False, strict_critical=True)
+    issues = validate_file(
+        REPO_ROOT / "demo_scene.json", warnings_as_errors=False, strict_critical=True
+    )
     errors = [i for i in issues if i.level == "ERROR"]
     assert not errors, "\n".join(i.message for i in errors)

@@ -39,9 +39,7 @@ class TestParseArgs:
         assert args.height == 64
 
     def test_profile_flag(self, monkeypatch):
-        monkeypatch.setattr(
-            sys, "argv", ["run_designer.py", "--profile", "esp32os_256x128_gray4"]
-        )
+        monkeypatch.setattr(sys, "argv", ["run_designer.py", "--profile", "esp32os_256x128_gray4"])
         args = parse_args()
         assert args.profile == "esp32os_256x128_gray4"
 
@@ -77,9 +75,7 @@ class TestParseArgs:
         assert args.no_autosave is True
 
     def test_live_preview_port(self, monkeypatch):
-        monkeypatch.setattr(
-            sys, "argv", ["run_designer.py", "--live-preview-port", "COM3"]
-        )
+        monkeypatch.setattr(sys, "argv", ["run_designer.py", "--live-preview-port", "COM3"])
         args = parse_args()
         assert args.live_preview_port == "COM3"
 
@@ -89,16 +85,12 @@ class TestParseArgs:
         assert args.live_preview_baud == 115200
 
     def test_live_preview_baud_custom(self, monkeypatch):
-        monkeypatch.setattr(
-            sys, "argv", ["run_designer.py", "--live-preview-baud", "9600"]
-        )
+        monkeypatch.setattr(sys, "argv", ["run_designer.py", "--live-preview-baud", "9600"])
         args = parse_args()
         assert args.live_preview_baud == 9600
 
     def test_invalid_profile_rejected(self, monkeypatch):
-        monkeypatch.setattr(
-            sys, "argv", ["run_designer.py", "--profile", "nonexistent"]
-        )
+        monkeypatch.setattr(sys, "argv", ["run_designer.py", "--profile", "nonexistent"])
         with pytest.raises(SystemExit):
             parse_args()
 

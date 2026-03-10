@@ -21,12 +21,11 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _app(widgets: Optional[List[WidgetConfig]] = None,
-         profile: str = "esp32os_256x128_gray4"):
+def _app(widgets: Optional[List[WidgetConfig]] = None, profile: str = "esp32os_256x128_gray4"):
     designer = UIDesigner(256, 128)
     designer.create_scene("main")
     sc = designer.scenes["main"]
-    for w in (widgets or []):
+    for w in widgets or []:
         sc.widgets.append(w)
     layout = MagicMock()
     layout.canvas_rect = pygame.Rect(0, 0, 256, 128)
@@ -149,8 +148,7 @@ class TestMultiSelection:
         assert "multiple" in row_dict.get("type", "").lower()
 
     def test_multi_shows_bounds(self):
-        app = _app([_w(x=10, y=20, width=30, height=10),
-                     _w(x=50, y=60, width=20, height=15)])
+        app = _app([_w(x=10, y=20, width=30, height=10), _w(x=50, y=60, width=20, height=15)])
         set_selection(app, [0, 1])
         rows, _, _ = compute_inspector_rows(app)
         keys = [r[0] for r in rows]

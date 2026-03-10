@@ -64,7 +64,9 @@ def test_make_baseline_coerces_optional_ints():
 def test_draw_border_clamps_optional_dimensions():
     designer = UIDesigner(8, 8)
     canvas = [[" " for _ in range(8)] for _ in range(8)]
-    widget = SimpleNamespace(x=-2, y=-2, width=None, height=None, border=True, border_style="single")
+    widget = SimpleNamespace(
+        x=-2, y=-2, width=None, height=None, border=True, border_style="single"
+    )
     border_chars = designer._get_border_chars(widget.border_style)
 
     designer._draw_border(canvas, widget, border_chars, 8, 8)

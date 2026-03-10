@@ -17,6 +17,7 @@ from ui_designer import UIDesigner, WidgetConfig, get_widget_help, show_command_
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_designer_with_scene(n_widgets=0):
     """Return (designer, scene) with optional pre-populated widgets."""
     d = UIDesigner(256, 128)
@@ -559,8 +560,20 @@ class TestShowCommandHelp:
 class TestGetWidgetHelp:
     @pytest.mark.parametrize(
         "wtype",
-        ["label", "button", "progressbar", "gauge", "checkbox", "panel", "icon", "chart",
-         "box", "slider", "radiobutton", "textbox"],
+        [
+            "label",
+            "button",
+            "progressbar",
+            "gauge",
+            "checkbox",
+            "panel",
+            "icon",
+            "chart",
+            "box",
+            "slider",
+            "radiobutton",
+            "textbox",
+        ],
     )
     def test_known_types(self, wtype):
         w = WidgetConfig(type=wtype, x=0, y=0, width=10, height=10)

@@ -13,6 +13,7 @@ from ui_designer import SceneConfig, WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -144,7 +145,10 @@ class TestDrawStatus:
         """Multiple scenes show scene index (lines 292-296)."""
         app = _make_app(tmp_path, monkeypatch)
         app.designer.scenes["second"] = SceneConfig(
-            name="second", width=256, height=128, widgets=[],
+            name="second",
+            width=256,
+            height=128,
+            widgets=[],
         )
         draw_status(app)
 

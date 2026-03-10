@@ -83,14 +83,28 @@ def draw_context_menu(app) -> None:
         text_r = pygame.Rect(mx + pad, cy, panel_w - pad * 2, row_h)
         fg = PALETTE["text"] if not is_hover else PALETTE["panel"]
         draw_text_clipped(
-            app, surface=surface, text=label, rect=text_r,
-            fg=fg, padding=0, align="left", valign="middle", max_lines=1,
+            app,
+            surface=surface,
+            text=label,
+            rect=text_r,
+            fg=fg,
+            padding=0,
+            align="left",
+            valign="middle",
+            max_lines=1,
             use_device_font=False,
         )
         if shortcut:
             draw_text_clipped(
-                app, surface=surface, text=shortcut, rect=text_r,
-                fg=fg, padding=0, align="right", valign="middle", max_lines=1,
+                app,
+                surface=surface,
+                text=shortcut,
+                rect=text_r,
+                fg=fg,
+                padding=0,
+                align="right",
+                valign="middle",
+                max_lines=1,
                 use_device_font=False,
             )
         hitboxes.append((item_rect, action))
@@ -380,7 +394,12 @@ def draw_help_overlay(app) -> None:
     if use_cols:  # pragma: no cover — panel_w capped at GRID*70, content always narrower
         col_w = max(GRID * 18, (content_rect.width - gap) // 2)
         left = pygame.Rect(content_rect.x, content_rect.y, col_w, content_rect.height)
-        right = pygame.Rect(content_rect.x + col_w + gap, content_rect.y, content_rect.width - col_w - gap, content_rect.height)
+        right = pygame.Rect(
+            content_rect.x + col_w + gap,
+            content_rect.y,
+            content_rect.width - col_w - gap,
+            content_rect.height,
+        )
 
         header_h = min(row_h, max(1, content_rect.height // 6))
         left_header = pygame.Rect(left.x, left.y, left.width, header_h)

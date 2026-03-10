@@ -74,9 +74,9 @@ ALLOWED_CONSTRAINT_KEYS = {"b", "ax", "ay", "sx", "sy", "mx", "my", "mr", "mb"}
 ALLOWED_RUNTIME_META_KEYS = {"bind", "key", "kind", "type", "min", "max", "step", "values"}
 
 # ── Rendering constants (must match drawing.py / firmware) ──────────────
-CHAR_W = 6       # font6x8 char width
-CHAR_H = 8       # font6x8 char height
-RENDER_PAD = 2   # per-side padding (clip_rect = rect.inflate(-4, -4))
+CHAR_W = 6  # font6x8 char width
+CHAR_H = 8  # font6x8 char height
+RENDER_PAD = 2  # per-side padding (clip_rect = rect.inflate(-4, -4))
 MIN_TEXT_H = RENDER_PAD * 2 + CHAR_H  # 12 — minimum for 1 text line
 
 # Firmware field limits (must match uint16_t / int16_t in ui_scene.h)
@@ -84,7 +84,7 @@ INT16_MIN = -32768
 INT16_MAX = 32767
 UINT16_MAX = 65535
 MAX_WIDGETS_PER_SCENE = 64  # soft limit; ESP32 memory pressure
-MAX_TEXT_LEN = 127           # practical limit for OLED readability
+MAX_TEXT_LEN = 127  # practical limit for OLED readability
 
 # Valid widget ID pattern: letters, digits, underscore, hyphen, dot
 _WIDGET_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.\-]*$")
@@ -97,13 +97,17 @@ FONT_CHARS = set(" .:_-/%?+<>!=(),#*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 # ── Color helpers ──────────────────────────────────────────────────────────
 _HEX_RE = re.compile(r"^#([0-9a-fA-F]{6})$")
 _NAMED_COLORS = {
-    "black": (0, 0, 0), "white": (255, 255, 255),
-    "red": (255, 0, 0), "green": (0, 255, 0), "blue": (0, 0, 255),
-    "gray": (128, 128, 128), "grey": (128, 128, 128),
+    "black": (0, 0, 0),
+    "white": (255, 255, 255),
+    "red": (255, 0, 0),
+    "green": (0, 255, 0),
+    "blue": (0, 0, 255),
+    "gray": (128, 128, 128),
+    "grey": (128, 128, 128),
 }
 MIN_VISIBLE_BRIGHTNESS = 0x20  # ~12 % — anything below is unreadable on OLED
-MIN_CONTRAST = 40              # min brightness delta between fg and bg
-MIN_EDGE_MARGIN = 2            # px from screen edge for non-full-span widgets
+MIN_CONTRAST = 40  # min brightness delta between fg and bg
+MIN_EDGE_MARGIN = 2  # px from screen edge for non-full-span widgets
 
 # Warning text fragments promoted to ERROR when strict_critical=True.
 CRITICAL_WARNING_MARKERS = (
@@ -141,6 +145,7 @@ def _is_critical_warning(message: str) -> bool:
 
 
 # ── Core types ─────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class Issue:
@@ -182,6 +187,7 @@ def _wref(scene_name: str, w: dict[str, Any], idx: int) -> str:
 
 # ── Main validator ─────────────────────────────────────────────────────────
 
+
 def validate_data(
     data: dict[str, Any],
     *,
@@ -206,7 +212,9 @@ def validate_data(
     # ── Rule 36: Scene name validation ──
     for scene_name in scenes:
         if not scene_name or not _SCENE_NAME_RE.match(scene_name):
-            issues.append(Issue("WARN", f"{file_label}: scene name '{scene_name}' has invalid characters"))
+            issues.append(
+                Issue("WARN", f"{file_label}: scene name '{scene_name}' has invalid characters")
+            )
 
     for scene_name, scene in scenes.items():
         pfx = f"{file_label}: {scene_name}"
@@ -281,7 +289,9 @@ def validate_data(
                 issues.append(Issue("ERROR", f"{wl}: origin ({x},{y}) is negative"))
             intersects_scene = (x < sw) and (y < sh) and (x + ww > 0) and (y + hh > 0)
             if (x + ww > sw or y + hh > sh) and intersects_scene and w.get("visible") is not False:
-                issues.append(Issue("WARN", f"{wl}: rect ({x},{y},{ww},{hh}) out of bounds {sw}x{sh}"))
+                issues.append(
+                    Issue("WARN", f"{wl}: rect ({x},{y},{ww},{hh}) out of bounds {sw}x{sh}")
+                )
 
             # ── Rule 1: Unique widget IDs ──
             widget_id = w.get("_widget_id") or w.get("id")
@@ -299,7 +309,11 @@ def validate_data(
                     issues.append(Issue("ERROR", f"{wl}: '{key}' must be boolean"))
 
             # ── max_lines ──
-            if "max_lines" in w and w.get("max_lines") is not None and not _is_int(w.get("max_lines")):
+            if (
+                "max_lines" in w
+                and w.get("max_lines") is not None
+                and not _is_int(w.get("max_lines"))
+            ):
                 issues.append(Issue("ERROR", f"{wl}: max_lines must be int or null"))
             if _is_int(w.get("max_lines")) and int(w.get("max_lines")) < 0:  # type: ignore[arg-type]
                 issues.append(Issue("ERROR", f"{wl}: max_lines must be >= 0"))
@@ -349,9 +363,15 @@ def validate_data(
                 max_lines = inner_h // CHAR_H if inner_h > 0 else 0
                 max_chars = inner_w // CHAR_W if inner_w > 0 else 0
                 if max_lines < 1:
-                    issues.append(Issue("WARN", f"{wl}: h={hh} → 0 text lines (need inner_h >= {CHAR_H})"))
+                    issues.append(
+                        Issue("WARN", f"{wl}: h={hh} → 0 text lines (need inner_h >= {CHAR_H})")
+                    )
                 if max_chars > 0 and len(text) > max_chars:
-                    issues.append(Issue("WARN", f"{wl}: text '{text}' ({len(text)} ch) > max {max_chars} chars"))
+                    issues.append(
+                        Issue(
+                            "WARN", f"{wl}: text '{text}' ({len(text)} ch) > max {max_chars} chars"
+                        )
+                    )
 
             # ── Rule 9: Value range sanity ──
             if wt in ("gauge", "progressbar", "slider"):
@@ -402,7 +422,12 @@ def validate_data(
                 if fg_rgb and bg_rgb:
                     contrast = abs(_brightness(fg_rgb) - _brightness(bg_rgb))
                     if contrast < MIN_CONTRAST:
-                        issues.append(Issue("WARN", f"{wl}: low contrast ({contrast}) fg='{fg_str}' vs bg='{bg_str}'"))
+                        issues.append(
+                            Issue(
+                                "WARN",
+                                f"{wl}: low contrast ({contrast}) fg='{fg_str}' vs bg='{bg_str}'",
+                            )
+                        )
 
             # ── Rule 20: runtime string format ──
             if runtime:
@@ -415,13 +440,44 @@ def validate_data(
                         break
 
             # ── Rule 24: Edge margin (non-full-span widgets shouldn't touch edges) ──
-            if ww < sw and x > 0 and x < sw and x + ww > 0 and x + ww <= sw and x + ww > sw - MIN_EDGE_MARGIN:
-                issues.append(Issue("WARN", f"{wl}: right edge too close to boundary ({x + ww} > {sw - MIN_EDGE_MARGIN})"))
-            if hh < sh and y > 0 and y < sh and y + hh > 0 and y + hh <= sh and y + hh > sh - MIN_EDGE_MARGIN:
-                issues.append(Issue("WARN", f"{wl}: bottom edge too close to boundary ({y + hh} > {sh - MIN_EDGE_MARGIN})"))
+            if (
+                ww < sw
+                and x > 0
+                and x < sw
+                and x + ww > 0
+                and x + ww <= sw
+                and x + ww > sw - MIN_EDGE_MARGIN
+            ):
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: right edge too close to boundary ({x + ww} > {sw - MIN_EDGE_MARGIN})",
+                    )
+                )
+            if (
+                hh < sh
+                and y > 0
+                and y < sh
+                and y + hh > 0
+                and y + hh <= sh
+                and y + hh > sh - MIN_EDGE_MARGIN
+            ):
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: bottom edge too close to boundary ({y + hh} > {sh - MIN_EDGE_MARGIN})",
+                    )
+                )
 
             # ── Rule 25: Text widget with no text and no runtime binding ──
-            if wt in TEXT_TYPES and not text and not runtime and w.get("visible") is not False and w.get("enabled") is not False and not widget_id:
+            if (
+                wt in TEXT_TYPES
+                and not text
+                and not runtime
+                and w.get("visible") is not False
+                and w.get("enabled") is not False
+                and not widget_id
+            ):
                 issues.append(Issue("WARN", f"{wl}: {wt} with no text and no runtime binding"))
 
             # ── Rule 26: Font charset compliance ──
@@ -435,7 +491,9 @@ def validate_data(
             for vf in ("value", "min_value", "max_value"):
                 vv = w.get(vf)
                 if _is_int(vv) and (vv < INT16_MIN or vv > INT16_MAX):
-                    issues.append(Issue("ERROR", f"{wl}: {vf}={vv} overflows int16 [{INT16_MIN},{INT16_MAX}]"))
+                    issues.append(
+                        Issue("ERROR", f"{wl}: {vf}={vv} overflows int16 [{INT16_MIN},{INT16_MAX}]")
+                    )
 
             # ── Rule 23: Style field validation ──
             if "style" in w:
@@ -446,7 +504,9 @@ def validate_data(
             # ── Rule 27: Widget ID format ──
             if widget_id is not None and isinstance(widget_id, str) and widget_id:
                 if not _WIDGET_ID_RE.match(widget_id):
-                    issues.append(Issue("ERROR", f"{wl}: id '{widget_id}' contains invalid characters"))
+                    issues.append(
+                        Issue("ERROR", f"{wl}: id '{widget_id}' contains invalid characters")
+                    )
 
             # ── Rule 28: Chart data_points validation ──
             if wt == "chart":
@@ -455,9 +515,13 @@ def validate_data(
                     if not isinstance(dp, list):
                         issues.append(Issue("ERROR", f"{wl}: data_points must be a list"))
                     else:
-                        bad_dp = [v for v in dp if not isinstance(v, (int, float)) or isinstance(v, bool)]
+                        bad_dp = [
+                            v for v in dp if not isinstance(v, (int, float)) or isinstance(v, bool)
+                        ]
                         if bad_dp:
-                            issues.append(Issue("ERROR", f"{wl}: data_points contains non-numeric values"))
+                            issues.append(
+                                Issue("ERROR", f"{wl}: data_points contains non-numeric values")
+                            )
 
             # ── Rule 29: Icon widget requires icon_char ──
             if wt == "icon":
@@ -503,11 +567,15 @@ def validate_data(
             # ── Rule 38: Geometry uint16 overflow ──
             for gf, gv in [("x", x), ("y", y), ("width", ww), ("height", hh)]:
                 if gv > UINT16_MAX:
-                    issues.append(Issue("ERROR", f"{wl}: {gf}={gv} overflows uint16 (max {UINT16_MAX})"))
+                    issues.append(
+                        Issue("ERROR", f"{wl}: {gf}={gv} overflows uint16 (max {UINT16_MAX})")
+                    )
 
             # ── Rule 39: Text length warning ──
             if wt in TEXT_TYPES and text and len(text) > MAX_TEXT_LEN:
-                issues.append(Issue("WARN", f"{wl}: text length {len(text)} exceeds {MAX_TEXT_LEN} chars"))
+                issues.append(
+                    Issue("WARN", f"{wl}: text length {len(text)} exceeds {MAX_TEXT_LEN} chars")
+                )
 
             # ── Rule 40: Runtime key validation ──
             if runtime:
@@ -518,15 +586,21 @@ def validate_data(
                     if "=" in part:
                         key = part.split("=", 1)[0].strip()
                         if key and not _RUNTIME_KEY_RE.match(key):
-                            issues.append(Issue("WARN", f"{wl}: runtime key '{key}' has invalid format"))
+                            issues.append(
+                                Issue("WARN", f"{wl}: runtime key '{key}' has invalid format")
+                            )
 
             # ── Rule 41: Completely invisible widget ──
             if x >= sw and y >= sh:
-                issues.append(Issue("WARN", f"{wl}: widget at ({x},{y}) fully outside scene {sw}x{sh}"))
+                issues.append(
+                    Issue("WARN", f"{wl}: widget at ({x},{y}) fully outside scene {sw}x{sh}")
+                )
 
             # ── Rule 42: Hidden widget with runtime binding ──
             if w.get("visible") is False and runtime and not widget_id:
-                issues.append(Issue("WARN", f"{wl}: widget is hidden (visible=false) but has runtime binding"))
+                issues.append(
+                    Issue("WARN", f"{wl}: widget is hidden (visible=false) but has runtime binding")
+                )
 
             # ── Rule 43: locked field must be bool ──
             if "locked" in w and not _is_bool(w.get("locked")):
@@ -540,11 +614,17 @@ def validate_data(
                 elif isinstance(so, dict):
                     for sk, sv in so.items():
                         if not isinstance(sv, dict):
-                            issues.append(Issue("ERROR", f"{wl}: state_overrides['{sk}'] must be a dict"))
+                            issues.append(
+                                Issue("ERROR", f"{wl}: state_overrides['{sk}'] must be a dict")
+                            )
 
             # ── Rule 45: Scene dimensions within uint16 ──
         if sw > UINT16_MAX or sh > UINT16_MAX:
-            issues.append(Issue("ERROR", f"{pfx}: scene dimensions {sw}x{sh} overflow uint16 (max {UINT16_MAX})"))
+            issues.append(
+                Issue(
+                    "ERROR", f"{pfx}: scene dimensions {sw}x{sh} overflow uint16 (max {UINT16_MAX})"
+                )
+            )
 
         # ── Per-widget rules that need full pass complete ──
         for idx, w in enumerate(widgets):
@@ -563,7 +643,9 @@ def validate_data(
 
             # ── Rule 46: Textbox minimum size ──
             if wt == "textbox" and (ww < 20 or hh < MIN_TEXT_H):
-                issues.append(Issue("WARN", f"{wl}: textbox {ww}x{hh} too small (min 20x{MIN_TEXT_H})"))
+                issues.append(
+                    Issue("WARN", f"{wl}: textbox {ww}x{hh} too small (min 20x{MIN_TEXT_H})")
+                )
 
             # ── Rule 47: Panel with content but no border or bg ──
             text_raw2 = w.get("text", "")
@@ -576,7 +658,9 @@ def validate_data(
             # ── Rule 48: z_index range warning ──
             z = w.get("z_index", 0)
             if _is_int(z) and (z < -100 or z > 200):
-                issues.append(Issue("WARN", f"{wl}: z_index={z} is extreme (typical range -100..200)"))
+                issues.append(
+                    Issue("WARN", f"{wl}: z_index={z} is extreme (typical range -100..200)")
+                )
 
             # ── Rule 49: Duplicate text in same scene (exact match warning) ──
             # (computed after per-widget loop, below)
@@ -644,13 +728,17 @@ def validate_data(
             cr = w.get("corner_radius")
             if cr is not None:
                 if not _is_int(cr) or cr < 0:
-                    issues.append(Issue("ERROR", f"{wl}: corner_radius={cr!r} must be a non-negative int"))
+                    issues.append(
+                        Issue("ERROR", f"{wl}: corner_radius={cr!r} must be a non-negative int")
+                    )
 
             # ── Rule 61: border_width must be non-negative int if present ──
             bw = w.get("border_width")
             if bw is not None:
                 if not _is_int(bw) or bw < 0:
-                    issues.append(Issue("ERROR", f"{wl}: border_width={bw!r} must be a non-negative int"))
+                    issues.append(
+                        Issue("ERROR", f"{wl}: border_width={bw!r} must be a non-negative int")
+                    )
 
             # ── Rule 62: border_color must be parseable if present ──
             bc = w.get("border_color", "")
@@ -696,23 +784,39 @@ def validate_data(
                 alias_val = w.get(alias_key)
                 if isinstance(alias_val, str) and alias_val.strip():
                     if _parse_color(alias_val) is None:
-                        issues.append(Issue("ERROR", f"{wl}: {alias_key}='{alias_val}' is not a valid color"))
+                        issues.append(
+                            Issue("ERROR", f"{wl}: {alias_key}='{alias_val}' is not a valid color")
+                        )
 
             # ── Rule 71: max_lines excessively large ──
             if _is_int(w.get("max_lines")) and w.get("max_lines") > 100:
-                issues.append(Issue("WARN", f"{wl}: max_lines={w.get('max_lines')} seems excessive (>100)"))
+                issues.append(
+                    Issue("WARN", f"{wl}: max_lines={w.get('max_lines')} seems excessive (>100)")
+                )
 
             # ── Rule 72: text widget with both static text and runtime binding ──
             _tv = w.get("text", "")
             text_val = str(_tv) if isinstance(_tv, str) else ""
             _rv = w.get("runtime", "")
             runtime_val = str(_rv) if isinstance(_rv, str) else ""
-            if wt in TEXT_TYPES and text_val.strip() and runtime_val.strip() and w.get("visible") is not False:
-                issues.append(Issue("WARN", f"{wl}: has both text='{text_val}' and runtime='{runtime_val}' (runtime may override text)"))
+            if (
+                wt in TEXT_TYPES
+                and text_val.strip()
+                and runtime_val.strip()
+                and w.get("visible") is not False
+            ):
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: has both text='{text_val}' and runtime='{runtime_val}' (runtime may override text)",
+                    )
+                )
 
             # ── Rule 73: icon widget too small for icon_char ──
             if wt == "icon" and (ww < CHAR_W or hh < CHAR_H):
-                issues.append(Issue("WARN", f"{wl}: icon {ww}x{hh} too small (min {CHAR_W}x{CHAR_H})"))
+                issues.append(
+                    Issue("WARN", f"{wl}: icon {ww}x{hh} too small (min {CHAR_W}x{CHAR_H})")
+                )
 
             # ── Rule 74: padding larger than widget interior ──
             px = w.get("padding_x")
@@ -733,12 +837,20 @@ def validate_data(
 
             # ── Rule 77: text_overflow on non-text widget ──
             tof = w.get("text_overflow")
-            if isinstance(tof, str) and tof.lower() not in {"", "ellipsis"} and wt not in TEXT_TYPES:
+            if (
+                isinstance(tof, str)
+                and tof.lower() not in {"", "ellipsis"}
+                and wt not in TEXT_TYPES
+            ):
                 issues.append(Issue("WARN", f"{wl}: text_overflow='{tof}' on non-text type '{wt}'"))
 
             # ── Rule 78: align on non-text widget ──
             walign = w.get("align")
-            if isinstance(walign, str) and walign.lower() not in {"", "left"} and wt not in TEXT_TYPES:
+            if (
+                isinstance(walign, str)
+                and walign.lower() not in {"", "left"}
+                and wt not in TEXT_TYPES
+            ):
                 issues.append(Issue("WARN", f"{wl}: align='{walign}' on non-text type '{wt}'"))
 
             # ── Rule 79: widget larger than scene ──
@@ -751,9 +863,13 @@ def validate_data(
             mx = w.get("margin_x")
             my = w.get("margin_y")
             if _is_int(mx) and mx > 0 and x + mx >= sw:
-                issues.append(Issue("WARN", f"{wl}: margin_x={mx} pushes widget past scene right edge"))
+                issues.append(
+                    Issue("WARN", f"{wl}: margin_x={mx} pushes widget past scene right edge")
+                )
             if _is_int(my) and my > 0 and y + my >= sh:
-                issues.append(Issue("WARN", f"{wl}: margin_y={my} pushes widget past scene bottom edge"))
+                issues.append(
+                    Issue("WARN", f"{wl}: margin_y={my} pushes widget past scene bottom edge")
+                )
 
             # ── Rule 81: progressbar with text (not rendered) ──
             if wt == "progressbar" and text.strip():
@@ -764,12 +880,16 @@ def validate_data(
                 for vf in ("value", "min_value", "max_value"):
                     vv = w.get(vf)
                     if _is_int(vv) and vv != 0:
-                        issues.append(Issue("WARN", f"{wl}: {vf}={vv} on {wt} (not a value widget)"))
+                        issues.append(
+                            Issue("WARN", f"{wl}: {vf}={vv} on {wt} (not a value widget)")
+                        )
                         break
 
             # ── Rule 83: checked on non-checkbox/radiobutton ──
             if wt not in {"checkbox", "radiobutton"} and w.get("checked") is True:
-                issues.append(Issue("WARN", f"{wl}: checked=true on non-checkbox/radiobutton '{wt}'"))
+                issues.append(
+                    Issue("WARN", f"{wl}: checked=true on non-checkbox/radiobutton '{wt}'")
+                )
 
             # ── Rule 84: icon_char on non-icon widget ──
             if wt != "icon" and w.get("icon_char", ""):
@@ -779,7 +899,9 @@ def validate_data(
             if wt not in TEXT_TYPES and w.get("max_lines") is not None:
                 ml85 = w.get("max_lines")
                 if _is_int(ml85) and ml85 > 0:
-                    issues.append(Issue("WARN", f"{wl}: max_lines={ml85} on non-text widget '{wt}'"))
+                    issues.append(
+                        Issue("WARN", f"{wl}: max_lines={ml85} on non-text widget '{wt}'")
+                    )
 
             # ── Rule 86: max_lines firmware uint8 overflow ──
             ml86 = w.get("max_lines")
@@ -795,26 +917,51 @@ def validate_data(
             # ── Rule 88: max_lines with non-wrap text_overflow ──
             tof88 = str(w.get("text_overflow", "") or "").lower()
             ml88 = w.get("max_lines")
-            if wt in TEXT_TYPES and _is_int(ml88) and ml88 > 1 and tof88 and tof88 not in {"wrap", "auto", "", "ellipsis"}:
-                issues.append(Issue("WARN", f"{wl}: max_lines={ml88} but text_overflow='{tof88}' (max_lines may be ignored)"))
+            if (
+                wt in TEXT_TYPES
+                and _is_int(ml88)
+                and ml88 > 1
+                and tof88
+                and tof88 not in {"wrap", "auto", "", "ellipsis"}
+            ):
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: max_lines={ml88} but text_overflow='{tof88}' (max_lines may be ignored)",
+                    )
+                )
 
             # ── Rule 89: responsive_rules entries structure ──
             rr89 = w.get("responsive_rules")
             if isinstance(rr89, list):
                 for ri, entry in enumerate(rr89):
                     if not isinstance(entry, dict):
-                        issues.append(Issue("ERROR", f"{wl}: responsive_rules[{ri}] must be a dict"))
+                        issues.append(
+                            Issue("ERROR", f"{wl}: responsive_rules[{ri}] must be a dict")
+                        )
                     elif "condition" not in entry:
-                        issues.append(Issue("ERROR", f"{wl}: responsive_rules[{ri}] missing 'condition'"))
+                        issues.append(
+                            Issue("ERROR", f"{wl}: responsive_rules[{ri}] missing 'condition'")
+                        )
 
             # ── Rule 90: chart data_points int16 overflow ──
             if wt == "chart":
                 dp90 = w.get("data_points")
                 if isinstance(dp90, list):
-                    bad90 = [v for v in dp90 if isinstance(v, (int, float)) and not isinstance(v, bool)
-                             and (int(v) < INT16_MIN or int(v) > INT16_MAX)]
+                    bad90 = [
+                        v
+                        for v in dp90
+                        if isinstance(v, (int, float))
+                        and not isinstance(v, bool)
+                        and (int(v) < INT16_MIN or int(v) > INT16_MAX)
+                    ]
                     if bad90:
-                        issues.append(Issue("ERROR", f"{wl}: data_points values outside int16 range: {bad90[:3]}"))
+                        issues.append(
+                            Issue(
+                                "ERROR",
+                                f"{wl}: data_points values outside int16 range: {bad90[:3]}",
+                            )
+                        )
 
             # ── Rule 91: text field must be a string ──
             text_raw = w.get("text")
@@ -829,7 +976,9 @@ def validate_data(
             # ── Rule 93: chart-only style on non-chart widget ──
             st93 = str(w.get("style", "") or "").lower()
             if wt != "chart" and st93 in {"bar", "line"}:
-                issues.append(Issue("WARN", f"{wl}: style='{st93}' is chart-specific on non-chart '{wt}'"))
+                issues.append(
+                    Issue("WARN", f"{wl}: style='{st93}' is chart-specific on non-chart '{wt}'")
+                )
 
             # ── Rule 94: font_size firmware range ──
             fs94 = w.get("font_size")
@@ -846,7 +995,12 @@ def validate_data(
             if isinstance(so96, dict):
                 for sk in so96:
                     if not isinstance(sk, str) or not sk.strip():
-                        issues.append(Issue("ERROR", f"{wl}: state_overrides key {sk!r} must be a non-empty string"))
+                        issues.append(
+                            Issue(
+                                "ERROR",
+                                f"{wl}: state_overrides key {sk!r} must be a non-empty string",
+                            )
+                        )
 
             # ── Rule 97: cross-scene duplicate widget IDs ──
             # (computed after all scenes processed — deferred below)
@@ -856,23 +1010,37 @@ def validate_data(
             if _is_int(cr98) and cr98 > 0:
                 half_min = min(ww, hh) // 2
                 if cr98 > half_min:
-                    issues.append(Issue("WARN", f"{wl}: corner_radius={cr98} exceeds half of min dimension ({half_min})"))
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{wl}: corner_radius={cr98} exceeds half of min dimension ({half_min})",
+                        )
+                    )
 
             # ── Rule 99: border_width firmware uint8 overflow ──
             bw99 = w.get("border_width")
             if _is_int(bw99) and bw99 > 255:
-                issues.append(Issue("ERROR", f"{wl}: border_width={bw99} overflows uint8 (max 255)"))
+                issues.append(
+                    Issue("ERROR", f"{wl}: border_width={bw99} overflows uint8 (max 255)")
+                )
 
             # ── Rule 100: corner_radius firmware uint8 overflow ──
             cr100 = w.get("corner_radius")
             if _is_int(cr100) and cr100 > 255:
-                issues.append(Issue("ERROR", f"{wl}: corner_radius={cr100} overflows uint8 (max 255)"))
+                issues.append(
+                    Issue("ERROR", f"{wl}: corner_radius={cr100} overflows uint8 (max 255)")
+                )
 
             # ── Rule 101: chart data_points count limit ──
             if wt == "chart":
                 dp101 = w.get("data_points")
                 if isinstance(dp101, list) and len(dp101) > 128:
-                    issues.append(Issue("WARN", f"{wl}: data_points has {len(dp101)} entries (>128, sub-pixel on 256px display)"))
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{wl}: data_points has {len(dp101)} entries (>128, sub-pixel on 256px display)",
+                        )
+                    )
 
             # ── Rule 102: empty runtime binding value ──
             _rv102 = w.get("runtime", "")
@@ -885,7 +1053,11 @@ def validate_data(
                     if "=" in part102:
                         _key102, val102 = part102.split("=", 1)
                         if not val102.strip():
-                            issues.append(Issue("WARN", f"{wl}: runtime '{part102}' has empty value after '='"))
+                            issues.append(
+                                Issue(
+                                    "WARN", f"{wl}: runtime '{part102}' has empty value after '='"
+                                )
+                            )
 
             # ── Rule 103: chart with no data and no runtime ──
             if wt == "chart":
@@ -893,7 +1065,9 @@ def validate_data(
                 _rv103 = w.get("runtime", "")
                 rt103 = str(_rv103) if isinstance(_rv103, str) else ""
                 if (dp103 is None or (isinstance(dp103, list) and len(dp103) == 0)) and not rt103:
-                    issues.append(Issue("WARN", f"{wl}: chart has no data_points and no runtime binding"))
+                    issues.append(
+                        Issue("WARN", f"{wl}: chart has no data_points and no runtime binding")
+                    )
 
             # ── Rule 104: animations list contains empty strings ──
             if "animations" in w:
@@ -901,17 +1075,29 @@ def validate_data(
                 if isinstance(anim104, list):
                     empty_ct = sum(1 for a in anim104 if isinstance(a, str) and not a.strip())
                     if empty_ct:
-                        issues.append(Issue("WARN", f"{wl}: animations contains {empty_ct} empty string(s)"))
+                        issues.append(
+                            Issue("WARN", f"{wl}: animations contains {empty_ct} empty string(s)")
+                        )
 
             # ── Rule 107: text_overflow=wrap with max_lines=1 ──
             ov107 = str(w.get("text_overflow", "") or "").lower()
             ml107 = w.get("max_lines")
             if ov107 == "wrap" and _is_int(ml107) and ml107 == 1:
-                issues.append(Issue("WARN", f"{wl}: text_overflow='wrap' with max_lines=1 (wrap can never produce a second line)"))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: text_overflow='wrap' with max_lines=1 (wrap can never produce a second line)",
+                    )
+                )
 
             # ── Rule 108: slider with height > width ──
             if wt == "slider" and hh > ww:
-                issues.append(Issue("WARN", f"{wl}: slider height({hh}) > width({ww}); firmware renders horizontal track"))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: slider height({hh}) > width({ww}); firmware renders horizontal track",
+                    )
+                )
 
             # ── Rule 109: disabled+checked toggle without runtime ──
             if wt in ("checkbox", "radiobutton"):
@@ -920,65 +1106,111 @@ def validate_data(
                 _rv109 = w.get("runtime", "")
                 rt109 = str(_rv109) if isinstance(_rv109, str) else ""
                 if r109_en is False and r109_chk is True and not rt109:
-                    issues.append(Issue("WARN", f"{wl}: disabled checked={r109_chk} {wt} with no runtime (stuck state)"))
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{wl}: disabled checked={r109_chk} {wt} with no runtime (stuck state)",
+                        )
+                    )
 
             # ── Rule 110: widget ID structural issues (.., trailing .- ) ──
             wid110 = w.get("_widget_id") or w.get("id")
             if isinstance(wid110, str) and wid110:
                 if ".." in wid110 or wid110.endswith(".") or wid110.endswith("-"):
-                    issues.append(Issue("ERROR", f"{wl}: id '{wid110}' has structural issue (consecutive dots, trailing dot/hyphen)"))
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{wl}: id '{wid110}' has structural issue (consecutive dots, trailing dot/hyphen)",
+                        )
+                    )
 
             # ── Rule 111: border=false but border_style not none/empty ──
             r111_border = w.get("border")
             r111_bs = str(w.get("border_style", "") or "").lower()
             if r111_border is False and r111_bs and r111_bs not in {"none", "", "single"}:
-                issues.append(Issue("WARN", f"{wl}: border=false but border_style='{r111_bs}' (style is ignored)"))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: border=false but border_style='{r111_bs}' (style is ignored)",
+                    )
+                )
 
             # ── Rule 112: both visible=false and enabled=false ──
             if w.get("visible") is False and w.get("enabled") is False:
-                issues.append(Issue("WARN", f"{wl}: both visible=false and enabled=false (redundant)"))
+                issues.append(
+                    Issue("WARN", f"{wl}: both visible=false and enabled=false (redundant)")
+                )
 
             # ── Rule 113: text_overflow=wrap but too short for 2 lines ──
             ov113 = str(w.get("text_overflow", "") or "").lower()
             if ov113 == "wrap" and hh < RENDER_PAD * 2 + CHAR_H * 2:
-                issues.append(Issue("WARN", f"{wl}: text_overflow='wrap' but height={hh} too short for 2 lines (need {RENDER_PAD * 2 + CHAR_H * 2})"))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: text_overflow='wrap' but height={hh} too short for 2 lines (need {RENDER_PAD * 2 + CHAR_H * 2})",
+                    )
+                )
 
             # ── Rule 114: align center/right on checkbox/radiobutton ──
             if wt in ("checkbox", "radiobutton"):
                 al114 = str(w.get("align", "") or "").lower()
                 if al114 in ("center", "right"):
-                    issues.append(Issue("WARN", f"{wl}: align='{al114}' on {wt} (indicator is fixed left-edge)"))
+                    issues.append(
+                        Issue(
+                            "WARN", f"{wl}: align='{al114}' on {wt} (indicator is fixed left-edge)"
+                        )
+                    )
 
             # ── Rule 116: chart min_value >= max_value ──
             if wt == "chart":
                 r116_min = w.get("min_value", 0)
                 r116_max = w.get("max_value", 100)
                 if _is_int(r116_min) and _is_int(r116_max) and r116_min >= r116_max:
-                    issues.append(Issue("ERROR", f"{wl}: chart min_value={r116_min} >= max_value={r116_max}"))
+                    issues.append(
+                        Issue("ERROR", f"{wl}: chart min_value={r116_min} >= max_value={r116_max}")
+                    )
 
             # ── Rule 117: progressbar height too small for visible fill ──
             if wt == "progressbar" and hh <= 2:
-                issues.append(Issue("WARN", f"{wl}: progressbar height={hh} too small for visible fill (need >2)"))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: progressbar height={hh} too small for visible fill (need >2)",
+                    )
+                )
 
             # ── Rule 118: constraints dict unrecognized keys ──
             r118_con = w.get("constraints")
             if isinstance(r118_con, dict) and r118_con:
                 r118_bad = sorted(set(r118_con.keys()) - ALLOWED_CONSTRAINT_KEYS)
                 if r118_bad:
-                    issues.append(Issue("WARN", f"{wl}: constraints has unrecognized keys: {r118_bad}"))
+                    issues.append(
+                        Issue("WARN", f"{wl}: constraints has unrecognized keys: {r118_bad}")
+                    )
 
             # ── Rule 119: icon widget too small for bitmap rendering ──
             if wt == "icon" and w.get("icon_char"):
                 if ww < 20 or hh < 20:
-                    issues.append(Issue("WARN", f"{wl}: icon {ww}x{hh} too small for bitmap (min 20x20 with border)"))
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{wl}: icon {ww}x{hh} too small for bitmap (min 20x20 with border)",
+                        )
+                    )
 
             # ── Rule 120: checkbox/radiobutton too narrow for label text ──
             if wt in ("checkbox", "radiobutton") and text and ww < 16:
-                issues.append(Issue("WARN", f"{wl}: {wt} width={ww} too narrow for label text (min 16)"))
+                issues.append(
+                    Issue("WARN", f"{wl}: {wt} width={ww} too narrow for label text (min 16)")
+                )
 
             # ── Rule 121: value/chart widget has text but height < CHAR_H ──
             if wt in ("gauge", "progressbar", "slider", "chart") and text and hh < CHAR_H:
-                issues.append(Issue("WARN", f"{wl}: {wt} height={hh} too short to render text (need >={CHAR_H})"))
+                issues.append(
+                    Issue(
+                        "WARN", f"{wl}: {wt} height={hh} too short to render text (need >={CHAR_H})"
+                    )
+                )
 
             # ── Rule 122: runtime meta key validation ──
             if runtime:
@@ -988,7 +1220,12 @@ def validate_data(
                         continue
                     r122_key = r122_part.split("=", 1)[0].strip().lower()
                     if r122_key and r122_key not in ALLOWED_RUNTIME_META_KEYS:
-                        issues.append(Issue("WARN", f"{wl}: runtime key '{r122_key}' is not a recognized meta key"))
+                        issues.append(
+                            Issue(
+                                "WARN",
+                                f"{wl}: runtime key '{r122_key}' is not a recognized meta key",
+                            )
+                        )
 
             # ── Rule 106: scene dimensions too small ──
             # (checked once per scene, outside per-widget loop — see below)
@@ -999,11 +1236,17 @@ def validate_data(
             if not isinstance(r115_w, dict):
                 continue
             r115_t = str(r115_w.get("type", "") or "").lower()
-            if r115_t in FOCUSABLE_TYPES and r115_w.get("visible") is not False and r115_w.get("enabled") is not False:
+            if (
+                r115_t in FOCUSABLE_TYPES
+                and r115_w.get("visible") is not False
+                and r115_w.get("enabled") is not False
+            ):
                 has_focusable = True
                 break
         if not has_focusable and len(widgets) > 0:
-            issues.append(Issue("WARN", f"{pfx}: scene has no focusable widgets (navigation dead-end)"))
+            issues.append(
+                Issue("WARN", f"{pfx}: scene has no focusable widgets (navigation dead-end)")
+            )
 
         # ── Rule 105: overlapping widgets with identical z_index ──
         for i in range(len(widgets)):
@@ -1030,7 +1273,11 @@ def validate_data(
                     if _is_int(az) and _is_int(bz) and az == bz:
                         ref_a = _wref(scene_name, a, i)
                         ref_b = _wref(scene_name, b, j)
-                        issues.append(Issue("WARN", f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}"))
+                        issues.append(
+                            Issue(
+                                "WARN", f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}"
+                            )
+                        )
 
         # ── Rule 106: scene dimensions too small ──
         if sw < 8 or sh < 8:
@@ -1048,7 +1295,9 @@ def validate_data(
         for geo, indices in geo_map.items():
             if len(indices) >= 2:
                 refs = ", ".join(str(i) for i in indices)
-                issues.append(Issue("WARN", f"{pfx}: widgets [{refs}] share identical geometry {geo}"))
+                issues.append(
+                    Issue("WARN", f"{pfx}: widgets [{refs}] share identical geometry {geo}")
+                )
 
         # ── Rule 66: Disabled widget with no runtime (may be unreachable) ──
         for idx, w in enumerate(widgets):
@@ -1060,7 +1309,9 @@ def validate_data(
                 if not runtime_val:
                     ref = _wref(scene_name, w, idx)
                     wl = f"{pfx}: {ref}"
-                    issues.append(Issue("WARN", f"{wl}: disabled (enabled=false) with no runtime binding"))
+                    issues.append(
+                        Issue("WARN", f"{wl}: disabled (enabled=false) with no runtime binding")
+                    )
 
         # ── Rule 49: Large number of identical non-empty text strings ──
         text_counts: dict[str, int] = {}
@@ -1073,11 +1324,21 @@ def validate_data(
                 text_counts[t] = text_counts.get(t, 0) + 1
         for t, count in text_counts.items():
             if count >= 4:
-                issues.append(Issue("WARN", f"{pfx}: text '{t}' appears {count} times (consider runtime binding)"))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{pfx}: text '{t}' appears {count} times (consider runtime binding)",
+                    )
+                )
 
         # ── Rule 33: Excessive widget count per scene ──
         if len(widgets) > MAX_WIDGETS_PER_SCENE:
-            issues.append(Issue("WARN", f"{pfx}: {len(widgets)} widgets exceeds recommended max {MAX_WIDGETS_PER_SCENE}"))
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {len(widgets)} widgets exceeds recommended max {MAX_WIDGETS_PER_SCENE}",
+                )
+            )
 
         # ── Rule 21: Overlap detection ──
         for i in range(len(widgets)):
@@ -1115,7 +1376,10 @@ def validate_data(
                 continue
             if wid in global_ids and global_ids[wid] != scene_name:
                 issues.append(
-                    Issue("WARN", f"{file_label}: widget id '{wid}' appears in both '{global_ids[wid]}' and '{scene_name}'")
+                    Issue(
+                        "WARN",
+                        f"{file_label}: widget id '{wid}' appears in both '{global_ids[wid]}' and '{scene_name}'",
+                    )
                 )
             else:
                 global_ids[wid] = scene_name
@@ -1123,11 +1387,18 @@ def validate_data(
     if warnings_as_errors:
         return [Issue("ERROR", i.message) if i.level == "WARN" else i for i in issues]
     if strict_critical:
-        return [Issue("ERROR", i.message) if i.level == "WARN" and _is_critical_warning(i.message) else i for i in issues]
+        return [
+            Issue("ERROR", i.message)
+            if i.level == "WARN" and _is_critical_warning(i.message)
+            else i
+            for i in issues
+        ]
     return issues
 
 
-def validate_file(path: Path, *, warnings_as_errors: bool, strict_critical: bool = False) -> list[Issue]:
+def validate_file(
+    path: Path, *, warnings_as_errors: bool, strict_critical: bool = False
+) -> list[Issue]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -1179,4 +1450,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -22,6 +22,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -56,6 +57,7 @@ def _canvas_pos(app, x=10, y=10):
 # ===========================================================================
 # on_mouse_down — Canvas
 # ===========================================================================
+
 
 class TestMouseDownCanvas:
     def test_click_empty_canvas_starts_box_select(self, tmp_path, monkeypatch):
@@ -302,6 +304,7 @@ class TestMouseDownSceneTabs:
 # on_mouse_up
 # ===========================================================================
 
+
 class TestMouseUp:
     def test_clears_drag_state(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -333,6 +336,7 @@ class TestMouseUp:
 # ===========================================================================
 # _finish_box_select
 # ===========================================================================
+
 
 class TestFinishBoxSelect:
     def test_small_rect_ignored(self, tmp_path, monkeypatch):
@@ -369,6 +373,7 @@ class TestFinishBoxSelect:
 # ===========================================================================
 # on_mouse_move
 # ===========================================================================
+
 
 class TestMouseMove:
     def test_no_pointer_down_ignored(self, tmp_path, monkeypatch):
@@ -470,6 +475,7 @@ class TestMouseMove:
 # ===========================================================================
 # on_mouse_wheel
 # ===========================================================================
+
 
 class TestMouseWheel:
     def test_zero_dy_ignored(self, tmp_path, monkeypatch):

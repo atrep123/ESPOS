@@ -246,7 +246,11 @@ class TestIconBitmap:
 class TestWriteIconsC:
     def test_basic_output(self, tmp_path):
         icon = IconBitmap(
-            name="arrow", sym_base="mi_arrow", w=16, h=16, stride=2,
+            name="arrow",
+            sym_base="mi_arrow",
+            w=16,
+            h=16,
+            stride=2,
             data=bytes([0xFF] * 32),
         )
         out = tmp_path / "icons.c"
@@ -258,7 +262,11 @@ class TestWriteIconsC:
 
     def test_24px_output(self, tmp_path):
         icon = IconBitmap(
-            name="wifi", sym_base="mi_wifi", w=24, h=24, stride=3,
+            name="wifi",
+            sym_base="mi_wifi",
+            w=24,
+            h=24,
+            stride=3,
             data=bytes([0xAA] * 72),
         )
         out = tmp_path / "icons_24.c"
@@ -287,7 +295,11 @@ class TestWriteIconsC:
 
     def test_hex_values_in_output(self, tmp_path):
         icon = IconBitmap(
-            name="test", sym_base="mi_test", w=8, h=1, stride=1,
+            name="test",
+            sym_base="mi_test",
+            w=8,
+            h=1,
+            stride=1,
             data=bytes([0xAB]),
         )
         out = tmp_path / "test.c"
@@ -411,4 +423,4 @@ class TestWriteRegistry:
         _write_registry(out_h, out_c, [])
         c_content = out_c.read_text(encoding="utf-8")
         assert "normalize_key" in c_content
-        assert 'mi_' in c_content  # strips mi_ prefix
+        assert "mi_" in c_content  # strips mi_ prefix
