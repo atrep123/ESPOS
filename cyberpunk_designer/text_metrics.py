@@ -72,8 +72,6 @@ def wrap_text_chars(
 
     def _push(line: str) -> None:
         nonlocal truncated
-        if truncated:
-            return
         if len(lines) >= max_lines:
             truncated = True
             return

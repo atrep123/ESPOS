@@ -28,16 +28,16 @@ class _SimListModel:
 
 
 def sim_runtime_reset(app) -> None:
-    setattr(app, "_sim_listmodels", {})
-    setattr(app, "_sim_runtime_snapshot", {})
+    app._sim_listmodels = {}
+    app._sim_runtime_snapshot = {}
 
 
 def sim_runtime_restore(app) -> None:
     sc = app.state.current_scene()
     snapshot = getattr(app, "_sim_runtime_snapshot", {}) or {}
     if not snapshot:
-        setattr(app, "_sim_listmodels", {})
-        setattr(app, "_sim_runtime_snapshot", {})
+        app._sim_listmodels = {}
+        app._sim_runtime_snapshot = {}
         return
 
     for w in getattr(sc, "widgets", []) or []:
@@ -53,8 +53,8 @@ def sim_runtime_restore(app) -> None:
         except Exception:
             continue
 
-    setattr(app, "_sim_listmodels", {})
-    setattr(app, "_sim_runtime_snapshot", {})
+    app._sim_listmodels = {}
+    app._sim_runtime_snapshot = {}
 
 
 def _sim_snapshot_widget(app, w) -> None:
@@ -64,7 +64,7 @@ def _sim_snapshot_widget(app, w) -> None:
     snapshot = getattr(app, "_sim_runtime_snapshot", None)
     if snapshot is None:
         snapshot = {}
-        setattr(app, "_sim_runtime_snapshot", snapshot)
+        app._sim_runtime_snapshot = snapshot
     if wid in snapshot:
         return
     snapshot[wid] = _SimWidgetSnapshot(
@@ -155,7 +155,7 @@ def _ensure_sim_listmodel(app, sc, root: str) -> Optional[_SimListModel]:
     models = getattr(app, "_sim_listmodels", None)
     if models is None:
         models = {}
-        setattr(app, "_sim_listmodels", models)
+        app._sim_listmodels = models
     if root in models:
         return models[root]
 
@@ -408,7 +408,7 @@ def focus_move_direction(app, direction: str) -> None:
                     gap = cr.left - r.right
                 elif r.left >= cr.right:
                     gap = r.left - cr.right
-                else:
+                else:  # pragma: no cover — requires zero-width widget
                     gap = 0
                 score = int(1_000_000 + gap * 10_000 + primary * 10_000 + secondary * 100 + dist2)
                 if loose_score is None or score < loose_score:
@@ -426,7 +426,7 @@ def focus_move_direction(app, direction: str) -> None:
                     gap = cr.top - r.bottom
                 elif r.top >= cr.bottom:
                     gap = r.top - cr.bottom
-                else:
+                else:  # pragma: no cover — requires zero-height widget
                     gap = 0
                 score = int(1_000_000 + gap * 10_000 + primary * 10_000 + secondary * 100 + dist2)
                 if loose_score is None or score < loose_score:

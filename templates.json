@@ -417,5 +417,5989 @@
         }
       ]
     }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
+  },
+  {
+    "metadata": {
+      "name": "TestTpl",
+      "category": "Custom",
+      "description": "1 widget(s)",
+      "author": "User",
+      "tags": []
+    },
+    "scene": {
+      "name": "TestTpl",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0,
+          "y": 0,
+          "width": 80,
+          "height": 16,
+          "text": "T"
+        }
+      ]
+    }
   }
 ]

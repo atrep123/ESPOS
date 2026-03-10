@@ -23,7 +23,7 @@ def _base_layout_size(app, palette_w: int, inspector_w: int) -> Tuple[int, int]:
     canvas_w = int(getattr(app.designer, "width", 0) or 0)
     canvas_h = int(getattr(app.designer, "height", 0) or 0)
     base_w = max(1, canvas_w + int(palette_w) + int(inspector_w))
-    base_h = max(1, canvas_h + int(getattr(app, "toolbar_h", 0) or 0) + int(getattr(app, "status_h", 0) or 0))
+    base_h = max(1, canvas_h + int(getattr(app, "toolbar_h", 0) or 0) + int(getattr(app, "scene_tabs_h", 0) or 0) + int(getattr(app, "status_h", 0) or 0))
     return base_w, base_h
 
 
@@ -178,6 +178,7 @@ def rebuild_layout(
         inspector_w=inspector_w,
         toolbar_h=int(getattr(app, "toolbar_h", 24) or 24),
         status_h=int(getattr(app, "status_h", 18) or 18),
+        scene_tabs_h=int(getattr(app, "scene_tabs_h", 0) or 0),
     )
     app.logical_surface = pygame.Surface((app.layout.width, app.layout.height))
 

@@ -27,8 +27,6 @@ def fit_selection_to_widget(app) -> None:
     def _snap_up(v: int, g: int = GRID) -> int:
         v = int(v)
         g = int(g)
-        if g <= 0:
-            return v
         return g * ((v + g - 1) // g)
 
     def _parse_max_lines(w: WidgetConfig) -> Optional[int]:

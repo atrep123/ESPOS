@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -17,11 +18,11 @@ def load_or_default(app) -> None:
     autosave_exists = app.autosave_path.exists()
     use_autosave = False
 
-    if autosave_exists:
+    if autosave_exists and base_exists:
         try:
-            base_mtime = app.json_path.stat().st_mtime if base_exists else 0
+            base_mtime = app.json_path.stat().st_mtime
             autosave_mtime = app.autosave_path.stat().st_mtime
-            if autosave_mtime >= base_mtime:
+            if autosave_mtime > base_mtime:
                 use_autosave = True
         except Exception:
             pass
@@ -171,6 +172,13 @@ def load_json(app) -> None:
     app._rebuild_layout(window_size=win_size, force_scene_size=False, lock_scale=None)
     app.state = EditorState(app.designer, app.layout)
     app._dirty = False
+    app._dirty_scenes = set()
+    # Drain stale events so they don't apply to the freshly loaded scene
+    try:
+        import pygame
+        pygame.event.clear()
+    except Exception:
+        pass
 
 
 def write_audit_report(app) -> None:
@@ -197,5 +205,6 @@ def maybe_autosave(app) -> None:
         app.designer.save_to_json(str(app.autosave_path))
         app._last_autosave_ts = now
         app._dirty = False
+        app._dirty_scenes = set()
     except Exception:
         pass
