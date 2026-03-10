@@ -601,3 +601,119 @@ void test_render_zero_size_label(void)
     /* Can't fit any text in zero-width widget */
     TEST_ASSERT_FALSE(has_call_type(DRAW_TEXT));
 }
+
+/* ------------------------------------------------------------------ */
+/* Integer overflow safety — large value * span must not wrap          */
+/* ------------------------------------------------------------------ */
+
+void test_render_progressbar_large_range_no_overflow(void)
+{
+    UiDrawOps ops = make_ops();
+    /* Use large min/max to stress the multiplication. */
+    UiWidget w = make_widget(UIW_PROGRESSBAR, 0, 0, 200, 12);
+    w.border = 1;
+    w.min_value = -30000;
+    w.max_value = 30000;
+    w.value = 15000; /* 75 % of range */
+    ui_render_widget(&w, &ops);
+    /* Should produce a filled region without overflow artifacts. */
+    int found_fill = 0;
+    for (int i = 0; i < s_call_count; ++i) {
+        if (s_calls[i].type == DRAW_FILL_RECT && s_calls[i].w > 0 &&
+            s_calls[i].w <= 198) {
+            found_fill = 1;
+        }
+    }
+    TEST_ASSERT_TRUE(found_fill);
+}
+
+void test_render_slider_large_range_no_overflow(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_SLIDER, 0, 0, 200, 14);
+    w.border = 1;
+    w.min_value = -30000;
+    w.max_value = 30000;
+    w.value = 30000; /* max */
+    ui_render_widget(&w, &ops);
+    /* Knob should be at right edge, not wrapped negative. */
+    int found_fill = 0;
+    for (int i = 0; i < s_call_count; ++i) {
+        if (s_calls[i].type == DRAW_FILL_RECT && s_calls[i].x >= 0) {
+            found_fill = 1;
+        }
+    }
+    TEST_ASSERT_TRUE(found_fill);
+}
+
+void test_render_gauge_large_range_no_overflow(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_GAUGE, 0, 0, 200, 12);
+    w.border = 1;
+    w.min_value = -30000;
+    w.max_value = 30000;
+    w.value = 0; /* 50 % of range */
+    ui_render_widget(&w, &ops);
+    int found_fill = 0;
+    for (int i = 0; i < s_call_count; ++i) {
+        if (s_calls[i].type == DRAW_FILL_RECT && s_calls[i].w > 0 &&
+            s_calls[i].w <= 198) {
+            found_fill = 1;
+        }
+    }
+    TEST_ASSERT_TRUE(found_fill);
+}
+
+void test_render_chart_large_range_no_overflow(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_CHART, 0, 0, 200, 60);
+    w.border = 1;
+    w.min_value = -30000;
+    w.max_value = 30000;
+    w.value = 25000;
+    ui_render_widget(&w, &ops);
+    /* Bars must have non-negative heights (no overflow wrap). */
+    for (int i = 0; i < s_call_count; ++i) {
+        if (s_calls[i].type == DRAW_FILL_RECT) {
+            TEST_ASSERT_TRUE(s_calls[i].h >= 0);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Zero-dimension widget types — _draw_rect / _fill_rect guards       */
+/* ------------------------------------------------------------------ */
+
+void test_render_box_zero_width_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_BOX, 10, 10, 0, 20);
+    w.border = 1;
+    ui_render_widget(&w, &ops);
+    /* Must not crash; drawing with w=0 should be skipped. */
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_render_box_zero_height_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_BOX, 10, 10, 40, 0);
+    w.border = 1;
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_render_progressbar_tiny_no_crash(void)
+{
+    UiDrawOps ops = make_ops();
+    /* Width=2 → inner_w=0 → early return. */
+    UiWidget w = make_widget(UIW_PROGRESSBAR, 0, 0, 2, 2);
+    w.border = 1;
+    w.min_value = 0;
+    w.max_value = 100;
+    w.value = 50;
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_TRUE(1);
+}

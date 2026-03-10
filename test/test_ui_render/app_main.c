@@ -38,6 +38,13 @@ void test_render_box_border_double(void);
 void test_render_unknown_type_draws_rect(void);
 void test_render_with_minimal_ops(void);
 void test_render_zero_size_label(void);
+void test_render_progressbar_large_range_no_overflow(void);
+void test_render_slider_large_range_no_overflow(void);
+void test_render_gauge_large_range_no_overflow(void);
+void test_render_chart_large_range_no_overflow(void);
+void test_render_box_zero_width_no_crash(void);
+void test_render_box_zero_height_no_crash(void);
+void test_render_progressbar_tiny_no_crash(void);
 
 void app_main(void)
 {
@@ -78,6 +85,13 @@ void app_main(void)
     RUN_TEST(test_render_unknown_type_draws_rect);
     RUN_TEST(test_render_with_minimal_ops);
     RUN_TEST(test_render_zero_size_label);
+    RUN_TEST(test_render_progressbar_large_range_no_overflow);
+    RUN_TEST(test_render_slider_large_range_no_overflow);
+    RUN_TEST(test_render_gauge_large_range_no_overflow);
+    RUN_TEST(test_render_chart_large_range_no_overflow);
+    RUN_TEST(test_render_box_zero_width_no_crash);
+    RUN_TEST(test_render_box_zero_height_no_crash);
+    RUN_TEST(test_render_progressbar_tiny_no_crash);
     UNITY_END();
 }
 
@@ -119,6 +133,13 @@ void test_render_box_border_double(void);
 void test_render_unknown_type_draws_rect(void);
 void test_render_with_minimal_ops(void);
 void test_render_zero_size_label(void);
+void test_render_progressbar_large_range_no_overflow(void);
+void test_render_slider_large_range_no_overflow(void);
+void test_render_gauge_large_range_no_overflow(void);
+void test_render_chart_large_range_no_overflow(void);
+void test_render_box_zero_width_no_crash(void);
+void test_render_box_zero_height_no_crash(void);
+void test_render_progressbar_tiny_no_crash(void);
 
 int main(void)
 {
@@ -159,6 +180,13 @@ int main(void)
     RUN_TEST(test_render_unknown_type_draws_rect);
     RUN_TEST(test_render_with_minimal_ops);
     RUN_TEST(test_render_zero_size_label);
+    RUN_TEST(test_render_progressbar_large_range_no_overflow);
+    RUN_TEST(test_render_slider_large_range_no_overflow);
+    RUN_TEST(test_render_gauge_large_range_no_overflow);
+    RUN_TEST(test_render_chart_large_range_no_overflow);
+    RUN_TEST(test_render_box_zero_width_no_crash);
+    RUN_TEST(test_render_box_zero_height_no_crash);
+    RUN_TEST(test_render_progressbar_tiny_no_crash);
     UNITY_END();
     return 0;
 }

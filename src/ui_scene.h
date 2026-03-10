@@ -24,6 +24,7 @@ typedef enum {
     UIW_PANEL = 9,
     UIW_ICON = 10,
     UIW_CHART = 11,
+    UIW__COUNT          /* sentinel — must remain last */
 } UiWidgetType;
 
 /* Border style (keep values stable; used by exporter/runtime). */

@@ -461,6 +461,7 @@ static void ui_draw_text_block(
 
 static inline void _draw_rect(const UiDrawOps *ops, int x, int y, int w, int h, uint8_t c)
 {
+    if (w <= 0 || h <= 0) return;
     if (ops->draw_rect) {
         ops->draw_rect(ops->ctx, x, y, w, h, c);
         return;
@@ -477,6 +478,7 @@ static inline void _draw_rect(const UiDrawOps *ops, int x, int y, int w, int h, 
 
 static inline void _fill_rect(const UiDrawOps *ops, int x, int y, int w, int h, uint8_t c)
 {
+    if (w <= 0 || h <= 0) return;
     if (ops->fill_rect) {
         ops->fill_rect(ops->ctx, x, y, w, h, c);
         return;
@@ -588,7 +590,7 @@ static void _render_progressbar(const UiWidget *w, const UiDrawOps *ops)
     int val = w->value - w->min_value;
     if (val < 0) val = 0;
     if (val > range) val = range;
-    int filled = (val * span) / range;
+    int filled = (int)(((int32_t)val * span) / range);
 
     if (filled > 0) {
         _fill_rect(ops, w->x + 1, w->y + 1, filled, inner_h, fill);
@@ -854,7 +856,7 @@ static void _render_slider(const UiWidget *w, const UiDrawOps *ops)
     int val = w->value - w->min_value;
     if (val < 0) val = 0;
     if (val > range) val = range;
-    int knob_x = inner_x + (val * (inner_w - 1)) / range;
+    int knob_x = inner_x + (int)(((int32_t)val * (inner_w - 1)) / range);
 
     int knob_w = 5;
     int knob_h = w->height - 4;
@@ -929,7 +931,7 @@ static void _render_gauge(const UiWidget *w, const UiDrawOps *ops)
     int val = w->value - w->min_value;
     if (val < 0) val = 0;
     if (val > range) val = range;
-    int filled = (val * inner_w) / range;
+    int filled = (int)(((int32_t)val * inner_w) / range);
     if (filled > 0) {
         _fill_rect(ops, w->x + 1, w->y + 1, filled, inner_h, fill);
     }
@@ -1077,7 +1079,7 @@ static void _render_chart(const UiWidget *w, const UiDrawOps *ops)
     if (base < 0) base = 0;
     for (int i = 0; i < bars; ++i) {
         int v = (base + i * 11) % (range + 1);
-        int bh = (v * (inner_h - 6)) / range;
+        int bh = (int)(((int32_t)v * (inner_h - 6)) / range);
         int bx = inner_x + 4 + i * (bar_w + gap);
         int by = inner_y + inner_h - 4 - bh;
         _fill_rect(ops, bx, by, bar_w, bh, fill);
