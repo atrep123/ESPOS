@@ -24,12 +24,19 @@ typedef struct {
     int step;
 
     char values[64];
+
+    /* Display formatting (optional) */
+    char suffix[16];    /* unit suffix, e.g. "°C", "%", "V"  */
+    char prefix[16];    /* value prefix, e.g. "$", "#"       */
+    int  precision;     /* decimal places for float (-1 = default 2) */
+    int  scale;         /* fixed-point divisor for float (0 = default 100) */
 } ui_meta_t;
 
 /* Parse a runtime metadata string:
  *   "bind=contrast;kind=int;min=0;max=255;step=8"
  *   "bind=invert;kind=bool;values=off|on"
  *   "bind=mode;kind=enum;values=A|B|C"
+ *   "bind=temp;kind=float;scale=10;precision=1;suffix=°C"
  */
 bool ui_meta_parse(const char *s, ui_meta_t *out);
 

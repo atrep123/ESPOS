@@ -14,6 +14,8 @@ static void ui_meta_reset(ui_meta_t *m)
     memset(m, 0, sizeof(*m));
     m->kind = UI_META_KIND_NONE;
     m->step = 1;
+    m->precision = -1;  /* -1 = use default (2 for float) */
+    m->scale = 0;       /*  0 = use default (100)         */
 }
 
 static const char *skip_ws(const char *p)
@@ -213,6 +215,42 @@ bool ui_meta_parse(const char *s, ui_meta_t *out)
             }
             memcpy(out->values, v0, n);
             out->values[n] = '\0';
+            continue;
+        }
+        if (key_eq_ci(k0, klen, "suffix") || key_eq_ci(k0, klen, "unit")) {
+            size_t n = vlen;
+            if (n >= sizeof(out->suffix)) {
+                n = sizeof(out->suffix) - 1;
+            }
+            memcpy(out->suffix, v0, n);
+            out->suffix[n] = '\0';
+            continue;
+        }
+        if (key_eq_ci(k0, klen, "prefix")) {
+            size_t n = vlen;
+            if (n >= sizeof(out->prefix)) {
+                n = sizeof(out->prefix) - 1;
+            }
+            memcpy(out->prefix, v0, n);
+            out->prefix[n] = '\0';
+            continue;
+        }
+        if (key_eq_ci(k0, klen, "precision") || key_eq_ci(k0, klen, "decimals")) {
+            int v = 0;
+            if (parse_int_span(v0, vlen, &v)) {
+                if (v < 0) v = 0;
+                if (v > 6) v = 6;
+                out->precision = v;
+            }
+            continue;
+        }
+        if (key_eq_ci(k0, klen, "scale") || key_eq_ci(k0, klen, "divisor")) {
+            int v = 0;
+            if (parse_int_span(v0, vlen, &v)) {
+                if (v > 0) {
+                    out->scale = v;
+                }
+            }
             continue;
         }
     }

@@ -71,7 +71,10 @@ FOCUSABLE_TYPES = {"button", "checkbox", "radiobutton", "slider"}
 ALLOWED_CONSTRAINT_KEYS = {"b", "ax", "ay", "sx", "sy", "mx", "my", "mr", "mb"}
 
 # Valid runtime meta keys (ui_meta.c ui_meta_parse)
-ALLOWED_RUNTIME_META_KEYS = {"bind", "key", "kind", "type", "min", "max", "step", "values"}
+ALLOWED_RUNTIME_META_KEYS = {
+    "bind", "key", "kind", "type", "min", "max", "step", "values",
+    "suffix", "unit", "prefix", "precision", "decimals", "scale", "divisor",
+}
 
 # ── Rendering constants (must match drawing.py / firmware) ──────────────
 CHAR_W = 6  # font6x8 char width

@@ -520,7 +520,7 @@ static int ui_update_bound_text(UiScene *scene, int idx)
         base = meta.bind_key;
     }
 
-    char vbuf[32];
+    char vbuf[UI_TEXT_OVERRIDE_LEN - 28];
     vbuf[0] = '\0';
 
     if (meta.kind == UI_META_KIND_BOOL) {
@@ -538,7 +538,12 @@ static int ui_update_bound_text(UiScene *scene, int idx)
         if (!ui_bind_get_int(meta.bind_key, &cur)) {
             return 0;
         }
-        snprintf(vbuf, sizeof(vbuf), "%d", cur);
+        if (meta.prefix[0] != '\0' || meta.suffix[0] != '\0') {
+            snprintf(vbuf, sizeof(vbuf), "%s%d%s",
+                     meta.prefix, cur, meta.suffix);
+        } else {
+            snprintf(vbuf, sizeof(vbuf), "%d", cur);
+        }
     } else if (meta.kind == UI_META_KIND_ENUM) {
         int cur = 0;
         if (!ui_bind_get_int(meta.bind_key, &cur)) {
@@ -563,22 +568,41 @@ static int ui_update_bound_text(UiScene *scene, int idx)
         if (!ui_bind_get_int(meta.bind_key, &cur)) {
             return 0;
         }
-        /* Floats are stored as int * 100 (fixed-point).  Display with 1 or 2
-         * decimal places depending on magnitude. */
-        int whole = cur / 100;
-        int frac = cur % 100;
+        /* Configurable fixed-point: scale (default 100), precision (default 2) */
+        int sc = (meta.scale > 0) ? meta.scale : 100;
+        int prec = (meta.precision >= 0) ? meta.precision : 2;
+        int whole = cur / sc;
+        int frac = cur % sc;
         if (frac < 0) frac = -frac;
-        if (cur < 0 && whole == 0) {
-            snprintf(vbuf, sizeof(vbuf), "-%d.%02d", whole, frac);
+
+        if (prec == 0) {
+            /* Round: if frac >= sc/2, bump whole */
+            int rounded = whole;
+            if (cur >= 0 && frac >= sc / 2) rounded++;
+            else if (cur < 0 && frac >= sc / 2) rounded--;
+            snprintf(vbuf, sizeof(vbuf), "%s%d%s",
+                     meta.prefix, rounded, meta.suffix);
         } else {
-            snprintf(vbuf, sizeof(vbuf), "%d.%02d", whole, frac);
+            /* Scale frac to requested precision digits */
+            int pow10 = 1;
+            for (int i = 0; i < prec; i++) pow10 *= 10;
+            int frac_scaled = (int)(((int64_t)frac * pow10) / sc);
+
+            if (cur < 0 && whole == 0) {
+                snprintf(vbuf, sizeof(vbuf), "%s-%d.%0*d%s",
+                         meta.prefix, whole, prec, frac_scaled, meta.suffix);
+            } else {
+                snprintf(vbuf, sizeof(vbuf), "%s%d.%0*d%s",
+                         meta.prefix, whole, prec, frac_scaled, meta.suffix);
+            }
         }
     } else {
         return 0;
     }
 
     char out[UI_TEXT_OVERRIDE_LEN];
-    snprintf(out, sizeof(out), "%s: %s", base, vbuf);
+    int n = snprintf(out, sizeof(out), "%s: %s", base, vbuf);
+    (void)n; /* truncation is safe — display width is limited anyway */
 
     const char *cur_txt = (w->text != NULL) ? w->text : "";
     if (strcmp(cur_txt, out) == 0) {

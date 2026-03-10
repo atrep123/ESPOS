@@ -149,12 +149,12 @@ if is_blank "$POLICY_HISTORY_CSV"; then
   exit 2
 fi
 
-if [[ "$TRIAGE_CSV_ARG_SET" -eq 1 && is_blank "$POLICY_TRIAGE_CSV" ]]; then
+if [[ "$TRIAGE_CSV_ARG_SET" -eq 1 ]] && is_blank "$POLICY_TRIAGE_CSV"; then
   echo "[FAIL] --native-policy-triage-csv was provided but is empty" >&2
   exit 2
 fi
 
-if [[ "$TRIAGE_DELTA_CSV_ARG_SET" -eq 1 && is_blank "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+if [[ "$TRIAGE_DELTA_CSV_ARG_SET" -eq 1 ]] && is_blank "$POLICY_TRIAGE_DELTA_CSV"; then
   echo "[FAIL] --native-policy-triage-delta-csv was provided but is empty" >&2
   exit 2
 fi

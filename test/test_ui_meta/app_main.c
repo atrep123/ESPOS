@@ -15,6 +15,11 @@ void test_ui_meta_kind_aliases(void);
 void test_ui_meta_step_zero_defaults_to_one(void);
 void test_ui_meta_key_alias(void);
 void test_ui_meta_parse_int_overflow_rejected(void);
+void test_ui_meta_parse_suffix(void);
+void test_ui_meta_parse_prefix(void);
+void test_ui_meta_parse_precision(void);
+void test_ui_meta_parse_scale(void);
+void test_ui_meta_combined_formatting_fields(void);
 
 void app_main(void)
 {
@@ -32,6 +37,11 @@ void app_main(void)
     RUN_TEST(test_ui_meta_step_zero_defaults_to_one);
     RUN_TEST(test_ui_meta_key_alias);
     RUN_TEST(test_ui_meta_parse_int_overflow_rejected);
+    RUN_TEST(test_ui_meta_parse_suffix);
+    RUN_TEST(test_ui_meta_parse_prefix);
+    RUN_TEST(test_ui_meta_parse_precision);
+    RUN_TEST(test_ui_meta_parse_scale);
+    RUN_TEST(test_ui_meta_combined_formatting_fields);
     UNITY_END();
 }
 
@@ -50,6 +60,11 @@ void test_ui_meta_kind_aliases(void);
 void test_ui_meta_step_zero_defaults_to_one(void);
 void test_ui_meta_key_alias(void);
 void test_ui_meta_parse_int_overflow_rejected(void);
+void test_ui_meta_parse_suffix(void);
+void test_ui_meta_parse_prefix(void);
+void test_ui_meta_parse_precision(void);
+void test_ui_meta_parse_scale(void);
+void test_ui_meta_combined_formatting_fields(void);
 
 int main(void)
 {
@@ -67,6 +82,11 @@ int main(void)
     RUN_TEST(test_ui_meta_step_zero_defaults_to_one);
     RUN_TEST(test_ui_meta_key_alias);
     RUN_TEST(test_ui_meta_parse_int_overflow_rejected);
+    RUN_TEST(test_ui_meta_parse_suffix);
+    RUN_TEST(test_ui_meta_parse_prefix);
+    RUN_TEST(test_ui_meta_parse_precision);
+    RUN_TEST(test_ui_meta_parse_scale);
+    RUN_TEST(test_ui_meta_combined_formatting_fields);
     return UNITY_END();
 }
 

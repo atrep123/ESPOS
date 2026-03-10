@@ -166,3 +166,81 @@ void test_ui_meta_parse_int_overflow_rejected(void)
     TEST_ASSERT_EQUAL_INT(1000, m.max);
 }
 
+void test_ui_meta_parse_suffix(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=temp;kind=float;suffix=\xc2\xb0""C", &m));
+    TEST_ASSERT_EQUAL_STRING("\xc2\xb0""C", m.suffix);
+    TEST_ASSERT_EQUAL_STRING("", m.prefix);
+
+    /* unit= is an alias for suffix= */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=bat;kind=int;unit=%", &m));
+    TEST_ASSERT_EQUAL_STRING("%", m.suffix);
+}
+
+void test_ui_meta_parse_prefix(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=price;kind=int;prefix=$", &m));
+    TEST_ASSERT_EQUAL_STRING("$", m.prefix);
+    TEST_ASSERT_EQUAL_STRING("", m.suffix);
+}
+
+void test_ui_meta_parse_precision(void)
+{
+    ui_meta_t m;
+    /* precision= sets decimal places */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;precision=1", &m));
+    TEST_ASSERT_EQUAL_INT(1, m.precision);
+
+    /* decimals= is alias */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;decimals=3", &m));
+    TEST_ASSERT_EQUAL_INT(3, m.precision);
+
+    /* default is -1 (use default 2) */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float", &m));
+    TEST_ASSERT_EQUAL_INT(-1, m.precision);
+
+    /* clamp: negative → 0, >6 → 6 */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;precision=-5", &m));
+    TEST_ASSERT_EQUAL_INT(0, m.precision);
+
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;precision=99", &m));
+    TEST_ASSERT_EQUAL_INT(6, m.precision);
+}
+
+void test_ui_meta_parse_scale(void)
+{
+    ui_meta_t m;
+    /* scale= sets fixed-point divisor */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;scale=10", &m));
+    TEST_ASSERT_EQUAL_INT(10, m.scale);
+
+    /* divisor= is alias */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;divisor=1000", &m));
+    TEST_ASSERT_EQUAL_INT(1000, m.scale);
+
+    /* default is 0 (meaning use 100) */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float", &m));
+    TEST_ASSERT_EQUAL_INT(0, m.scale);
+
+    /* non-positive values are ignored */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;scale=0", &m));
+    TEST_ASSERT_EQUAL_INT(0, m.scale);
+
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;kind=float;scale=-10", &m));
+    TEST_ASSERT_EQUAL_INT(0, m.scale);
+}
+
+void test_ui_meta_combined_formatting_fields(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse(
+        "bind=temp;kind=float;scale=10;precision=1;suffix=\xc2\xb0""C;prefix= ", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_FLOAT, (int)m.kind);
+    TEST_ASSERT_EQUAL_STRING("temp", m.bind_key);
+    TEST_ASSERT_EQUAL_INT(10, m.scale);
+    TEST_ASSERT_EQUAL_INT(1, m.precision);
+    TEST_ASSERT_EQUAL_STRING("\xc2\xb0""C", m.suffix);
+    TEST_ASSERT_EQUAL_STRING(" ", m.prefix);
+}
