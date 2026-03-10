@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -111,6 +112,12 @@ def run_headless(json_path: Path, width: int, height: int, profile: Optional[str
 
 def send_live_preview(json_path: Path, port: str, baud: int = 115200) -> None:
     """Best-effort push of JSON to ESP32 over serial. Expects device-side handler for framed JSON."""
+    if not port.strip():
+        print("[WARN] Live preview port is empty; skipping.")
+        return
+    if not re.match(r'^(COM\d+|/dev/tty(USB|ACM|S)\d+)$', port):
+        print(f"[WARN] Suspicious serial port name: {port!r}; skipping live preview.")
+        return
     try:
         import serial  # type: ignore
     except Exception:
