@@ -29,6 +29,7 @@ extend-exclude = [
     "preview",
     "docs",
     "reports",
+    "output",
 ]
 
 [tool.ruff.lint]
@@ -60,7 +61,7 @@ strict_equality = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unreachable = true
-exclude = "(build|dist|generated|\\.pio|\\.platformio-local|\\.venv|__pycache__)"
+exclude = "(build|dist|generated|\\.pio|\\.platformio-local|\\.venv|__pycache__|output)"
 
 [tool.pytest.ini_options]
 markers = [
@@ -75,5 +76,7 @@ filterwarnings = [
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+testpaths = ["tests"]
+collect_ignore = ["output"]
 timeout = 300
 timeout_method = "thread"
