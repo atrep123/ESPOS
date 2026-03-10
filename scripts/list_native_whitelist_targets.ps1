@@ -1,8 +1,16 @@
 [CmdletBinding(PositionalBinding = $false)]
-param()
+param(
+  [switch]$Help
+)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\list_native_whitelist_targets.ps1 [-Help]"
+  Write-Host "  Lists native build .exe files for App Control allow-listing."
+  exit 0
+}
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $nativeBuildDir = Join-Path $repoRoot ".pio\build\native"
