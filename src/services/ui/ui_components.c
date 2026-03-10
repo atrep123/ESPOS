@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "ui_helpers.h"
+
 static int ui_id_starts_with(const char *id, const char *prefix)
 {
     if (id == NULL || prefix == NULL) {
@@ -14,30 +16,6 @@ static int ui_id_starts_with(const char *id, const char *prefix)
         return 0;
     }
     return (strncmp(id, prefix, n) == 0) ? 1 : 0;
-}
-
-static int ui_parse_uint_dec(const char *s, int *out_value)
-{
-    if (out_value != NULL) {
-        *out_value = 0;
-    }
-    if (s == NULL || *s < '0' || *s > '9') {
-        return 0;
-    }
-    int v = 0;
-    const char *p = s;
-    while (*p >= '0' && *p <= '9') {
-        int next = v * 10 + (*p - '0');
-        if (next < v) {
-            break;
-        }
-        v = next;
-        p += 1;
-    }
-    if (out_value != NULL) {
-        *out_value = v;
-    }
-    return 1;
 }
 
 static bool ui_set_active_prefix_index(

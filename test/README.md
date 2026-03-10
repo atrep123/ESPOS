@@ -21,7 +21,7 @@ pio test -e native -f test_ui_core  # single suite
 | `test_store` | `src/services/store/` — NVS/SPIFFS persistence | 18 |
 | `test_ui_bindings` | `src/services/ui/ui_bindings.c` — runtime value bindings | 18 |
 | `test_ui_cmd` | `src/services/ui/ui_cmd.c` — UI command dispatch | 27 |
-| `test_ui_components` | `src/services/ui/ui_components.c` — widget rendering | 16 |
+| `test_ui_components` | `src/services/ui/ui_components.c` — widget rendering | 18 |
 | `test_ui_core` | `src/services/ui/ui_core.c` — widget tree & state | 15 |
 | `test_ui_font` | `src/ui_font_6x8.c` — bitmap font data | 8 |
 | `test_ui_helpers` | `src/services/ui/ui_helpers.c` — parse & toast queue helpers | 33 |
@@ -31,7 +31,7 @@ pio test -e native -f test_ui_core  # single suite
 | `test_ui_render` | `src/ui_render.c` — widget rendering dispatch | 44 |
 | `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 51 |
 
-**Total: ~342 test cases**
+**Total: ~344 test cases**
 
 ## Stubs
 

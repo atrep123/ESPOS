@@ -1,5 +1,6 @@
 #include "unity.h"
 
+#include <limits.h>
 #include <string.h>
 
 #include "services/ui/ui_components.h"
@@ -491,4 +492,49 @@ void test_ui_components_tabs_out_of_range_clears_all(void)
     TEST_ASSERT_TRUE(ui_components_tabs_set_active(&scene, "tabs", 99, NULL, NULL));
     TEST_ASSERT_EQUAL_UINT8(0, widgets[0].style);
     TEST_ASSERT_EQUAL_UINT8(0, widgets[1].style);
+}
+
+void test_ui_components_sync_extreme_focus_idx(void)
+{
+    UiWidget widgets[2];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "menu.item0";
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+    widgets[1].id = "menu.item1";
+    widgets[1].visible = 1;
+    widgets[1].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 2,
+        .widgets = widgets,
+    };
+
+    /* INT_MIN and INT_MAX must be rejected without UB */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, INT_MIN, NULL, NULL));
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, INT_MAX, NULL, NULL));
+}
+
+void test_ui_components_sync_overflow_item_index(void)
+{
+    /* Widget id with a huge numeric suffix that would overflow int parsing */
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "menu.item99999999999";
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* Overflow in item index parsing → returns false safely */
+    TEST_ASSERT_FALSE(ui_components_sync_active_from_focus(&scene, 0, NULL, NULL));
 }

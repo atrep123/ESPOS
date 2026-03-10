@@ -18,6 +18,8 @@ void test_ui_components_prefix_visible_null_widget_ids(void);
 void test_ui_components_list_set_active(void);
 void test_ui_components_menu_no_match_returns_false(void);
 void test_ui_components_tabs_out_of_range_clears_all(void);
+void test_ui_components_sync_extreme_focus_idx(void);
+void test_ui_components_sync_overflow_item_index(void);
 
 void app_main(void)
 {
@@ -38,6 +40,8 @@ void app_main(void)
     RUN_TEST(test_ui_components_list_set_active);
     RUN_TEST(test_ui_components_menu_no_match_returns_false);
     RUN_TEST(test_ui_components_tabs_out_of_range_clears_all);
+    RUN_TEST(test_ui_components_sync_extreme_focus_idx);
+    RUN_TEST(test_ui_components_sync_overflow_item_index);
     UNITY_END();
 }
 
@@ -59,6 +63,8 @@ void test_ui_components_prefix_visible_null_widget_ids(void);
 void test_ui_components_list_set_active(void);
 void test_ui_components_menu_no_match_returns_false(void);
 void test_ui_components_tabs_out_of_range_clears_all(void);
+void test_ui_components_sync_extreme_focus_idx(void);
+void test_ui_components_sync_overflow_item_index(void);
 
 int main(void)
 {
@@ -79,6 +85,8 @@ int main(void)
     RUN_TEST(test_ui_components_list_set_active);
     RUN_TEST(test_ui_components_menu_no_match_returns_false);
     RUN_TEST(test_ui_components_tabs_out_of_range_clears_all);
+    RUN_TEST(test_ui_components_sync_extreme_focus_idx);
+    RUN_TEST(test_ui_components_sync_overflow_item_index);
     return UNITY_END();
 }
 
