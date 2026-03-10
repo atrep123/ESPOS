@@ -1220,6 +1220,8 @@ static void ui_task(void *arg)
         ESP_LOGE(TAG, "bus_make_queue failed — UI events disabled");
     }
 
+    ui_bind_init();
+
     if (!ui_scene_clone(&UI_SCENE_DEMO, &s_scene, s_widgets, (int)UI_MAX_WIDGETS)) {
         ESP_LOGE(TAG, "ui_scene_clone failed");
         vTaskDelete(NULL);

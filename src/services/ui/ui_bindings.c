@@ -6,6 +6,17 @@
 #include "esp_log.h"
 #include "services/store/store.h"
 
+#ifndef ESPOS_NATIVE
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+static SemaphoreHandle_t s_mtx;
+#define BIND_LOCK()   do { if (s_mtx) xSemaphoreTake(s_mtx, portMAX_DELAY); } while (0)
+#define BIND_UNLOCK() do { if (s_mtx) xSemaphoreGive(s_mtx); } while (0)
+#else
+#define BIND_LOCK()   ((void)0)
+#define BIND_UNLOCK() ((void)0)
+#endif
+
 static const char *TAG = "ui_bindings";
 
 /* ---------------------------------------------------------------------------
@@ -60,7 +71,19 @@ static bind_slot_t *slot_alloc(const char *key)
 
 void ui_bind_clear_all(void)
 {
+    BIND_LOCK();
     memset(s_slots, 0, sizeof(s_slots));
+    BIND_UNLOCK();
+}
+
+void ui_bind_init(void)
+{
+#ifndef ESPOS_NATIVE
+    if (s_mtx == NULL) {
+        s_mtx = xSemaphoreCreateMutex();
+    }
+#endif
+    ui_bind_clear_all();
 }
 
 /* ---------------------------------------------------------------------------
@@ -94,11 +117,14 @@ bool ui_bind_get_int(const char *key, int *out)
     }
 
     /* Generic store */
+    BIND_LOCK();
     bind_slot_t *s = slot_find(key);
     if (s != NULL) {
         *out = s->ival;
+        BIND_UNLOCK();
         return true;
     }
+    BIND_UNLOCK();
     return false;
 }
 
@@ -134,11 +160,14 @@ esp_err_t ui_bind_set_int(const char *key, int v)
     }
 
     /* Generic store */
+    BIND_LOCK();
     bind_slot_t *s = slot_alloc(key);
     if (s == NULL) {
+        BIND_UNLOCK();
         return ESP_FAIL;
     }
     s->ival = v;
+    BIND_UNLOCK();
     return ESP_OK;
 }
 
@@ -167,11 +196,14 @@ bool ui_bind_get_bool(const char *key, bool *out)
     }
 
     /* Generic store (int-based) */
+    BIND_LOCK();
     bind_slot_t *s = slot_find(key);
     if (s != NULL) {
         *out = (s->ival != 0);
+        BIND_UNLOCK();
         return true;
     }
+    BIND_UNLOCK();
     return false;
 }
 
@@ -191,11 +223,14 @@ esp_err_t ui_bind_set_bool(const char *key, bool v)
     }
 
     /* Generic store */
+    BIND_LOCK();
     bind_slot_t *s = slot_alloc(key);
     if (s == NULL) {
+        BIND_UNLOCK();
         return ESP_FAIL;
     }
     s->ival = v ? 1 : 0;
+    BIND_UNLOCK();
     return ESP_OK;
 }
 
@@ -213,12 +248,15 @@ bool ui_bind_get_str(const char *key, char *out, size_t out_cap)
         return false;
     }
 
+    BIND_LOCK();
     bind_slot_t *s = slot_find(key);
     if (s != NULL) {
         strncpy(out, s->sval, out_cap - 1);
         out[out_cap - 1] = '\0';
+        BIND_UNLOCK();
         return true;
     }
+    BIND_UNLOCK();
     return false;
 }
 
@@ -228,8 +266,10 @@ esp_err_t ui_bind_set_str(const char *key, const char *value)
         return ESP_ERR_INVALID_ARG;
     }
 
+    BIND_LOCK();
     bind_slot_t *s = slot_alloc(key);
     if (s == NULL) {
+        BIND_UNLOCK();
         return ESP_FAIL;
     }
     if (value != NULL) {
@@ -238,6 +278,7 @@ esp_err_t ui_bind_set_str(const char *key, const char *value)
     } else {
         s->sval[0] = '\0';
     }
+    BIND_UNLOCK();
     return ESP_OK;
 }
 

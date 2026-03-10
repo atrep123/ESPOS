@@ -48,28 +48,34 @@ static void rpc_task(void *arg)
 
     char buf[64];
     int n = 0;
+    int discard = 0;
 
     while (1) {
         uint8_t ch;
         int r = uart_read_bytes(UARTN, &ch, 1, portMAX_DELAY);
         if (r == 1) {
-            if (ch == '\n' || n >= (int)(sizeof(buf) - 1)) {
-                buf[n] = 0;
-                n = 0;
+            if (ch == '\n') {
+                if (!discard) {
+                    buf[n] = 0;
 
-                msg_t m = { .topic = TOP_RPC_CALL };
-                unsigned int tmp = 0;
-                /* 24-bit RGB limit: SSD1363 uses 4bpp gray but UI
-                 * data model stores colours as 24-bit packed RGB. */
-                if (sscanf(buf, "set_bg %x", &tmp) == 1 && tmp <= 0xFFFFFFU) {
-                    m.u.rpc.arg = tmp;
-                    strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method) - 1);
-                    m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
-                } else {
-                    strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method) - 1);
-                    m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
+                    msg_t m = { .topic = TOP_RPC_CALL };
+                    unsigned int tmp = 0;
+                    /* 24-bit RGB limit: SSD1363 uses 4bpp gray but UI
+                     * data model stores colours as 24-bit packed RGB. */
+                    if (sscanf(buf, "set_bg %x", &tmp) == 1 && tmp <= 0xFFFFFFU) {
+                        m.u.rpc.arg = tmp;
+                        strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method) - 1);
+                        m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
+                    } else {
+                        strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method) - 1);
+                        m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
+                    }
+                    bus_publish(&m);
                 }
-                bus_publish(&m);
+                n = 0;
+                discard = 0;
+            } else if (n >= (int)(sizeof(buf) - 1)) {
+                discard = 1;
             } else {
                 buf[n++] = (char)ch;
             }

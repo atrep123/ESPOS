@@ -27,3 +27,6 @@ esp_err_t ui_bind_set_str(const char *key, const char *value);
 /* Clear all entries in the generic store (e.g. on scene switch). */
 void ui_bind_clear_all(void);
 
+/* Initialise the binding subsystem (creates the internal mutex). */
+void ui_bind_init(void);
+

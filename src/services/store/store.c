@@ -6,6 +6,8 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static const char *TAG = "store";
 
@@ -20,11 +22,19 @@ static store_conf_t g_conf = {
     ._reserved0 = 0,
 };
 static bool s_inited = false;
+static SemaphoreHandle_t s_store_mtx;
+
+#define STORE_LOCK()   do { if (s_store_mtx) xSemaphoreTake(s_store_mtx, portMAX_DELAY); } while (0)
+#define STORE_UNLOCK() do { if (s_store_mtx) xSemaphoreGive(s_store_mtx); } while (0)
 
 esp_err_t store_init(store_conf_t *out)
 {
     if (out == NULL) {
         return ESP_ERR_INVALID_ARG;
+    }
+
+    if (s_store_mtx == NULL) {
+        s_store_mtx = xSemaphoreCreateMutex();
     }
 
     esp_err_t err = nvs_flash_init();
@@ -77,7 +87,9 @@ esp_err_t store_get_conf(store_conf_t *out)
         return ESP_ERR_INVALID_STATE;
     }
 
+    STORE_LOCK();
     *out = g_conf;
+    STORE_UNLOCK();
     return ESP_OK;
 }
 
@@ -87,11 +99,13 @@ esp_err_t store_set_bg_rgb(uint32_t rgb)
         return ESP_ERR_INVALID_STATE;
     }
 
+    STORE_LOCK();
     g_conf.bg_rgb = rgb;
 
     nvs_handle_t h;
     esp_err_t err = nvs_open("app", NVS_READWRITE, &h);
     if (err != ESP_OK) {
+        STORE_UNLOCK();
         return err;
     }
 
@@ -101,6 +115,7 @@ esp_err_t store_set_bg_rgb(uint32_t rgb)
     }
 
     nvs_close(h);
+    STORE_UNLOCK();
     return err;
 }
 
@@ -127,8 +142,11 @@ esp_err_t store_set_display_contrast(uint8_t contrast)
         return ESP_ERR_INVALID_STATE;
     }
 
+    STORE_LOCK();
     g_conf.display_contrast = contrast;
-    return store_save_conf();
+    esp_err_t err = store_save_conf();
+    STORE_UNLOCK();
+    return err;
 }
 
 esp_err_t store_set_display_invert(bool invert)
@@ -137,8 +155,11 @@ esp_err_t store_set_display_invert(bool invert)
         return ESP_ERR_INVALID_STATE;
     }
 
+    STORE_LOCK();
     g_conf.display_invert = invert ? 1 : 0;
-    return store_save_conf();
+    esp_err_t err = store_save_conf();
+    STORE_UNLOCK();
+    return err;
 }
 
 esp_err_t store_set_display_col_offset(uint8_t offset_units)
@@ -151,6 +172,9 @@ esp_err_t store_set_display_col_offset(uint8_t offset_units)
         offset_units = 79;
     }
 
+    STORE_LOCK();
     g_conf.display_col_offset = offset_units;
-    return store_save_conf();
+    esp_err_t err = store_save_conf();
+    STORE_UNLOCK();
+    return err;
 }
