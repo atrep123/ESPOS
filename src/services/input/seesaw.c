@@ -21,7 +21,10 @@ static inline TickType_t seesaw_timeout_ticks(void)
 
 esp_err_t seesaw_read(uint8_t addr, uint8_t base, uint8_t reg, uint8_t *out, size_t len)
 {
-    if (out == NULL || len == 0) {
+    if (out == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (len == 0) {
         return ESP_OK;
     }
 
@@ -111,6 +114,9 @@ esp_err_t seesaw_read_u32(uint8_t addr, uint8_t base, uint8_t reg, uint32_t *out
 
 esp_err_t seesaw_read_i32(uint8_t addr, uint8_t base, uint8_t reg, int32_t *out)
 {
+    if (out == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
     uint32_t v = 0;
     esp_err_t err = seesaw_read_u32(addr, base, reg, &v);
     if (err != ESP_OK) {
