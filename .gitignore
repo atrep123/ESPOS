@@ -47,6 +47,15 @@ package-lock.json
 src-tauri/target/
 **/src-tauri/target/
 
+# C/C++ build artifacts (outside PlatformIO)
+*.o
+*.elf
+*.bin
+*.map
+*.a
+*.so
+*.d
+
 # Logs
 simulator.log
 sim_ports.json
