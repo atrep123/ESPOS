@@ -1033,7 +1033,7 @@ static void ui_toast_queue_push(UiToast *toast, const char *message, uint32_t du
         toast->head = (uint8_t)((toast->head + 1U) % UI_TOAST_QUEUE_LEN);
         toast->count = (uint8_t)(toast->count - 1U);
     }
-    uint8_t tail = (uint8_t)((toast->head + toast->count) % UI_TOAST_QUEUE_LEN);
+    uint8_t tail = (uint8_t)(((unsigned)toast->head + (unsigned)toast->count) % UI_TOAST_QUEUE_LEN);
     strncpy(toast->q[tail].message, message ? message : "", sizeof(toast->q[tail].message) - 1);
     toast->q[tail].message[sizeof(toast->q[tail].message) - 1] = '\0';
     toast->q[tail].duration_ms = duration_ms;
