@@ -84,3 +84,66 @@ void test_ui_meta_parse_list(void)
     TEST_ASSERT_EQUAL_STRING("No Pulse", out);
 }
 
+void test_ui_meta_parse_null_and_empty(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_FALSE(ui_meta_parse(NULL, &m));
+    TEST_ASSERT_FALSE(ui_meta_parse("", &m));
+    TEST_ASSERT_FALSE(ui_meta_parse("kind=int", &m));  /* no bind key */
+    TEST_ASSERT_FALSE(ui_meta_parse("noequals", &m));  /* no key=value */
+}
+
+void test_ui_meta_values_count_edge_cases(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, ui_meta_values_count(NULL));
+    TEST_ASSERT_EQUAL_INT(0, ui_meta_values_count(""));
+    TEST_ASSERT_EQUAL_INT(1, ui_meta_values_count("single"));
+    TEST_ASSERT_EQUAL_INT(2, ui_meta_values_count("A|B"));
+}
+
+void test_ui_meta_values_get_edge_cases(void)
+{
+    char out[16];
+    TEST_ASSERT_FALSE(ui_meta_values_get(NULL, 0, out, sizeof(out)));
+    TEST_ASSERT_FALSE(ui_meta_values_get("A|B", -1, out, sizeof(out)));
+    TEST_ASSERT_FALSE(ui_meta_values_get("A|B", 2, out, sizeof(out)));
+    /* NULL output buffer */
+    TEST_ASSERT_FALSE(ui_meta_values_get("A", 0, NULL, 0));
+}
+
+void test_ui_meta_kind_aliases(void)
+{
+    ui_meta_t m;
+    /* boolean alias */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=x;kind=boolean", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_BOOL, (int)m.kind);
+    /* i32 alias */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=y;kind=i32", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_INT, (int)m.kind);
+    /* choice alias → ENUM */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=z;kind=choice;values=A|B", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_ENUM, (int)m.kind);
+    /* f32 alias → FLOAT */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=w;kind=f32", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_FLOAT, (int)m.kind);
+    /* type= alias for kind= */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=v;type=string", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_STR, (int)m.kind);
+}
+
+void test_ui_meta_step_zero_defaults_to_one(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=val;kind=int;step=0", &m));
+    TEST_ASSERT_TRUE(m.has_step);
+    TEST_ASSERT_EQUAL_INT(1, m.step);
+}
+
+void test_ui_meta_key_alias(void)
+{
+    ui_meta_t m;
+    /* key= is an alias for bind= */
+    TEST_ASSERT_TRUE(ui_meta_parse("key=brightness;kind=int", &m));
+    TEST_ASSERT_EQUAL_STRING("brightness", m.bind_key);
+}
+

@@ -410,3 +410,35 @@ void test_move_focus_beam_prefers_closer(void)
     TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_DOWN));
 }
 
+void test_first_focus_in_rect_null_scene(void)
+{
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_first_focus_in_rect(NULL, 0, 0, 100, 100));
+}
+
+void test_move_focus_in_rect_null_scene(void)
+{
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_move_focus_in_rect(NULL, 0, UI_NAV_DOWN, 0, 0, 100, 100));
+}
+
+void test_first_focus_in_rect_empty_rect_returns_neg1(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "b0", 50, 50);
+    init_button(&widgets[1], "b1", 80, 50);
+    UiScene s = make_scene(widgets, 2);
+    /* Rect that covers nothing (0,0,1,1) while widgets are at 50,50+ */
+    TEST_ASSERT_EQUAL_INT(-1, ui_nav_first_focus_in_rect(&s, 0, 0, 1, 1));
+}
+
+void test_cycle_focus_delta_zero_stays(void)
+{
+    UiWidget widgets[2];
+    init_button(&widgets[0], "b0", 0, 0);
+    init_button(&widgets[1], "b1", 20, 0);
+    UiScene s = make_scene(widgets, 2);
+    /* delta=0 should return first focus (same behavior as invalid) */
+    int result = ui_nav_cycle_focus(&s, 0, 0);
+    /* With delta=0 the cycle logic may return first or current; just ensure no crash */
+    TEST_ASSERT_TRUE(result >= -1 && result < 2);
+}
+

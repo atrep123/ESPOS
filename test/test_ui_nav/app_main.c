@@ -39,6 +39,10 @@ void test_move_focus_2x2_grid(void);
 void test_move_focus_null_scene_returns_neg1(void);
 void test_move_focus_invalid_current_returns_first(void);
 void test_move_focus_beam_prefers_closer(void);
+void test_first_focus_in_rect_null_scene(void);
+void test_move_focus_in_rect_null_scene(void);
+void test_first_focus_in_rect_empty_rect_returns_neg1(void);
+void test_cycle_focus_delta_zero_stays(void);
 
 void app_main(void)
 {
@@ -80,6 +84,10 @@ void app_main(void)
     RUN_TEST(test_move_focus_null_scene_returns_neg1);
     RUN_TEST(test_move_focus_invalid_current_returns_first);
     RUN_TEST(test_move_focus_beam_prefers_closer);
+    RUN_TEST(test_first_focus_in_rect_null_scene);
+    RUN_TEST(test_move_focus_in_rect_null_scene);
+    RUN_TEST(test_first_focus_in_rect_empty_rect_returns_neg1);
+    RUN_TEST(test_cycle_focus_delta_zero_stays);
     UNITY_END();
 }
 
@@ -122,6 +130,10 @@ void test_move_focus_2x2_grid(void);
 void test_move_focus_null_scene_returns_neg1(void);
 void test_move_focus_invalid_current_returns_first(void);
 void test_move_focus_beam_prefers_closer(void);
+void test_first_focus_in_rect_null_scene(void);
+void test_move_focus_in_rect_null_scene(void);
+void test_first_focus_in_rect_empty_rect_returns_neg1(void);
+void test_cycle_focus_delta_zero_stays(void);
 
 int main(void)
 {
@@ -163,6 +175,10 @@ int main(void)
     RUN_TEST(test_move_focus_null_scene_returns_neg1);
     RUN_TEST(test_move_focus_invalid_current_returns_first);
     RUN_TEST(test_move_focus_beam_prefers_closer);
+    RUN_TEST(test_first_focus_in_rect_null_scene);
+    RUN_TEST(test_move_focus_in_rect_null_scene);
+    RUN_TEST(test_first_focus_in_rect_empty_rect_returns_neg1);
+    RUN_TEST(test_cycle_focus_delta_zero_stays);
     return UNITY_END();
 }
 

@@ -405,3 +405,90 @@ void test_ui_components_prefix_visible_null_widget_ids(void)
     TEST_ASSERT_EQUAL_UINT8(0, widgets[0].visible);  /* NULL id skipped */
     TEST_ASSERT_EQUAL_UINT8(1, widgets[1].visible);
 }
+
+void test_ui_components_list_set_active(void)
+{
+    UiWidget widgets[3];
+    memset(widgets, 0, sizeof(widgets));
+
+    widgets[0].id = "mylist.item0";
+    widgets[0].style = (uint8_t)(UI_STYLE_BOLD | UI_STYLE_HIGHLIGHT);
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    widgets[1].id = "mylist.item1";
+    widgets[1].style = UI_STYLE_BOLD;
+    widgets[1].visible = 1;
+    widgets[1].enabled = 1;
+
+    widgets[2].id = "mylist.title";
+    widgets[2].style = 0;
+    widgets[2].visible = 1;
+    widgets[2].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 3,
+        .widgets = widgets,
+    };
+
+    DirtyCapture cap;
+    memset(&cap, 0, sizeof(cap));
+
+    TEST_ASSERT_TRUE(ui_components_list_set_active(&scene, "mylist", 1, capture_dirty_add, &cap));
+    TEST_ASSERT_EQUAL_UINT8(UI_STYLE_BOLD, widgets[0].style);
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)(UI_STYLE_BOLD | UI_STYLE_HIGHLIGHT), widgets[1].style);
+    TEST_ASSERT_EQUAL_INT(2, cap.calls);
+}
+
+void test_ui_components_menu_no_match_returns_false(void)
+{
+    UiWidget widgets[1];
+    memset(widgets, 0, sizeof(widgets));
+    widgets[0].id = "other.item0";
+    widgets[0].style = 0;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 1,
+        .widgets = widgets,
+    };
+
+    /* No widgets matching "menu" prefix → returns false */
+    TEST_ASSERT_FALSE(ui_components_menu_set_active(&scene, "menu", 0, NULL, NULL));
+}
+
+void test_ui_components_tabs_out_of_range_clears_all(void)
+{
+    UiWidget widgets[2];
+    memset(widgets, 0, sizeof(widgets));
+
+    widgets[0].id = "tabs.tab1";
+    widgets[0].style = UI_STYLE_HIGHLIGHT;
+    widgets[0].visible = 1;
+    widgets[0].enabled = 1;
+
+    widgets[1].id = "tabs.tab2";
+    widgets[1].style = 0;
+    widgets[1].visible = 1;
+    widgets[1].enabled = 1;
+
+    UiScene scene = {
+        .name = "test",
+        .width = 128,
+        .height = 64,
+        .widget_count = 2,
+        .widgets = widgets,
+    };
+
+    /* Selecting index 99 → clears all highlights */
+    TEST_ASSERT_TRUE(ui_components_tabs_set_active(&scene, "tabs", 99, NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT8(0, widgets[0].style);
+    TEST_ASSERT_EQUAL_UINT8(0, widgets[1].style);
+}

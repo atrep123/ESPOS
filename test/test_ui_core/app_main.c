@@ -30,6 +30,8 @@ void test_ui_core_button_c_tracks_state(void);
 void test_ui_core_button_unknown_id_no_change(void);
 void test_ui_core_scene_wraps_after_metrics(void);
 void test_ui_core_init_sets_bg_dark(void);
+void test_ui_core_init_clears_metrics(void);
+void test_ui_core_button_a_press_sets_btnA(void);
 
 int main(void)
 {
@@ -47,6 +49,8 @@ int main(void)
     RUN_TEST(test_ui_core_button_unknown_id_no_change);
     RUN_TEST(test_ui_core_scene_wraps_after_metrics);
     RUN_TEST(test_ui_core_init_sets_bg_dark);
+    RUN_TEST(test_ui_core_init_clears_metrics);
+    RUN_TEST(test_ui_core_button_a_press_sets_btnA);
     return UNITY_END();
 }
 

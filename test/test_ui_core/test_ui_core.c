@@ -1,5 +1,7 @@
 #include "unity.h"
 
+#include <string.h>
+
 #include "services/ui/ui_core.h"
 
 void setUp(void) {}
@@ -144,5 +146,28 @@ void test_ui_core_init_sets_bg_dark(void)
                         ((uint16_t)(0x08 & 0xFC) << 3) |
                         (uint16_t)(0x08 >> 3);
     TEST_ASSERT_EQUAL_UINT16(expected, st.bg);
+}
+
+void test_ui_core_init_clears_metrics(void)
+{
+    ui_state_t st;
+    /* Fill with garbage */
+    memset(&st, 0xFF, sizeof(st));
+    ui_core_init(&st);
+    TEST_ASSERT_EQUAL_UINT32(0, st.metrics_free_heap);
+    TEST_ASSERT_EQUAL_UINT32(0, st.metrics_min_free_heap);
+}
+
+void test_ui_core_button_a_press_sets_btnA(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    TEST_ASSERT_EQUAL_UINT8(0, st.btnA);
+
+    ui_core_on_button(&st, 0, true);
+    TEST_ASSERT_EQUAL_UINT8(1, st.btnA);
+
+    ui_core_on_button(&st, 0, false);
+    TEST_ASSERT_EQUAL_UINT8(0, st.btnA);
 }
 

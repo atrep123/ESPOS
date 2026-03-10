@@ -8,6 +8,12 @@ void test_ui_meta_values_helpers(void);
 void test_ui_meta_parse_str(void);
 void test_ui_meta_parse_float(void);
 void test_ui_meta_parse_list(void);
+void test_ui_meta_parse_null_and_empty(void);
+void test_ui_meta_values_count_edge_cases(void);
+void test_ui_meta_values_get_edge_cases(void);
+void test_ui_meta_kind_aliases(void);
+void test_ui_meta_step_zero_defaults_to_one(void);
+void test_ui_meta_key_alias(void);
 
 void app_main(void)
 {
@@ -18,6 +24,12 @@ void app_main(void)
     RUN_TEST(test_ui_meta_parse_str);
     RUN_TEST(test_ui_meta_parse_float);
     RUN_TEST(test_ui_meta_parse_list);
+    RUN_TEST(test_ui_meta_parse_null_and_empty);
+    RUN_TEST(test_ui_meta_values_count_edge_cases);
+    RUN_TEST(test_ui_meta_values_get_edge_cases);
+    RUN_TEST(test_ui_meta_kind_aliases);
+    RUN_TEST(test_ui_meta_step_zero_defaults_to_one);
+    RUN_TEST(test_ui_meta_key_alias);
     UNITY_END();
 }
 
@@ -29,6 +41,12 @@ void test_ui_meta_values_helpers(void);
 void test_ui_meta_parse_str(void);
 void test_ui_meta_parse_float(void);
 void test_ui_meta_parse_list(void);
+void test_ui_meta_parse_null_and_empty(void);
+void test_ui_meta_values_count_edge_cases(void);
+void test_ui_meta_values_get_edge_cases(void);
+void test_ui_meta_kind_aliases(void);
+void test_ui_meta_step_zero_defaults_to_one(void);
+void test_ui_meta_key_alias(void);
 
 int main(void)
 {
@@ -39,6 +57,12 @@ int main(void)
     RUN_TEST(test_ui_meta_parse_str);
     RUN_TEST(test_ui_meta_parse_float);
     RUN_TEST(test_ui_meta_parse_list);
+    RUN_TEST(test_ui_meta_parse_null_and_empty);
+    RUN_TEST(test_ui_meta_values_count_edge_cases);
+    RUN_TEST(test_ui_meta_values_get_edge_cases);
+    RUN_TEST(test_ui_meta_kind_aliases);
+    RUN_TEST(test_ui_meta_step_zero_defaults_to_one);
+    RUN_TEST(test_ui_meta_key_alias);
     return UNITY_END();
 }
 
