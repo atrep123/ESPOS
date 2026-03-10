@@ -7,11 +7,25 @@ param(
   [string]$NativePolicyProbeJson = "reports/native_policy_probe_auto.json",
   [string]$NativePolicyHistoryJsonl = "reports/native_policy_probe_history.jsonl",
   [int]$NativePolicyProbeRounds = 1,
-  [string]$Design = "main_scene.json"
+  [string]$Design = "main_scene.json",
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\check_all.ps1 [-Help]"
+  Write-Host "  -SkipPython                   Skip Python lint/test"
+  Write-Host "  -SkipPio                      Skip PlatformIO builds"
+  Write-Host "  -Fast                         Fast mode"
+  Write-Host "  -AllowNativePolicyBlock       Allow native policy blocks"
+  Write-Host "  -NativePolicyProbeJson <path>  Probe JSON path"
+  Write-Host "  -NativePolicyHistoryJsonl <path> History JSONL path"
+  Write-Host "  -NativePolicyProbeRounds <int>  Probe rounds (default: 1)"
+  Write-Host "  -Design <path>                Design JSON (default: main_scene.json)"
+  exit 0
+}
 
 if ([string]::IsNullOrWhiteSpace($Design)) {
   throw "-Design cannot be empty"
