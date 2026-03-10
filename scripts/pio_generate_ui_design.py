@@ -33,7 +33,11 @@ from tools.ui_codegen import (  # noqa: E402
 
 
 def _main() -> None:
-    if os.environ.get("ESP32OS_PIO_UI_EXPORT", "1").strip() == "0":
+    export_flag = os.environ.get("ESP32OS_PIO_UI_EXPORT", "1").strip()
+    if export_flag not in {"0", "1"}:
+        raise RuntimeError("[UI] ESP32OS_PIO_UI_EXPORT must be '0' or '1'")
+
+    if export_flag == "0":
         print("[UI] Export disabled (ESP32OS_PIO_UI_EXPORT=0)")
         return
 
