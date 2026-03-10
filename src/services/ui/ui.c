@@ -946,7 +946,9 @@ static void ui_modal_cancel(UiScene *scene, UiModal *modal, int *focus, UiEdit *
     snprintf(cancel_id, sizeof(cancel_id), "%s.cancel", modal->root);
     int idx = ui_scene_find_by_id(scene, cancel_id);
     UiWidget *w = ui_scene_widget_mut(scene, idx);
-    ui_publish_action(w);
+    if (w != NULL) {
+        ui_publish_action(w);
+    }
 
     ui_modal_hide(scene, modal, focus, edit, dirty);
 }
