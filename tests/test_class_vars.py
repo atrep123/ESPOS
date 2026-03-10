@@ -7,6 +7,9 @@ from ui_designer import UIDesigner
 
 
 def test_class_vars_initialized_to_none(tmp_path, monkeypatch):
+    # Reset class-level state that may have been set by prior tests
+    UIDesigner._last_loaded_json = None
+    UIDesigner._json_watch_mtime = None
     d = UIDesigner(8, 8)
     assert UIDesigner._last_loaded_json is None
     assert UIDesigner._json_watch_mtime is None

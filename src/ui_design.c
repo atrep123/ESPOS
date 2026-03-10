@@ -62,7 +62,7 @@ static const char str_53[] = "Toast";
 static const UiWidget widgets[] = {
     { /* [0] UIW_PANEL "" */
         .type = UIW_PANEL,
-        .x = 0, .y = 0, .width = 256, .height = 16,
+        .x = 8, .y = 16, .width = 246, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = NULL,
@@ -78,7 +78,7 @@ static const UiWidget widgets[] = {
     },
     { /* [1] UIW_LABEL "ESP32OS" */
         .type = UIW_LABEL,
-        .x = 6, .y = 0, .width = 160, .height = 16,
+        .x = 8, .y = 40, .width = 160, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_0,
@@ -94,7 +94,7 @@ static const UiWidget widgets[] = {
     },
     { /* [2] UIW_LABEL "status_bar.right" */
         .type = UIW_LABEL,
-        .x = 166, .y = 0, .width = 84, .height = 16,
+        .x = 8, .y = 64, .width = 84, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_2,
@@ -110,7 +110,7 @@ static const UiWidget widgets[] = {
     },
     { /* [3] UIW_PANEL "" */
         .type = UIW_PANEL,
-        .x = 0, .y = 16, .width = 256, .height = 112,
+        .x = 8, .y = 88, .width = 246, .height = 38,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = NULL,
@@ -126,7 +126,7 @@ static const UiWidget widgets[] = {
     },
     { /* [4] UIW_PANEL "menu.panel" */
         .type = UIW_PANEL,
-        .x = 8, .y = 20, .width = 240, .height = 104,
+        .x = 8, .y = 208, .width = 240, .height = 104,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_3,
@@ -142,7 +142,7 @@ static const UiWidget widgets[] = {
     },
     { /* [5] UIW_LABEL "Menu" */
         .type = UIW_LABEL,
-        .x = 16, .y = 22, .width = 172, .height = 16,
+        .x = 8, .y = 320, .width = 172, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_4,
@@ -158,7 +158,7 @@ static const UiWidget widgets[] = {
     },
     { /* [6] UIW_LABEL "1/3" */
         .type = UIW_LABEL,
-        .x = 192, .y = 22, .width = 48, .height = 16,
+        .x = 188, .y = 320, .width = 48, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_6,
@@ -174,7 +174,7 @@ static const UiWidget widgets[] = {
     },
     { /* [7] UIW_BUTTON "Display" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 40, .width = 224, .height = 16,
+        .x = 8, .y = 344, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_8,
@@ -190,7 +190,7 @@ static const UiWidget widgets[] = {
     },
     { /* [8] UIW_BUTTON "Inputs" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 56, .width = 224, .height = 16,
+        .x = 8, .y = 368, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_10,
@@ -206,7 +206,7 @@ static const UiWidget widgets[] = {
     },
     { /* [9] UIW_BUTTON "About" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 72, .width = 224, .height = 16,
+        .x = 8, .y = 392, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_12,
@@ -222,7 +222,7 @@ static const UiWidget widgets[] = {
     },
     { /* [10] UIW_BUTTON "menu.item3" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 88, .width = 224, .height = 16,
+        .x = 8, .y = 416, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_14,
@@ -238,7 +238,7 @@ static const UiWidget widgets[] = {
     },
     { /* [11] UIW_BUTTON "menu.item4" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 104, .width = 224, .height = 16,
+        .x = 8, .y = 440, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_15,
@@ -254,7 +254,7 @@ static const UiWidget widgets[] = {
     },
     { /* [12] UIW_PANEL "list.panel" */
         .type = UIW_PANEL,
-        .x = 8, .y = 20, .width = 240, .height = 104,
+        .x = 8, .y = 464, .width = 240, .height = 104,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_16,
@@ -270,7 +270,7 @@ static const UiWidget widgets[] = {
     },
     { /* [13] UIW_LABEL "Display" */
         .type = UIW_LABEL,
-        .x = 16, .y = 22, .width = 172, .height = 16,
+        .x = 8, .y = 576, .width = 172, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_17,
@@ -286,7 +286,7 @@ static const UiWidget widgets[] = {
     },
     { /* [14] UIW_LABEL "1/12" */
         .type = UIW_LABEL,
-        .x = 192, .y = 22, .width = 48, .height = 16,
+        .x = 188, .y = 576, .width = 48, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_18,
@@ -302,7 +302,7 @@ static const UiWidget widgets[] = {
     },
     { /* [15] UIW_BUTTON "list.item0" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 40, .width = 224, .height = 16,
+        .x = 8, .y = 600, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_20,
@@ -318,7 +318,7 @@ static const UiWidget widgets[] = {
     },
     { /* [16] UIW_LABEL "Contrast" */
         .type = UIW_LABEL,
-        .x = 20, .y = 40, .width = 144, .height = 16,
+        .x = 8, .y = 624, .width = 144, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_21,
@@ -334,7 +334,7 @@ static const UiWidget widgets[] = {
     },
     { /* [17] UIW_LABEL "0" */
         .type = UIW_LABEL,
-        .x = 164, .y = 40, .width = 72, .height = 16,
+        .x = 160, .y = 624, .width = 72, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_23,
@@ -350,7 +350,7 @@ static const UiWidget widgets[] = {
     },
     { /* [18] UIW_BUTTON "list.item1" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 56, .width = 224, .height = 16,
+        .x = 8, .y = 648, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_25,
@@ -366,7 +366,7 @@ static const UiWidget widgets[] = {
     },
     { /* [19] UIW_LABEL "Invert" */
         .type = UIW_LABEL,
-        .x = 20, .y = 56, .width = 144, .height = 16,
+        .x = 8, .y = 672, .width = 144, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_26,
@@ -382,7 +382,7 @@ static const UiWidget widgets[] = {
     },
     { /* [20] UIW_LABEL "off" */
         .type = UIW_LABEL,
-        .x = 164, .y = 56, .width = 72, .height = 16,
+        .x = 160, .y = 672, .width = 72, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_28,
@@ -398,7 +398,7 @@ static const UiWidget widgets[] = {
     },
     { /* [21] UIW_BUTTON "list.item2" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 72, .width = 224, .height = 16,
+        .x = 8, .y = 696, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_30,
@@ -414,7 +414,7 @@ static const UiWidget widgets[] = {
     },
     { /* [22] UIW_LABEL "ColOffset" */
         .type = UIW_LABEL,
-        .x = 20, .y = 72, .width = 144, .height = 16,
+        .x = 8, .y = 720, .width = 144, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_31,
@@ -430,7 +430,7 @@ static const UiWidget widgets[] = {
     },
     { /* [23] UIW_LABEL "0" */
         .type = UIW_LABEL,
-        .x = 164, .y = 72, .width = 72, .height = 16,
+        .x = 160, .y = 720, .width = 72, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_33,
@@ -446,7 +446,7 @@ static const UiWidget widgets[] = {
     },
     { /* [24] UIW_BUTTON "list.item3" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 88, .width = 224, .height = 16,
+        .x = 8, .y = 744, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_34,
@@ -462,7 +462,7 @@ static const UiWidget widgets[] = {
     },
     { /* [25] UIW_LABEL "list.item3.label" */
         .type = UIW_LABEL,
-        .x = 20, .y = 88, .width = 144, .height = 16,
+        .x = 8, .y = 768, .width = 144, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_35,
@@ -478,7 +478,7 @@ static const UiWidget widgets[] = {
     },
     { /* [26] UIW_LABEL "list.item3.value" */
         .type = UIW_LABEL,
-        .x = 164, .y = 88, .width = 72, .height = 16,
+        .x = 160, .y = 768, .width = 72, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_36,
@@ -494,7 +494,7 @@ static const UiWidget widgets[] = {
     },
     { /* [27] UIW_BUTTON "list.item4" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 104, .width = 224, .height = 16,
+        .x = 8, .y = 792, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_37,
@@ -510,7 +510,7 @@ static const UiWidget widgets[] = {
     },
     { /* [28] UIW_LABEL "list.item4.label" */
         .type = UIW_LABEL,
-        .x = 20, .y = 104, .width = 144, .height = 16,
+        .x = 8, .y = 816, .width = 144, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_38,
@@ -526,7 +526,7 @@ static const UiWidget widgets[] = {
     },
     { /* [29] UIW_LABEL "list.item4.value" */
         .type = UIW_LABEL,
-        .x = 164, .y = 104, .width = 72, .height = 16,
+        .x = 160, .y = 816, .width = 72, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_39,
@@ -542,7 +542,7 @@ static const UiWidget widgets[] = {
     },
     { /* [30] UIW_PANEL "edit.panel" */
         .type = UIW_PANEL,
-        .x = 8, .y = 20, .width = 240, .height = 104,
+        .x = 8, .y = 840, .width = 240, .height = 104,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_40,
@@ -558,7 +558,7 @@ static const UiWidget widgets[] = {
     },
     { /* [31] UIW_LABEL "Edit" */
         .type = UIW_LABEL,
-        .x = 16, .y = 22, .width = 224, .height = 16,
+        .x = 8, .y = 952, .width = 224, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_41,
@@ -574,7 +574,7 @@ static const UiWidget widgets[] = {
     },
     { /* [32] UIW_LABEL "UP/DOWN adjust  B back" */
         .type = UIW_LABEL,
-        .x = 16, .y = 104, .width = 224, .height = 16,
+        .x = 8, .y = 976, .width = 224, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_43,
@@ -590,7 +590,7 @@ static const UiWidget widgets[] = {
     },
     { /* [33] UIW_BUTTON "Contrast" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 60, .width = 224, .height = 16,
+        .x = 8, .y = 1000, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_45,
@@ -606,7 +606,7 @@ static const UiWidget widgets[] = {
     },
     { /* [34] UIW_BUTTON "Invert" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 60, .width = 224, .height = 16,
+        .x = 8, .y = 1024, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_47,
@@ -622,7 +622,7 @@ static const UiWidget widgets[] = {
     },
     { /* [35] UIW_BUTTON "ColOffset" */
         .type = UIW_BUTTON,
-        .x = 16, .y = 60, .width = 224, .height = 16,
+        .x = 8, .y = 1048, .width = 224, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_49,
@@ -638,7 +638,7 @@ static const UiWidget widgets[] = {
     },
     { /* [36] UIW_PANEL "toast.panel" */
         .type = UIW_PANEL,
-        .x = 8, .y = 108, .width = 240, .height = 20,
+        .x = 8, .y = 1072, .width = 240, .height = 20,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_51,
@@ -654,7 +654,7 @@ static const UiWidget widgets[] = {
     },
     { /* [37] UIW_LABEL "Toast" */
         .type = UIW_LABEL,
-        .x = 12, .y = 110, .width = 232, .height = 16,
+        .x = 8, .y = 1100, .width = 232, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_52,

@@ -524,3 +524,174 @@ def generate_scenes_header(
 
     return "\n".join(lines)
 
+
+def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
+    """Return C initializer lines for a single UiWidget."""
+    lines: list[str] = []
+    wtype = WIDGET_TYPE_MAP.get(str(w.get("type", "label")).lower(), "UIW_LABEL")
+    x = as_int(w.get("x", 0), 0)
+    y = as_int(w.get("y", 0), 0)
+    ww = as_int(w.get("width", 8), 8)
+    hh = as_int(w.get("height", 8), 8)
+    border = 1 if as_bool(w.get("border", True), True) else 0
+    checked = 1 if as_bool(w.get("checked", False), False) else 0
+    value = as_int(w.get("value", 0), 0)
+    min_value = as_int(w.get("min_value", 0), 0)
+    max_value = as_int(w.get("max_value", 100), 100)
+
+    widget_id = str(w.get("_widget_id") or w.get("id") or "")
+    text = str(w.get("text", "") or "")
+    constraints = str(w.get("constraints_json", "") or w.get("runtime", "") or "")
+    anim_csv = str(w.get("animations_csv", "") or "")
+    if not anim_csv:
+        anims = w.get("animations")
+        if isinstance(anims, list) and anims:
+            anim_csv = ";".join([str(a) for a in anims])
+
+    id_ref = pool.mapping.get(widget_id, "") if widget_id else ""
+    text_ref = pool.mapping.get(text, "") if text else ""
+    c_ref = pool.mapping.get(constraints, "") if constraints else ""
+    a_ref = pool.mapping.get(anim_csv, "") if anim_csv else ""
+
+    fg = parse_gray4(w.get("color_fg", ""), default=15)
+    bg = parse_gray4(w.get("color_bg", ""), default=0)
+    bs = border_style_for(w, border=border)
+    al = align_for(w)
+    va = valign_for(w)
+    ov = overflow_for(w)
+    ml = as_int(w.get("max_lines", 0), 0)
+    if ml < 0:
+        ml = 0
+    st = style_expr(w.get("style", ""))
+    vis = 1 if as_bool(w.get("visible", True), True) else 0
+    ena = 1 if as_bool(w.get("enabled", True), True) else 0
+
+    preview = text or widget_id or ""
+    lines.append(f'    {{ /* [{idx}] {wtype} "{escape_c_string(preview)}" */')
+    lines.append(f"        .type = {wtype},")
+    lines.append(f"        .x = {x}, .y = {y}, .width = {ww}, .height = {hh},")
+    lines.append(f"        .border = {border}, .checked = {checked},")
+    lines.append(f"        .value = {value}, .min_value = {min_value}, .max_value = {max_value},")
+    lines.append(f"        .id = {id_ref if id_ref else 'NULL'},")
+    lines.append(f"        .text = {text_ref if text_ref else 'NULL'},")
+    lines.append(f"        .constraints_json = {c_ref if c_ref else 'NULL'},")
+    lines.append(f"        .animations_csv = {a_ref if a_ref else 'NULL'},")
+    lines.append(f"        .fg = {fg}, .bg = {bg},")
+    lines.append(f"        .border_style = {bs},")
+    lines.append(f"        .align = {al}, .valign = {va},")
+    lines.append(f"        .text_overflow = {ov}, .max_lines = {ml},")
+    lines.append(f"        .style = {st},")
+    lines.append(f"        .visible = {vis}, .enabled = {ena},")
+    lines.append("    },")
+    return lines
+
+
+def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tuple[str, str]:
+    """Generate ui_design.c + ui_design.h with ALL scenes from the JSON file.
+
+    Exports:
+      - ``const UiScene ui_scenes[]`` (one entry per scene)
+      - ``#define UI_SCENE_COUNT N``
+      - per-scene index macros ``#define UI_SCENE_IDX_<NAME> <i>``
+      - backward-compat ``#define UI_SCENE_DEMO ui_scenes[0]``
+    """
+    scenes = load_scenes(json_path)
+    if not scenes:
+        raise ValueError("No scenes found in JSON.")
+
+    pool = build_string_pool(collect_scenes_strings(scenes), symbol_prefix="str_")
+
+    scene_names: list[str] = []  # sanitised C identifiers
+    scene_keys: list[str] = []   # original names
+
+    # === Header (.h) ===
+    h: list[str] = []
+    h.append("/* Auto-generated: UI design for ESP32OS (multi-scene) */")
+    h.append(f"/* Source: {escape_c_string(source_label)} */")
+    h.append("#ifndef UI_DESIGN_H")
+    h.append("#define UI_DESIGN_H")
+    h.append("")
+    h.append("#include <stdint.h>")
+    h.append('#include "ui_scene.h"')
+    h.append("")
+    h.append("#define UI_ENABLE_CONSTRAINTS 1")
+    h.append("#define UI_ENABLE_ANIMATIONS  1")
+    h.append("")
+    h.append("#ifdef __cplusplus")
+    h.append('extern "C" {')
+    h.append("#endif")
+    h.append("")
+
+    # === Source (.c) ===
+    c: list[str] = []
+    c.append("/* Auto-generated: UI design for ESP32OS (multi-scene) */")
+    c.append(f"/* Source: {escape_c_string(source_label)} */")
+    c.append('#include "ui_design.h"')
+    c.append("")
+    c.append("/* String pool */")
+    if pool.decls:
+        c.extend(pool.decls)
+    else:
+        c.append("/* (empty) */")
+    c.append("")
+
+    for scene_name, scene_data in scenes.items():
+        safe = sanitize_ident(scene_name)
+        scene_names.append(safe)
+        scene_keys.append(scene_name)
+
+        widgets = scene_data.get("widgets", [])
+        if not isinstance(widgets, list):
+            widgets = []
+        width = as_int(scene_data.get("width", 128), 128)
+        height = as_int(scene_data.get("height", 64), 64)
+
+        c.append(f"/* Scene: {escape_c_string(scene_name)} ({len(widgets)} widgets) */")
+        c.append(f"static const UiWidget {safe}_widgets[] = {{")
+        for idx, w in enumerate(widgets):
+            if isinstance(w, dict):
+                c.extend(_emit_widget(w, idx, pool))
+        c.append("};")
+        c.append("")
+
+    # Scene array
+    c.append("/* Scene registry */")
+    c.append("const UiScene ui_scenes[] = {")
+    for safe, key in zip(scene_names, scene_keys):
+        scene_data = scenes[key]
+        widgets = scene_data.get("widgets", [])
+        if not isinstance(widgets, list):
+            widgets = []
+        width = as_int(scene_data.get("width", 128), 128)
+        height = as_int(scene_data.get("height", 64), 64)
+        c.append(f'    {{ /* {escape_c_string(key)} */')
+        c.append(f'        .name = "{escape_c_string(key)}",')
+        c.append(f"        .width = {width}, .height = {height},")
+        c.append(f"        .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),")
+        c.append(f"        .widgets = {safe}_widgets,")
+        c.append("    },")
+    c.append("};")
+    c.append("")
+
+    # Header: extern + defines
+    h.append(f"#define UI_SCENE_COUNT {len(scene_names)}")
+    h.append("")
+    h.append("/* Scene index macros */")
+    for i, safe in enumerate(scene_names):
+        h.append(f"#define UI_SCENE_IDX_{safe.upper()} {i}")
+    h.append("")
+    h.append("/* Scene array */")
+    h.append("extern const UiScene ui_scenes[];")
+    h.append("")
+    h.append("/* Backward-compatible alias (first scene) */")
+    h.append("#define UI_SCENE_DEMO ui_scenes[0]")
+    h.append("")
+    h.append("#ifdef __cplusplus")
+    h.append("}")
+    h.append("#endif")
+    h.append("")
+    h.append("#endif /* UI_DESIGN_H */")
+    h.append("")
+
+    return "\n".join(c), "\n".join(h)
+
