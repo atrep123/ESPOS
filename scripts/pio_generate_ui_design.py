@@ -50,6 +50,8 @@ def _main() -> None:
     json_path = Path(json_path_raw).expanduser()
     if not json_path.is_absolute():
         json_path = project_dir / json_path
+    if json_path.exists() and json_path.is_dir():
+        raise RuntimeError(f"[UI] JSON path points to a directory: {json_path}")
 
     scene_name_raw = os.environ.get("ESP32OS_UI_SCENE", "main")
     if not scene_name_raw.strip():
