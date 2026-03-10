@@ -35,7 +35,7 @@ class Template:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Template":
+    def from_dict(cls, data: Dict[str, Any]) -> Template:
         meta_data = data.get("metadata", {})
         metadata = TemplateMetadata(
             name=meta_data.get("name", "Untitled"),

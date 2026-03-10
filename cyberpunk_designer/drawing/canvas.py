@@ -144,7 +144,7 @@ def draw_canvas(app) -> None:
             focusable = [(idx, w) for idx, w in items
                          if getattr(w, "visible", True) and getattr(w, "enabled", True)
                          and w.type in {"button", "checkbox", "slider", "gauge", "progressbar", "textbox", "radiobutton"}]
-            for order, (idx, w) in enumerate(focusable):
+            for order, (_idx, w) in enumerate(focusable):
                 wx = origin_x + int(w.x) + int(getattr(w, "width", 8) or 8) - GRID
                 wy = origin_y + int(w.y)
                 try:

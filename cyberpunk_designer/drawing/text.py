@@ -63,7 +63,7 @@ def wrap_text_px(app, text: str, max_width_px: int, max_lines: int, ellipsis: st
     for pi, para in enumerate(paras):
         words = para.split()
         current = ""
-        for wi, word in enumerate(words):
+        for _wi, word in enumerate(words):
             cand = word if not current else f"{current} {word}"
             if text_width_px(app, cand) <= max_width_px:
                 current = cand

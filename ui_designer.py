@@ -1622,7 +1622,7 @@ class UIDesigner:
 
     def _read_json_file(self, filename: str) -> Dict[str, Any]:
         try:
-            with open(filename, "r", encoding="utf-8") as f:
+            with open(filename, encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError as exc:
             raise SceneLoadError(f"File not found: {filename}") from exc
@@ -3204,7 +3204,7 @@ if __name__ == "__main__":
     # Scripted CLI mode
     if args.script_file:
         try:
-            with open(args.script_file, "r", encoding="utf-8") as f:
+            with open(args.script_file, encoding="utf-8") as f:
                 lines = [ln.strip() for ln in f.readlines()]
             # Drop blanks and comments
             lines = [ln for ln in lines if ln and not ln.lstrip().startswith("#")]

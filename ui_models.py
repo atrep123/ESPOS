@@ -270,7 +270,7 @@ class WidgetConfig:
         try:
             t = getattr(self, "type", None)
             if t is not None and hasattr(t, "value"):
-                self.type = str(getattr(t, "value"))
+                self.type = str(t.value)
         except Exception:
             pass
 

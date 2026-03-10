@@ -44,7 +44,7 @@ def send_live_preview(app) -> None:
     except Exception as exc:
         app._set_status(f"Live preview: cannot read JSON ({exc})", ttl_sec=6.0)
         return
-    frame = f"<<UIJSON>>{payload}<<END>>".encode("utf-8")
+    frame = f"<<UIJSON>>{payload}<<END>>".encode()
     try:
         with serial.Serial(port=app.live_preview_port, baudrate=int(app.live_preview_baud), timeout=2) as ser:
             ser.write(frame)

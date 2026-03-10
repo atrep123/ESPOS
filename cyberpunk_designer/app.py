@@ -773,7 +773,7 @@ class CyberpunkEditorApp:
             groups[w.type].append(w)
 
         # Smart placement based on widget relationships
-        for widget_type, widgets in groups.items():
+        for _widget_type, widgets in groups.items():
             # Sort by size for better packing
             widgets.sort(key=lambda w: w.width * w.height, reverse=True)
 
@@ -1421,7 +1421,7 @@ class CyberpunkEditorApp:
             self.pointer_pos = self._screen_to_logical(event.pos)
             lx, ly = self.pointer_pos
             if self.layout.scene_tabs_rect.collidepoint(lx, ly):
-                for rect, tab_idx, tab_name in getattr(self, "tab_hitboxes", []):
+                for rect, tab_idx, _tab_name in getattr(self, "tab_hitboxes", []):
                     if tab_idx >= 0 and rect.collidepoint(lx, ly):
                         self._jump_to_scene(tab_idx)
                         self._delete_current_scene()
@@ -1490,7 +1490,7 @@ class CyberpunkEditorApp:
         """Open right-click context menu for scene tabs."""
         lx, ly = pos
         # Find which tab was right-clicked
-        for rect, tab_idx, tab_name in getattr(self, "tab_hitboxes", []):
+        for rect, tab_idx, _tab_name in getattr(self, "tab_hitboxes", []):
             if tab_idx >= 0 and rect.collidepoint(lx, ly):
                 self._jump_to_scene(tab_idx)
                 break
@@ -2154,7 +2154,7 @@ class CyberpunkEditorApp:
         lx, ly = pos
         # Double-click on scene tab → rename
         if self.layout.scene_tabs_rect.collidepoint(lx, ly):
-            for rect, tab_idx, tab_name in getattr(self, "tab_hitboxes", []):
+            for rect, tab_idx, _tab_name in getattr(self, "tab_hitboxes", []):
                 if tab_idx >= 0 and rect.collidepoint(lx, ly):
                     self._jump_to_scene(tab_idx)
                     self._rename_current_scene()
