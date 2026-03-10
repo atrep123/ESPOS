@@ -209,7 +209,9 @@ def create_cli_interface(
                 if len(parts) < 5:
                     print("Usage: template <name> <id> <x> <y>")
                     continue
-                designer.add_widget_from_template(parts[1], parts[2], int(parts[3]), int(parts[4]))
+                designer.add_widget_from_template(
+                    parts[1], int(parts[3]), int(parts[4]), id=parts[2]
+                )
                 print(f"[OK] Added widget '{parts[2]}' from template: {parts[1]}")
 
             elif action == "clone":

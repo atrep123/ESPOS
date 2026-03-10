@@ -88,7 +88,7 @@ def escape_c_string(text: object) -> str:
 
 def as_int(v: object, default: int = 0) -> int:
     try:
-        return int(v)  # type: ignore[arg-type]
+        return int(v)  # type: ignore[call-overload]
     except Exception:
         return int(default)
 
@@ -262,7 +262,7 @@ def write_if_changed(path: Path, content: str) -> bool:
     if existing == content:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8", newline="\n")
+    path.write_text(content, encoding="utf-8", newline="\n")  # type: ignore[call-arg]
     return True
 
 
