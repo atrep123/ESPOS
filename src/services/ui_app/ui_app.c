@@ -318,9 +318,19 @@ static void ui_app_show_edit(const char *title, const char *root, const char *hi
 
 static void ui_app_reset_display_defaults(void)
 {
-    (void)ui_bind_set_int("contrast", SSD1363_INIT_CONTRAST);
-    (void)ui_bind_set_bool("invert", false);
-    (void)ui_bind_set_int("col_offset", SSD1363_COL_OFFSET);
+    esp_err_t err;
+    err = ui_bind_set_int("contrast", SSD1363_INIT_CONTRAST);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "bind_set_int(contrast) failed: %s", esp_err_to_name(err));
+    }
+    err = ui_bind_set_bool("invert", false);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "bind_set_bool(invert) failed: %s", esp_err_to_name(err));
+    }
+    err = ui_bind_set_int("col_offset", SSD1363_COL_OFFSET);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "bind_set_int(col_offset) failed: %s", esp_err_to_name(err));
+    }
 }
 
 static void ui_app_handle_menu_action(uint32_t idx)

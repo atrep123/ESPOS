@@ -127,17 +127,20 @@ void ui_icon_bench(display_t *d, uint32_t count, uint8_t size_px, enum display_b
     const double us_per_draw = (draws > 0.0) ? (usec / draws) : 0.0;
     const double fps = (us_per_draw > 0.0) ? (1000000.0 / us_per_draw) : 0.0;
 
-    (void)snprintf(out_json, out_len,
+    int sret = snprintf(out_json, out_len,
                    "{\"count\":%lu,\"size\":%u,\"mode\":\"%s\",\"us_per_draw\":%.3f,\"fps\":%.2f}",
                    (unsigned long)count,
                    (unsigned int)size_px,
                    (mode == BLIT_INVERT) ? "invert" : (mode == BLIT_XOR ? "xor" : "normal"),
                    us_per_draw,
                    fps);
+    if (sret < 0 || (size_t)sret >= out_len) {
+        ESP_LOGW(TAG, "icon bench JSON truncated");
+    }
 #else
     (void)d; (void)count; (void)size_px; (void)mode;
     if (out_json && out_len) {
-        (void)snprintf(out_json, out_len, "{\"count\":0,\"size\":0,\"mode\":\"none\",\"us_per_draw\":0,\"fps\":0}");
+        snprintf(out_json, out_len, "{\"count\":0,\"size\":0,\"mode\":\"none\",\"us_per_draw\":0,\"fps\":0}");
     }
 #endif
 }

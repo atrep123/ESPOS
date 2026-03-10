@@ -1283,7 +1283,10 @@ static void ui_task(void *arg)
     store_conf_t conf;
     esp_err_t conf_err = store_get_conf(&conf);
     if (conf_err == ESP_OK) {
-        (void)ssd1363_set_col_offset_units(conf.display_col_offset);
+        esp_err_t coerr = ssd1363_set_col_offset_units(conf.display_col_offset);
+        if (coerr != ESP_OK) {
+            ESP_LOGW(TAG, "ssd1363_set_col_offset_units failed: %s", esp_err_to_name(coerr));
+        }
     }
 
     esp_err_t err = ssd1363_init_panel();
@@ -1291,8 +1294,14 @@ static void ui_task(void *arg)
         ESP_LOGE(TAG, "ssd1363_init_panel failed: %d", (int)err);
     }
     if (conf_err == ESP_OK) {
-        (void)ssd1363_set_contrast(conf.display_contrast);
-        (void)ssd1363_invert_display(conf.display_invert != 0);
+        esp_err_t cerr = ssd1363_set_contrast(conf.display_contrast);
+        if (cerr != ESP_OK) {
+            ESP_LOGW(TAG, "ssd1363_set_contrast failed: %s", esp_err_to_name(cerr));
+        }
+        cerr = ssd1363_invert_display(conf.display_invert != 0);
+        if (cerr != ESP_OK) {
+            ESP_LOGW(TAG, "ssd1363_invert_display failed: %s", esp_err_to_name(cerr));
+        }
     }
 
     enum { W = DISPLAY_WIDTH, H = DISPLAY_HEIGHT };
