@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+print_usage() {
+  cat <<'EOF'
+Usage: ./scripts/check_native_toolchain.sh
+
+Checks whether `pio` and `gcc` are available in PATH and prints platform-specific
+guidance when prerequisites are missing.
+EOF
+}
+
+if [[ "$#" -eq 1 && ( "$1" == "-h" || "$1" == "--help" ) ]]; then
+  print_usage
+  exit 0
+fi
+
 if [[ "$#" -gt 0 ]]; then
   echo "Unexpected argument(s): $*" >&2
   exit 2
