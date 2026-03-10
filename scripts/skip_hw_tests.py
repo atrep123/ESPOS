@@ -21,9 +21,9 @@ def has_esp32s3() -> bool:
     devices = list(list_ports.comports())
     for dev in devices:
         try:
-            if dev.vid == ESPRESSIF_VID and (dev.pid in ESP32S3_PIDS or dev.pid is not None):
+            if dev.vid == ESPRESSIF_VID and dev.pid in ESP32S3_PIDS:
                 return True
-            if dev.vid == ARDUINO_VID and (dev.pid in ARDUINO_NANO_ESP32_PIDS or dev.pid is not None):
+            if dev.vid == ARDUINO_VID and dev.pid in ARDUINO_NANO_ESP32_PIDS:
                 return True
             desc = (dev.description or "").lower()
             if (
