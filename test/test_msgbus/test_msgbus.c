@@ -269,3 +269,52 @@ void test_bus_metrics_union_delivery(void)
 
     vQueueDelete(q);
 }
+
+void test_bus_drop_count_initially_zero(void)
+{
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count(TOP_TICK_10MS));
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count(TOP_INPUT_BTN));
+}
+
+void test_bus_drop_count_increments_on_full_queue(void)
+{
+    QueueHandle_t q = bus_make_queue(1);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 1;
+    bus_publish(&m); /* fills the queue */
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count(TOP_TICK_10MS));
+
+    bus_publish(&m); /* dropped */
+    TEST_ASSERT_EQUAL_UINT32(1, bus_drop_count(TOP_TICK_10MS));
+
+    bus_publish(&m); /* dropped again */
+    TEST_ASSERT_EQUAL_UINT32(2, bus_drop_count(TOP_TICK_10MS));
+
+    vQueueDelete(q);
+}
+
+void test_bus_drop_count_reset_on_reinit(void)
+{
+    QueueHandle_t q = bus_make_queue(1);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    bus_publish(&m);
+    bus_publish(&m); /* dropped */
+    TEST_ASSERT_TRUE(bus_drop_count(TOP_TICK_10MS) > 0);
+
+    bus_init(); /* reinit clears everything */
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count(TOP_TICK_10MS));
+
+    vQueueDelete(q);
+}
+
+void test_bus_drop_count_invalid_topic_returns_zero(void)
+{
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)-1));
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)99));
+}

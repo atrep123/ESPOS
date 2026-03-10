@@ -168,6 +168,24 @@ void test_parse_item_root_slot_null_out_slot(void)
     TEST_ASSERT_EQUAL_STRING("list", root);
 }
 
+void test_parse_item_root_slot_cap1_truncates_root(void)
+{
+    char root[1]; /* only room for NUL terminator */
+    int slot = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_item_root_slot("abc.item7", root, sizeof(root), &slot));
+    TEST_ASSERT_EQUAL_STRING("", root); /* root truncated to empty */
+    TEST_ASSERT_EQUAL_INT(7, slot);
+}
+
+void test_parse_item_root_slot_cap2_truncates_root(void)
+{
+    char root[2]; /* room for 1 char + NUL */
+    int slot = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_item_root_slot("hello.item99", root, sizeof(root), &slot));
+    TEST_ASSERT_EQUAL_STRING("h", root); /* root truncated to 1 char */
+    TEST_ASSERT_EQUAL_INT(99, slot);
+}
+
 /* ======================== Toast queue ======================== */
 
 void test_toast_reset(void)

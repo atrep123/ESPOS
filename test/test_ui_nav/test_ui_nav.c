@@ -551,3 +551,24 @@ void test_move_focus_right_wraps(void)
     TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, 1, UI_NAV_RIGHT));
 }
 
+void test_move_focus_invalid_dir_above_range(void)
+{
+    /* dir=4 is out of range (UI_NAV_RIGHT=3); should return current_idx */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "a", 0, 0);
+    init_button(&widgets[1], "b", 30, 0);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, 0, (ui_nav_dir_t)4));
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 1, (ui_nav_dir_t)255));
+}
+
+void test_move_focus_invalid_dir_negative(void)
+{
+    /* Negative dir cast to enum should return current_idx */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "a", 0, 0);
+    init_button(&widgets[1], "b", 30, 0);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 1, (ui_nav_dir_t)-1));
+}
+

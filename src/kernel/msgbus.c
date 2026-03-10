@@ -11,6 +11,7 @@ static const char *TAG = "msgbus";
 
 static QueueHandle_t subs[MAX_TOPICS][MAX_SUBS];
 static uint8_t subc[MAX_TOPICS];
+static uint32_t s_drops[MAX_TOPICS];
 
 /* Thread safety: bus_subscribe() must only be called during init (before
  * scheduler or from a single task).  bus_publish() is safe from any task
@@ -20,6 +21,7 @@ void bus_init(void)
 {
     memset(subs, 0, sizeof(subs));
     memset(subc, 0, sizeof(subc));
+    memset(s_drops, 0, sizeof(s_drops));
 }
 
 QueueHandle_t bus_make_queue(size_t depth)
@@ -53,9 +55,20 @@ void bus_publish(const msg_t *m)
     for (uint8_t i = 0; i < n; i++) {
         if (arr[i] != NULL) {
             if (xQueueSend(arr[i], m, 0) != pdTRUE) {
-                ESP_LOGD(TAG, "queue full, topic %d sub %u", (int)m->topic, (unsigned)i);
+                s_drops[m->topic]++;
+                ESP_LOGW(TAG, "queue full, topic %d sub %u (drops=%lu)",
+                         (int)m->topic, (unsigned)i,
+                         (unsigned long)s_drops[m->topic]);
             }
         }
     }
+}
+
+uint32_t bus_drop_count(topic_t t)
+{
+    if ((int)t < 0 || (int)t >= MAX_TOPICS) {
+        return 0;
+    }
+    return s_drops[t];
 }
 

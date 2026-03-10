@@ -58,6 +58,8 @@ void app_main(void)
     RUN_TEST(test_parse_item_root_slot_small_root_buffer);
     RUN_TEST(test_parse_item_root_slot_null_root);
     RUN_TEST(test_parse_item_root_slot_null_out_slot);
+    RUN_TEST(test_parse_item_root_slot_cap1_truncates_root);
+    RUN_TEST(test_parse_item_root_slot_cap2_truncates_root);
     RUN_TEST(test_toast_reset);
     RUN_TEST(test_toast_reset_null_safe);
     RUN_TEST(test_toast_push_pop_single);
@@ -96,6 +98,8 @@ void test_parse_item_root_slot_dot_at_end(void);
 void test_parse_item_root_slot_small_root_buffer(void);
 void test_parse_item_root_slot_null_root(void);
 void test_parse_item_root_slot_null_out_slot(void);
+void test_parse_item_root_slot_cap1_truncates_root(void);
+void test_parse_item_root_slot_cap2_truncates_root(void);
 void test_toast_reset(void);
 void test_toast_reset_null_safe(void);
 void test_toast_push_pop_single(void);
@@ -133,6 +137,8 @@ int main(void)
     RUN_TEST(test_parse_item_root_slot_small_root_buffer);
     RUN_TEST(test_parse_item_root_slot_null_root);
     RUN_TEST(test_parse_item_root_slot_null_out_slot);
+    RUN_TEST(test_parse_item_root_slot_cap1_truncates_root);
+    RUN_TEST(test_parse_item_root_slot_cap2_truncates_root);
     RUN_TEST(test_toast_reset);
     RUN_TEST(test_toast_reset_null_safe);
     RUN_TEST(test_toast_push_pop_single);

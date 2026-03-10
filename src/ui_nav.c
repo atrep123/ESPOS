@@ -308,6 +308,9 @@ int ui_nav_move_focus(const UiScene *scene, int current_idx, ui_nav_dir_t dir)
     if (!scene || !scene->widgets || scene->widget_count == 0) {
         return -1;
     }
+    if ((int)dir < 0 || (int)dir > UI_NAV_RIGHT) {
+        return current_idx;
+    }
 
     if (current_idx < 0 || (uint16_t)current_idx >= scene->widget_count) {
         return ui_nav_first_focus(scene);

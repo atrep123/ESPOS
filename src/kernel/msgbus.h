@@ -78,3 +78,4 @@ void bus_init(void);
 QueueHandle_t bus_make_queue(size_t depth);
 void bus_subscribe(topic_t t, QueueHandle_t q);
 void bus_publish(const msg_t *m);
+uint32_t bus_drop_count(topic_t t);
