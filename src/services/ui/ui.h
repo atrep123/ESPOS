@@ -37,3 +37,6 @@ void ui_cmd_dialog_hide(const char *root);
 
 void ui_cmd_toast_enqueue(const char *root, const char *message, uint32_t duration_ms);
 void ui_cmd_toast_hide(const char *root);
+
+/* Scene switching (multi-scene designs). */
+void ui_cmd_switch_scene(int scene_index);

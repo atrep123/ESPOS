@@ -39,6 +39,8 @@ typedef enum {
 
     UI_CMD_TOAST_ENQUEUE = 48,
     UI_CMD_TOAST_HIDE = 49,
+
+    UI_CMD_SWITCH_SCENE = 64,
 } ui_cmd_kind_t;
 
 typedef struct {

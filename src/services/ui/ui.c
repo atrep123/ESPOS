@@ -631,6 +631,25 @@ static int ui_update_bound_text(UiScene *scene, int idx)
                 snprintf(vbuf, sizeof(vbuf), "%d", cur);
             }
         }
+    } else if (meta.kind == UI_META_KIND_STR) {
+        if (!ui_bind_get_str(meta.bind_key, vbuf, sizeof(vbuf))) {
+            return 0;
+        }
+    } else if (meta.kind == UI_META_KIND_FLOAT) {
+        int cur = 0;
+        if (!ui_bind_get_int(meta.bind_key, &cur)) {
+            return 0;
+        }
+        /* Floats are stored as int * 100 (fixed-point).  Display with 1 or 2
+         * decimal places depending on magnitude. */
+        int whole = cur / 100;
+        int frac = cur % 100;
+        if (frac < 0) frac = -frac;
+        if (cur < 0 && whole == 0) {
+            snprintf(vbuf, sizeof(vbuf), "-%d.%02d", whole, frac);
+        } else {
+            snprintf(vbuf, sizeof(vbuf), "%d.%02d", whole, frac);
+        }
     } else {
         return 0;
     }
@@ -1317,6 +1336,8 @@ static void ui_task(void *arg)
         bus_subscribe(TOP_INPUT_BTN, q);
         bus_subscribe(TOP_METRICS_RET, q);
         bus_subscribe(TOP_UI_CMD, q);
+    } else {
+        ESP_LOGE(TAG, "bus_make_queue failed — UI events disabled");
     }
 
     if (!ui_scene_clone(&UI_SCENE_DEMO, &s_scene, s_widgets, (int)UI_MAX_WIDGETS)) {
@@ -1410,7 +1431,44 @@ static void ui_task(void *arg)
         }
 
         if (got && m.topic == TOP_UI_CMD) {
-            ui_handle_ui_cmd(scene, &m, &focus, &edit, &modal, &toast, &dirty);
+#ifdef UI_SCENE_COUNT
+            if ((ui_cmd_kind_t)m.u.ui_cmd.kind == UI_CMD_SWITCH_SCENE) {
+                int si = (int)m.u.ui_cmd.value;
+                if (si >= 0 && si < UI_SCENE_COUNT) {
+                    if (edit.kind != UI_EDIT_NONE) {
+                        ui_edit_exit(scene, &edit, &dirty);
+                    }
+                    ui_modal_reset(&modal);
+                    ui_toast_reset(&toast);
+                    if (!ui_scene_clone(&ui_scenes[si], scene, s_widgets, (int)UI_MAX_WIDGETS)) {
+                        ESP_LOGE(TAG, "switch_scene clone failed idx=%d", si);
+                    } else {
+                        ui_listmodels_init(&s_listmodels);
+                        for (int i = 0; i < (int)scene->widget_count && i < UI_MAX_WIDGETS; ++i) {
+                            s_text_original[i] = scene->widgets[(uint16_t)i].text;
+                            s_text_override[i][0] = '\0';
+                        }
+                        for (int i = 0; i < (int)scene->widget_count && i < UI_MAX_WIDGETS; ++i) {
+                            (void)ui_update_bound_text(scene, i);
+                        }
+                        (void)ui_components_set_prefix_visible(scene, "toast", false, NULL, NULL);
+                        (void)ui_components_set_prefix_visible(scene, "modal", false, NULL, NULL);
+                        (void)ui_components_set_prefix_visible(scene, "dialog", false, NULL, NULL);
+                        (void)ui_components_set_prefix_visible(scene, "dialog_confirm", false, NULL, NULL);
+                        (void)ui_components_set_prefix_visible(scene, "notification", false, NULL, NULL);
+                        focus = ui_nav_first_focus(scene);
+                        (void)ui_components_sync_active_from_focus(scene, focus, NULL, NULL);
+                        ui_dirty_full(&dirty);
+                        ESP_LOGI(TAG, "switched to scene %d (%s)", si, scene->name ? scene->name : "?");
+                    }
+                } else {
+                    ESP_LOGW(TAG, "switch_scene: invalid index %d (count=%d)", si, UI_SCENE_COUNT);
+                }
+            } else
+#endif
+            {
+                ui_handle_ui_cmd(scene, &m, &focus, &edit, &modal, &toast, &dirty);
+            }
         }
 
         if (got && m.topic == TOP_INPUT_BTN && m.u.btn.pressed) {

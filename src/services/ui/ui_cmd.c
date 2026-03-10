@@ -114,3 +114,8 @@ void ui_cmd_toast_hide(const char *root)
 {
     ui_publish_cmd(UI_CMD_TOAST_HIDE, root, NULL, 0);
 }
+
+void ui_cmd_switch_scene(int scene_index)
+{
+    ui_publish_cmd(UI_CMD_SWITCH_SCENE, NULL, NULL, (int32_t)scene_index);
+}
