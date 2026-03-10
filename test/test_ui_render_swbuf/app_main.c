@@ -54,6 +54,7 @@ void test_render_widget_radiobutton(void);
 void test_render_widget_textbox(void);
 void test_render_widget_chart(void);
 void test_render_widget_unknown_type(void);
+void test_render_widget_sentinel_type_rejected(void);
 void test_render_label_center_align(void);
 void test_render_label_text_overflow_auto_wraps(void);
 void test_render_widget_disabled_style(void);
@@ -109,6 +110,7 @@ int main(void)
     RUN_TEST(test_render_widget_textbox);
     RUN_TEST(test_render_widget_chart);
     RUN_TEST(test_render_widget_unknown_type);
+    RUN_TEST(test_render_widget_sentinel_type_rejected);
     RUN_TEST(test_render_label_center_align);
     RUN_TEST(test_render_label_text_overflow_auto_wraps);
     RUN_TEST(test_render_widget_disabled_style);

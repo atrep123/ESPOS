@@ -1114,6 +1114,9 @@ void ui_render_widget(const UiWidget *w, const UiDrawOps *ops)
     if (!ui_widget_is_visible(w)) {
         return;
     }
+    if (w->type >= UIW__COUNT) {
+        return;
+    }
 
     switch (w->type) {
         case UIW_LABEL:

@@ -842,7 +842,25 @@ void test_render_widget_unknown_type(void)
     w.width = 20; w.height = 10;
     w.visible = 1; w.enabled = 1;
 
-    /* Should not crash, falls through to default rect */
+    /* Invalid type >= UIW__COUNT is rejected by bounds guard */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_widget_sentinel_type_rejected(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW__COUNT;  /* sentinel value — not a valid widget type */
+    w.x = 0; w.y = 0;
+    w.width = 20; w.height = 10;
+    w.visible = 1; w.enabled = 1;
+
+    /* Sentinel type must be rejected by bounds guard */
     ui_render_widget(&w, &ops);
     TEST_ASSERT_EQUAL_INT(0, cap.count);
 }
