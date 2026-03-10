@@ -41,6 +41,8 @@ void bus_subscribe(topic_t t, QueueHandle_t q)
     uint8_t *n = &subc[t];
     if (*n < MAX_SUBS) {
         subs[t][(*n)++] = q;
+    } else {
+        ESP_LOGE(TAG, "bus_subscribe: topic %d full (%d subs)", (int)t, MAX_SUBS);
     }
 }
 

@@ -1024,9 +1024,13 @@ static void ui_handle_ui_cmd(
                 case UI_CMD_SET_STYLE:
                     w->style = (uint8_t)m->u.ui_cmd.value;
                     break;
-                case UI_CMD_SET_VALUE:
-                    w->value = (int16_t)m->u.ui_cmd.value;
+                case UI_CMD_SET_VALUE: {
+                    int32_t v = m->u.ui_cmd.value;
+                    if (v < INT16_MIN) v = INT16_MIN;
+                    if (v > INT16_MAX) v = INT16_MAX;
+                    w->value = (int16_t)v;
                     break;
+                }
                 case UI_CMD_SET_CHECKED:
                     w->checked = (m->u.ui_cmd.value != 0) ? 1 : 0;
                     break;

@@ -590,7 +590,7 @@ static void _render_progressbar(const UiWidget *w, const UiDrawOps *ops)
     int val = w->value - w->min_value;
     if (val < 0) val = 0;
     if (val > range) val = range;
-    int filled = (int)(((int32_t)val * span) / range);
+    int filled = (int)(((int64_t)val * span) / range);
 
     if (filled > 0) {
         _fill_rect(ops, w->x + 1, w->y + 1, filled, inner_h, fill);
@@ -856,7 +856,7 @@ static void _render_slider(const UiWidget *w, const UiDrawOps *ops)
     int val = w->value - w->min_value;
     if (val < 0) val = 0;
     if (val > range) val = range;
-    int knob_x = inner_x + (int)(((int32_t)val * (inner_w - 1)) / range);
+    int knob_x = inner_x + (int)(((int64_t)val * (inner_w - 1)) / range);
 
     int knob_w = 5;
     int knob_h = w->height - 4;
@@ -931,7 +931,7 @@ static void _render_gauge(const UiWidget *w, const UiDrawOps *ops)
     int val = w->value - w->min_value;
     if (val < 0) val = 0;
     if (val > range) val = range;
-    int filled = (int)(((int32_t)val * inner_w) / range);
+    int filled = (int)(((int64_t)val * inner_w) / range);
     if (filled > 0) {
         _fill_rect(ops, w->x + 1, w->y + 1, filled, inner_h, fill);
     }
@@ -1061,6 +1061,7 @@ static void _render_chart(const UiWidget *w, const UiDrawOps *ops)
     int inner_w = w->width - 2;
     int inner_h = w->height - 2;
     if (inner_w <= 0 || inner_h <= 0) return;
+    if (inner_w < 8 || inner_h < 8) return;  /* too small for meaningful chart */
 
     /* Minimal placeholder "chart": axes + a few bars based on value. */
     if (ops->draw_hline) {
@@ -1079,7 +1080,7 @@ static void _render_chart(const UiWidget *w, const UiDrawOps *ops)
     if (base < 0) base = 0;
     for (int i = 0; i < bars; ++i) {
         int v = (base + i * 11) % (range + 1);
-        int bh = (int)(((int32_t)v * (inner_h - 6)) / range);
+        int bh = (int)(((int64_t)v * (inner_h - 6)) / range);
         int bx = inner_x + 4 + i * (bar_w + gap);
         int by = inner_y + inner_h - 4 - bh;
         _fill_rect(ops, bx, by, bar_w, bh, fill);

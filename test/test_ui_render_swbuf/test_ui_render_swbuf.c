@@ -1156,3 +1156,65 @@ void test_swbuf_blit_mono_stride_too_small_rejected(void)
         TEST_ASSERT_EQUAL_UINT8(0, backing[i]);
     }
 }
+
+void test_render_chart_tiny_widget_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_CHART;
+    w.x = 0; w.y = 0;
+    w.width = 6; w.height = 6;  /* inner 4×4, below 8×8 minimum */
+    w.border = 1;
+    w.value = 50; w.min_value = 0; w.max_value = 100;
+    w.visible = 1; w.enabled = 1;
+
+    /* Should return early without crash — too small for chart content */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_progressbar_large_range_no_overflow(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_PROGRESSBAR;
+    w.x = 0; w.y = 0;
+    w.width = 250; w.height = 14;
+    w.border = 1;
+    /* val * span = 32767 * 248 ≈ 8.1M — fits int32, but test the int64 path */
+    w.min_value = -32768; w.max_value = 32767;
+    w.value = 32767;
+    w.visible = 1; w.enabled = 1;
+
+    /* Must not crash or produce negative fill from overflow */
+    ui_render_widget(&w, &ops);
+    /* No assertion on text — just verify no crash */
+}
+
+void test_render_gauge_large_range_no_overflow(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_GAUGE;
+    w.x = 0; w.y = 0;
+    w.width = 250; w.height = 20;
+    w.border = 1;
+    w.min_value = -32768; w.max_value = 32767;
+    w.value = 16384;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    /* Must not crash */
+}

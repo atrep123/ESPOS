@@ -7,6 +7,7 @@
 #include "msgbus.h"
 
 static const char *TAG = "timers";
+static TaskHandle_t s_tick_task;
 
 static void tick_task(void *arg)
 {
@@ -26,9 +27,14 @@ static void tick_task(void *arg)
 
 void kernel_start_ticker(void)
 {
-    BaseType_t rc = xTaskCreatePinnedToCore(tick_task, "tick", 2048, NULL, 5, NULL, 1);
+    if (s_tick_task != NULL) {
+        return;
+    }
+
+    BaseType_t rc = xTaskCreatePinnedToCore(tick_task, "tick", 2048, NULL, 5, &s_tick_task, 1);
     if (rc != pdPASS) {
         ESP_LOGE(TAG, "tick task creation failed");
+        s_tick_task = NULL;
     }
 }
 

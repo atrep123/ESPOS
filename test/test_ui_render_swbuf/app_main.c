@@ -69,6 +69,9 @@ void test_render_widget_icon_with_border(void);
 void test_render_widget_invisible_skipped(void);
 void test_render_widget_button_border_styles(void);
 void test_swbuf_blit_mono_stride_too_small_rejected(void);
+void test_render_chart_tiny_widget_no_crash(void);
+void test_render_progressbar_large_range_no_overflow(void);
+void test_render_gauge_large_range_no_overflow(void);
 #endif
 
 int main(void)
@@ -126,6 +129,9 @@ int main(void)
     RUN_TEST(test_render_widget_invisible_skipped);
     RUN_TEST(test_render_widget_button_border_styles);
     RUN_TEST(test_swbuf_blit_mono_stride_too_small_rejected);
+    RUN_TEST(test_render_chart_tiny_widget_no_crash);
+    RUN_TEST(test_render_progressbar_large_range_no_overflow);
+    RUN_TEST(test_render_gauge_large_range_no_overflow);
 #endif
     return UNITY_END();
 }

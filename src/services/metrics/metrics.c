@@ -11,6 +11,7 @@
 static const char *TAG = "metrics";
 
 static QueueHandle_t q;
+static TaskHandle_t s_metrics_task;
 
 static void metrics_task(void *arg)
 {
@@ -47,13 +48,18 @@ static void metrics_task(void *arg)
 
 void metrics_start(void)
 {
+    if (s_metrics_task != NULL) {
+        return;
+    }
+
     q = bus_make_queue(8);
     if (q == NULL) {
         ESP_LOGE(TAG, "bus_make_queue failed");
         return;
     }
-    BaseType_t rc = xTaskCreatePinnedToCore(metrics_task, "metrics", 4096, NULL, 4, NULL, 0);
+    BaseType_t rc = xTaskCreatePinnedToCore(metrics_task, "metrics", 4096, NULL, 4, &s_metrics_task, 0);
     if (rc != pdPASS) {
         ESP_LOGE(TAG, "metrics task creation failed");
+        s_metrics_task = NULL;
     }
 }
