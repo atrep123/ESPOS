@@ -32,6 +32,9 @@ void bus_subscribe(topic_t t, QueueHandle_t q)
     if ((int)t < 0 || (int)t >= MAX_TOPICS) {
         return;
     }
+    if (q == NULL) {
+        return;
+    }
 
     uint8_t *n = &subc[t];
     if (*n < MAX_SUBS) {

@@ -229,3 +229,43 @@ void test_bus_subscribe_multiple_topics(void)
     vQueueDelete(q1);
     vQueueDelete(q2);
 }
+
+void test_bus_subscribe_null_queue_ignored(void)
+{
+    /* NULL queue should be silently rejected, not waste a subscriber slot */
+    bus_subscribe(TOP_TICK_10MS, NULL);
+
+    QueueHandle_t q = bus_make_queue(4);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 88;
+    bus_publish(&m);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+    TEST_ASSERT_EQUAL_UINT32(88, recv.u.tick.tick);
+
+    vQueueDelete(q);
+}
+
+void test_bus_metrics_union_delivery(void)
+{
+    QueueHandle_t q = bus_make_queue(4);
+    bus_subscribe(TOP_METRICS_RET, q);
+
+    msg_t m = {0};
+    m.topic = TOP_METRICS_RET;
+    m.u.metrics.free_heap = 123456;
+    m.u.metrics.min_free_heap = 65432;
+    bus_publish(&m);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+    TEST_ASSERT_EQUAL_INT(TOP_METRICS_RET, recv.topic);
+    TEST_ASSERT_EQUAL_UINT32(123456, recv.u.metrics.free_heap);
+    TEST_ASSERT_EQUAL_UINT32(65432, recv.u.metrics.min_free_heap);
+
+    vQueueDelete(q);
+}
