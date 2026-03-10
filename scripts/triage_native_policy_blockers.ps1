@@ -9,11 +9,27 @@ param(
   [switch]$OnlyWorsening,
   [switch]$IncludeAllDeltaRows,
   [int]$MinAbsDeltaScore = 0,
-  [string]$DeltaSortBy = "abs-delta"
+  [string]$DeltaSortBy = "abs-delta",
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\triage_native_policy_blockers.ps1 [-Help]"
+  Write-Host "  -HistoryPath <path>        History JSONL (default: reports/native_policy_probe_history.jsonl)"
+  Write-Host "  -Top <int>                 Top N blockers (default: 5)"
+  Write-Host "  -MarkdownOut <path>        Triage markdown output"
+  Write-Host "  -CsvOut <path>             Triage CSV output"
+  Write-Host "  -DeltaCsvOut <path>        Delta CSV output"
+  Write-Host "  -DeltaWindow <int>         Delta comparison window"
+  Write-Host "  -OnlyWorsening             Show only worsening suites"
+  Write-Host "  -IncludeAllDeltaRows       Include all rows in delta CSV"
+  Write-Host "  -MinAbsDeltaScore <int>    Minimum absolute delta score"
+  Write-Host "  -DeltaSortBy <string>      Delta sort column (default: abs-delta)"
+  exit 0
+}
 
 $csvOutSpecified = $PSBoundParameters.ContainsKey("CsvOut")
 $deltaCsvOutSpecified = $PSBoundParameters.ContainsKey("DeltaCsvOut")
