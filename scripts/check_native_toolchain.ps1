@@ -1,8 +1,16 @@
 [CmdletBinding(PositionalBinding = $false)]
-param()
+param(
+  [switch]$Help
+)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\\scripts\\check_native_toolchain.ps1 [-Help]"
+  Write-Host "Checks whether 'pio' and 'gcc' are available in PATH."
+  exit 0
+}
 
 Write-Host "== Native Toolchain Check (Windows) =="
 
