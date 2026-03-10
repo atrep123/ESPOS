@@ -59,7 +59,7 @@ static void rpc_task(void *arg)
 
                 msg_t m = { .topic = TOP_RPC_CALL };
                 unsigned int tmp = 0;
-                if (sscanf(buf, "set_bg %x", &tmp) == 1) {
+                if (sscanf(buf, "set_bg %x", &tmp) == 1 && tmp <= 0xFFFFFFU) {
                     m.u.rpc.arg = tmp;
                     strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method) - 1);
                     m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';

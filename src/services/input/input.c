@@ -14,6 +14,10 @@
 
 static const char *TAG = "input";
 
+/* Maximum encoder delta accepted per poll — clamps sensor glitches and
+ * prevents -INT32_MIN overflow when inverting direction. */
+#define MAX_ENCODER_DELTA 100
+
 typedef struct {
     int pin;
     uint8_t id;
@@ -451,6 +455,8 @@ static void input_seesaw_poll_rotary(input_seesaw_rotary_t *rot)
 
     int32_t delta = 0;
     if (seesaw_read_i32(rot->addr, SEESAW_ENCODER_BASE, (uint8_t)(SEESAW_ENCODER_DELTA + 0), &delta) == ESP_OK) {
+        if (delta > MAX_ENCODER_DELTA)  delta = MAX_ENCODER_DELTA;
+        if (delta < -MAX_ENCODER_DELTA) delta = -MAX_ENCODER_DELTA;
         if (rot->invert_dir) {
             delta = -delta;
         }
@@ -493,6 +499,8 @@ static void input_seesaw_poll_quad(input_seesaw_quad_t *quad)
         if (seesaw_read_i32(quad->addr, SEESAW_ENCODER_BASE, (uint8_t)(SEESAW_ENCODER_DELTA + n), &delta) != ESP_OK) {
             continue;
         }
+        if (delta > MAX_ENCODER_DELTA)  delta = MAX_ENCODER_DELTA;
+        if (delta < -MAX_ENCODER_DELTA) delta = -MAX_ENCODER_DELTA;
         if (quad->invert_dir) {
             delta = -delta;
         }
