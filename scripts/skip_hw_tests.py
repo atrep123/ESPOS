@@ -57,7 +57,7 @@ def main() -> int:
     want = normalized_want
 
     board_present = has_esp32s3()
-    env = os.getenv("PIOENV") or ""
+    env = (os.getenv("PIOENV") or "").strip()
     hw_env = env[:-5] if env.endswith("-nohw") else env
     if not hw_env:
         hw_env = "esp32-s3-devkitm-1"
