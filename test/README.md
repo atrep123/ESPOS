@@ -25,13 +25,13 @@ pio test -e native -f test_ui_core  # single suite
 | `test_ui_core` | `src/services/ui/ui_core.c` — widget tree & state | 15 |
 | `test_ui_font` | `src/ui_font_6x8.c` — bitmap font data | 8 |
 | `test_ui_helpers` | `src/services/ui/ui_helpers.c` — parse & toast queue helpers | 31 |
-| `test_ui_listmodel` | `src/services/ui/ui_listmodel.c` — list/tree model | 11 |
+| `test_ui_listmodel` | `src/services/ui/ui_listmodel.c` — list/tree model | 20 |
 | `test_ui_meta` | `src/services/ui/ui_meta.c` — widget metadata | 12 |
 | `test_ui_nav` | `src/ui_nav.c` — focus navigation | 41 |
 | `test_ui_render` | `src/ui_render.c` — widget rendering dispatch | 44 |
 | `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 44 |
 
-**Total: ~321 test cases**
+**Total: ~330 test cases**
 
 ## Stubs
 
