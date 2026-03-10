@@ -64,6 +64,24 @@ void test_parse_uint_dec_large_number(void)
     TEST_ASSERT_EQUAL_INT(100000, v);
 }
 
+void test_parse_uint_dec_overflow_stops(void)
+{
+    /* A number that would overflow int (>2147483647) should stop parsing
+     * before the overflow and return the partial result. */
+    int v = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_uint_dec("9999999999", &v));
+    /* Implementation stops before overflow; value <= INT_MAX */
+    TEST_ASSERT_TRUE(v >= 0);
+    TEST_ASSERT_TRUE(v <= 2147483647);
+}
+
+void test_parse_uint_dec_max_int(void)
+{
+    int v = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_uint_dec("2147483647", &v));
+    TEST_ASSERT_EQUAL_INT(2147483647, v);
+}
+
 /* ======================== ui_parse_item_root_slot ======================== */
 
 void test_parse_item_root_slot_basic(void)

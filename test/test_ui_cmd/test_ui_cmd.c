@@ -276,3 +276,31 @@ void test_cmd_text_truncation(void)
     TEST_ASSERT_EQUAL_UINT(63, strlen(m.u.ui_cmd.text));
     TEST_ASSERT_EQUAL_CHAR('\0', m.u.ui_cmd.text[63]);
 }
+
+void test_cmd_listmodel_set_item_truncation(void)
+{
+    /* Combined label + tab + value exceeding 63 chars is truncated. */
+    const char *label = "ABCDEFGHIJKLMNOPQRSTUVWXYZ01234"; /* 30 chars */
+    const char *value = "abcdefghijklmnopqrstuvwxyz012345"; /* 31 chars */
+    /* Total: 30 + 1(tab) + 31 = 62 => fits within 63 */
+    ui_cmd_listmodel_set_item("x", 0, label, value);
+    msg_t m = recv_one();
+    TEST_ASSERT_TRUE(strlen(m.u.ui_cmd.text) <= 63);
+    TEST_ASSERT_NOT_NULL(strchr(m.u.ui_cmd.text, '\t'));
+
+    /* Now exceed: 40 + 1 + 40 = 81 > 63 */
+    const char *big_label = "ABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890123"; /* 40 */
+    const char *big_value = "abcdefghijklmnopqrstuvwxyz01234567890123"; /* 40 */
+    ui_cmd_listmodel_set_item("x", 1, big_label, big_value);
+    m = recv_one();
+    TEST_ASSERT_EQUAL_UINT(63, strlen(m.u.ui_cmd.text));
+    TEST_ASSERT_EQUAL_CHAR('\0', m.u.ui_cmd.text[63]);
+}
+
+void test_cmd_listmodel_set_item_both_null(void)
+{
+    ui_cmd_listmodel_set_item("x", 0, NULL, NULL);
+    msg_t m = recv_one();
+    TEST_ASSERT_EQUAL_INT(UI_CMD_LISTMODEL_SET_ITEM, m.u.ui_cmd.kind);
+    TEST_ASSERT_EQUAL_STRING("", m.u.ui_cmd.text);
+}

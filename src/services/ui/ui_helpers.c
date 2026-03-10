@@ -1,5 +1,6 @@
 #include "ui_helpers.h"
 
+#include <limits.h>
 #include <string.h>
 
 /* ---- String parsing ---- */
@@ -15,11 +16,11 @@ int ui_parse_uint_dec(const char *s, int *out_value)
     int v = 0;
     const char *p = s;
     while (*p >= '0' && *p <= '9') {
-        int next = v * 10 + (*p - '0');
-        if (next < v) {
-            break;
+        int digit = *p - '0';
+        if (v > (INT_MAX - digit) / 10) {
+            break; /* would overflow */
         }
-        v = next;
+        v = v * 10 + digit;
         p += 1;
     }
     if (out_value != NULL) {

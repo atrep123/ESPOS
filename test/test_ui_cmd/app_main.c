@@ -56,6 +56,8 @@ void app_main(void)
     RUN_TEST(test_cmd_switch_scene);
     RUN_TEST(test_cmd_id_truncation);
     RUN_TEST(test_cmd_text_truncation);
+    RUN_TEST(test_cmd_listmodel_set_item_truncation);
+    RUN_TEST(test_cmd_listmodel_set_item_both_null);
     UNITY_END();
 }
 
@@ -86,6 +88,8 @@ void test_cmd_toast_hide(void);
 void test_cmd_switch_scene(void);
 void test_cmd_id_truncation(void);
 void test_cmd_text_truncation(void);
+void test_cmd_listmodel_set_item_truncation(void);
+void test_cmd_listmodel_set_item_both_null(void);
 
 int main(void)
 {
@@ -115,6 +119,8 @@ int main(void)
     RUN_TEST(test_cmd_switch_scene);
     RUN_TEST(test_cmd_id_truncation);
     RUN_TEST(test_cmd_text_truncation);
+    RUN_TEST(test_cmd_listmodel_set_item_truncation);
+    RUN_TEST(test_cmd_listmodel_set_item_both_null);
     return UNITY_END();
 }
 

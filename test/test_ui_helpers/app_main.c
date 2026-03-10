@@ -45,6 +45,8 @@ void app_main(void)
     RUN_TEST(test_parse_uint_dec_non_digit);
     RUN_TEST(test_parse_uint_dec_null_out);
     RUN_TEST(test_parse_uint_dec_large_number);
+    RUN_TEST(test_parse_uint_dec_overflow_stops);
+    RUN_TEST(test_parse_uint_dec_max_int);
     RUN_TEST(test_parse_item_root_slot_basic);
     RUN_TEST(test_parse_item_root_slot_higher_index);
     RUN_TEST(test_parse_item_root_slot_null_id);
@@ -81,6 +83,8 @@ void test_parse_uint_dec_empty_string(void);
 void test_parse_uint_dec_non_digit(void);
 void test_parse_uint_dec_null_out(void);
 void test_parse_uint_dec_large_number(void);
+void test_parse_uint_dec_overflow_stops(void);
+void test_parse_uint_dec_max_int(void);
 void test_parse_item_root_slot_basic(void);
 void test_parse_item_root_slot_higher_index(void);
 void test_parse_item_root_slot_null_id(void);
@@ -116,6 +120,8 @@ int main(void)
     RUN_TEST(test_parse_uint_dec_non_digit);
     RUN_TEST(test_parse_uint_dec_null_out);
     RUN_TEST(test_parse_uint_dec_large_number);
+    RUN_TEST(test_parse_uint_dec_overflow_stops);
+    RUN_TEST(test_parse_uint_dec_max_int);
     RUN_TEST(test_parse_item_root_slot_basic);
     RUN_TEST(test_parse_item_root_slot_higher_index);
     RUN_TEST(test_parse_item_root_slot_null_id);
