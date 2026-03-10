@@ -32,6 +32,13 @@ from tools.ui_codegen import (  # noqa: E402
 )
 
 
+def _strip_optional_quotes(value: str) -> str:
+    text = value.strip()
+    if len(text) >= 2 and ((text[0] == '"' and text[-1] == '"') or (text[0] == "'" and text[-1] == "'")):
+        text = text[1:-1].strip()
+    return text
+
+
 def _main() -> None:
     export_flag = os.environ.get("ESP32OS_PIO_UI_EXPORT", "1").strip()
     if export_flag not in {"0", "1"}:
@@ -43,10 +50,12 @@ def _main() -> None:
 
     project_dir = Path(env["PROJECT_DIR"])  # noqa: F821 - provided by PlatformIO/SCons
     json_override = os.environ.get("ESP32OS_UI_JSON")
-    if json_override is not None and not json_override.strip():
-        raise RuntimeError("[UI] ESP32OS_UI_JSON cannot be empty")
+    if json_override is not None:
+        json_override = _strip_optional_quotes(json_override)
+        if not json_override:
+            raise RuntimeError("[UI] ESP32OS_UI_JSON cannot be empty")
 
-    json_path_raw = json_override.strip() if json_override is not None else str(project_dir / "main_scene.json")
+    json_path_raw = json_override if json_override is not None else str(project_dir / "main_scene.json")
     json_path = Path(json_path_raw).expanduser()
     if not json_path.is_absolute():
         json_path = project_dir / json_path
@@ -54,9 +63,9 @@ def _main() -> None:
         raise RuntimeError(f"[UI] JSON path points to a directory: {json_path}")
 
     scene_name_raw = os.environ.get("ESP32OS_UI_SCENE", "main")
-    if not scene_name_raw.strip():
+    scene_name = _strip_optional_quotes(scene_name_raw)
+    if not scene_name:
         raise RuntimeError("[UI] ESP32OS_UI_SCENE cannot be empty")
-    scene_name = scene_name_raw.strip()
     out_c = project_dir / "src" / "ui_design.c"
     out_h = project_dir / "src" / "ui_design.h"
 
