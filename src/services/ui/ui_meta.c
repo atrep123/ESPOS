@@ -1,6 +1,8 @@
 #include "ui_meta.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -70,8 +72,9 @@ static int parse_int_span(const char *s, size_t n, int *out)
     buf[n] = '\0';
 
     char *end = NULL;
+    errno = 0;
     long v = strtol(buf, &end, 10);
-    if (end == buf) {
+    if (end == buf || errno == ERANGE || v < INT_MIN || v > INT_MAX) {
         return 0;
     }
     *out = (int)v;

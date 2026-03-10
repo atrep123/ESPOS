@@ -14,6 +14,7 @@ void test_ui_meta_values_get_edge_cases(void);
 void test_ui_meta_kind_aliases(void);
 void test_ui_meta_step_zero_defaults_to_one(void);
 void test_ui_meta_key_alias(void);
+void test_ui_meta_parse_int_overflow_rejected(void);
 
 void app_main(void)
 {
@@ -30,6 +31,7 @@ void app_main(void)
     RUN_TEST(test_ui_meta_kind_aliases);
     RUN_TEST(test_ui_meta_step_zero_defaults_to_one);
     RUN_TEST(test_ui_meta_key_alias);
+    RUN_TEST(test_ui_meta_parse_int_overflow_rejected);
     UNITY_END();
 }
 
@@ -47,6 +49,7 @@ void test_ui_meta_values_get_edge_cases(void);
 void test_ui_meta_kind_aliases(void);
 void test_ui_meta_step_zero_defaults_to_one(void);
 void test_ui_meta_key_alias(void);
+void test_ui_meta_parse_int_overflow_rejected(void);
 
 int main(void)
 {
@@ -63,6 +66,7 @@ int main(void)
     RUN_TEST(test_ui_meta_kind_aliases);
     RUN_TEST(test_ui_meta_step_zero_defaults_to_one);
     RUN_TEST(test_ui_meta_key_alias);
+    RUN_TEST(test_ui_meta_parse_int_overflow_rejected);
     return UNITY_END();
 }
 

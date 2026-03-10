@@ -147,3 +147,22 @@ void test_ui_meta_key_alias(void)
     TEST_ASSERT_EQUAL_STRING("brightness", m.bind_key);
 }
 
+void test_ui_meta_parse_int_overflow_rejected(void)
+{
+    ui_meta_t m;
+    /* Huge positive number exceeds LONG_MAX — should be rejected */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=x;kind=int;min=99999999999999999999", &m));
+    TEST_ASSERT_FALSE(m.has_min);
+
+    /* Huge negative number exceeds LONG_MIN — should be rejected */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=x;kind=int;max=-99999999999999999999", &m));
+    TEST_ASSERT_FALSE(m.has_max);
+
+    /* Normal values still work */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=x;kind=int;min=-1000;max=1000", &m));
+    TEST_ASSERT_TRUE(m.has_min);
+    TEST_ASSERT_TRUE(m.has_max);
+    TEST_ASSERT_EQUAL_INT(-1000, m.min);
+    TEST_ASSERT_EQUAL_INT(1000, m.max);
+}
+
