@@ -61,12 +61,17 @@ def main() -> int:
     hw_env = env[:-5] if env.endswith("-nohw") else env
     if not hw_env:
         hw_env = "esp32-s3-devkitm-1"
+    suggested_cmd = (
+        f"pio run -t upload -e {hw_env}"
+        if want == "upload"
+        else f"pio test -e {hw_env}"
+    )
 
     if not board_present:
         print(
             f"INFO: No compatible board detected. Skipping '{want}' stage.\n"
             "To run hardware tests, connect your board and use:\n"
-            f"  pio test -e {hw_env}"
+            f"  {suggested_cmd}"
         )
         return 0
 
@@ -74,7 +79,7 @@ def main() -> int:
     print(
         f"INFO: Board detected, but this '-nohw' environment auto-skips "
         f"'{want}' stage to avoid conflicts. For full hardware test execution, use:\n"
-        f"  pio test -e {hw_env}"
+        f"  {suggested_cmd}"
     )
     return 0
 
