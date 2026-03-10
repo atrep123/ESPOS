@@ -116,7 +116,7 @@ def add_component(app, name: str) -> None:
                 icon_char=str(cfg.get("icon_char", "")),
                 data_points=list(cfg.get("data_points", [])),
                 text_overflow=str(cfg.get("text_overflow", "ellipsis") or "ellipsis"),
-                max_lines=cfg.get("max_lines", None),
+                max_lines=cfg.get("max_lines"),
                 runtime=str(cfg.get("runtime", "") or ""),
                 locked=bool(cfg.get("locked", False)),
                 visible=bool(cfg.get("visible", True)),

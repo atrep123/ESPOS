@@ -373,7 +373,7 @@ def draw_help_overlay(app) -> None:
 
     sel_count = 0
     try:
-        sel_count = int(len(getattr(app.state, "selected", []) or []))
+        sel_count = len(getattr(app.state, "selected", []) or [])
     except Exception:
         sel_count = 0
 

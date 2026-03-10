@@ -1,21 +1,21 @@
 """Comprehensive headless visual verification — grayscale palette aware."""
 
-import inspect  # noqa: E402
+import inspect
 import os
 import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-import pygame  # noqa: E402
+import pygame
 
 pygame.init()
 
-from pathlib import Path  # noqa: E402
+from pathlib import Path
 
-from cyberpunk_designer import drawing  # noqa: E402
-from cyberpunk_designer.app import CyberpunkEditorApp  # noqa: E402
-from cyberpunk_designer.constants import PALETTE  # noqa: E402
+from cyberpunk_designer import drawing
+from cyberpunk_designer.app import CyberpunkEditorApp
+from cyberpunk_designer.constants import PALETTE
 
 PASS = 0
 FAIL = 0
@@ -414,7 +414,7 @@ app._dirty = False
 
 # ══════════════════════════════════════════════
 print("\n=== 20. VALIDATION RULES ===")
-from tools.validate_design import validate_file  # noqa: E402
+from tools.validate_design import validate_file
 
 issues_main = validate_file(Path("main_scene.json"), warnings_as_errors=False)
 errors_main = [i for i in issues_main if i.level == "ERROR"]
@@ -446,7 +446,7 @@ if Path("widget_catalog.json").exists():
 
 # ══════════════════════════════════════════════
 print("\n=== 21. PER-WIDGET-TYPE DRAW ===")
-from ui_designer import WidgetConfig  # noqa: E402
+from ui_designer import WidgetConfig
 
 _test_surf = pygame.Surface((128, 64))
 _test_bg = (0, 0, 0)

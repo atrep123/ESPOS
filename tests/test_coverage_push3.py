@@ -1159,7 +1159,7 @@ class TestClipboardExtraEdges:
         # Replace scenes with a dict subclass whose keys() omits the current name
         class TrickyDict(dict):
             def keys(self):
-                return [k for k in super().keys() if k != current] + ["_phantom_"]
+                return [k for k in super().keys() if k != current] + ["_phantom_"]  # noqa: SIM118
 
             def get(self, key, default=None):
                 if key == "_phantom_":
@@ -1658,7 +1658,7 @@ class TestPropertyCyclesEdges:
     """Cover _save_state except and OOB first_idx branches in property_cycles."""
 
     # ---- parametrized _save_state except + OOB default for cycle_* funcs ----
-    @pytest.mark.parametrize("func_name,attr", _CYCLE_SAVE_OOB)
+    @pytest.mark.parametrize(("func_name", "attr"), _CYCLE_SAVE_OOB)
     def test_save_except(self, func_name, attr, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import property_cycles as pc
 
@@ -1667,7 +1667,7 @@ class TestPropertyCyclesEdges:
         _make_save_raise(app)
         getattr(pc, func_name)(app)
 
-    @pytest.mark.parametrize("func_name,attr", _CYCLE_SAVE_OOB)
+    @pytest.mark.parametrize(("func_name", "attr"), _CYCLE_SAVE_OOB)
     def test_oob_default(self, func_name, attr, tmp_path, monkeypatch):
         from cyberpunk_designer.selection_ops import property_cycles as pc
 

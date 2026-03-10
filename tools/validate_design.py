@@ -49,7 +49,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.ui_codegen import WIDGET_TYPE_MAP  # noqa: E402
+from tools.ui_codegen import WIDGET_TYPE_MAP
 
 # ── Enum sets ──────────────────────────────────────────────────────────────
 ALLOWED_BORDER_STYLES = {"none", "", "single", "double", "rounded", "bold", "dashed"}

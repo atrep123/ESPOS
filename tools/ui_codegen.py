@@ -133,7 +133,7 @@ def _rgb_to_gray4(r: int, g: int, b: int) -> int:
         y = 0.2126 * float(r) + 0.7152 * float(g) + 0.0722 * float(b)
     except Exception:
         y = 255.0
-    v = int(round((y / 255.0) * 15.0))
+    v = round((y / 255.0) * 15.0)
     return max(0, min(15, v))
 
 

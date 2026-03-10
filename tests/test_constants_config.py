@@ -5,7 +5,7 @@ from ui_models import WidgetConfig
 
 
 def test_constants_paths():
-    assert ESP32OS_DIR == Path.home() / ".esp32os"
+    assert Path.home() / ".esp32os" == ESP32OS_DIR
     assert BACKUP_DIR == ESP32OS_DIR / "designer_backups"
 
 

@@ -864,9 +864,7 @@ class CyberpunkEditorApp:
         """Main loop."""
         while self.running:
             # Dynamic FPS adjustment
-            if self.vsync_enabled:
-                tick_fps = int(self.target_fps)
-            elif self.auto_scale_adjust:
+            if self.vsync_enabled or self.auto_scale_adjust:
                 tick_fps = int(self.target_fps)
             elif self.fps_limit > 0:
                 tick_fps = int(self.fps_limit)
@@ -1209,7 +1207,7 @@ class CyberpunkEditorApp:
         """Map component role -> widget index within selection."""
         sc = self.state.current_scene()
         roles: Dict[str, int] = {}
-        prefix = f"{str(root_prefix or '')}."
+        prefix = f"{root_prefix or ''!s}."
         if prefix == ".":
             return roles
         for idx in indices:
@@ -1355,7 +1353,7 @@ class CyberpunkEditorApp:
             rows += 1  # section header
             if sec_name not in self.palette_collapsed:
                 rows += len(items)
-        rows += int(len(sc.widgets))  # widget list
+        rows += len(sc.widgets)  # widget list
         gap = max(0, int(getattr(self, "pixel_padding", 0) or 0))
         return int(self.pixel_row_height) * rows + gap
 

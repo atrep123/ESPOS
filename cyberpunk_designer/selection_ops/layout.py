@@ -241,7 +241,7 @@ def grid_arrange(app) -> None:
     except Exception:
         pass
     n = len(valid)
-    cols = max(1, int(math.ceil(math.sqrt(n))))
+    cols = max(1, math.ceil(math.sqrt(n)))
     # Use first widget position as origin; uniform cell = max sizes + GRID gap
     max_w = max(int(sc.widgets[i].width or GRID) for i in valid)
     max_h = max(int(sc.widgets[i].height or GRID) for i in valid)

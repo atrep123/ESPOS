@@ -12,7 +12,7 @@ from __future__ import annotations
 from cyberpunk_designer.app import CyberpunkEditorApp, main
 from cyberpunk_designer.constants import GRID, PALETTE
 
-__all__ = ["CyberpunkEditorApp", "GRID", "PALETTE", "main"]
+__all__ = ["GRID", "PALETTE", "CyberpunkEditorApp", "main"]
 
 if __name__ == "__main__":
     main()

@@ -15,16 +15,16 @@ import os
 import sys
 from pathlib import Path
 
-Import("env")  # noqa: F821 - provided by PlatformIO/SCons
+Import("env")  # noqa: F821
 
 try:
     REPO_ROOT = Path(__file__).resolve().parents[1]
 except NameError:  # PlatformIO/SCons may execute without __file__
-    REPO_ROOT = Path(env["PROJECT_DIR"])  # noqa: F821 - provided by PlatformIO/SCons
+    REPO_ROOT = Path(env["PROJECT_DIR"])  # noqa: F821
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.ui_codegen import (  # noqa: E402
+from tools.ui_codegen import (
     generate_ui_design_multi_pair,
     generate_ui_design_pair,
     load_scenes,
@@ -50,7 +50,7 @@ def _main() -> None:
         print("[UI] Export disabled (ESP32OS_PIO_UI_EXPORT=0)")
         return
 
-    project_dir = Path(env["PROJECT_DIR"])  # noqa: F821 - provided by PlatformIO/SCons
+    project_dir = Path(env["PROJECT_DIR"])  # noqa: F821
     json_override = os.environ.get("ESP32OS_UI_JSON")
     if json_override is not None:
         json_override = _strip_optional_quotes(json_override)

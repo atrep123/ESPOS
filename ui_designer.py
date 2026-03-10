@@ -19,10 +19,10 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, TypedDict, Union,
 from constants import BACKUP_DIR, GRID_SIZE_MEDIUM
 from design_tokens import color_hex
 from ui_models import (
-    BorderStyle,  # noqa: F401 - re-exported
+    BorderStyle,
     ConstraintBaseline,
     Constraints,
-    Scene,  # noqa: F401 - re-exported
+    Scene,
     SceneConfig,
     SceneConfigDict,
     WidgetConfig,
@@ -2433,7 +2433,7 @@ class UIDesigner:
         import math
 
         amp = max(1, min(3, scene.height // 10))
-        dy = int(round(amp * math.sin(2 * math.pi * (t % steps) / steps)))
+        dy = round(amp * math.sin(2 * math.pi * (t % steps) / steps))
         widget.y = max(0, min(scene.height - widget.height, widget.y + dy))
 
     def _anim_slide_in_left(
@@ -2963,7 +2963,7 @@ def _log_preflight(result: Dict[str, Any]) -> None:
 
 
 # --- CLI interface, helpers, and WCAG utilities (extracted to ui_cli.py) ---
-from ui_cli import (  # noqa: E402
+from ui_cli import (
     _NAMED_COLORS,
     _contrast_ratio,
     _parse_color,
@@ -3224,17 +3224,17 @@ if __name__ == "__main__":
 
 # Re-export for backward compatibility
 __all__ = [
-    "UIDesigner",
-    "WidgetConfig",
-    "WidgetType",
+    "_NAMED_COLORS",
     "BorderStyle",
     "Scene",
     "SceneConfig",
-    "create_cli_interface",
-    "show_command_help",
-    "get_widget_help",
-    "_NAMED_COLORS",
+    "UIDesigner",
+    "WidgetConfig",
+    "WidgetType",
+    "_contrast_ratio",
     "_parse_color",
     "_rel_lum",
-    "_contrast_ratio",
+    "create_cli_interface",
+    "get_widget_help",
+    "show_command_help",
 ]

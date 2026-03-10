@@ -21,16 +21,16 @@ ESP32OS_DIR = Path.home() / ESP32_CONFIG_DIR  #: Root directory for user data.
 BACKUP_DIR = ESP32OS_DIR / BACKUP_DIR_NAME  #: Backup directory for autosaves.
 
 __all__ = [
-    "GRID_SIZE_SMALL",
-    "GRID_SIZE_MEDIUM",
-    "GRID_SIZE_LARGE",
-    "DEFAULT_WIDGET_WIDTH",
+    "BACKUP_DIR",
+    "BACKUP_DIR_NAME",
     "DEFAULT_WIDGET_HEIGHT",
     "DEFAULT_WIDGET_SIZE",
-    "MIN_WIDGET_SIZE",
-    "MAX_WIDGET_SIZE",
-    "ESP32_CONFIG_DIR",
-    "BACKUP_DIR_NAME",
+    "DEFAULT_WIDGET_WIDTH",
     "ESP32OS_DIR",
-    "BACKUP_DIR",
+    "ESP32_CONFIG_DIR",
+    "GRID_SIZE_LARGE",
+    "GRID_SIZE_MEDIUM",
+    "GRID_SIZE_SMALL",
+    "MAX_WIDGET_SIZE",
+    "MIN_WIDGET_SIZE",
 ]

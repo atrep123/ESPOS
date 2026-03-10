@@ -518,8 +518,8 @@ class TestGridArrange:
         grid_arrange(app)
         # sqrt(4) = 2 → 2x2 grid
         positions = [(int(_w(app, i).x), int(_w(app, i).y)) for i in range(4)]
-        xs = sorted(set(p[0] for p in positions))
-        ys = sorted(set(p[1] for p in positions))
+        xs = sorted({p[0] for p in positions})
+        ys = sorted({p[1] for p in positions})
         assert len(xs) == 2
         assert len(ys) == 2
 

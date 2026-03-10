@@ -20,7 +20,7 @@ MSG_UNKNOWN_ANIM = "Unknown animation name"
 
 def create_cli_interface(
     commands: Optional[List[str]] = None,
-):  # noqa: C901 - CLI handler intentionally complex  # NOSONAR
+):
     """Advanced CLI interface for UI designer.
 
     If 'commands' is provided, runs non-interactively executing each command in order.

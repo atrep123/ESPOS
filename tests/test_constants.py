@@ -20,7 +20,7 @@ def test_numeric_constants():
 def test_path_constants():
     assert constants.ESP32_CONFIG_DIR == ".esp32os"
     assert constants.BACKUP_DIR_NAME == "designer_backups"
-    assert constants.ESP32OS_DIR == Path.home() / ".esp32os"
+    assert Path.home() / ".esp32os" == constants.ESP32OS_DIR
     assert constants.BACKUP_DIR == constants.ESP32OS_DIR / "designer_backups"
 
 

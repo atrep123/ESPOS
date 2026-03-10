@@ -107,10 +107,10 @@ def resize_selection_to(app, new_w: int, new_h: int) -> bool:
         nw = float(ow) * sx
         nh = float(oh) * sy
 
-        ix = int(round(nx))
-        iy = int(round(ny))
-        iw = max(GRID, int(round(nw)))
-        ih = max(GRID, int(round(nh)))
+        ix = round(nx)
+        iy = round(ny)
+        iw = max(GRID, round(nw))
+        ih = max(GRID, round(nh))
         if app.snap_enabled:
             ix = snap(ix)
             iy = snap(iy)

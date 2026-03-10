@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from run_designer import send_live_preview  # noqa: E402
+from run_designer import send_live_preview
 
 
 def main() -> None:

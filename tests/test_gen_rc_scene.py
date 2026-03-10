@@ -485,7 +485,7 @@ _ALL_BUILDERS = [
 ]
 
 
-@pytest.mark.parametrize("name,builder", _ALL_BUILDERS)
+@pytest.mark.parametrize(("name", "builder"), _ALL_BUILDERS)
 def test_builder_returns_valid_structure(name, builder):
     s = builder()
     assert isinstance(s, dict)
@@ -496,35 +496,35 @@ def test_builder_returns_valid_structure(name, builder):
     assert len(s["widgets"]) > 0
 
 
-@pytest.mark.parametrize("name,builder", _ALL_BUILDERS)
+@pytest.mark.parametrize(("name", "builder"), _ALL_BUILDERS)
 def test_builder_all_types_valid(name, builder):
     s = builder()
     for w in s["widgets"]:
         assert w["type"] in VALID_TYPES, f"{name}: bad type {w['type']!r}"
 
 
-@pytest.mark.parametrize("name,builder", _ALL_BUILDERS)
+@pytest.mark.parametrize(("name", "builder"), _ALL_BUILDERS)
 def test_builder_unique_ids(name, builder):
     s = builder()
     ids = [w["_widget_id"] for w in s["widgets"] if w.get("_widget_id")]
     assert len(ids) == len(set(ids)), f"{name}: duplicate widget IDs"
 
 
-@pytest.mark.parametrize("name,builder", _ALL_BUILDERS)
+@pytest.mark.parametrize(("name", "builder"), _ALL_BUILDERS)
 def test_builder_passes_validation(name, builder):
     s = builder()
     errors = validate_scene(name, s)
     assert errors == [], f"{name} validation:\n" + "\n".join(errors)
 
 
-@pytest.mark.parametrize("name,builder", _ALL_BUILDERS)
+@pytest.mark.parametrize(("name", "builder"), _ALL_BUILDERS)
 def test_builder_widgets_have_ids(name, builder):
     s = builder()
     for i, w in enumerate(s["widgets"]):
         assert w.get("_widget_id"), f"{name}: widget #{i} missing _widget_id"
 
 
-@pytest.mark.parametrize("name,builder", _ALL_BUILDERS)
+@pytest.mark.parametrize(("name", "builder"), _ALL_BUILDERS)
 def test_builder_all_in_bounds(name, builder):
     s = builder()
     for w in s["widgets"]:

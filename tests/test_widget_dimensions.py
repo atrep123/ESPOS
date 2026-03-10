@@ -8,7 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from ui_designer import UIDesigner, WidgetConfig
 
 
-@pytest.mark.parametrize("width,height", [(None, None), (0, 0), (-1, -2), (5, 7)])
+@pytest.mark.parametrize(("width", "height"), [(None, None), (0, 0), (-1, -2), (5, 7)])
 def test_widget_bounds_handles_optional(width, height):
     d = UIDesigner(20, 20)
     sc = d.create_scene("main")

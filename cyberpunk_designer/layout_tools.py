@@ -208,7 +208,7 @@ def distribute_selection(app, axis: str) -> None:
             else:
                 prev_w = max(GRID, int(getattr(ordered[pos - 1][1], "width", GRID) or GRID))
                 cursor += float(prev_w) + gap
-                nx = int(round(cursor))
+                nx = round(cursor)
             ny = int(getattr(w, "y", 0) or 0)
             nx, ny = _clamp_xy_in_scene(app, nx, ny, w)
             w.x = nx
@@ -239,7 +239,7 @@ def distribute_selection(app, axis: str) -> None:
             else:
                 prev_h = max(GRID, int(getattr(ordered[pos - 1][1], "height", GRID) or GRID))
                 cursor += float(prev_h) + gap
-                ny = int(round(cursor))
+                ny = round(cursor)
             nx = int(getattr(w, "x", 0) or 0)
             nx, ny = _clamp_xy_in_scene(app, nx, ny, w)
             w.x = nx
@@ -373,7 +373,7 @@ def snap_drag_to_guides(
     sc_w = int(getattr(sc, "width", 0) or 0)
     sc_h = int(getattr(sc, "height", 0) or 0)
 
-    sel = set(int(i) for i in (getattr(app.state, "selected", []) or []) if str(i).isdigit())
+    sel = {int(i) for i in (getattr(app.state, "selected", []) or []) if str(i).isdigit()}
 
     x_edges: List[int] = [0, sc_w]
     x_centers: List[int] = [sc_w // 2]

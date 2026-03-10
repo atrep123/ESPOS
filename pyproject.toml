@@ -40,6 +40,10 @@ select = [
     "B",    # flake8-bugbear (common pitfalls)
     "S",    # flake8-bandit (security)
     "UP",   # pyupgrade (modern Python idioms)
+    "SIM",  # flake8-simplify
+    "C4",   # flake8-comprehensions
+    "PT",   # flake8-pytest-style
+    "RUF",  # ruff-specific rules
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
@@ -51,7 +55,27 @@ ignore = [
     "UP006",  # use X | Y instead of Optional/Union (requires Python 3.10+)
     "UP035",  # deprecated typing imports (requires Python 3.9+)
     "UP045",  # use X | Y in type aliases (requires Python 3.10+)
+    "SIM105", # contextlib.suppress instead of try-except-pass (style preference)
+    "C408",   # unnecessary dict() call (rewrite as literal — many false positives)
+    "PT018",  # composite assertions (style preference, 81 occurrences)
+    "RUF001", # ambiguous unicode character in string (legitimate non-ASCII)
+    "RUF002", # ambiguous unicode character in docstring
+    "RUF003", # ambiguous unicode character in comment
+    "RUF005", # use [*x, ...] instead of concatenation (readability preference)
+    "RUF012", # mutable class variable without ClassVar (dataclass pattern)
+    "RUF015", # prefer next() over [0] (minor optimization, readability trade-off)
+    "RUF059", # unused __all__ entry (noisy for re-export packages)
+    "SIM102", # collapsible nested ifs (intentionally nested for readability)
+    "SIM108", # use ternary expression (if-else blocks are clearer)
+    "SIM115", # open() without context manager (acceptable patterns)
+    "SIM117", # merge with statements (readability preference)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*.py" = ["E402"]
+"tools/*.py" = ["E402"]
+"verify_all_visual.py" = ["E402"]
+"ui_designer.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.9"

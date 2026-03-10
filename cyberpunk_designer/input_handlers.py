@@ -1047,7 +1047,7 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
                     app.designer._save_state()
                 except Exception:
                     pass
-                default = True if key in {"border", "visible", "enabled"} else False
+                default = key in {"border", "visible", "enabled"}
                 values: List[bool] = []
                 for idx in app.state.selected:
                     if not (0 <= idx < len(sc.widgets)):
@@ -1400,10 +1400,10 @@ def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> 
             ny = float(int(start_rect.y)) + rel_y * sy
             nw = float(int(ow)) * sx
             nh = float(int(oh)) * sy
-            ix = int(round(nx))
-            iy = int(round(ny))
-            iw = max(GRID, int(round(nw)))
-            ih = max(GRID, int(round(nh)))
+            ix = round(nx)
+            iy = round(ny)
+            iw = max(GRID, round(nw))
+            ih = max(GRID, round(nh))
             if app.snap_enabled:
                 ix = snap(ix)
                 iy = snap(iy)

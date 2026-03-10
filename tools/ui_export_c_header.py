@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.ui_codegen import generate_scenes_header  # noqa: E402
+from tools.ui_codegen import generate_scenes_header
 
 
 def export_header(json_path: Path, out_path: Path) -> None:

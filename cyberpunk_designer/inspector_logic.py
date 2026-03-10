@@ -156,7 +156,7 @@ def inspector_field_to_str(app, field: str, w: WidgetConfig) -> str:
             for idx in selection:
                 if 0 <= idx < len(sc.widgets):
                     values.append(str(getattr(sc.widgets[idx], f, "") or ""))
-            uniq = sorted(set([v for v in values if v]))
+            uniq = sorted({v for v in values if v})
             if len(uniq) == 1:
                 return uniq[0]
             return ""
@@ -1134,7 +1134,7 @@ def compute_inspector_rows(app) -> Tuple[List[Tuple[str, str]], bool, Optional[W
     selection = list(getattr(app.state, "selected", []) or [])
 
     def _mixed_str(values: List[str]) -> str:
-        uniq = sorted(set([str(v or "") for v in values if str(v or "")]))
+        uniq = sorted({str(v or "") for v in values if str(v or "")})
         if len(uniq) == 1:
             return uniq[0]
         if not uniq:

@@ -9,7 +9,7 @@ from ui_models import _make_baseline
 
 
 @pytest.mark.parametrize(
-    "w,h,bw,bh,expected_w,expected_h",
+    ("w", "h", "bw", "bh", "expected_w", "expected_h"),
     [
         (None, None, None, None, 0, 0),
         (5, None, 10, 12, 5, 0),

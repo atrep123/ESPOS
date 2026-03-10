@@ -141,11 +141,13 @@ class TestLivePreviewMain:
     def test_missing_json_exits(self, tmp_path):
         from tools.live_preview import main
 
-        with patch(
-            "sys.argv", ["live_preview", str(tmp_path / "nonexistent.json"), "--port", "COM99"]
+        with (
+            patch(
+                "sys.argv", ["live_preview", str(tmp_path / "nonexistent.json"), "--port", "COM99"]
+            ),
+            pytest.raises(SystemExit),
         ):
-            with pytest.raises(SystemExit):
-                main()
+            main()
 
     def test_valid_json_calls_send(self, tmp_path, monkeypatch):
         design = {"width": 256, "height": 128, "scenes": {"main": {"widgets": []}}}
