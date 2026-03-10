@@ -3,11 +3,21 @@ param(
   [string]$HistoryPath = "reports/native_policy_probe_history.jsonl",
   [int]$Last = 20,
   [string]$MarkdownOut = "",
-  [string]$CsvOut = ""
+  [string]$CsvOut = "",
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\summarize_native_policy_history.ps1 [-Help]"
+  Write-Host "  -HistoryPath <path>  History JSONL input (default: reports/native_policy_probe_history.jsonl)"
+  Write-Host "  -Last <int>          Number of recent entries (default: 20)"
+  Write-Host "  -MarkdownOut <path>  Markdown summary output"
+  Write-Host "  -CsvOut <path>       CSV summary output"
+  exit 0
+}
 
 $markdownOutSpecified = $PSBoundParameters.ContainsKey("MarkdownOut")
 $csvOutSpecified = $PSBoundParameters.ContainsKey("CsvOut")
