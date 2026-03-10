@@ -43,6 +43,15 @@ void test_first_focus_in_rect_null_scene(void);
 void test_move_focus_in_rect_null_scene(void);
 void test_first_focus_in_rect_empty_rect_returns_neg1(void);
 void test_cycle_focus_delta_zero_stays(void);
+void test_move_focus_in_rect_right(void);
+void test_move_focus_in_rect_left(void);
+void test_move_focus_in_rect_up(void);
+void test_move_focus_in_rect_down(void);
+void test_move_focus_in_rect_wraps_forward(void);
+void test_move_focus_in_rect_wraps_backward(void);
+void test_move_focus_in_rect_excludes_outside(void);
+void test_move_focus_left_wraps(void);
+void test_move_focus_right_wraps(void);
 
 void app_main(void)
 {
@@ -88,6 +97,15 @@ void app_main(void)
     RUN_TEST(test_move_focus_in_rect_null_scene);
     RUN_TEST(test_first_focus_in_rect_empty_rect_returns_neg1);
     RUN_TEST(test_cycle_focus_delta_zero_stays);
+    RUN_TEST(test_move_focus_in_rect_right);
+    RUN_TEST(test_move_focus_in_rect_left);
+    RUN_TEST(test_move_focus_in_rect_up);
+    RUN_TEST(test_move_focus_in_rect_down);
+    RUN_TEST(test_move_focus_in_rect_wraps_forward);
+    RUN_TEST(test_move_focus_in_rect_wraps_backward);
+    RUN_TEST(test_move_focus_in_rect_excludes_outside);
+    RUN_TEST(test_move_focus_left_wraps);
+    RUN_TEST(test_move_focus_right_wraps);
     UNITY_END();
 }
 
@@ -134,6 +152,15 @@ void test_first_focus_in_rect_null_scene(void);
 void test_move_focus_in_rect_null_scene(void);
 void test_first_focus_in_rect_empty_rect_returns_neg1(void);
 void test_cycle_focus_delta_zero_stays(void);
+void test_move_focus_in_rect_right(void);
+void test_move_focus_in_rect_left(void);
+void test_move_focus_in_rect_up(void);
+void test_move_focus_in_rect_down(void);
+void test_move_focus_in_rect_wraps_forward(void);
+void test_move_focus_in_rect_wraps_backward(void);
+void test_move_focus_in_rect_excludes_outside(void);
+void test_move_focus_left_wraps(void);
+void test_move_focus_right_wraps(void);
 
 int main(void)
 {
@@ -179,6 +206,15 @@ int main(void)
     RUN_TEST(test_move_focus_in_rect_null_scene);
     RUN_TEST(test_first_focus_in_rect_empty_rect_returns_neg1);
     RUN_TEST(test_cycle_focus_delta_zero_stays);
+    RUN_TEST(test_move_focus_in_rect_right);
+    RUN_TEST(test_move_focus_in_rect_left);
+    RUN_TEST(test_move_focus_in_rect_up);
+    RUN_TEST(test_move_focus_in_rect_down);
+    RUN_TEST(test_move_focus_in_rect_wraps_forward);
+    RUN_TEST(test_move_focus_in_rect_wraps_backward);
+    RUN_TEST(test_move_focus_in_rect_excludes_outside);
+    RUN_TEST(test_move_focus_left_wraps);
+    RUN_TEST(test_move_focus_right_wraps);
     return UNITY_END();
 }
 

@@ -28,6 +28,7 @@ void test_ui_bind_set_bool_store_full(void);
 void test_ui_bind_set_str_empty_key(void);
 void test_ui_bind_get_str_small_buf(void);
 void test_ui_bind_int_negative_value(void);
+void test_ui_bind_contrast_boundary_adjacent(void);
 
 int main(void)
 {
@@ -50,6 +51,7 @@ int main(void)
     RUN_TEST(test_ui_bind_set_str_empty_key);
     RUN_TEST(test_ui_bind_get_str_small_buf);
     RUN_TEST(test_ui_bind_int_negative_value);
+    RUN_TEST(test_ui_bind_contrast_boundary_adjacent);
     return UNITY_END();
 }
 

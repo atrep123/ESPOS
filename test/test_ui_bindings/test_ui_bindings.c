@@ -267,3 +267,27 @@ void test_ui_bind_int_negative_value(void)
     TEST_ASSERT_TRUE(ui_bind_get_int("temp", &val));
     TEST_ASSERT_EQUAL_INT(-42, val);
 }
+
+void test_ui_bind_contrast_boundary_adjacent(void)
+{
+    int val;
+    /* -1 is just below valid range → clamps to 0 */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int("contrast", -1));
+    TEST_ASSERT_TRUE(ui_bind_get_int("contrast", &val));
+    TEST_ASSERT_EQUAL_INT(0, val);
+
+    /* 0 is at boundary → stays 0 */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int("contrast", 0));
+    TEST_ASSERT_TRUE(ui_bind_get_int("contrast", &val));
+    TEST_ASSERT_EQUAL_INT(0, val);
+
+    /* 255 is at boundary → stays 255 */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int("contrast", 255));
+    TEST_ASSERT_TRUE(ui_bind_get_int("contrast", &val));
+    TEST_ASSERT_EQUAL_INT(255, val);
+
+    /* 256 is just above → clamps to 255 */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int("contrast", 256));
+    TEST_ASSERT_TRUE(ui_bind_get_int("contrast", &val));
+    TEST_ASSERT_EQUAL_INT(255, val);
+}

@@ -19,7 +19,7 @@ pio test -e native -f test_ui_core  # single suite
 | `test_msgbus` | `src/kernel/msgbus.c` — message bus pub/sub | 13 |
 | `test_seesaw` | `src/services/input/seesaw.c` — Adafruit seesaw encoder | 25 |
 | `test_store` | `src/services/store/` — NVS/SPIFFS persistence | 18 |
-| `test_ui_bindings` | `src/services/ui/ui_bindings.c` — runtime value bindings | 18 |
+| `test_ui_bindings` | `src/services/ui/ui_bindings.c` — runtime value bindings | 19 |
 | `test_ui_cmd` | `src/services/ui/ui_cmd.c` — UI command dispatch | 27 |
 | `test_ui_components` | `src/services/ui/ui_components.c` — widget rendering | 18 |
 | `test_ui_core` | `src/services/ui/ui_core.c` — widget tree & state | 15 |
@@ -27,11 +27,11 @@ pio test -e native -f test_ui_core  # single suite
 | `test_ui_helpers` | `src/services/ui/ui_helpers.c` — parse & toast queue helpers | 33 |
 | `test_ui_listmodel` | `src/services/ui/ui_listmodel.c` — list/tree model | 20 |
 | `test_ui_meta` | `src/services/ui/ui_meta.c` — widget metadata | 12 |
-| `test_ui_nav` | `src/ui_nav.c` — focus navigation | 41 |
+| `test_ui_nav` | `src/ui_nav.c` — focus navigation | 50 |
 | `test_ui_render` | `src/ui_render.c` — widget rendering dispatch | 44 |
 | `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 51 |
 
-**Total: ~344 test cases**
+**Total: ~354 test cases**
 
 ## Stubs
 

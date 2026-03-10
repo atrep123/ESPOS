@@ -442,3 +442,112 @@ void test_cycle_focus_delta_zero_stays(void)
     TEST_ASSERT_TRUE(result >= -1 && result < 2);
 }
 
+/* --- move_focus_in_rect directional tests --- */
+
+void test_move_focus_in_rect_right(void)
+{
+    /* 2x2 grid inside a rect; RIGHT from top-left → top-right */
+    UiWidget widgets[4];
+    init_button(&widgets[0], "tl", 10, 10);
+    init_button(&widgets[1], "tr", 40, 10);
+    init_button(&widgets[2], "bl", 10, 40);
+    init_button(&widgets[3], "br", 40, 40);
+    UiScene s = make_scene(widgets, 4);
+    int next = ui_nav_move_focus_in_rect(&s, 0, UI_NAV_RIGHT, 0, 0, 60, 60);
+    TEST_ASSERT_EQUAL_INT(1, next);
+}
+
+void test_move_focus_in_rect_left(void)
+{
+    /* 2x2 grid inside a rect; LEFT from top-right → top-left */
+    UiWidget widgets[4];
+    init_button(&widgets[0], "tl", 10, 10);
+    init_button(&widgets[1], "tr", 40, 10);
+    init_button(&widgets[2], "bl", 10, 40);
+    init_button(&widgets[3], "br", 40, 40);
+    UiScene s = make_scene(widgets, 4);
+    int next = ui_nav_move_focus_in_rect(&s, 1, UI_NAV_LEFT, 0, 0, 60, 60);
+    TEST_ASSERT_EQUAL_INT(0, next);
+}
+
+void test_move_focus_in_rect_up(void)
+{
+    /* 2x2 grid inside a rect; UP from bottom-left → top-left */
+    UiWidget widgets[4];
+    init_button(&widgets[0], "tl", 10, 10);
+    init_button(&widgets[1], "tr", 40, 10);
+    init_button(&widgets[2], "bl", 10, 40);
+    init_button(&widgets[3], "br", 40, 40);
+    UiScene s = make_scene(widgets, 4);
+    int next = ui_nav_move_focus_in_rect(&s, 2, UI_NAV_UP, 0, 0, 60, 60);
+    TEST_ASSERT_EQUAL_INT(0, next);
+}
+
+void test_move_focus_in_rect_down(void)
+{
+    /* 2x2 grid inside a rect; DOWN from top-left → bottom-left */
+    UiWidget widgets[4];
+    init_button(&widgets[0], "tl", 10, 10);
+    init_button(&widgets[1], "tr", 40, 10);
+    init_button(&widgets[2], "bl", 10, 40);
+    init_button(&widgets[3], "br", 40, 40);
+    UiScene s = make_scene(widgets, 4);
+    int next = ui_nav_move_focus_in_rect(&s, 0, UI_NAV_DOWN, 0, 0, 60, 60);
+    TEST_ASSERT_EQUAL_INT(2, next);
+}
+
+void test_move_focus_in_rect_wraps_forward(void)
+{
+    /* Two buttons in a vertical column inside rect; DOWN from bottom wraps to top */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "top", 10, 10);
+    init_button(&widgets[1], "bot", 10, 40);
+    UiScene s = make_scene(widgets, 2);
+    int next = ui_nav_move_focus_in_rect(&s, 1, UI_NAV_DOWN, 0, 0, 60, 60);
+    TEST_ASSERT_EQUAL_INT(0, next);
+}
+
+void test_move_focus_in_rect_wraps_backward(void)
+{
+    /* Two buttons in a vertical column inside rect; UP from top wraps to bottom */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "top", 10, 10);
+    init_button(&widgets[1], "bot", 10, 40);
+    UiScene s = make_scene(widgets, 2);
+    int next = ui_nav_move_focus_in_rect(&s, 0, UI_NAV_UP, 0, 0, 60, 60);
+    TEST_ASSERT_EQUAL_INT(1, next);
+}
+
+void test_move_focus_in_rect_excludes_outside(void)
+{
+    /* Widget outside rect must not be navigated to */
+    UiWidget widgets[3];
+    init_button(&widgets[0], "inside1", 10, 10);
+    init_button(&widgets[1], "outside", 80, 10);  /* outside rect */
+    init_button(&widgets[2], "inside2", 10, 30);
+    UiScene s = make_scene(widgets, 3);
+    /* RIGHT from inside1: outside widget excluded, wraps within rect */
+    int next = ui_nav_move_focus_in_rect(&s, 0, UI_NAV_RIGHT, 0, 0, 50, 50);
+    TEST_ASSERT(next == 0 || next == 2);  /* must not be 1 (outside) */
+}
+
+void test_move_focus_left_wraps(void)
+{
+    /* Two buttons horizontally; LEFT from leftmost wraps to right */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "left", 0, 20);
+    init_button(&widgets[1], "right", 50, 20);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 0, UI_NAV_LEFT));
+}
+
+void test_move_focus_right_wraps(void)
+{
+    /* Two buttons horizontally; RIGHT from rightmost wraps to left */
+    UiWidget widgets[2];
+    init_button(&widgets[0], "left", 0, 20);
+    init_button(&widgets[1], "right", 50, 20);
+    UiScene s = make_scene(widgets, 2);
+    TEST_ASSERT_EQUAL_INT(0, ui_nav_move_focus(&s, 1, UI_NAV_RIGHT));
+}
+
