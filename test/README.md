@@ -14,20 +14,22 @@ pio test -e native -f test_ui_core  # single suite
 
 ## Test Suites
 
-| Suite | Module Under Test |
-|-------|-------------------|
-| `test_msgbus` | `src/kernel/msgbus.c` — message bus pub/sub |
-| `test_seesaw` | `src/services/input/seesaw.c` — Adafruit seesaw encoder |
-| `test_store` | `src/services/store/` — NVS/SPIFFS persistence |
-| `test_ui_bindings` | `src/services/ui/ui_bindings.c` — runtime value bindings |
-| `test_ui_cmd` | `src/services/ui/ui_cmd.c` — UI command dispatch |
-| `test_ui_components` | `src/services/ui/ui_components.c` — widget rendering |
-| `test_ui_core` | `src/services/ui/ui_core.c` — widget tree & state |
-| `test_ui_font` | `src/ui_font_6x8.c` — bitmap font data |
-| `test_ui_listmodel` | `src/services/ui/ui_listmodel.c` — list/tree model |
-| `test_ui_meta` | `src/services/ui/ui_meta.c` — widget metadata |
-| `test_ui_nav` | `src/ui_nav.c` — focus navigation |
-| `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer |
+| Suite | Module Under Test | Tests |
+|-------|-------------------|-------|
+| `test_msgbus` | `src/kernel/msgbus.c` — message bus pub/sub | 8 |
+| `test_seesaw` | `src/services/input/seesaw.c` — Adafruit seesaw encoder | 25 |
+| `test_store` | `src/services/store/` — NVS/SPIFFS persistence | 18 |
+| `test_ui_bindings` | `src/services/ui/ui_bindings.c` — runtime value bindings | 18 |
+| `test_ui_cmd` | `src/services/ui/ui_cmd.c` — UI command dispatch | 25 |
+| `test_ui_components` | `src/services/ui/ui_components.c` — widget rendering | 16 |
+| `test_ui_core` | `src/services/ui/ui_core.c` — widget tree & state | 15 |
+| `test_ui_font` | `src/ui_font_6x8.c` — bitmap font data | 8 |
+| `test_ui_listmodel` | `src/services/ui/ui_listmodel.c` — list/tree model | 11 |
+| `test_ui_meta` | `src/services/ui/ui_meta.c` — widget metadata | 12 |
+| `test_ui_nav` | `src/ui_nav.c` — focus navigation | 41 |
+| `test_ui_render_swbuf` | `src/ui_render_swbuf.c` — software-buffered renderer | 44 |
+
+**Total: ~241 test cases**
 
 ## Stubs
 
