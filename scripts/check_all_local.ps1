@@ -12,11 +12,30 @@ param(
   [string]$NativePolicySummaryMarkdown = "reports/native_policy_summary.md",
   [string]$NativePolicyHistoryCsv = "reports/native_policy_history.csv",
   [string]$NativePolicyTriageCsv = "",
-  [string]$NativePolicyTriageDeltaCsv = ""
+  [string]$NativePolicyTriageDeltaCsv = "",
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\check_all_local.ps1 [-Help]"
+  Write-Host "  -SkipPython                         Skip Python lint/test"
+  Write-Host "  -SkipPio                            Skip PlatformIO checks"
+  Write-Host "  -Fast                               Fast mode"
+  Write-Host "  -StrictArtifacts                    Require all artifacts"
+  Write-Host "  -StrictTriageCsv                    Require triage CSV"
+  Write-Host "  -StrictTriageDeltaCsv               Require triage delta CSV"
+  Write-Host "  -Design <path>                      Design JSON (default: main_scene.json)"
+  Write-Host "  -NativePolicyProbeJson <path>       Probe JSON path"
+  Write-Host "  -NativePolicyHistoryJsonl <path>    History JSONL path"
+  Write-Host "  -NativePolicySummaryMarkdown <path> Summary markdown path"
+  Write-Host "  -NativePolicyHistoryCsv <path>      History CSV path"
+  Write-Host "  -NativePolicyTriageCsv <path>       Triage CSV path"
+  Write-Host "  -NativePolicyTriageDeltaCsv <path>  Triage delta CSV path"
+  exit 0
+}
 
 if ((-not $StrictArtifacts) -and ($StrictTriageCsv -or $StrictTriageDeltaCsv)) {
   throw "-StrictTriageCsv/-StrictTriageDeltaCsv require -StrictArtifacts"
