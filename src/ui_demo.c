@@ -66,8 +66,12 @@ static void ui_demo_draw_focus(UiDrawOps *ops, const UiScene *scene, int idx)
 
 void ui_demo_render_once(void)
 {
-    /* Ensure bus/panel are at least initialized; ignore errors for demo. */
-    (void)ssd1363_init_panel();
+    /* Ensure bus/panel are at least initialized. */
+    esp_err_t err = ssd1363_init_panel();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "ssd1363_init_panel failed: %s", esp_err_to_name(err));
+        return;
+    }
 
     /* Allocate a static framebuffer (layout depends on DISPLAY_COLOR_BITS). */
     enum { W = DISPLAY_WIDTH, H = DISPLAY_HEIGHT };
@@ -95,7 +99,12 @@ void ui_demo_render_once(void)
 
 static void ui_demo_task(void *arg)
 {
-    (void)ssd1363_init_panel();
+    esp_err_t err = ssd1363_init_panel();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "ssd1363_init_panel failed: %s", esp_err_to_name(err));
+        vTaskDelete(NULL);
+        return;
+    }
 
     enum { W = DISPLAY_WIDTH, H = DISPLAY_HEIGHT };
     static uint8_t fb[UI_SWBUF_BYTES(W, H)];

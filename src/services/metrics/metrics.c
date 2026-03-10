@@ -48,5 +48,8 @@ static void metrics_task(void *arg)
 void metrics_start(void)
 {
     q = bus_make_queue(8);
-    (void)xTaskCreatePinnedToCore(metrics_task, "metrics", 4096, NULL, 4, NULL, 0);
+    BaseType_t rc = xTaskCreatePinnedToCore(metrics_task, "metrics", 4096, NULL, 4, NULL, 0);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "metrics task creation failed");
+    }
 }

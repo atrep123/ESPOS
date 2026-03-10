@@ -441,7 +441,7 @@ static void ui_draw_text_block(
                     n = want - 3;
                 }
                 line[n] = '\0';
-                strcat(line, "...");
+                memcpy(line + n, "...", 4); /* includes NUL */
             } else {
                 line[want] = '\0';
             }

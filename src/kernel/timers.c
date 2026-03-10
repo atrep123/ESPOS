@@ -3,7 +3,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "esp_log.h"
 #include "msgbus.h"
+
+static const char *TAG = "timers";
 
 static void tick_task(void *arg)
 {
@@ -23,6 +26,9 @@ static void tick_task(void *arg)
 
 void kernel_start_ticker(void)
 {
-    (void)xTaskCreatePinnedToCore(tick_task, "tick", 2048, NULL, 5, NULL, 1);
+    BaseType_t rc = xTaskCreatePinnedToCore(tick_task, "tick", 2048, NULL, 5, NULL, 1);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "tick task creation failed");
+    }
 }
 

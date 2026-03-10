@@ -77,5 +77,8 @@ static void rpc_task(void *arg)
 
 void rpc_start(void)
 {
-    (void)xTaskCreatePinnedToCore(rpc_task, "rpc", 4096, NULL, 5, NULL, 0);
+    BaseType_t rc = xTaskCreatePinnedToCore(rpc_task, "rpc", 4096, NULL, 5, NULL, 0);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "rpc task creation failed");
+    }
 }

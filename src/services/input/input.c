@@ -289,7 +289,10 @@ static void __attribute__((unused)) input_seesaw_try_init_gamepad(input_seesaw_g
         (1u << 1) |  /* B */
         (1u << 0) |  /* SELECT */
         (1u << 16);  /* START */
-    (void)seesaw_pin_mode_bulk(gp->addr, mask, SEESAW_PIN_INPUT_PULLUP);
+    esp_err_t seerr = seesaw_pin_mode_bulk(gp->addr, mask, SEESAW_PIN_INPUT_PULLUP);
+    if (seerr != ESP_OK) {
+        ESP_LOGW(TAG, "seesaw gamepad pin_mode_bulk failed: %s", esp_err_to_name(seerr));
+    }
     ESP_LOGI("input", "Seesaw gamepad detected at 0x%02X", (unsigned)gp->addr);
 #endif
 }
@@ -321,7 +324,10 @@ static void __attribute__((unused)) input_seesaw_try_init_rotary(input_seesaw_ro
     rot->addr = (uint8_t)INPUT_SEESAW_ROTARY_ADDR;
 
     /* Button pin from Adafruit seesaw_rotary_simpletest.py */
-    (void)seesaw_pin_mode_bulk(rot->addr, (1u << 24), SEESAW_PIN_INPUT_PULLUP);
+    esp_err_t seerr = seesaw_pin_mode_bulk(rot->addr, (1u << 24), SEESAW_PIN_INPUT_PULLUP);
+    if (seerr != ESP_OK) {
+        ESP_LOGW(TAG, "seesaw rotary pin_mode_bulk failed: %s", esp_err_to_name(seerr));
+    }
     ESP_LOGI("input", "Seesaw rotary detected at 0x%02X", (unsigned)rot->addr);
 #endif
 }
@@ -356,7 +362,10 @@ static void __attribute__((unused)) input_seesaw_try_init_quad(input_seesaw_quad
     for (int i = 0; i < 4; ++i) {
         mask |= (1u << pins[i]);
     }
-    (void)seesaw_pin_mode_bulk(quad->addr, mask, SEESAW_PIN_INPUT_PULLUP);
+    esp_err_t seerr = seesaw_pin_mode_bulk(quad->addr, mask, SEESAW_PIN_INPUT_PULLUP);
+    if (seerr != ESP_OK) {
+        ESP_LOGW(TAG, "seesaw quad pin_mode_bulk failed: %s", esp_err_to_name(seerr));
+    }
 
     for (int i = 0; i < 4; ++i) {
         uint8_t raw_id, press_id, hold_id, cw_id, ccw_id;
@@ -688,5 +697,8 @@ static void input_task(void *arg)
 
 void input_start(void)
 {
-    (void)xTaskCreatePinnedToCore(input_task, "in", 2048, NULL, 5, NULL, 0);
+    BaseType_t rc = xTaskCreatePinnedToCore(input_task, "in", 2048, NULL, 5, NULL, 0);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "input task creation failed");
+    }
 }
