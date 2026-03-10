@@ -15,6 +15,11 @@ ARDUINO_NANO_ESP32_PIDS: List[int] = [0x0070]
 ALLOWED_STAGES = {"test", "upload"}
 
 
+def _print_usage() -> None:
+    print("Usage: python scripts/skip_hw_tests.py [test|upload]")
+    print("If omitted, stage defaults to 'test'.")
+
+
 def has_esp32s3() -> bool:
     if list_ports is None:
         return False
@@ -46,6 +51,9 @@ def main() -> int:
         return 2
 
     want = sys.argv[1] if len(sys.argv) > 1 else "test"
+    if want in {"-h", "--help"}:
+        _print_usage()
+        return 0
     normalized_want = want.strip().lower()
     if not normalized_want:
         print("ERROR: Stage argument cannot be empty", file=sys.stderr)
