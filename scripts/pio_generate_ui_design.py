@@ -56,9 +56,13 @@ def _main() -> None:
             raise RuntimeError("[UI] ESP32OS_UI_JSON cannot be empty")
 
     json_path_raw = json_override if json_override is not None else str(project_dir / "main_scene.json")
-    json_path = Path(json_path_raw).expanduser()
+    json_path = Path(json_path_raw).expanduser().resolve()
     if not json_path.is_absolute():
-        json_path = project_dir / json_path
+        json_path = (project_dir / json_path).resolve()
+    try:
+        json_path.relative_to(project_dir.resolve())
+    except ValueError as exc:
+        raise RuntimeError(f"[UI] JSON path escapes project directory: {json_path}") from exc
     if json_path.exists() and json_path.is_dir():
         raise RuntimeError(f"[UI] JSON path points to a directory: {json_path}")
 

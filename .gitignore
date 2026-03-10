@@ -63,6 +63,9 @@ reports/ci_smoke_*.log
 
 # Local designer preferences
 designer_prefs.json
+user_widget_presets.json
+undo_history.json
+widget_catalog.json
 
 # Generated test outputs
 test_export.html

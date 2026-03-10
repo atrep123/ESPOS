@@ -26,6 +26,8 @@ from tools.ui_codegen import generate_scenes_header  # noqa: E402
 
 def export_header(json_path: Path, out_path: Path) -> None:
     guard = (out_path.stem.upper().replace("-", "_") + "_H").replace(".", "_")
+    if guard[0].isdigit():
+        guard = "_" + guard
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     text = generate_scenes_header(json_path, guard=guard, source_name=json_path.name, generated_ts=ts)
     out_path.parent.mkdir(parents=True, exist_ok=True)
