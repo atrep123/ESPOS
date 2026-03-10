@@ -4,11 +4,22 @@ param(
   [int]$DelaySeconds = 2,
   [int]$Rounds = 1,
   [string[]]$Suites = @(),
-  [string]$JsonOut = ""
+  [string]$JsonOut = "",
+  [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ($Help) {
+  Write-Host "Usage: .\scripts\check_native_policy_probe.ps1 [-Help]"
+  Write-Host "  -MaxAttemptsPerSuite <int>  Max retries per suite (default: 3)"
+  Write-Host "  -DelaySeconds <int>        Delay between retries (default: 2)"
+  Write-Host "  -Rounds <int>              Number of probe rounds (default: 1)"
+  Write-Host "  -Suites <string[]>         Suites to probe (default: all native)"
+  Write-Host "  -JsonOut <path>            Output JSON path"
+  exit 0
+}
 
 function Try-AddMsysGccToPath {
   $msysGccDir = "C:\msys64\ucrt64\bin"
