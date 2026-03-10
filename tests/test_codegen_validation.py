@@ -30,6 +30,7 @@ from tools.ui_codegen import (
     border_style_for,
     build_string_pool,
     collect_widget_strings,
+    escape_c_comment,
     escape_c_string,
     generate_scenes_header,
     generate_ui_design_multi_pair,
@@ -71,10 +72,11 @@ def _emit(w: dict, idx: int = 0) -> str:
 # escape_c_string — tab char and combined escapes
 # ===========================================================================
 class TestEscapeCStringExtended:
-    def test_tab_preserved_verbatim(self):
-        """Tab chars are not escaped (no \\t rule in the function)."""
+    def test_tab_escaped(self):
+        """Tab chars are escaped to \\t in C strings."""
         result = escape_c_string("a\tb")
-        assert "\t" in result
+        assert "\\t" in result
+        assert "\t" not in result
 
     def test_combined_escapes(self):
         result = escape_c_string('line1\nline2\r"end"\\done')
@@ -88,6 +90,25 @@ class TestEscapeCStringExtended:
 
     def test_numeric_input(self):
         assert escape_c_string(42) == "42"
+
+    def test_null_byte_stripped(self):
+        """Null bytes are stripped to prevent C string truncation."""
+        assert escape_c_string("a\0b") == "ab"
+
+
+# ===========================================================================
+# escape_c_comment — prevent comment-close injection
+# ===========================================================================
+class TestEscapeCComment:
+    def test_close_comment_escaped(self):
+        assert "*/" not in escape_c_comment("hello */ world")
+        assert "* /" in escape_c_comment("hello */ world")
+
+    def test_plain_text_unchanged(self):
+        assert escape_c_comment("hello world") == "hello world"
+
+    def test_none_input(self):
+        assert escape_c_comment(None) == ""
 
 
 # ===========================================================================

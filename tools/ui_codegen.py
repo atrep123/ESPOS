@@ -83,7 +83,14 @@ def escape_c_string(text: object) -> str:
         .replace('"', '\\"')
         .replace("\n", "\\n")
         .replace("\r", "\\r")
+        .replace("\t", "\\t")
+        .replace("\0", "")
     )
+
+
+def escape_c_comment(text: object) -> str:
+    """Escape text for safe inclusion inside a C block comment."""
+    return str(text or "").replace("*/", "* /")
 
 
 def as_int(v: object, default: int = 0) -> int:
@@ -289,7 +296,7 @@ def generate_ui_design_pair(
     h_lines: list[str] = []
     h_lines.append("/* Auto-generated: UI design for ESP32OS */")
     h_lines.append(
-        f"/* Source: {escape_c_string(source_label)} (scene: {escape_c_string(selected_name)}) */"
+        f"/* Source: {escape_c_comment(source_label)} (scene: {escape_c_comment(selected_name)}) */"
     )
     h_lines.append("#ifndef UI_DESIGN_H")
     h_lines.append("#define UI_DESIGN_H")
@@ -319,7 +326,7 @@ def generate_ui_design_pair(
     c_lines: list[str] = []
     c_lines.append("/* Auto-generated: UI design for ESP32OS */")
     c_lines.append(
-        f"/* Source: {escape_c_string(source_label)} (scene: {escape_c_string(selected_name)}) */"
+        f"/* Source: {escape_c_comment(source_label)} (scene: {escape_c_comment(selected_name)}) */"
     )
     c_lines.append('#include "ui_design.h"')
     c_lines.append("")
@@ -374,7 +381,7 @@ def generate_ui_design_pair(
         enabled = 1 if as_bool(w.get("enabled", True), True) else 0
 
         preview = text or widget_id or ""
-        c_lines.append(f'    {{ /* [{idx}] {wtype} "{escape_c_string(preview)}" */')
+        c_lines.append(f'    {{ /* [{idx}] {wtype} "{escape_c_comment(preview)}" */')
         c_lines.append(f"        .type = {wtype},")
         c_lines.append(f"        .x = {x}, .y = {y}, .width = {ww}, .height = {hh},")
         c_lines.append(f"        .border = {border}, .checked = {checked},")
@@ -597,7 +604,7 @@ def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
     ena = 1 if as_bool(w.get("enabled", True), True) else 0
 
     preview = text or widget_id or ""
-    lines.append(f'    {{ /* [{idx}] {wtype} "{escape_c_string(preview)}" */')
+    lines.append(f'    {{ /* [{idx}] {wtype} "{escape_c_comment(preview)}" */')
     lines.append(f"        .type = {wtype},")
     lines.append(f"        .x = {x}, .y = {y}, .width = {ww}, .height = {hh},")
     lines.append(f"        .border = {border}, .checked = {checked},")
@@ -637,7 +644,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     # === Header (.h) ===
     h: list[str] = []
     h.append("/* Auto-generated: UI design for ESP32OS (multi-scene) */")
-    h.append(f"/* Source: {escape_c_string(source_label)} */")
+    h.append(f"/* Source: {escape_c_comment(source_label)} */")
     h.append("#ifndef UI_DESIGN_H")
     h.append("#define UI_DESIGN_H")
     h.append("")
@@ -655,7 +662,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     # === Source (.c) ===
     c: list[str] = []
     c.append("/* Auto-generated: UI design for ESP32OS (multi-scene) */")
-    c.append(f"/* Source: {escape_c_string(source_label)} */")
+    c.append(f"/* Source: {escape_c_comment(source_label)} */")
     c.append('#include "ui_design.h"')
     c.append("")
     c.append("/* String pool */")
@@ -676,7 +683,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
         width = as_int(scene_data.get("width", 128), 128)
         height = as_int(scene_data.get("height", 64), 64)
 
-        c.append(f"/* Scene: {escape_c_string(scene_name)} ({len(widgets)} widgets) */")
+        c.append(f"/* Scene: {escape_c_comment(scene_name)} ({len(widgets)} widgets) */")
         c.append(f"static const UiWidget {safe}_widgets[] = {{")
         for idx, w in enumerate(widgets):
             if isinstance(w, dict):
@@ -694,7 +701,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
             widgets = []
         width = as_int(scene_data.get("width", 128), 128)
         height = as_int(scene_data.get("height", 64), 64)
-        c.append(f"    {{ /* {escape_c_string(key)} */")
+        c.append(f"    {{ /* {escape_c_comment(key)} */")
         c.append(f'        .name = "{escape_c_string(key)}",')
         c.append(f"        .width = {width}, .height = {height},")
         c.append(
