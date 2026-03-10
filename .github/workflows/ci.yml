@@ -15,6 +15,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -36,7 +40,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup PlatformIO
         uses: n-vr/setup-platformio-action@v1
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
       - name: Native tests
         run: pio test -e native
-      - name: Build (nohw)
+      - name: Build ESP32-S3 (nohw)
+        run: pio run -e esp32-s3-devkitm-1-nohw
+      - name: Build Arduino Nano ESP32 (nohw)
         run: pio run -e arduino_nano_esp32-nohw
