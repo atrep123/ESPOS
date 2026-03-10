@@ -544,11 +544,6 @@ def draw_text_clipped(
         return
     if use_device_font is None:
         use_device = text_metrics.is_device_profile(getattr(app, "hardware_profile", None))
-        if use_device:
-            try:
-                use_device = bool(getattr(app.layout, "canvas_rect", pygame.Rect(0, 0, 0, 0)).colliderect(rect))
-            except Exception:
-                use_device = False
     else:
         use_device = bool(use_device_font)
 
@@ -624,12 +619,9 @@ def draw_text_in_rect(
     align = str(getattr(w, "align", "left") or "left").lower()
     valign = str(getattr(w, "valign", "middle") or "middle").lower()
     line_h = max(1, int(app.pixel_font.get_height()))
+    # Use one deterministic text path for widget text on device profiles.
+    # Avoid per-rect gating that can make top rows render with a different font.
     use_device = text_metrics.is_device_profile(getattr(app, "hardware_profile", None))
-    if use_device:
-        try:
-            use_device = bool(getattr(app.layout, "canvas_rect", pygame.Rect(0, 0, 0, 0)).colliderect(rect))
-        except Exception:
-            use_device = False
     overflow = str(getattr(w, "text_overflow", "ellipsis") or "ellipsis").strip().lower()
     if overflow not in {"ellipsis", "wrap", "clip", "auto"}:
         overflow = "ellipsis"
@@ -663,6 +655,9 @@ def draw_text_in_rect(
         max_lines = 1
 
     ell = "" if overflow == "clip" else "..."
+    # Keep text rendering mode deterministic for widget labels: either device 6x8
+    # on device profiles or pixel pygame font otherwise. This avoids mixed-looking
+    # glyphs when auto-detection flips per-rect.
     draw_text_clipped(
         app,
         surface=surface,
@@ -674,6 +669,7 @@ def draw_text_in_rect(
         valign=valign,
         max_lines=max_lines,
         ellipsis=ell,
+        use_device_font=use_device,
     )
 
 
@@ -720,8 +716,52 @@ def draw_widget_preview(
             y += step
 
     pressed = str(getattr(w, "state", "default") or "default").lower() in {"pressed", "down"}
+    use_device_font = text_metrics.is_device_profile(getattr(app, "hardware_profile", None))
 
-    if kind == "checkbox":
+    if kind == "label":
+        if label:
+            align = str(getattr(w, "align", "left") or "left").lower()
+            valign = str(getattr(w, "valign", "middle") or "middle").lower()
+            if use_device_font:
+                clip_rect = rect.inflate(-padding * 2, -padding * 2)
+                if clip_rect.width > 0 and clip_rect.height > 0:
+                    max_chars = max(1, int(clip_rect.width) // max(1, int(font6x8.CHAR_W)))
+                    flat = " ".join(str(label).replace("\t", " ").replace("\r", "").replace("\n", " ").split())
+                    line = text_metrics.ellipsize_chars(flat, max_chars=max_chars, ellipsis="...")
+                    txt = font6x8.render_text(line, fg)
+                    if align == "center":
+                        x = clip_rect.centerx - txt.get_width() // 2
+                    elif align == "right":
+                        x = clip_rect.right - txt.get_width()
+                    else:
+                        x = clip_rect.x
+                    if valign == "top":
+                        y = clip_rect.y
+                    elif valign == "bottom":
+                        y = clip_rect.bottom - txt.get_height()
+                    else:
+                        y = clip_rect.centery - txt.get_height() // 2
+                    old_clip = surface.get_clip()
+                    try:
+                        surface.set_clip(clip_rect)
+                        surface.blit(txt, (x, y))
+                    finally:
+                        surface.set_clip(old_clip)
+            else:
+                draw_text_clipped(
+                    app,
+                    surface=surface,
+                    text=label,
+                    rect=rect,
+                    fg=fg,
+                    padding=padding,
+                    align=align,
+                    valign=valign,
+                    max_lines=1,
+                    ellipsis="...",
+                    use_device_font=False,
+                )
+    elif kind == "checkbox":
         box = pygame.Rect(rect.x + padding, rect.y + padding, GRID, GRID)
         pygame.draw.rect(surface, app._shade(bg, 16), box)
         draw_border_style(app, surface, box, "single", app._shade(fg, -40))
@@ -745,6 +785,7 @@ def draw_widget_preview(
                 align="left",
                 valign="middle",
                 max_lines=1,
+                use_device_font=use_device_font,
             )
     elif kind == "progressbar":
         pct = app._value_ratio(w)
@@ -845,6 +886,7 @@ def draw_widget_preview(
             align="center",
             valign="middle",
             max_lines=1,
+            use_device_font=use_device_font,
         )
     else:
         if label:
