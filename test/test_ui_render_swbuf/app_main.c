@@ -51,6 +51,16 @@ void test_render_widget_unknown_type(void);
 void test_render_label_center_align(void);
 void test_render_label_text_overflow_auto_wraps(void);
 void test_render_widget_disabled_style(void);
+void test_render_widget_button(void);
+void test_render_widget_button_no_border(void);
+void test_render_widget_button_null_text(void);
+void test_render_widget_panel(void);
+void test_render_widget_panel_no_text(void);
+void test_render_widget_box(void);
+void test_render_widget_icon_no_crash(void);
+void test_render_widget_icon_with_border(void);
+void test_render_widget_invisible_skipped(void);
+void test_render_widget_button_border_styles(void);
 #endif
 
 int main(void)
@@ -90,6 +100,16 @@ int main(void)
     RUN_TEST(test_render_label_center_align);
     RUN_TEST(test_render_label_text_overflow_auto_wraps);
     RUN_TEST(test_render_widget_disabled_style);
+    RUN_TEST(test_render_widget_button);
+    RUN_TEST(test_render_widget_button_no_border);
+    RUN_TEST(test_render_widget_button_null_text);
+    RUN_TEST(test_render_widget_panel);
+    RUN_TEST(test_render_widget_panel_no_text);
+    RUN_TEST(test_render_widget_box);
+    RUN_TEST(test_render_widget_icon_no_crash);
+    RUN_TEST(test_render_widget_icon_with_border);
+    RUN_TEST(test_render_widget_invisible_skipped);
+    RUN_TEST(test_render_widget_button_border_styles);
 #endif
     return UNITY_END();
 }

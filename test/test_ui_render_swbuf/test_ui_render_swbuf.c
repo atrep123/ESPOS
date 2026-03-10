@@ -785,4 +785,210 @@ void test_render_widget_disabled_style(void)
     TEST_ASSERT_EQUAL_INT(1, cap.count);
     TEST_ASSERT_EQUAL_STRING("Disabled", cap.text[0]);
 }
+
+void test_render_widget_button(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BUTTON;
+    w.x = 10; w.y = 5;
+    w.width = 80; w.height = 14;
+    w.border = 1;
+    w.text = "OK";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("OK", cap.text[0]);
+}
+
+void test_render_widget_button_no_border(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 12;
+    w.border = 0;
+    w.text = "No Border";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("No Border", cap.text[0]);
+}
+
+void test_render_widget_button_null_text(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 14;
+    w.border = 1;
+    w.text = NULL;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_widget_panel(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_PANEL;
+    w.x = 0; w.y = 0;
+    w.width = 100; w.height = 40;
+    w.border = 1;
+    w.text = "Title";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Title", cap.text[0]);
+}
+
+void test_render_widget_panel_no_text(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_PANEL;
+    w.x = 0; w.y = 0;
+    w.width = 100; w.height = 40;
+    w.border = 1;
+    w.text = NULL;
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_widget_box(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BOX;
+    w.x = 5; w.y = 5;
+    w.width = 50; w.height = 30;
+    w.border = 1;
+    w.text = "Box";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    /* Box delegates to panel renderer */
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("Box", cap.text[0]);
+}
+
+void test_render_widget_icon_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_ICON;
+    w.x = 0; w.y = 0;
+    w.width = 24; w.height = 24;
+    w.border = 0;
+    w.text = "wifi";
+    w.visible = 1; w.enabled = 1;
+
+    /* Icon rendering without blit_mono falls back to drawing first char as text */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("w", cap.text[0]);
+}
+
+void test_render_widget_icon_with_border(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_ICON;
+    w.x = 0; w.y = 0;
+    w.width = 24; w.height = 24;
+    w.border = 1;
+    w.text = "home";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    /* Icon with border falls back to text rendering of first char */
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_STRING("h", cap.text[0]);
+}
+
+void test_render_widget_invisible_skipped(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 60; w.height = 14;
+    w.text = "Hidden";
+    w.visible = 0; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_widget_button_border_styles(void)
+{
+    /* Verify different border styles don't crash */
+    uint8_t styles[] = {
+        UI_BORDER_NONE, UI_BORDER_SINGLE, UI_BORDER_DOUBLE,
+        UI_BORDER_ROUNDED, UI_BORDER_BOLD, UI_BORDER_DASHED
+    };
+    for (int i = 0; i < (int)(sizeof(styles) / sizeof(styles[0])); i++) {
+        TextCapture cap;
+        memset(&cap, 0, sizeof(cap));
+        UiDrawOps ops = make_capture_ops(&cap);
+
+        UiWidget w;
+        memset(&w, 0, sizeof(w));
+        w.type = UIW_BUTTON;
+        w.x = 0; w.y = 0;
+        w.width = 60; w.height = 14;
+        w.border = 1;
+        w.border_style = styles[i];
+        w.text = "Style";
+        w.visible = 1; w.enabled = 1;
+
+        ui_render_widget(&w, &ops);
+        TEST_ASSERT_EQUAL_INT(1, cap.count);
+    }
+}
 #endif
