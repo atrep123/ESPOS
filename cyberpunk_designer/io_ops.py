@@ -4,6 +4,7 @@ import json
 import os
 import time
 from dataclasses import asdict
+from dataclasses import fields as _dc_fields
 from pathlib import Path
 from typing import List
 
@@ -109,8 +110,9 @@ def apply_preset_slot(app, slot: int, add_new: bool = False) -> None:
             if not (0 <= idx < len(sc.widgets)):
                 continue
             w = sc.widgets[idx]
+            _allowed = {f.name for f in _dc_fields(type(w))}
             for key, val in preset.items():
-                if key in ("x", "y"):
+                if key in ("x", "y") or key not in _allowed:
                     continue
                 setattr(w, key, val)
     app._mark_dirty()

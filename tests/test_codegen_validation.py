@@ -92,8 +92,10 @@ class TestEscapeCStringExtended:
         assert escape_c_string(42) == "42"
 
     def test_null_byte_stripped(self):
-        """Null bytes are stripped to prevent C string truncation."""
-        assert escape_c_string("a\0b") == "ab"
+        """Null bytes are escaped to \\x00 to prevent C string truncation."""
+        result = escape_c_string("a\0b")
+        assert "\0" not in result
+        assert "\\x00" in result
 
 
 # ===========================================================================
@@ -775,3 +777,143 @@ class TestFullPipelineFieldTypes:
         )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert "UIW_BOX" in src
+
+
+# ===========================================================================
+# Adversarial codegen pipeline tests
+# ===========================================================================
+class TestAdversarialEscaping:
+    """Test that control chars and comment injection are neutralized."""
+
+    def test_control_chars_escaped_in_string(self):
+        """Non-printable ASCII chars get \\xNN escaping."""
+        result = escape_c_string("a\x01b\x0bc\x7fd")
+        assert "\\x01" in result
+        assert "\\x0b" in result
+        assert "\\x7f" in result
+        # No raw control chars remain
+        for ch in result:
+            assert ord(ch) >= 0x20 or ch in ("\\",), f"raw ctrl char {ord(ch):#x} in output"
+
+    def test_null_bytes_removed(self):
+        result = escape_c_string("a\x00b")
+        assert "\x00" not in result
+        assert "ab" in result or "a" in result
+
+    def test_comment_open_escaped(self):
+        """/* sequences are broken up to prevent nested comments."""
+        result = escape_c_comment("foo /* bar")
+        assert "/*" not in result
+        assert "/ *" in result
+
+    def test_comment_newlines_flattened(self):
+        result = escape_c_comment("line1\nline2\rline3")
+        assert "\n" not in result
+        assert "\r" not in result
+
+    def test_comment_combined_injection(self):
+        result = escape_c_comment("a */ /* b")
+        assert "*/" not in result
+        assert "/*" not in result
+
+
+class TestEmptySceneCodegen:
+    """Empty scenes produce valid, compilable C code."""
+
+    def test_empty_design_pair(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": []}},
+        )
+        src, hdr = generate_ui_design_pair(
+            p, scene_name="main", source_label="test"
+        )
+        assert "widget_count = 0" in src
+        assert ".widgets = NULL" in src
+        # Must not have sizeof on empty array
+        assert "sizeof(widgets)" not in src
+
+    def test_multi_pair_empty_scene(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"empty": {"width": 64, "height": 32, "widgets": []}},
+        )
+        src, _ = generate_ui_design_multi_pair(p, source_label="t")
+        assert "widget_count = 0" in src
+        assert ".widgets = NULL" in src
+
+    def test_scenes_header_empty_scene(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"blank": {"width": 64, "height": 32, "widgets": []}},
+        )
+        h = generate_scenes_header(p, guard="G", source_name="f", generated_ts="t")
+        assert "widget_count = 0" in h
+        assert ".widgets = NULL" in h
+        assert "blank_scene" in h
+
+
+class TestAdversarialWidgetText:
+    """Malicious text in widget fields cannot break the generated C."""
+
+    def test_text_with_all_control_chars(self, tmp_path):
+        evil = "".join(chr(i) for i in range(32))
+        p = _write_json(
+            tmp_path,
+            {"sc": {"width": 64, "height": 32, "widgets": [_w(text=evil)]}},
+        )
+        src, _ = generate_ui_design_multi_pair(p, source_label="t")
+        # No raw control chars in output (except \n as line terminators)
+        for line in src.splitlines():
+            for ch in line:
+                assert ord(ch) >= 0x20 or ch == "\t", (
+                    f"raw ctrl char {ord(ch):#x} in generated C"
+                )
+
+    def test_scene_name_with_comment_injection(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"test*//*evil": {"width": 64, "height": 32, "widgets": [_w()]}},
+        )
+        src, _ = generate_ui_design_multi_pair(p, source_label="t")
+        # Inside comments, */ and /* must be neutralized
+        import re
+
+        for m in re.finditer(r"/\*(.*?)\*/", src, re.DOTALL):
+            body = m.group(1)
+            assert "*/" not in body, f"unescaped */ in comment: {body!r}"
+            # /* inside comment body would be a nested comment (not valid C)
+            assert "/*" not in body, f"unescaped /* in comment: {body!r}"
+
+    def test_huge_values_clamped(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {
+                    "width": 64,
+                    "height": 32,
+                    "widgets": [
+                        _w(
+                            x=999999,
+                            y=-999999,
+                            width=999999,
+                            height=999999,
+                            value=999999,
+                            min_value=-999999,
+                            max_value=999999,
+                            max_lines=999,
+                        )
+                    ],
+                }
+            },
+        )
+        src, _ = generate_ui_design_multi_pair(p, source_label="t")
+        # uint16 fields clamped to 65535
+        assert ".x = 65535" in src
+        assert ".width = 65535" in src
+        # int16 fields clamped to [-32768, 32767]
+        assert ".value = 32767" in src
+        assert ".min_value = -32768" in src
+        assert ".max_value = 32767" in src
+        # uint8 clamped to 255
+        assert ".max_lines = 255" in src

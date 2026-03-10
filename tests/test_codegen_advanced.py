@@ -146,7 +146,9 @@ class TestScenesHeader:
         )
         h = generate_scenes_header(p, guard="G", source_name="f", generated_ts="t")
         assert "empty_widgets[]" in h
-        assert "/* empty */" in h
+        assert "empty sentinel" in h
+        assert "widget_count = 0" in h
+        assert ".widgets = NULL" in h
 
 
 # ---------------------------------------------------------------------------

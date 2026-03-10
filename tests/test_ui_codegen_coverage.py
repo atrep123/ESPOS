@@ -124,12 +124,13 @@ class TestGenerateScenesHeaderEdge:
     """Lines 440-441, 449, 468, 484: edge cases in generate_scenes_header."""
 
     def test_empty_widgets_scene(self, tmp_path):
-        """Line 449: scene with no widgets → '/* empty */' comment."""
+        """Scene with no widgets → sentinel array + widget_count = 0."""
         data = {"scenes": {"main": {"width": 128, "height": 64, "widgets": []}}}
         p = tmp_path / "test.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = generate_scenes_header(p, guard="TEST_H", source_name="test", generated_ts="now")
-        assert "/* empty */" in result
+        assert "empty sentinel" in result
+        assert "widget_count = 0" in result
 
     def test_widget_with_animations_list(self, tmp_path):
         """Line 468: animations list gets joined to anim_csv."""

@@ -76,21 +76,35 @@ class StringPool:
     decls: list[str]
 
 
+import re as _re
+
+
 def escape_c_string(text: object) -> str:
-    return (
+    s = (
         str(text or "")
         .replace("\\", "\\\\")
         .replace('"', '\\"')
         .replace("\n", "\\n")
         .replace("\r", "\\r")
         .replace("\t", "\\t")
-        .replace("\0", "")
+    )
+    return _re.sub(
+        r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]",
+        lambda m: f"\\x{ord(m.group()):02x}",
+        s,
     )
 
 
 def escape_c_comment(text: object) -> str:
     """Escape text for safe inclusion inside a C block comment."""
-    return str(text or "").replace("*/", "* /")
+    s = (
+        str(text or "")
+        .replace("*/", "* /")
+        .replace("/*", "/ *")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+    return _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", s)
 
 
 def as_int(v: object, default: int = 0) -> int:
@@ -357,6 +371,22 @@ def generate_ui_design_pair(
         c_lines.append("/* (empty) */")
     c_lines.append("")
     c_lines.append("/* Widget definitions */")
+    if not widgets or not any(isinstance(w, dict) for w in widgets):
+        c_lines.append("static const UiWidget widgets[] = {")
+        c_lines.append("    {0}  /* empty sentinel */")
+        c_lines.append("};")
+        c_lines.append("")
+        c_lines.append("/* Scene definition */")
+        c_lines.append("const UiScene ui_design = {")
+        c_lines.append(f'    .name = "{escape_c_string(selected_name)}",')
+        c_lines.append(f"    .width = {width},")
+        c_lines.append(f"    .height = {height},")
+        c_lines.append("    .widget_count = 0,")
+        c_lines.append("    .widgets = NULL,")
+        c_lines.append("};")
+        c_lines.append("")
+        return "\n".join(c_lines), "\n".join(h_lines)
+
     c_lines.append("static const UiWidget widgets[] = {")
 
     for idx, w in enumerate(widgets):
@@ -482,7 +512,6 @@ def generate_scenes_header(
 
     for scene_name, scene_data in scenes.items():
         safe = sanitize_ident(scene_name)
-        scene_names.append(safe)
         width = as_int(scene_data.get("width", 128), 128)
         height = as_int(scene_data.get("height", 64), 64)
         widgets = list(scene_data.get("widgets", []) or [])
@@ -493,8 +522,20 @@ def generate_scenes_header(
 
         lines.append(f"/* Scene: {scene_name} ({width}x{height}) */")
         lines.append(f"static const UiWidget {safe}_widgets[] = {{")
-        if not widgets:
-            lines.append("    /* empty */")
+        if not widgets or not any(isinstance(w, dict) for w in widgets):
+            lines.append("    {0}  /* empty sentinel */")
+            lines.append("};")
+            lines.append("")
+            lines.append(f"static const UiScene {safe}_scene = {{")
+            lines.append(f'    .name = "{escape_c_string(scene_name)}",')
+            lines.append(f"    .width = {width}, .height = {height},")
+            lines.append("    .widget_count = 0,")
+            lines.append("    .widgets = NULL,")
+            lines.append("};")
+            lines.append("")
+            scene_names.append(safe)
+            continue
+
         for idx, w in enumerate(widgets):
             if not isinstance(w, dict):
                 continue
@@ -564,6 +605,7 @@ def generate_scenes_header(
         lines.append(f"    .widgets = {safe}_widgets,")
         lines.append("};")
         lines.append("")
+        scene_names.append(safe)
 
     lines.append("/* Scene registry */")
     lines.append("static const UiScene *all_scenes[] = {")
@@ -699,6 +741,9 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
 
         c.append(f"/* Scene: {escape_c_comment(scene_name)} ({len(widgets)} widgets) */")
         c.append(f"static const UiWidget {safe}_widgets[] = {{")
+        has_widgets = any(isinstance(w, dict) for w in widgets)
+        if not has_widgets:
+            c.append("    {0}  /* empty sentinel */")
         for idx, w in enumerate(widgets):
             if isinstance(w, dict):
                 c.extend(_emit_widget(w, idx, pool))
@@ -715,13 +760,18 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
             widgets = []
         width = as_int(scene_data.get("width", 128), 128)
         height = as_int(scene_data.get("height", 64), 64)
+        has_widgets = any(isinstance(w, dict) for w in widgets) if widgets else False
         c.append(f"    {{ /* {escape_c_comment(key)} */")
         c.append(f'        .name = "{escape_c_string(key)}",')
         c.append(f"        .width = {width}, .height = {height},")
-        c.append(
-            f"        .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),"
-        )
-        c.append(f"        .widgets = {safe}_widgets,")
+        if has_widgets:
+            c.append(
+                f"        .widget_count = (uint16_t)(sizeof({safe}_widgets) / sizeof({safe}_widgets[0])),"
+            )
+            c.append(f"        .widgets = {safe}_widgets,")
+        else:
+            c.append("        .widget_count = 0,")
+            c.append("        .widgets = NULL,")
         c.append("    },")
     c.append("};")
     c.append("")

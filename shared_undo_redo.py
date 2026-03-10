@@ -170,12 +170,12 @@ class UndoRedoManager:
             version=self.version,
         )
 
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(asdict(state), f, indent=2)
 
     def load_state(self, path: str):
         """Load history state from file"""
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         state = HistoryState(**data)
