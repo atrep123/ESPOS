@@ -23,15 +23,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt -r requirements-dev.txt
-      - name: Ruff
+      - name: Ruff lint
         run: python -m ruff check .
+      - name: Ruff format check
+        continue-on-error: true
+        run: python -m ruff format --check .
+      - name: Mypy
+        continue-on-error: true
+        run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py design_tokens.py tools/ui_codegen.py scripts/pio_generate_ui_design.py || true
       - name: Validate design JSON
         run: python tools/validate_design.py main_scene.json
       - name: Run tests
         env:
           PYTHONIOENCODING: "utf-8"
         run: |
-          python -m pytest -q
+          python -m pytest -q --tb=short --cov=. --cov-report=term-missing:skip-covered
 
   firmware:
     name: Firmware (PlatformIO)
