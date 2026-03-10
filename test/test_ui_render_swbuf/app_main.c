@@ -25,6 +25,12 @@ void test_render_label_overflow_wrap_wraps_and_ellipsizes_last_line(void);
 void test_render_checkbox_overflow_clip_truncates_without_ellipsis(void);
 #if DISPLAY_COLOR_BITS == 4
 void test_swbuf_flush_dirty_gray4_aligns_x_to_columns(void);
+void test_swbuf_flush_gray4_full_sends_all_rows(void);
+void test_swbuf_flush_gray4_full_preserves_pixel_data(void);
+void test_swbuf_flush_auto_delegates_to_gray4(void);
+void test_swbuf_flush_dirty_auto_delegates_to_gray4(void);
+void test_swbuf_flush_dirty_gray4_clean_falls_back_to_full(void);
+void test_swbuf_flush_dirty_gray4_multi_row_region(void);
 void test_swbuf_blit_mono_gray4_sets_pixels(void);
 void test_swbuf_hline_sets_pixels_and_marks_dirty(void);
 void test_swbuf_vline_sets_pixels_and_marks_dirty(void);
@@ -74,6 +80,12 @@ int main(void)
     RUN_TEST(test_render_checkbox_overflow_clip_truncates_without_ellipsis);
 #if DISPLAY_COLOR_BITS == 4
     RUN_TEST(test_swbuf_flush_dirty_gray4_aligns_x_to_columns);
+    RUN_TEST(test_swbuf_flush_gray4_full_sends_all_rows);
+    RUN_TEST(test_swbuf_flush_gray4_full_preserves_pixel_data);
+    RUN_TEST(test_swbuf_flush_auto_delegates_to_gray4);
+    RUN_TEST(test_swbuf_flush_dirty_auto_delegates_to_gray4);
+    RUN_TEST(test_swbuf_flush_dirty_gray4_clean_falls_back_to_full);
+    RUN_TEST(test_swbuf_flush_dirty_gray4_multi_row_region);
     RUN_TEST(test_swbuf_blit_mono_gray4_sets_pixels);
     RUN_TEST(test_swbuf_hline_sets_pixels_and_marks_dirty);
     RUN_TEST(test_swbuf_vline_sets_pixels_and_marks_dirty);

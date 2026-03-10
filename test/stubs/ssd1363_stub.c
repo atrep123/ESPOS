@@ -31,6 +31,7 @@ uint16_t ssd1363_stub_last_x1(void) { return s_last_x1; }
 uint16_t ssd1363_stub_last_y1(void) { return s_last_y1; }
 
 size_t ssd1363_stub_write_calls(void) { return s_write_calls; }
+size_t ssd1363_stub_total_bytes(void) { return s_total_bytes; }
 size_t ssd1363_stub_first_write_len(void) { return s_first_write_len; }
 
 size_t ssd1363_stub_copy_first_write(uint8_t *out, size_t max_out)

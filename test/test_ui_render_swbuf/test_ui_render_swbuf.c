@@ -242,6 +242,130 @@ void test_swbuf_flush_dirty_gray4_aligns_x_to_columns(void)
     TEST_ASSERT_EQUAL_UINT8(0x00, first[1]);
 }
 
+void test_swbuf_flush_gray4_full_sends_all_rows(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+
+    ssd1363_stub_reset();
+    ui_swbuf_flush_gray4_ssd1363(&b);
+
+    /* Full flush: begin_frame covers entire buffer. */
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_x0());
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_y0());
+    TEST_ASSERT_EQUAL_UINT16(7, ssd1363_stub_last_x1());
+    TEST_ASSERT_EQUAL_UINT16(3, ssd1363_stub_last_y1());
+
+    /* 4 rows, each ceil(8/2)=4 bytes = 16 bytes total. */
+    TEST_ASSERT_EQUAL_UINT32(4, (uint32_t)ssd1363_stub_write_calls());
+    TEST_ASSERT_EQUAL_UINT32(16, (uint32_t)ssd1363_stub_total_bytes());
+}
+
+void test_swbuf_flush_gray4_full_preserves_pixel_data(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 4, 1);
+    ui_swbuf_clear(&b, 0);
+
+    /* Set first two pixels: px0=0xA, px1=0x5 → byte = 0xA5 */
+    ui_swbuf_fill_rect(&b, 0, 0, 1, 1, 0xA);
+    ui_swbuf_fill_rect(&b, 1, 0, 1, 1, 0x5);
+
+    ssd1363_stub_reset();
+    ui_swbuf_flush_gray4_ssd1363(&b);
+
+    uint8_t first[4] = {0};
+    size_t n = ssd1363_stub_copy_first_write(first, sizeof(first));
+    TEST_ASSERT_EQUAL_UINT32(2, (uint32_t)n); /* ceil(4/2) = 2 bytes */
+    TEST_ASSERT_EQUAL_UINT8(0xA5, first[0]);
+    TEST_ASSERT_EQUAL_UINT8(0x00, first[1]);
+}
+
+void test_swbuf_flush_auto_delegates_to_gray4(void)
+{
+    /* In 4bpp mode, flush_auto should behave identically to flush_gray4. */
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 2);
+    ui_swbuf_clear(&b, 0);
+
+    ssd1363_stub_reset();
+    ui_swbuf_flush_auto_ssd1363(&b);
+
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_x0());
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_y0());
+    TEST_ASSERT_EQUAL_UINT16(7, ssd1363_stub_last_x1());
+    TEST_ASSERT_EQUAL_UINT16(1, ssd1363_stub_last_y1());
+    TEST_ASSERT_EQUAL_UINT32(2, (uint32_t)ssd1363_stub_write_calls());
+}
+
+void test_swbuf_flush_dirty_auto_delegates_to_gray4(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 2);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Mark a single pixel dirty. */
+    ui_swbuf_fill_rect(&b, 2, 0, 1, 1, 7);
+
+    ssd1363_stub_reset();
+    ui_swbuf_flush_dirty_auto_ssd1363(&b);
+
+    /* Should flush aligned 4px dirty region, same as dirty_gray4. */
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_x0());
+    TEST_ASSERT_EQUAL_UINT16(3, ssd1363_stub_last_x1());
+    TEST_ASSERT_TRUE(ssd1363_stub_write_calls() > 0);
+}
+
+void test_swbuf_flush_dirty_gray4_clean_falls_back_to_full(void)
+{
+    /* When dirty flag is clear, flush_dirty_gray4 should fall back to full flush. */
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 2);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ssd1363_stub_reset();
+    ui_swbuf_flush_dirty_gray4_ssd1363(&b);
+
+    /* Falls back to full flush — covers entire frame. */
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_x0());
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_y0());
+    TEST_ASSERT_EQUAL_UINT16(7, ssd1363_stub_last_x1());
+    TEST_ASSERT_EQUAL_UINT16(1, ssd1363_stub_last_y1());
+    TEST_ASSERT_TRUE(ssd1363_stub_write_calls() > 0);
+}
+
+void test_swbuf_flush_dirty_gray4_multi_row_region(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Dirty a 3-row region at x=5..6, y=2..4. */
+    ui_swbuf_fill_rect(&b, 5, 2, 2, 3, 0xF);
+
+    ssd1363_stub_reset();
+    ui_swbuf_flush_dirty_gray4_ssd1363(&b);
+
+    /* Region x=5..6: aligned to 4px → x0=4, x1=7. */
+    TEST_ASSERT_EQUAL_UINT16(4, ssd1363_stub_last_x0());
+    TEST_ASSERT_EQUAL_UINT16(2, ssd1363_stub_last_y0());
+    TEST_ASSERT_EQUAL_UINT16(7, ssd1363_stub_last_x1());
+    TEST_ASSERT_EQUAL_UINT16(4, ssd1363_stub_last_y1());
+    /* 3 rows, each ceil(4/2)=2 bytes = 6 bytes. */
+    TEST_ASSERT_EQUAL_UINT32(3, (uint32_t)ssd1363_stub_write_calls());
+    TEST_ASSERT_EQUAL_UINT32(6, (uint32_t)ssd1363_stub_total_bytes());
+}
+
 void test_swbuf_blit_mono_gray4_sets_pixels(void)
 {
     uint8_t backing[64];
