@@ -38,6 +38,10 @@ def main() -> None:
     p.add_argument("-o", "--output", type=Path, required=True, help="Output header path (e.g. output/ui.h)")
     args = p.parse_args()
 
+    for name in ("json", "output"):
+        if not str(getattr(args, name)).strip():
+            p.error(f"{name} path cannot be empty or whitespace-only")
+
     if not args.json.exists():
         raise SystemExit(f"[FAIL] JSON not found: {args.json}")
     export_header(args.json, args.output)

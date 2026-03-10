@@ -75,6 +75,9 @@ def main() -> None:
     parser.add_argument("--max-height", type=int, default=240, help="Max recommended height")
     args = parser.parse_args()
 
+    if not str(args.root).strip():
+        parser.error("--root cannot be empty or whitespace-only")
+
     root = Path(args.root).resolve()
     files = list(find_design_files(root))
     if not files:

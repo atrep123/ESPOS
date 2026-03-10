@@ -27,6 +27,11 @@ def main() -> None:
     parser.add_argument("--baud", type=int, default=115200, help="Baudrate (default 115200)")
     args = parser.parse_args()
 
+    if not str(args.json).strip():
+        parser.error("json path cannot be empty or whitespace-only")
+    if not str(args.port).strip():
+        parser.error("--port cannot be empty or whitespace-only")
+
     if not args.json.exists():
         raise SystemExit(f"JSON not found: {args.json}")
     send_live_preview(args.json, args.port, args.baud)

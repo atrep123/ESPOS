@@ -1153,6 +1153,9 @@ def main() -> int:
     )
     args = p.parse_args()
 
+    if not str(args.json).strip():
+        p.error("json path cannot be empty or whitespace-only")
+
     issues = validate_file(
         args.json,
         warnings_as_errors=args.warnings_as_errors,

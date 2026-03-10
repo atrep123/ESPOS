@@ -387,6 +387,10 @@ def main(argv: list[str]) -> int:
     )
     args = parser.parse_args(argv)
 
+    for name in ("assets", "out_dir"):
+        if not str(getattr(args, name)).strip():
+            parser.error(f"--{name.replace('_', '-')} cannot be empty or whitespace-only")
+
     repo_root = Path(__file__).resolve().parents[1]
     asset_dir = (repo_root / args.assets).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
