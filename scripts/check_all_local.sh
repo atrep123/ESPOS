@@ -17,6 +17,11 @@ POLICY_TRIAGE_DELTA_CSV=""
 TRIAGE_CSV_ARG_SET=0
 TRIAGE_DELTA_CSV_ARG_SET=0
 
+is_blank() {
+  local value="$1"
+  [[ -z "$value" || "$value" =~ ^[[:space:]]+$ ]]
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --strict-artifacts)
@@ -114,13 +119,8 @@ EOF
   esac
 done
 
-if [[ -z "$DESIGN" ]]; then
+if is_blank "$DESIGN"; then
   echo "[FAIL] Design path cannot be empty" >&2
-  exit 2
-fi
-
-if [[ "$DESIGN" =~ ^[[:space:]]+$ ]]; then
-  echo "[FAIL] Design path cannot be whitespace-only" >&2
   exit 2
 fi
 
@@ -129,32 +129,32 @@ if [[ "$STRICT_ARTIFACTS" -eq 0 && ( "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIA
   exit 2
 fi
 
-if [[ -z "$POLICY_PROBE_JSON" ]]; then
+if is_blank "$POLICY_PROBE_JSON"; then
   echo "[FAIL] --native-policy-probe-json cannot be empty" >&2
   exit 2
 fi
 
-if [[ -z "$POLICY_HISTORY_JSONL" ]]; then
+if is_blank "$POLICY_HISTORY_JSONL"; then
   echo "[FAIL] --native-policy-history-jsonl cannot be empty" >&2
   exit 2
 fi
 
-if [[ -z "$POLICY_SUMMARY_MD" ]]; then
+if is_blank "$POLICY_SUMMARY_MD"; then
   echo "[FAIL] --native-policy-summary-markdown cannot be empty" >&2
   exit 2
 fi
 
-if [[ -z "$POLICY_HISTORY_CSV" ]]; then
+if is_blank "$POLICY_HISTORY_CSV"; then
   echo "[FAIL] --native-policy-history-csv cannot be empty" >&2
   exit 2
 fi
 
-if [[ "$TRIAGE_CSV_ARG_SET" -eq 1 && -z "$POLICY_TRIAGE_CSV" ]]; then
+if [[ "$TRIAGE_CSV_ARG_SET" -eq 1 && is_blank "$POLICY_TRIAGE_CSV" ]]; then
   echo "[FAIL] --native-policy-triage-csv was provided but is empty" >&2
   exit 2
 fi
 
-if [[ "$TRIAGE_DELTA_CSV_ARG_SET" -eq 1 && -z "$POLICY_TRIAGE_DELTA_CSV" ]]; then
+if [[ "$TRIAGE_DELTA_CSV_ARG_SET" -eq 1 && is_blank "$POLICY_TRIAGE_DELTA_CSV" ]]; then
   echo "[FAIL] --native-policy-triage-delta-csv was provided but is empty" >&2
   exit 2
 fi
