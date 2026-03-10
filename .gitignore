@@ -86,3 +86,27 @@ quick_test_screenshot.png
 ui_designer_pro_demo*.json
 ui_designer_pro_demo*.html
 ui_designer_pro_demo*.png
+
+# Mutation testing cache
+.mutmut-cache
+
+# Coverage reports
+coverage_report.txt
+htmlcov/
+
+# Reports — CSV/JSON/TXT artifacts
+reports/*.csv
+reports/*.json
+reports/*.jsonl
+reports/*.txt
+
+# Agent session memory (local scratch)
+memories/
+
+# Temporary push/CI artifacts
+push*_err.txt
+push*_out.txt
+push*_results*.txt
+
+# Leaked pytest tmp dirs (Windows path mangling)
+UsersatrepAppData*
