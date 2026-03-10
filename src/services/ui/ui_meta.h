@@ -8,6 +8,8 @@ typedef enum {
     UI_META_KIND_BOOL = 1,
     UI_META_KIND_INT = 2,
     UI_META_KIND_ENUM = 3,
+    UI_META_KIND_STR = 4,
+    UI_META_KIND_FLOAT = 5,
 } ui_meta_kind_t;
 
 typedef struct {

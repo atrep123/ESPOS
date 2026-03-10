@@ -48,3 +48,39 @@ void test_ui_meta_values_helpers(void)
     TEST_ASSERT_FALSE(ui_meta_values_get(m.values, 3, out, sizeof(out)));
 }
 
+void test_ui_meta_parse_str(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=model_name;kind=str", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_STR, (int)m.kind);
+    TEST_ASSERT_EQUAL_STRING("model_name", m.bind_key);
+}
+
+void test_ui_meta_parse_float(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=batt_voltage;kind=float;min=3.0;max=4.2", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_FLOAT, (int)m.kind);
+    TEST_ASSERT_EQUAL_STRING("batt_voltage", m.bind_key);
+    /* min/max parsed as int (truncated) since parse_int_span uses strtol */
+    TEST_ASSERT_TRUE(m.has_min);
+    TEST_ASSERT_EQUAL_INT(3, m.min);
+    TEST_ASSERT_TRUE(m.has_max);
+    TEST_ASSERT_EQUAL_INT(4, m.max);
+}
+
+void test_ui_meta_parse_list(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=fs_mode;kind=list;values=Hold Last|Custom|No Pulse", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_ENUM, (int)m.kind);
+    TEST_ASSERT_EQUAL_STRING("fs_mode", m.bind_key);
+    TEST_ASSERT_EQUAL_INT(3, ui_meta_values_count(m.values));
+
+    char out[16];
+    TEST_ASSERT_TRUE(ui_meta_values_get(m.values, 0, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("Hold Last", out);
+    TEST_ASSERT_TRUE(ui_meta_values_get(m.values, 2, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("No Pulse", out);
+}
+

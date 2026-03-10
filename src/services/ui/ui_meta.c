@@ -100,8 +100,14 @@ static ui_meta_kind_t parse_kind(const char *s, size_t n)
     if (strcmp(buf, "int") == 0 || strcmp(buf, "i32") == 0 || strcmp(buf, "s32") == 0) {
         return UI_META_KIND_INT;
     }
-    if (strcmp(buf, "enum") == 0 || strcmp(buf, "choice") == 0) {
+    if (strcmp(buf, "enum") == 0 || strcmp(buf, "choice") == 0 || strcmp(buf, "list") == 0) {
         return UI_META_KIND_ENUM;
+    }
+    if (strcmp(buf, "str") == 0 || strcmp(buf, "string") == 0) {
+        return UI_META_KIND_STR;
+    }
+    if (strcmp(buf, "float") == 0 || strcmp(buf, "f32") == 0 || strcmp(buf, "double") == 0) {
+        return UI_META_KIND_FLOAT;
     }
     return UI_META_KIND_NONE;
 }
