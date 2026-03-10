@@ -12,6 +12,8 @@
 #include "kernel/msgbus.h"
 #include "seesaw.h"
 
+static const char *TAG = "input";
+
 typedef struct {
     int pin;
     uint8_t id;
@@ -68,7 +70,10 @@ static void input_configure_pin(int pin)
 #endif
         .intr_type = GPIO_INTR_DISABLE,
     };
-    (void)gpio_config(&c);
+    esp_err_t err = gpio_config(&c);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "gpio_config(pin=%d) failed: %s", pin, esp_err_to_name(err));
+    }
 }
 
 static int input_has_encoder(void)

@@ -4,12 +4,15 @@
 
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "kernel/msgbus.h"
 
 #define UARTN UART_NUM_0
+
+static const char *TAG = "rpc";
 
 static void rpc_task(void *arg)
 {
@@ -23,9 +26,25 @@ static void rpc_task(void *arg)
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_APB,
     };
-    uart_param_config(UARTN, &cfg);
-    uart_set_pin(UARTN, GPIO_NUM_1, GPIO_NUM_3, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    uart_driver_install(UARTN, 1024, 0, 0, NULL, 0);
+    esp_err_t err;
+    err = uart_param_config(UARTN, &cfg);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "uart_param_config failed: %s", esp_err_to_name(err));
+        vTaskDelete(NULL);
+        return;
+    }
+    err = uart_set_pin(UARTN, GPIO_NUM_1, GPIO_NUM_3, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "uart_set_pin failed: %s", esp_err_to_name(err));
+        vTaskDelete(NULL);
+        return;
+    }
+    err = uart_driver_install(UARTN, 1024, 0, 0, NULL, 0);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "uart_driver_install failed: %s", esp_err_to_name(err));
+        vTaskDelete(NULL);
+        return;
+    }
 
     char buf[64];
     int n = 0;
@@ -42,9 +61,11 @@ static void rpc_task(void *arg)
                 unsigned int tmp = 0;
                 if (sscanf(buf, "set_bg %x", &tmp) == 1) {
                     m.u.rpc.arg = tmp;
-                    strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method));
+                    strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method) - 1);
+                    m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
                 } else {
-                    strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method));
+                    strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method) - 1);
+                    m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
                 }
                 bus_publish(&m);
             } else {
