@@ -5,6 +5,15 @@
 void test_ui_listmodel_scrolls_viewport(void);
 void test_ui_listmodel_parse_item_text_splits_fields(void);
 void test_ui_listmodel_manager_creates_and_reuses(void);
+void test_ui_listmodel_set_len_negative(void);
+void test_ui_listmodel_set_len_above_max(void);
+void test_ui_listmodel_move_active_clamps_at_bounds(void);
+void test_ui_listmodel_active_slot_basic(void);
+void test_ui_listmodel_active_slot_null(void);
+void test_ui_listmodel_max_models_exceeded(void);
+void test_ui_listmodel_set_active_empty_list(void);
+void test_ui_listmodel_move_on_empty_list(void);
+void test_ui_listmodel_set_len_null(void);
 
 void app_main(void)
 {
@@ -12,6 +21,15 @@ void app_main(void)
     RUN_TEST(test_ui_listmodel_scrolls_viewport);
     RUN_TEST(test_ui_listmodel_parse_item_text_splits_fields);
     RUN_TEST(test_ui_listmodel_manager_creates_and_reuses);
+    RUN_TEST(test_ui_listmodel_set_len_negative);
+    RUN_TEST(test_ui_listmodel_set_len_above_max);
+    RUN_TEST(test_ui_listmodel_move_active_clamps_at_bounds);
+    RUN_TEST(test_ui_listmodel_active_slot_basic);
+    RUN_TEST(test_ui_listmodel_active_slot_null);
+    RUN_TEST(test_ui_listmodel_max_models_exceeded);
+    RUN_TEST(test_ui_listmodel_set_active_empty_list);
+    RUN_TEST(test_ui_listmodel_move_on_empty_list);
+    RUN_TEST(test_ui_listmodel_set_len_null);
     UNITY_END();
 }
 
@@ -28,6 +46,15 @@ void test_ui_listmodel_set_len_clamps_active(void);
 void test_ui_listmodel_move_active_delta_zero_no_change(void);
 void test_ui_listmodel_get_nonexistent_returns_null(void);
 void test_ui_listmodel_parse_null_and_empty(void);
+void test_ui_listmodel_set_len_negative(void);
+void test_ui_listmodel_set_len_above_max(void);
+void test_ui_listmodel_move_active_clamps_at_bounds(void);
+void test_ui_listmodel_active_slot_basic(void);
+void test_ui_listmodel_active_slot_null(void);
+void test_ui_listmodel_max_models_exceeded(void);
+void test_ui_listmodel_set_active_empty_list(void);
+void test_ui_listmodel_move_on_empty_list(void);
+void test_ui_listmodel_set_len_null(void);
 
 int main(void)
 {
@@ -43,6 +70,15 @@ int main(void)
     RUN_TEST(test_ui_listmodel_move_active_delta_zero_no_change);
     RUN_TEST(test_ui_listmodel_get_nonexistent_returns_null);
     RUN_TEST(test_ui_listmodel_parse_null_and_empty);
+    RUN_TEST(test_ui_listmodel_set_len_negative);
+    RUN_TEST(test_ui_listmodel_set_len_above_max);
+    RUN_TEST(test_ui_listmodel_move_active_clamps_at_bounds);
+    RUN_TEST(test_ui_listmodel_active_slot_basic);
+    RUN_TEST(test_ui_listmodel_active_slot_null);
+    RUN_TEST(test_ui_listmodel_max_models_exceeded);
+    RUN_TEST(test_ui_listmodel_set_active_empty_list);
+    RUN_TEST(test_ui_listmodel_move_on_empty_list);
+    RUN_TEST(test_ui_listmodel_set_len_null);
     return UNITY_END();
 }
 

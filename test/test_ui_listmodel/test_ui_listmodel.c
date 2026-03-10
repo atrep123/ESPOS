@@ -1,5 +1,6 @@
 #include "unity.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include "services/ui/ui_listmodel.h"
@@ -205,4 +206,111 @@ void test_ui_listmodel_parse_null_and_empty(void)
     ui_listmodel_parse_item_text("", label, (int)sizeof(label), value, (int)sizeof(value));
     TEST_ASSERT_EQUAL_STRING("", label);
     TEST_ASSERT_EQUAL_STRING("", value);
+}
+
+/* ------------------------------------------------------------------ */
+/* Edge-case tests for listmodel                                      */
+/* ------------------------------------------------------------------ */
+
+void test_ui_listmodel_set_len_negative(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+    UiListModel *m = ui_listmodels_get(&lists, "neg", true);
+    TEST_ASSERT_NOT_NULL(m);
+    ui_listmodel_set_len(m, -5);
+    TEST_ASSERT_EQUAL_UINT16(0, m->count);
+}
+
+void test_ui_listmodel_set_len_above_max(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+    UiListModel *m = ui_listmodels_get(&lists, "big", true);
+    TEST_ASSERT_NOT_NULL(m);
+    ui_listmodel_set_len(m, 9999);
+    TEST_ASSERT_EQUAL_UINT16(UI_LISTMODEL_MAX_ITEMS, m->count);
+}
+
+void test_ui_listmodel_move_active_clamps_at_bounds(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+    UiListModel *m = ui_listmodels_get(&lists, "clamp", true);
+    ui_listmodel_set_len(m, 5);
+
+    /* Move far negative — clamps to 0 */
+    ui_listmodel_set_active(m, 2, 3);
+    ui_listmodel_move_active(m, -100, 3);
+    TEST_ASSERT_EQUAL_UINT16(0, m->active);
+
+    /* Move far positive — clamps to count-1 */
+    ui_listmodel_move_active(m, 1000, 3);
+    TEST_ASSERT_EQUAL_UINT16(4, m->active);
+}
+
+void test_ui_listmodel_active_slot_basic(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+    UiListModel *m = ui_listmodels_get(&lists, "slot", true);
+    ui_listmodel_set_len(m, 10);
+    ui_listmodel_set_active(m, 5, 4);
+
+    int slot = ui_listmodel_active_slot(m);
+    /* active_slot = active - offset; offset is clamped so active is visible */
+    TEST_ASSERT_TRUE(slot >= 0 && slot < 4);
+}
+
+void test_ui_listmodel_active_slot_null(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, ui_listmodel_active_slot(NULL));
+}
+
+void test_ui_listmodel_max_models_exceeded(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+
+    /* Allocate all slots */
+    for (int i = 0; i < UI_LISTMODEL_MAX_MODELS; ++i) {
+        char name[8];
+        snprintf(name, sizeof(name), "m%d", i);
+        TEST_ASSERT_NOT_NULL(ui_listmodels_get(&lists, name, true));
+    }
+
+    /* Next allocation should fail */
+    TEST_ASSERT_NULL(ui_listmodels_get(&lists, "overflow", true));
+}
+
+void test_ui_listmodel_set_active_empty_list(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+    UiListModel *m = ui_listmodels_get(&lists, "empty", true);
+    TEST_ASSERT_NOT_NULL(m);
+
+    /* set_active on empty count=0 list */
+    bool changed = ui_listmodel_set_active(m, 5, 3);
+    TEST_ASSERT_TRUE(changed || (m->active == 0 && m->offset == 0));
+    TEST_ASSERT_EQUAL_UINT16(0, m->active);
+    TEST_ASSERT_EQUAL_UINT16(0, m->offset);
+}
+
+void test_ui_listmodel_move_on_empty_list(void)
+{
+    UiListModels lists;
+    ui_listmodels_init(&lists);
+    UiListModel *m = ui_listmodels_get(&lists, "mt", true);
+    TEST_ASSERT_NOT_NULL(m);
+
+    TEST_ASSERT_FALSE(ui_listmodel_move_active(m, 1, 3));
+    TEST_ASSERT_FALSE(ui_listmodel_move_active(m, -1, 3));
+}
+
+void test_ui_listmodel_set_len_null(void)
+{
+    /* Must not crash */
+    ui_listmodel_set_len(NULL, 5);
+    ui_listmodel_move_active(NULL, 1, 3);
 }
