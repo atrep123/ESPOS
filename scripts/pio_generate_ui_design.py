@@ -24,7 +24,12 @@ except NameError:  # PlatformIO/SCons may execute without __file__
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.ui_codegen import generate_ui_design_pair, write_if_changed  # noqa: E402
+from tools.ui_codegen import (  # noqa: E402
+    generate_ui_design_multi_pair,
+    generate_ui_design_pair,
+    load_scenes,
+    write_if_changed,
+)
 
 
 def _main() -> None:
@@ -33,11 +38,19 @@ def _main() -> None:
         return
 
     project_dir = Path(env["PROJECT_DIR"])  # noqa: F821 - provided by PlatformIO/SCons
-    json_path = Path(os.environ.get("ESP32OS_UI_JSON", str(project_dir / "main_scene.json"))).expanduser()
+    json_override = os.environ.get("ESP32OS_UI_JSON")
+    if json_override is not None and not json_override.strip():
+        raise RuntimeError("[UI] ESP32OS_UI_JSON cannot be empty")
+
+    json_path_raw = json_override.strip() if json_override is not None else str(project_dir / "main_scene.json")
+    json_path = Path(json_path_raw).expanduser()
     if not json_path.is_absolute():
         json_path = project_dir / json_path
 
-    scene_name = os.environ.get("ESP32OS_UI_SCENE", "main")
+    scene_name_raw = os.environ.get("ESP32OS_UI_SCENE", "main")
+    if not scene_name_raw.strip():
+        raise RuntimeError("[UI] ESP32OS_UI_SCENE cannot be empty")
+    scene_name = scene_name_raw.strip()
     out_c = project_dir / "src" / "ui_design.c"
     out_h = project_dir / "src" / "ui_design.h"
 
@@ -49,12 +62,20 @@ def _main() -> None:
     except Exception:
         source_label = json_path.name
 
-    c_text, h_text = generate_ui_design_pair(json_path, scene_name=scene_name, source_label=source_label)
+    # Use multi-scene export when JSON contains more than one scene.
+    scenes = load_scenes(json_path)
+    if len(scenes) > 1:
+        c_text, h_text = generate_ui_design_multi_pair(json_path, source_label=source_label)
+        mode = f"multi-scene, {len(scenes)} scenes"
+    else:
+        c_text, h_text = generate_ui_design_pair(json_path, scene_name=scene_name, source_label=source_label)
+        mode = f"scene: {scene_name}"
+
     changed = False
     changed |= write_if_changed(out_h, h_text)
     changed |= write_if_changed(out_c, c_text)
     if changed:
-        print(f"[UI] Generated ui_design from {json_path.name} (scene: {scene_name})")
+        print(f"[UI] Generated ui_design from {json_path.name} ({mode})")
 
 
 _main()
