@@ -139,9 +139,27 @@ def save_prefs(app) -> None:
 
 
 def save_json(app) -> None:
-    app.designer.save_to_json(str(app.json_path))
+    import tempfile
+    target = str(app.json_path)
+    dir_name = str(Path(target).parent)
+    tmp_path = None
+    try:
+        fd, tmp_path = tempfile.mkstemp(suffix=".tmp", dir=dir_name)
+        os.close(fd)
+        app.designer.save_to_json(tmp_path)
+        os.replace(tmp_path, target)
+        tmp_path = None  # replaced successfully, no cleanup needed
+    except Exception:
+        # Fallback: direct save
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        app.designer.save_to_json(target)
     write_audit_report(app)
     app._dirty = False
+    app._dirty_scenes = set()
 
 
 def load_json(app) -> None:
