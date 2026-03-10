@@ -106,7 +106,7 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "ESP32-S3 OS Started!");
 
-    store_conf_t conf;
+    store_conf_t conf = {0};
     esp_err_t err = store_init(&conf);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "store_init failed: %d", err);

@@ -66,6 +66,7 @@ static bind_slot_t *slot_alloc(const char *key)
             return &s_slots[i];
         }
     }
+    ESP_LOGW(TAG, "binding store full (%d slots), key='%s'", BIND_MAX_SLOTS, key);
     return NULL;  /* store full */
 }
 
@@ -134,29 +135,30 @@ esp_err_t ui_bind_set_int(const char *key, int v)
         return ESP_ERR_INVALID_ARG;
     }
 
-    /* Hardware-backed display keys */
+    /* Hardware-backed display keys (mutex-guarded to serialize I2C + NVS) */
     if (strcmp(key, "contrast") == 0) {
         if (v < 0) v = 0;
         if (v > 255) v = 255;
+        BIND_LOCK();
         esp_err_t err = store_set_display_contrast((uint8_t)v);
-        if (err != ESP_OK) {
-            return err;
+        if (err == ESP_OK) {
+            err = ssd1363_set_contrast((uint8_t)v);
         }
-        return ssd1363_set_contrast((uint8_t)v);
+        BIND_UNLOCK();
+        return err;
     }
     if (strcmp(key, "col_offset") == 0) {
         if (v < 0) v = 0;
         if (v > 255) v = 255;
+        BIND_LOCK();
         esp_err_t cerr = ssd1363_set_col_offset_units((uint8_t)v);
         if (cerr != ESP_OK) {
             ESP_LOGW(TAG, "ssd1363_set_col_offset_units failed: %s", esp_err_to_name(cerr));
         }
         uint8_t actual = ssd1363_get_col_offset_units();
         esp_err_t err = store_set_display_col_offset(actual);
-        if (err != ESP_OK) {
-            return err;
-        }
-        return ESP_OK;
+        BIND_UNLOCK();
+        return err;
     }
 
     /* Generic store */
@@ -213,13 +215,15 @@ esp_err_t ui_bind_set_bool(const char *key, bool v)
         return ESP_ERR_INVALID_ARG;
     }
 
-    /* Hardware-backed key */
+    /* Hardware-backed key (mutex-guarded to serialize I2C + NVS) */
     if (strcmp(key, "invert") == 0) {
+        BIND_LOCK();
         esp_err_t err = store_set_display_invert(v);
-        if (err != ESP_OK) {
-            return err;
+        if (err == ESP_OK) {
+            err = ssd1363_invert_display(v);
         }
-        return ssd1363_invert_display(v);
+        BIND_UNLOCK();
+        return err;
     }
 
     /* Generic store */

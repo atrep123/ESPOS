@@ -42,7 +42,7 @@ void ui_core_on_button(ui_state_t *st, uint8_t id, bool pressed)
         case 0: /* Button A: cycle scenes on press */
             st->btnA = pressed ? 1U : 0U;
             if (pressed) {
-                st->scene = (ui_scene_t)((st->scene + 1) % 3);
+                st->scene = (ui_scene_t)((st->scene + 1) % UI_SCENE__COUNT);
             }
             break;
         case 1: /* Button B */

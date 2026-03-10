@@ -16,6 +16,7 @@ typedef enum {
     UI_SCENE_HOME = 0,
     UI_SCENE_SETTINGS = 1,
     UI_SCENE_METRICS = 2,
+    UI_SCENE__COUNT           /* sentinel — keep last */
 } ui_scene_t;
 
 typedef struct {
