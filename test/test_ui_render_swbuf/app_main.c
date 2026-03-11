@@ -72,6 +72,14 @@ void test_swbuf_blit_mono_stride_too_small_rejected(void);
 void test_render_chart_tiny_widget_no_crash(void);
 void test_render_progressbar_large_range_no_overflow(void);
 void test_render_gauge_large_range_no_overflow(void);
+void test_swbuf_rect_zero_width_no_dirty(void);
+void test_swbuf_rect_zero_height_no_dirty(void);
+void test_swbuf_rect_negative_dims_no_dirty(void);
+void test_render_checkbox_tiny_no_crash(void);
+void test_render_radiobutton_tiny_no_crash(void);
+void test_render_button_tiny_no_text(void);
+void test_render_panel_tiny_no_text(void);
+void test_render_textbox_tiny_no_text(void);
 #endif
 
 int main(void)
@@ -132,6 +140,14 @@ int main(void)
     RUN_TEST(test_render_chart_tiny_widget_no_crash);
     RUN_TEST(test_render_progressbar_large_range_no_overflow);
     RUN_TEST(test_render_gauge_large_range_no_overflow);
+    RUN_TEST(test_swbuf_rect_zero_width_no_dirty);
+    RUN_TEST(test_swbuf_rect_zero_height_no_dirty);
+    RUN_TEST(test_swbuf_rect_negative_dims_no_dirty);
+    RUN_TEST(test_render_checkbox_tiny_no_crash);
+    RUN_TEST(test_render_radiobutton_tiny_no_crash);
+    RUN_TEST(test_render_button_tiny_no_text);
+    RUN_TEST(test_render_panel_tiny_no_text);
+    RUN_TEST(test_render_textbox_tiny_no_text);
 #endif
     return UNITY_END();
 }

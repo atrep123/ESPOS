@@ -1218,3 +1218,137 @@ void test_render_gauge_large_range_no_overflow(void)
     ui_render_widget(&w, &ops);
     /* Must not crash */
 }
+
+/* --- Edge-case tests for zero/negative dimension guards --- */
+
+void test_swbuf_rect_zero_width_no_dirty(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_rect(&b, 2, 2, 0, 4, 1);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_rect_zero_height_no_dirty(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_rect(&b, 2, 2, 6, 0, 1);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_rect_negative_dims_no_dirty(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_rect(&b, 2, 2, -3, -5, 1);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_render_checkbox_tiny_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_CHECKBOX;
+    w.x = 0; w.y = 0;
+    w.width = 3; w.height = 3;
+    w.text = "Tiny";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    /* height<4 guard should early-return; no text drawn */
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_radiobutton_tiny_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_RADIOBUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 2; w.height = 2;
+    w.text = "Tiny";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_button_tiny_no_text(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_BUTTON;
+    w.x = 0; w.y = 0;
+    w.width = 3; w.height = 10;
+    w.border = 1;
+    w.text = "X";
+    w.visible = 1; w.enabled = 1;
+
+    /* width=3, border=1 → iw = 3 - (1+1)*2 = -1 → guard skips text */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_panel_tiny_no_text(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_PANEL;
+    w.x = 0; w.y = 0;
+    w.width = 4; w.height = 10;
+    w.border = 1;
+    w.text = "P";
+    w.visible = 1; w.enabled = 1;
+
+    /* width=4, border=1 → iw = 4 - 4 = 0 → guard skips text */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+void test_render_textbox_tiny_no_text(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_TEXTBOX;
+    w.x = 0; w.y = 0;
+    w.width = 2; w.height = 10;
+    w.border = 1;
+    w.text = "T";
+    w.visible = 1; w.enabled = 1;
+
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}

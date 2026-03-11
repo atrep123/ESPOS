@@ -603,19 +603,21 @@ static void _render_progressbar(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            w->text,
-            fg,
-            w->align,
-            w->valign,
-            w->text_overflow,
-            (int)w->max_lines
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                w->text,
+                fg,
+                w->align,
+                w->valign,
+                w->text_overflow,
+                (int)w->max_lines
+            );
+        }
     }
 }
 
@@ -729,19 +731,21 @@ static void _render_button(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            w->text,
-            fg,
-            w->align,
-            w->valign,
-            w->text_overflow,
-            (int)w->max_lines
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                w->text,
+                fg,
+                w->align,
+                w->valign,
+                w->text_overflow,
+                (int)w->max_lines
+            );
+        }
     }
 }
 
@@ -767,19 +771,21 @@ static void _render_panel(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            w->text,
-            fg,
-            w->align,
-            w->valign,
-            w->text_overflow,
-            (int)w->max_lines
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                w->text,
+                fg,
+                w->align,
+                w->valign,
+                w->text_overflow,
+                (int)w->max_lines
+            );
+        }
     }
 }
 
@@ -813,19 +819,21 @@ static void _render_textbox(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            w->text,
-            fg,
-            w->align,
-            w->valign,
-            w->text_overflow,
-            (int)w->max_lines
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                w->text,
+                fg,
+                w->align,
+                w->valign,
+                w->text_overflow,
+                (int)w->max_lines
+            );
+        }
     }
 }
 
@@ -945,19 +953,21 @@ static void _render_gauge(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            w->text,
-            fg,
-            UI_ALIGN_LEFT,
-            UI_VALIGN_TOP,
-            w->text_overflow,
-            (int)w->max_lines
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                w->text,
+                fg,
+                UI_ALIGN_LEFT,
+                UI_VALIGN_TOP,
+                w->text_overflow,
+                (int)w->max_lines
+            );
+        }
     }
 }
 

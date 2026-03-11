@@ -156,14 +156,39 @@ bool ui_meta_parse(const char *s, ui_meta_t *out)
         const char *v0 = eq + 1;
         const char *v1 = seg_end;
         k0 = skip_ws(k0);
-        v0 = skip_ws(v0);
         rstrip_ws(k0, &k1);
-        rstrip_ws(v0, &v1);
-        if (k0 >= k1 || v0 >= v1) {
+        if (k0 >= k1) {
+            continue;
+        }
+        size_t klen = (size_t)(k1 - k0);
+
+        /* prefix/suffix: preserve raw value (leading spaces are content) */
+        if (key_eq_ci(k0, klen, "suffix") || key_eq_ci(k0, klen, "unit")) {
+            size_t n = (size_t)(v1 - v0);
+            if (n >= sizeof(out->suffix)) {
+                n = sizeof(out->suffix) - 1;
+            }
+            memcpy(out->suffix, v0, n);
+            out->suffix[n] = '\0';
+            continue;
+        }
+        if (key_eq_ci(k0, klen, "prefix")) {
+            size_t n = (size_t)(v1 - v0);
+            if (n >= sizeof(out->prefix)) {
+                n = sizeof(out->prefix) - 1;
+            }
+            memcpy(out->prefix, v0, n);
+            out->prefix[n] = '\0';
             continue;
         }
 
-        size_t klen = (size_t)(k1 - k0);
+        /* Strip value whitespace for remaining fields */
+        v0 = skip_ws(v0);
+        rstrip_ws(v0, &v1);
+        if (v0 >= v1) {
+            continue;
+        }
+
         size_t vlen = (size_t)(v1 - v0);
 
         if (key_eq_ci(k0, klen, "bind") || key_eq_ci(k0, klen, "key")) {
@@ -215,24 +240,6 @@ bool ui_meta_parse(const char *s, ui_meta_t *out)
             }
             memcpy(out->values, v0, n);
             out->values[n] = '\0';
-            continue;
-        }
-        if (key_eq_ci(k0, klen, "suffix") || key_eq_ci(k0, klen, "unit")) {
-            size_t n = vlen;
-            if (n >= sizeof(out->suffix)) {
-                n = sizeof(out->suffix) - 1;
-            }
-            memcpy(out->suffix, v0, n);
-            out->suffix[n] = '\0';
-            continue;
-        }
-        if (key_eq_ci(k0, klen, "prefix")) {
-            size_t n = vlen;
-            if (n >= sizeof(out->prefix)) {
-                n = sizeof(out->prefix) - 1;
-            }
-            memcpy(out->prefix, v0, n);
-            out->prefix[n] = '\0';
             continue;
         }
         if (key_eq_ci(k0, klen, "precision") || key_eq_ci(k0, klen, "decimals")) {

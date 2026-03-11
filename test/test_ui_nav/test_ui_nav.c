@@ -572,3 +572,32 @@ void test_move_focus_invalid_dir_negative(void)
     TEST_ASSERT_EQUAL_INT(1, ui_nav_move_focus(&s, 1, (ui_nav_dir_t)-1));
 }
 
+void test_cycle_focus_many_focusables_no_crash(void)
+{
+    /* 140 focusable buttons — exceeds the internal order[128] cap.
+       Cycling must still work on the first 128 without crashing. */
+    UiWidget widgets[140];
+    for (int i = 0; i < 140; ++i) {
+        char id[4];
+        id[0] = (char)('A' + (i / 26));
+        id[1] = (char)('a' + (i % 26));
+        id[2] = '\0';
+        init_button(&widgets[i], id, (i % 20) * 10, (i / 20) * 10);
+    }
+    UiScene s = make_scene(widgets, 140);
+
+    int first = ui_nav_first_focus(&s);
+    TEST_ASSERT(first >= 0);
+
+    /* Cycle forward through all — must not crash */
+    int cur = first;
+    for (int i = 0; i < 130; ++i) {
+        cur = ui_nav_cycle_focus(&s, cur, 1);
+        TEST_ASSERT(cur >= 0);
+    }
+    /* Cycle backward */
+    for (int i = 0; i < 130; ++i) {
+        cur = ui_nav_cycle_focus(&s, cur, -1);
+        TEST_ASSERT(cur >= 0);
+    }
+}

@@ -54,6 +54,7 @@ void test_move_focus_left_wraps(void);
 void test_move_focus_right_wraps(void);
 void test_move_focus_invalid_dir_above_range(void);
 void test_move_focus_invalid_dir_negative(void);
+void test_cycle_focus_many_focusables_no_crash(void);
 
 void app_main(void)
 {
@@ -110,6 +111,7 @@ void app_main(void)
     RUN_TEST(test_move_focus_right_wraps);
     RUN_TEST(test_move_focus_invalid_dir_above_range);
     RUN_TEST(test_move_focus_invalid_dir_negative);
+    RUN_TEST(test_cycle_focus_many_focusables_no_crash);
     UNITY_END();
 }
 
@@ -167,6 +169,7 @@ void test_move_focus_left_wraps(void);
 void test_move_focus_right_wraps(void);
 void test_move_focus_invalid_dir_above_range(void);
 void test_move_focus_invalid_dir_negative(void);
+void test_cycle_focus_many_focusables_no_crash(void);
 
 int main(void)
 {
@@ -223,6 +226,7 @@ int main(void)
     RUN_TEST(test_move_focus_right_wraps);
     RUN_TEST(test_move_focus_invalid_dir_above_range);
     RUN_TEST(test_move_focus_invalid_dir_negative);
+    RUN_TEST(test_cycle_focus_many_focusables_no_crash);
     return UNITY_END();
 }
 
