@@ -869,6 +869,7 @@ static void _render_slider(const UiWidget *w, const UiDrawOps *ops)
     int knob_x = inner_x + (int)(((int64_t)val * (inner_w - 1)) / range);
 
     int knob_w = 5;
+    if (knob_w > inner_w) knob_w = inner_w;
     int knob_h = w->height - 4;
     if (knob_h < 3) knob_h = 3;
     int kx = knob_x - (knob_w / 2);
@@ -1038,19 +1039,21 @@ static void _render_icon(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            buf,
-            fg,
-            UI_ALIGN_CENTER,
-            UI_VALIGN_MIDDLE,
-            UI_TEXT_OVERFLOW_CLIP,
-            1
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                buf,
+                fg,
+                UI_ALIGN_CENTER,
+                UI_VALIGN_MIDDLE,
+                UI_TEXT_OVERFLOW_CLIP,
+                1
+            );
+        }
     }
 }
 
@@ -1086,6 +1089,10 @@ static void _render_chart(const UiWidget *w, const UiDrawOps *ops)
     int gap = 2;
     int bar_w = (inner_w - 6 - (gap * (bars - 1))) / bars;
     if (bar_w < 1) bar_w = 1;
+    /* Reduce bar count if they won't fit */
+    while (bars > 1 && (4 + bars * bar_w + (bars - 1) * gap) > inner_w) {
+        bars--;
+    }
     int range = (w->max_value - w->min_value);
     if (range <= 0) range = 1;
     int base = w->value - w->min_value;
@@ -1105,19 +1112,21 @@ static void _render_chart(const UiWidget *w, const UiDrawOps *ops)
         int iy = w->y + inset + pad;
         int iw = w->width - (inset + pad) * 2;
         int ih = w->height - (inset + pad) * 2;
-        ui_draw_text_block(
-            ops,
-            ix,
-            iy,
-            iw,
-            ih,
-            w->text,
-            fg,
-            w->align,
-            w->valign,
-            w->text_overflow,
-            (int)w->max_lines
-        );
+        if (iw > 0 && ih >= UI_FONT_CHAR_H) {
+            ui_draw_text_block(
+                ops,
+                ix,
+                iy,
+                iw,
+                ih,
+                w->text,
+                fg,
+                w->align,
+                w->valign,
+                w->text_overflow,
+                (int)w->max_lines
+            );
+        }
     }
 }
 

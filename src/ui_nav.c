@@ -249,16 +249,20 @@ static int ui_nav_next_focusable_sorted_in_rect(const UiScene *scene, int curren
 
     int order[128];
     int n = 0;
+    int truncated = 0;
     for (uint16_t i = 0; i < scene->widget_count; ++i) {
         if (ui_nav_is_focusable_in_rect(&scene->widgets[i], bounds)) {
             if (n < (int)(sizeof(order) / sizeof(order[0]))) {
                 order[n++] = (int)i;
+            } else {
+                truncated = 1;
             }
         }
     }
     if (n == 0) {
         return -1;
     }
+    (void)truncated;
 
     for (int i = 0; i < n - 1; ++i) {
         for (int j = i + 1; j < n; ++j) {

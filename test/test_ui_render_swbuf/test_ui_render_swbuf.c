@@ -1352,3 +1352,63 @@ void test_render_textbox_tiny_no_text(void)
     ui_render_widget(&w, &ops);
     TEST_ASSERT_EQUAL_INT(0, cap.count);
 }
+
+void test_render_slider_narrow_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_SLIDER;
+    w.x = 0; w.y = 0;
+    w.width = 6; w.height = 10;
+    w.border = 0;
+    w.min_value = 0; w.max_value = 100;
+    w.value = 50;
+    w.visible = 1; w.enabled = 1;
+
+    /* inner_w = 2, knob_w clamped to 2 — must not draw outside */
+    ui_render_widget(&w, &ops);
+}
+
+void test_render_chart_small_no_crash(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_CHART;
+    w.x = 0; w.y = 0;
+    w.width = 12; w.height = 12;
+    w.border = 1;
+    w.min_value = 0; w.max_value = 100;
+    w.value = 50;
+    w.visible = 1; w.enabled = 1;
+
+    /* inner_w = 10, bars reduce to fit — must not draw outside */
+    ui_render_widget(&w, &ops);
+}
+
+void test_render_icon_tiny_no_text(void)
+{
+    TextCapture cap;
+    memset(&cap, 0, sizeof(cap));
+    UiDrawOps ops = make_capture_ops(&cap);
+
+    UiWidget w;
+    memset(&w, 0, sizeof(w));
+    w.type = UIW_ICON;
+    w.x = 0; w.y = 0;
+    w.width = 3; w.height = 10;
+    w.border = 1;
+    w.text = "?";
+    w.visible = 1; w.enabled = 1;
+
+    /* width=3, border=1 → iw = -1 → guard skips text */
+    ui_render_widget(&w, &ops);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+}

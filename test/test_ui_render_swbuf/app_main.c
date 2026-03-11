@@ -80,6 +80,9 @@ void test_render_radiobutton_tiny_no_crash(void);
 void test_render_button_tiny_no_text(void);
 void test_render_panel_tiny_no_text(void);
 void test_render_textbox_tiny_no_text(void);
+void test_render_slider_narrow_no_crash(void);
+void test_render_chart_small_no_crash(void);
+void test_render_icon_tiny_no_text(void);
 #endif
 
 int main(void)
@@ -148,6 +151,9 @@ int main(void)
     RUN_TEST(test_render_button_tiny_no_text);
     RUN_TEST(test_render_panel_tiny_no_text);
     RUN_TEST(test_render_textbox_tiny_no_text);
+    RUN_TEST(test_render_slider_narrow_no_crash);
+    RUN_TEST(test_render_chart_small_no_crash);
+    RUN_TEST(test_render_icon_tiny_no_text);
 #endif
     return UNITY_END();
 }
