@@ -211,6 +211,9 @@ void ui_swbuf_blit_mono(
     if (stride_bytes < ((w + 7) >> 3)) {
         return;  /* stride too small for declared width */
     }
+    if (stride_bytes > 1024) {
+        return;  /* unreasonably large stride */
+    }
 
     int x0 = (x < 0) ? 0 : x;
     int y0 = (y < 0) ? 0 : y;

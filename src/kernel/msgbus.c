@@ -26,7 +26,11 @@ void bus_init(void)
 
 QueueHandle_t bus_make_queue(size_t depth)
 {
-    return xQueueCreate(depth, sizeof(msg_t));
+    QueueHandle_t q = xQueueCreate(depth, sizeof(msg_t));
+    if (q == NULL) {
+        ESP_LOGE(TAG, "bus_make_queue: OOM, depth=%u", (unsigned)depth);
+    }
+    return q;
 }
 
 void bus_subscribe(topic_t t, QueueHandle_t q)
