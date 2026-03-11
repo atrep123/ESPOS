@@ -1,5 +1,6 @@
 #include "rpc.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "driver/uart.h"
@@ -59,13 +60,21 @@ static void rpc_task(void *arg)
                     buf[n] = 0;
 
                     msg_t m = { .topic = TOP_RPC_CALL };
-                    unsigned int tmp = 0;
                     /* 24-bit RGB limit: SSD1363 uses 4bpp gray but UI
-                     * data model stores colours as 24-bit packed RGB. */
-                    if (sscanf(buf, "set_bg %x", &tmp) == 1 && tmp <= 0xFFFFFFU) {
-                        m.u.rpc.arg = tmp;
-                        strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method) - 1);
-                        m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
+                     * data model stores colours as 24-bit packed RGB.
+                     * Use strtoul instead of sscanf %x to avoid UB on
+                     * hex overflow (input > UINT_MAX). */
+                    if (strncmp(buf, "set_bg ", 7) == 0) {
+                        char *end = NULL;
+                        unsigned long val = strtoul(buf + 7, &end, 16);
+                        if (end != buf + 7 && (*end == '\0' || *end == ' ') && val <= 0xFFFFFFUL) {
+                            m.u.rpc.arg = (uint32_t)val;
+                            strncpy(m.u.rpc.method, "set_bg", sizeof(m.u.rpc.method) - 1);
+                            m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
+                        } else {
+                            strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method) - 1);
+                            m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';
+                        }
                     } else {
                         strncpy(m.u.rpc.method, "noop", sizeof(m.u.rpc.method) - 1);
                         m.u.rpc.method[sizeof(m.u.rpc.method) - 1] = '\0';

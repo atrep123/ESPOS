@@ -4,6 +4,7 @@
 
 #include "driver/i2c.h"
 #include "esp_err.h"
+#include "esp_log.h"
 #include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 
@@ -57,6 +58,7 @@ esp_err_t seesaw_write(uint8_t addr, uint8_t base, uint8_t reg, const uint8_t *d
 {
     if (len > 64) {
         /* Defensive limit: keeps stack usage reasonable. */
+        ESP_LOGW("seesaw", "seesaw_write: len %u exceeds max 64", (unsigned)len);
         return ESP_ERR_INVALID_SIZE;
     }
 
