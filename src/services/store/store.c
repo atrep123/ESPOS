@@ -33,6 +33,11 @@ esp_err_t store_init(store_conf_t *out)
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (s_inited) {
+        *out = g_conf;
+        return ESP_OK;
+    }
+
     if (s_store_mtx == NULL) {
         s_store_mtx = xSemaphoreCreateMutex();
     }

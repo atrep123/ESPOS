@@ -621,6 +621,8 @@ static void _render_progressbar(const UiWidget *w, const UiDrawOps *ops)
 
 static void _render_checkbox(const UiWidget *w, const UiDrawOps *ops)
 {
+    if (w->height < 4 || w->width < 4) return;
+
     uint8_t fg, bg, border, muted, fill;
     ui_widget_colors(w, &fg, &bg, &border, &muted, &fill);
 
@@ -871,10 +873,10 @@ static void _render_slider(const UiWidget *w, const UiDrawOps *ops)
 
 static void _render_radiobutton(const UiWidget *w, const UiDrawOps *ops)
 {
+    if (w->height < 4 || w->width < 4) return;
+
     uint8_t fg, bg, border, muted, fill;
     ui_widget_colors(w, &fg, &bg, &border, &muted, &fill);
-
-    /* Square radio for simplicity (fits 1bpp/4bpp). */
     int box = (w->height > 6) ? 6 : (w->height - 2);
     if (box < 2) box = 2;
     int bx = w->x + 1;

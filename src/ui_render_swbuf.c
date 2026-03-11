@@ -132,6 +132,7 @@ void ui_swbuf_vline(void *ctx, int x, int y, int h, uint8_t color)
 
 void ui_swbuf_rect(void *ctx, int x, int y, int w, int h, uint8_t color)
 {
+    if (w <= 0 || h <= 0) return;
     ui_swbuf_hline(ctx, x, y, w, color);
     ui_swbuf_hline(ctx, x, y + h - 1, w, color);
     ui_swbuf_vline(ctx, x, y, h, color);
