@@ -40,6 +40,9 @@ esp_err_t store_init(store_conf_t *out)
 
     if (s_store_mtx == NULL) {
         s_store_mtx = xSemaphoreCreateMutex();
+        if (s_store_mtx == NULL) {
+            ESP_LOGE(TAG, "mutex creation failed");
+        }
     }
 
     esp_err_t err = nvs_flash_init();
@@ -105,11 +108,13 @@ esp_err_t store_set_bg_rgb(uint32_t rgb)
     }
 
     STORE_LOCK();
+    uint32_t old = g_conf.bg_rgb;
     g_conf.bg_rgb = rgb;
 
     nvs_handle_t h;
     esp_err_t err = nvs_open("app", NVS_READWRITE, &h);
     if (err != ESP_OK) {
+        g_conf.bg_rgb = old;
         STORE_UNLOCK();
         return err;
     }
@@ -120,6 +125,9 @@ esp_err_t store_set_bg_rgb(uint32_t rgb)
     }
 
     nvs_close(h);
+    if (err != ESP_OK) {
+        g_conf.bg_rgb = old;
+    }
     STORE_UNLOCK();
     return err;
 }
@@ -148,8 +156,12 @@ esp_err_t store_set_display_contrast(uint8_t contrast)
     }
 
     STORE_LOCK();
+    uint8_t old = g_conf.display_contrast;
     g_conf.display_contrast = contrast;
     esp_err_t err = store_save_conf();
+    if (err != ESP_OK) {
+        g_conf.display_contrast = old;
+    }
     STORE_UNLOCK();
     return err;
 }
@@ -161,8 +173,12 @@ esp_err_t store_set_display_invert(bool invert)
     }
 
     STORE_LOCK();
+    uint8_t old = g_conf.display_invert;
     g_conf.display_invert = invert ? 1 : 0;
     esp_err_t err = store_save_conf();
+    if (err != ESP_OK) {
+        g_conf.display_invert = old;
+    }
     STORE_UNLOCK();
     return err;
 }
@@ -178,8 +194,12 @@ esp_err_t store_set_display_col_offset(uint8_t offset_units)
     }
 
     STORE_LOCK();
+    uint8_t old = g_conf.display_col_offset;
     g_conf.display_col_offset = offset_units;
     esp_err_t err = store_save_conf();
+    if (err != ESP_OK) {
+        g_conf.display_col_offset = old;
+    }
     STORE_UNLOCK();
     return err;
 }

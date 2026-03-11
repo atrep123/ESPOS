@@ -82,6 +82,9 @@ void ui_bind_init(void)
 #ifndef ESPOS_NATIVE
     if (s_mtx == NULL) {
         s_mtx = xSemaphoreCreateMutex();
+        if (s_mtx == NULL) {
+            ESP_LOGE(TAG, "mutex creation failed");
+        }
     }
 #endif
     ui_bind_clear_all();
@@ -140,9 +143,9 @@ esp_err_t ui_bind_set_int(const char *key, int v)
         if (v < 0) v = 0;
         if (v > 255) v = 255;
         BIND_LOCK();
-        esp_err_t err = store_set_display_contrast((uint8_t)v);
+        esp_err_t err = ssd1363_set_contrast((uint8_t)v);
         if (err == ESP_OK) {
-            err = ssd1363_set_contrast((uint8_t)v);
+            err = store_set_display_contrast((uint8_t)v);
         }
         BIND_UNLOCK();
         return err;
@@ -218,9 +221,9 @@ esp_err_t ui_bind_set_bool(const char *key, bool v)
     /* Hardware-backed key (mutex-guarded to serialize I2C + NVS) */
     if (strcmp(key, "invert") == 0) {
         BIND_LOCK();
-        esp_err_t err = store_set_display_invert(v);
+        esp_err_t err = ssd1363_invert_display(v);
         if (err == ESP_OK) {
-            err = ssd1363_invert_display(v);
+            err = store_set_display_invert(v);
         }
         BIND_UNLOCK();
         return err;

@@ -1262,6 +1262,10 @@ static void ui_task(void *arg)
         s_text_original[i] = scene->widgets[(uint16_t)i].text;
         s_text_override[i][0] = '\0';
     }
+    for (int i = (int)scene->widget_count; i < UI_MAX_WIDGETS; ++i) {
+        s_text_original[i] = NULL;
+        s_text_override[i][0] = '\0';
+    }
     for (int i = 0; i < (int)scene->widget_count && i < UI_MAX_WIDGETS; ++i) {
         (void)ui_update_bound_text(scene, i);
     }
@@ -1356,6 +1360,10 @@ static void ui_task(void *arg)
                         ui_listmodels_init(&s_listmodels);
                         for (int i = 0; i < (int)scene->widget_count && i < UI_MAX_WIDGETS; ++i) {
                             s_text_original[i] = scene->widgets[(uint16_t)i].text;
+                            s_text_override[i][0] = '\0';
+                        }
+                        for (int i = (int)scene->widget_count; i < UI_MAX_WIDGETS; ++i) {
+                            s_text_original[i] = NULL;
                             s_text_override[i][0] = '\0';
                         }
                         for (int i = 0; i < (int)scene->widget_count && i < UI_MAX_WIDGETS; ++i) {
