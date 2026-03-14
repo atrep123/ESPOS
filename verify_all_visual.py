@@ -406,7 +406,7 @@ app._dirty = True
 app.running = True
 try:
     app._on_quit()
-except Exception:
+except (pygame.error, AttributeError, TypeError):
     pass
 check("First quit blocked when dirty", app.running is True, f"running={app.running}")
 app._dirty_scenes = set()

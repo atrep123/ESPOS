@@ -1,0 +1,155 @@
+{
+  "width": 256,
+  "height": 128,
+  "groups": {},
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 256,
+      "height": 128,
+      "bg_color": "black",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0, "y": 0, "width": 256, "height": 12,
+          "text": "SETTINGS",
+          "style": "bold",
+          "color_fg": "#ffffff", "color_bg": "#222222",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "header"
+        },
+        {
+          "type": "label",
+          "x": 4, "y": 16, "width": 60, "height": 10,
+          "text": "VOLUME",
+          "color_fg": "#cccccc", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "vol.label"
+        },
+        {
+          "type": "slider",
+          "x": 66, "y": 14, "width": 120, "height": 12,
+          "text": "",
+          "color_fg": "#88ddff", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "value": 75, "min_value": 0, "max_value": 100,
+          "_widget_id": "vol.slider"
+        },
+        {
+          "type": "label",
+          "x": 190, "y": 16, "width": 30, "height": 10,
+          "text": "75%",
+          "color_fg": "#88ddff", "color_bg": "black",
+          "border": false, "align": "right", "valign": "middle",
+          "_widget_id": "vol.pct"
+        },
+        {
+          "type": "label",
+          "x": 4, "y": 30, "width": 60, "height": 10,
+          "text": "BRIGHT",
+          "color_fg": "#cccccc", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "bri.label"
+        },
+        {
+          "type": "slider",
+          "x": 66, "y": 28, "width": 120, "height": 12,
+          "text": "",
+          "color_fg": "#ffcc44", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "value": 40, "min_value": 0, "max_value": 100,
+          "_widget_id": "bri.slider"
+        },
+        {
+          "type": "label",
+          "x": 190, "y": 30, "width": 30, "height": 10,
+          "text": "40%",
+          "color_fg": "#ffcc44", "color_bg": "black",
+          "border": false, "align": "right", "valign": "middle",
+          "_widget_id": "bri.pct"
+        },
+        {
+          "type": "checkbox",
+          "x": 4, "y": 44, "width": 100, "height": 12,
+          "text": "WIFI",
+          "color_fg": "#44ff88", "color_bg": "black",
+          "border": true, "border_style": "single",
+          "checked": true,
+          "_widget_id": "chk.wifi"
+        },
+        {
+          "type": "checkbox",
+          "x": 110, "y": 44, "width": 110, "height": 12,
+          "text": "BLUETOOTH",
+          "color_fg": "#8888ff", "color_bg": "black",
+          "border": true, "border_style": "single",
+          "checked": false,
+          "_widget_id": "chk.bt"
+        },
+        {
+          "type": "gauge",
+          "x": 4, "y": 60, "width": 72, "height": 48,
+          "text": "BATTERY",
+          "color_fg": "#44ff44", "color_bg": "#0a0a0a",
+          "border": true, "border_style": "single",
+          "value": 78, "min_value": 0, "max_value": 100,
+          "align": "center", "valign": "middle",
+          "_widget_id": "bat.gauge"
+        },
+        {
+          "type": "chart",
+          "x": 82, "y": 60, "width": 96, "height": 48,
+          "text": "SIGNAL",
+          "color_fg": "#aaddff", "color_bg": "#080808",
+          "border": true, "border_style": "single",
+          "data_points": [8, 12, 6, 15, 11, 9, 13, 7, 14, 10, 16, 12],
+          "align": "left",
+          "_widget_id": "sig.chart"
+        },
+        {
+          "type": "label",
+          "x": 184, "y": 60, "width": 68, "height": 10,
+          "text": "DISK 62%",
+          "color_fg": "#ff8844", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "disk.label"
+        },
+        {
+          "type": "progressbar",
+          "x": 184, "y": 72, "width": 68, "height": 10,
+          "text": "",
+          "color_fg": "#ff8844", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "value": 62, "min_value": 0, "max_value": 100,
+          "_widget_id": "disk.bar"
+        },
+        {
+          "type": "button",
+          "x": 184, "y": 86, "width": 68, "height": 12,
+          "text": "SAVE",
+          "color_fg": "#ffffff", "color_bg": "#333333",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "btn.save"
+        },
+        {
+          "type": "button",
+          "x": 184, "y": 102, "width": 68, "height": 12,
+          "text": "RESET",
+          "color_fg": "#ffffff", "color_bg": "#442222",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "btn.reset"
+        },
+        {
+          "type": "label",
+          "x": 0, "y": 116, "width": 256, "height": 12,
+          "text": "ESP32OS v1.0 | 192.168.1.42",
+          "color_fg": "#666666", "color_bg": "#111111",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "footer"
+        }
+      ]
+    }
+  }
+}

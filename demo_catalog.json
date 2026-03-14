@@ -1,0 +1,234 @@
+{
+  "width": 256,
+  "height": 128,
+  "groups": {},
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 256,
+      "height": 128,
+      "bg_color": "black",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0, "y": 0, "width": 256, "height": 12,
+          "text": "WIDGET CATALOG",
+          "style": "bold",
+          "color_fg": "#ffffff", "color_bg": "#1a1a1a",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "header"
+        },
+
+        {
+          "type": "label",
+          "x": 2, "y": 13, "width": 60, "height": 14,
+          "text": "Label",
+          "color_fg": "#cccccc", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "cat.label"
+        },
+        {
+          "type": "button",
+          "x": 64, "y": 13, "width": 56, "height": 14,
+          "text": "Button",
+          "color_fg": "#ffffff", "color_bg": "#333333",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.button"
+        },
+        {
+          "type": "checkbox",
+          "x": 124, "y": 13, "width": 62, "height": 14,
+          "text": "Check",
+          "color_fg": "#cccccc", "color_bg": "black",
+          "border": false,
+          "checked": true,
+          "_widget_id": "cat.checkbox"
+        },
+        {
+          "type": "radiobutton",
+          "x": 190, "y": 13, "width": 62, "height": 14,
+          "text": "Radio",
+          "color_fg": "#cccccc", "color_bg": "black",
+          "border": false,
+          "checked": true,
+          "_widget_id": "cat.radio"
+        },
+
+        {
+          "type": "label",
+          "x": 2, "y": 28, "width": 30, "height": 12,
+          "text": "PROG",
+          "color_fg": "#666666", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "lbl.prog"
+        },
+        {
+          "type": "progressbar",
+          "x": 34, "y": 29, "width": 90, "height": 10,
+          "text": "",
+          "color_fg": "#bbbbbb", "color_bg": "#111111",
+          "border": true, "border_style": "single",
+          "value": 65, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.progress"
+        },
+        {
+          "type": "label",
+          "x": 128, "y": 28, "width": 30, "height": 12,
+          "text": "SLDR",
+          "color_fg": "#666666", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "lbl.slider"
+        },
+        {
+          "type": "slider",
+          "x": 160, "y": 28, "width": 90, "height": 12,
+          "text": "",
+          "color_fg": "#bbbbbb", "color_bg": "#111111",
+          "border": false,
+          "value": 40, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.slider"
+        },
+
+        {
+          "type": "textbox",
+          "x": 2, "y": 41, "width": 120, "height": 14,
+          "text": "Hello ESP32",
+          "color_fg": "#dddddd", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "align": "left", "valign": "middle",
+          "_widget_id": "cat.textbox"
+        },
+        {
+          "type": "panel",
+          "x": 126, "y": 41, "width": 56, "height": 14,
+          "text": "Panel",
+          "color_fg": "#aaaaaa", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.panel"
+        },
+        {
+          "type": "box",
+          "x": 186, "y": 41, "width": 64, "height": 14,
+          "text": "Box",
+          "color_fg": "#aaaaaa", "color_bg": "#222222",
+          "border": true, "border_style": "dashed",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.box"
+        },
+
+        {
+          "type": "gauge",
+          "x": 2, "y": 56, "width": 60, "height": 42,
+          "text": "SPEED",
+          "color_fg": "#dddddd", "color_bg": "#0a0a0a",
+          "border": true, "border_style": "single",
+          "value": 72, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.gauge"
+        },
+        {
+          "type": "chart",
+          "x": 66, "y": 56, "width": 90, "height": 42,
+          "text": "EQ",
+          "color_fg": "#cccccc", "color_bg": "#0a0a0a",
+          "border": true, "border_style": "single",
+          "value": 75, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.chart"
+        },
+        {
+          "type": "progressbar",
+          "x": 160, "y": 56, "width": 90, "height": 8,
+          "text": "",
+          "color_fg": "#dd8844", "color_bg": "#1a1000",
+          "border": true, "border_style": "single",
+          "value": 85, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.prog2"
+        },
+        {
+          "type": "progressbar",
+          "x": 160, "y": 66, "width": 90, "height": 8,
+          "text": "",
+          "color_fg": "#44bb44", "color_bg": "#001a00",
+          "border": true, "border_style": "single",
+          "value": 50, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.prog3"
+        },
+        {
+          "type": "progressbar",
+          "x": 160, "y": 76, "width": 90, "height": 8,
+          "text": "",
+          "color_fg": "#4488dd", "color_bg": "#00001a",
+          "border": true, "border_style": "single",
+          "value": 30, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.prog4"
+        },
+        {
+          "type": "gauge",
+          "x": 160, "y": 86, "width": 44, "height": 20,
+          "text": "CPU",
+          "color_fg": "#dddddd", "color_bg": "#0a0a0a",
+          "border": true, "border_style": "single",
+          "value": 45, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.gauge2"
+        },
+        {
+          "type": "gauge",
+          "x": 208, "y": 86, "width": 44, "height": 20,
+          "text": "MEM",
+          "color_fg": "#dddddd", "color_bg": "#0a0a0a",
+          "border": true, "border_style": "single",
+          "value": 88, "min_value": 0, "max_value": 100,
+          "_widget_id": "cat.gauge3"
+        },
+
+        {
+          "type": "label",
+          "x": 2, "y": 108, "width": 62, "height": 18,
+          "text": "BOLD",
+          "style": "bold",
+          "color_fg": "#ffffff", "color_bg": "#333333",
+          "border": true, "border_style": "bold",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.bold"
+        },
+        {
+          "type": "label",
+          "x": 68, "y": 108, "width": 62, "height": 18,
+          "text": "ROUNDED",
+          "color_fg": "#cccccc", "color_bg": "#222222",
+          "border": true, "border_style": "rounded",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.rounded"
+        },
+        {
+          "type": "label",
+          "x": 134, "y": 108, "width": 58, "height": 18,
+          "text": "DOUBLE",
+          "color_fg": "#cccccc", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "double",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.double"
+        },
+        {
+          "type": "icon",
+          "x": 196, "y": 108, "width": 18, "height": 18,
+          "text": "@",
+          "color_fg": "#dddddd", "color_bg": "#222222",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.icon"
+        },
+        {
+          "type": "label",
+          "x": 218, "y": 108, "width": 36, "height": 18,
+          "text": "DASH",
+          "color_fg": "#aaaaaa", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "dashed",
+          "align": "center", "valign": "middle",
+          "_widget_id": "cat.dashed"
+        }
+      ]
+    }
+  }
+}

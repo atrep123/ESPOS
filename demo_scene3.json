@@ -1,0 +1,145 @@
+{
+  "width": 256,
+  "height": 128,
+  "groups": {},
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 256,
+      "height": 128,
+      "bg_color": "black",
+      "widgets": [
+        {
+          "type": "label",
+          "x": 0, "y": 0, "width": 256, "height": 12,
+          "text": "NOW PLAYING",
+          "style": "bold",
+          "color_fg": "#ffffff", "color_bg": "#222222",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "header"
+        },
+        {
+          "type": "label",
+          "x": 4, "y": 14, "width": 248, "height": 10,
+          "text": "MIDNIGHT DRIVE",
+          "color_fg": "#ffffff", "color_bg": "black",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "track.name"
+        },
+        {
+          "type": "label",
+          "x": 4, "y": 26, "width": 248, "height": 10,
+          "text": "SYNTHWAVE FM",
+          "color_fg": "#888888", "color_bg": "black",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "track.artist"
+        },
+        {
+          "type": "label",
+          "x": 4, "y": 38, "width": 30, "height": 10,
+          "text": "1:42",
+          "color_fg": "#999999", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "time.start"
+        },
+        {
+          "type": "progressbar",
+          "x": 38, "y": 38, "width": 180, "height": 10,
+          "text": "",
+          "color_fg": "#cccccc", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "value": 40, "min_value": 0, "max_value": 100,
+          "_widget_id": "time.bar"
+        },
+        {
+          "type": "label",
+          "x": 222, "y": 38, "width": 30, "height": 10,
+          "text": "4:15",
+          "color_fg": "#999999", "color_bg": "black",
+          "border": false, "align": "right", "valign": "middle",
+          "_widget_id": "time.end"
+        },
+        {
+          "type": "label",
+          "x": 4, "y": 52, "width": 36, "height": 10,
+          "text": "VOL",
+          "color_fg": "#cccccc", "color_bg": "black",
+          "border": false, "align": "left", "valign": "middle",
+          "_widget_id": "vol.label"
+        },
+        {
+          "type": "slider",
+          "x": 42, "y": 50, "width": 140, "height": 12,
+          "text": "",
+          "color_fg": "#bbbbbb", "color_bg": "#1a1a1a",
+          "border": true, "border_style": "single",
+          "value": 80, "min_value": 0, "max_value": 100,
+          "_widget_id": "vol.slider"
+        },
+        {
+          "type": "label",
+          "x": 186, "y": 52, "width": 30, "height": 10,
+          "text": "80%",
+          "color_fg": "#bbbbbb", "color_bg": "black",
+          "border": false, "align": "right", "valign": "middle",
+          "_widget_id": "vol.pct"
+        },
+        {
+          "type": "chart",
+          "x": 4, "y": 66, "width": 120, "height": 46,
+          "text": "EQUALIZER",
+          "color_fg": "#aaddff", "color_bg": "#080808",
+          "border": true, "border_style": "single",
+          "data_points": [14, 16, 12, 10, 8, 11, 15, 13, 9, 7, 12, 14],
+          "align": "left",
+          "_widget_id": "eq.chart"
+        },
+        {
+          "type": "gauge",
+          "x": 130, "y": 66, "width": 56, "height": 46,
+          "text": "BASS",
+          "color_fg": "#ffcc44", "color_bg": "#0a0a0a",
+          "border": true, "border_style": "single",
+          "value": 65, "min_value": 0, "max_value": 100,
+          "align": "center", "valign": "middle",
+          "_widget_id": "bass.gauge"
+        },
+        {
+          "type": "button",
+          "x": 192, "y": 66, "width": 56, "height": 12,
+          "text": "PREV",
+          "color_fg": "#cccccc", "color_bg": "#222222",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "btn.prev"
+        },
+        {
+          "type": "button",
+          "x": 192, "y": 82, "width": 56, "height": 12,
+          "text": "PLAY",
+          "color_fg": "#ffffff", "color_bg": "#444444",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "btn.play"
+        },
+        {
+          "type": "button",
+          "x": 192, "y": 98, "width": 56, "height": 12,
+          "text": "NEXT",
+          "color_fg": "#cccccc", "color_bg": "#222222",
+          "border": true, "border_style": "single",
+          "align": "center", "valign": "middle",
+          "_widget_id": "btn.next"
+        },
+        {
+          "type": "label",
+          "x": 0, "y": 116, "width": 256, "height": 12,
+          "text": "ESP32OS AUDIO 48KHZ 16BIT",
+          "color_fg": "#666666", "color_bg": "#111111",
+          "border": false, "align": "center", "valign": "middle",
+          "_widget_id": "footer"
+        }
+      ]
+    }
+  }
+}
