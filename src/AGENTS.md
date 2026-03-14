@@ -60,4 +60,47 @@ Při změnách se vždy podívej, zda už pro daný problém neexistuje služba 
   - vytvoř `src/services/<name>/<name>.c/.h`,
   - zaregistruj inicializaci v `src/main.c` (podobně jako `metrics_start`, `rpc_start`),
   - dbej na konzistentní log tag (`TAG`).
+  - Přidej i `*_stop()` funkci — každá služba s FreeRTOS taskem musí mít cleanup API.
+
+## Životní cyklus služeb
+
+Každá služba implementuje `*_start()` (vytvoří FreeRTOS task) a `*_stop()` (smaže task):
+
+| Služba | Start | Stop/Deinit |
+|--------|-------|-------------|
+| kernel/timers | `kernel_start_ticker()` | `kernel_stop_ticker()` |
+| kernel/msgbus | `bus_init()` | `bus_deinit()` |
+| ui | `ui_start()` | `ui_stop()` |
+| input | `input_start()` | `input_stop()` |
+| rpc | `rpc_start()` | `rpc_stop()` |
+| metrics | `metrics_start()` | `metrics_stop()` |
+| store | `store_init()` | `store_deinit()` |
+| ui_app | `ui_app_start()` | `ui_app_stop()` |
+
+Stop funkce uloží `TaskHandle_t` při startu a v `*_stop()` zavolají `vTaskDelete()`.
+Kernel cleanup (`bus_deinit`, `kernel_stop_ticker`) navíc uvolňuje fronty/semafory.
+
+### Ochrana proti dvojitému startu
+
+Každá `*_start()` funkce musí na začátku zkontrolovat, zda task už běží:
+
+```c
+void xxx_start(void) {
+    if (s_xxx_task != NULL) { return; }
+    BaseType_t rc = xTaskCreatePinnedToCore(..., &s_xxx_task, ...);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "xxx task creation failed");
+        s_xxx_task = NULL;
+    }
+}
+```
+
+### Graceful shutdown
+
+`system_shutdown()` v `main.c` zastaví služby v opačném pořadí startu:
+
+```
+ui_app_stop → ui_stop → metrics_stop → rpc_stop → input_stop
+→ kernel_stop_ticker → bus_deinit → store_deinit
+```
 

@@ -1,10 +1,73 @@
 # ESP32OS UI Toolkit
+> **English summary** — full docs below are in Czech.
 
+Embedded "OS UI" toolkit for ESP32-S3 with an SSD1363 OLED display (256×128, 4-bit grayscale). The pipeline:
+
+1. **Pygame Designer** — visual scene editor on PC (`run_designer.py`)
+2. **JSON scene** — `main_scene.json` is the source of truth
+3. **C code-gen** — JSON → `UiScene`/`UiWidget` structs (auto-generated `src/ui_design.c|h`)
+4. **Firmware runtime** — focus-based navigation (D-pad / encoder), value editors via `runtime` bindings
+
+### Quick start
+
+```bash
+# Install Python deps
+python -m pip install -r requirements.txt
+
+# Launch the visual designer
+python run_designer.py main_scene.json --profile esp32os_256x128_gray4
+
+# Export to C header
+python tools/ui_export_c_header.py main_scene.json -o ui_scene_generated.h
+
+# PlatformIO build (no hardware)
+pio run -e esp32-s3-devkitm-1-nohw
+
+# Lint & test
+python -m ruff check .
+python -m pytest -q --ignore=output
+```
+
+### Widget types
+
+label, button, panel, box, textbox, checkbox, radiobutton, progressbar, slider, gauge, toggle, list, chart, icon — see the table below for details.
+
+### Key directories
+
+| Path | Purpose |
+|------|---------|
+| `cyberpunk_designer/` | Pygame-based visual scene editor |
+| `ui_models.py` / `ui_designer.py` | Core data model & persistence |
+| `tools/` | Export & validation utilities |
+| `src/` | ESP32 firmware (C, PlatformIO) |
+| `schemas/` | JSON schema for design files |
+| `tests/` | Python test suite (pytest) |
+
+---
 Repo je záměrně osekaný na “embedded OS UI” cestu:
 
 - Pygame UI Designer (tvorba UI pro MCU bez dotyku)
 - Export JSON → C (`UiScene`/`UiWidget` dle `src/ui_scene.h`)
 - Firmware runtime pro SSD1363 (256×128, 4bpp gray), ovládání joystickem / enkodéry
+
+## Typy widgetů
+
+| Widget | Popis | Klíčové vlastnosti |
+|--------|-------|--------------------|
+| `label` | Textový popisek | `text`, `align`, `valign` |
+| `button` | Tlačítko s textem | `text`, fokusovatelné |
+| `panel` | Kontejner/pozadí | `border`, `border_style` |
+| `box` | Dekorativní rámeček | alias pro panel |
+| `textbox` | Editovatelné textové pole | `text`, podtržení |
+| `checkbox` | Zaškrtávací políčko | `checked` (bool) |
+| `radiobutton` | Přepínač (radio) | `checked` (bool) |
+| `progressbar` | Ukazatel průběhu | `value`, `min_value`, `max_value` |
+| `slider` | Posuvník pro nastavení hodnoty | `value`, `min_value`, `max_value` |
+| `gauge` | Kruhový/obloukový ukazatel | `value`, `min_value`, `max_value` |
+| `toggle` | Přepínač (on/off) | `checked` (bool), `text` |
+| `list` | Scrollovatelný seznam | `items`, `value` (aktivní index) |
+| `chart` | Sloupcový/čárový graf | `data_points`, `chart_mode` (bar/line) |
+| `icon` | Ikona s textem | `text` (znak/kód ikony) |
 
 ## Designer
 
@@ -40,6 +103,26 @@ UI runtime pak umí jednoduché editory bez dotyku (A/encoder = edit, Up/Down = 
 pio run -e arduino_nano_esp32-nohw
 pio run -e esp32-s3-devkitm-1-nohw
 ```
+
+### Env proměnné pro build hook
+
+| Proměnná | Default | Popis |
+|----------|---------|-------|
+| `ESP32OS_PIO_UI_EXPORT` | `1` | `0` = vypne generování `ui_design.c/h` |
+| `ESP32OS_UI_JSON` | `main_scene.json` | Cesta ke vstupnímu design JSON |
+| `ESP32OS_UI_SCENE` | `main` | Název scény v JSON |
+| `ESP32OS_UI_VALIDATE` | `0` | `1` = před generováním spustí `validate_design.py`; při ERROR zastaví build |
+
+### Graceful shutdown
+
+`system_shutdown()` v `src/main.c` zastaví všechny služby v opačném pořadí startu:
+
+```
+ui_app_stop → ui_stop → metrics_stop → rpc_stop → input_stop
+→ kernel_stop_ticker → bus_deinit → store_deinit
+```
+
+Funkci je možné zavolat z libovolného kontextu (např. RPC příkaz, deep-sleep handler).
 
 Poznámka:
 - PlatformIO verze jsou v repu připnuté záměrně kvůli reprodukovatelným buildům a stabilním `sdkconfig`.
@@ -100,6 +183,8 @@ Poznámka:
 ```powershell
 scripts/check_all.ps1
 scripts/check_all_local.ps1 -Fast
+scripts/check_all_local.ps1 -Guardrails
+# Guardrails run the same fast designer-refactor subset as CI.
 scripts/check_all_local.ps1 -Fast -StrictArtifacts
 scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageCsv
 scripts/check_all_local.ps1 -Fast -StrictArtifacts -StrictTriageDeltaCsv
@@ -127,6 +212,8 @@ scripts/burnin_native_policy.ps1 -Rounds 1 -SkipPython -TriageCsvPath "" -Triage
 
 ```bash
 ./scripts/check_all_local.sh main_scene.json
+./scripts/check_all_local.sh --guardrails
+# Guardrails run the same fast designer-refactor subset as CI.
 ./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv
 ./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-delta-csv
 ./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv --native-policy-triage-csv reports/native_policy_triage.csv

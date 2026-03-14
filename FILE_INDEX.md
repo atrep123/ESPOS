@@ -51,7 +51,7 @@
 
 ## Codegen / tooling
 
-- `scripts/pio_generate_ui_design.py` — PlatformIO pre-build script (JSON → `src/ui_design.c|h`)
+- `scripts/pio_generate_ui_design.py` — PlatformIO pre-build script (JSON → `src/ui_design.c|h`; optional `ESP32OS_UI_VALIDATE=1` pre-flight)
 - `scripts/skip_hw_tests.py` — skip hardware-dependent tests in CI
 - `tools/ui_codegen.py` — shared JSON → C/header codegen (used by scripts/tools)
 - `tools/ui_export_c_header.py` — CLI header-only exporter (JSON → `.h`)
@@ -87,7 +87,7 @@
 
 - `src/AGENTS.md` — firmware-only coding rules
 - `src/CMakeLists.txt` — ESP-IDF component CMake
-- `src/main.c` — entry point (`app_main`), SPIFFS init, service startup
+- `src/main.c` — entry point (`app_main`), SPIFFS init, service startup, `system_shutdown()` for graceful teardown
 - `src/ui_scene.h` — UI schema (`UiWidget`, `UiScene`, `UiWidgetType` enum)
 - `src/ui_design.c`, `src/ui_design.h` — **generated** demo design (do not edit)
 - `src/display_config.h` — display hardware configuration
@@ -102,7 +102,7 @@
 
 ### UI system
 
-- `src/services/ui/ui.c|h` — UI service (scene management, event loop, bound text)
+- `src/services/ui/ui.c|h` — UI service (scene management, event loop, `ui_start`/`ui_stop`)
 - `src/services/ui/ui_core.c|h` — widget tree, state, selection
 - `src/services/ui/ui_components.c|h` — widget-type rendering (label, button, gauge…)
 - `src/services/ui/ui_meta.c|h` — widget metadata & constraints (suffix, prefix, precision, scale)
@@ -121,34 +121,53 @@
 
 ### Kernel
 
-- `src/kernel/msgbus.c|h` — inter-service message bus
-- `src/kernel/timers.c|h` — software timer management
+- `src/kernel/msgbus.c|h` — inter-service message bus (`bus_init`, `bus_deinit`)
+- `src/kernel/timers.c|h` — software timer management (`kernel_start_ticker`, `kernel_stop_ticker`)
 
 ### Services
 
-- `src/services/input/` — button/encoder input service
-- `src/services/rpc/` — external RPC interface
-- `src/services/store/` — persistent configuration (NVS/SPIFFS)
-- `src/services/metrics/` — runtime performance metrics
-- `src/services/ui_app/` — application-level UI logic (screen stack, list population)
+Each service follows a start/stop lifecycle: `*_start()` creates a FreeRTOS task, `*_stop()` deletes it.
+
+- `src/services/input/` — button/encoder input service (`input_start`, `input_stop`)
+- `src/services/rpc/` — external RPC interface (`rpc_start`, `rpc_stop`)
+- `src/services/store/` — persistent configuration, NVS/SPIFFS (`store_init`, `store_deinit`)
+- `src/services/metrics/` — runtime performance metrics (`metrics_start`, `metrics_stop`)
+- `src/services/ui_app/` — application-level UI logic (`ui_app_start`, `ui_app_stop`)
 
 ## Tests (C — PlatformIO native)
 
 - `test/stubs/` — test stubs and mocks for firmware modules
+- `test/test_chart/` — chart widget tests
+- `test/test_gauge/` — gauge widget tests
+- `test/test_icon/` — icon rendering tests
+- `test/test_input/` — input service tests
+- `test/test_metrics/` — metrics service tests
 - `test/test_msgbus/` — message bus tests
+- `test/test_rpc/` — RPC service tests
 - `test/test_seesaw/` — seesaw driver tests
 - `test/test_store/` — store/config persistence tests
+- `test/test_ui_app/` — UI app layer tests
 - `test/test_ui_bindings/` — runtime value binding tests
+- `test/test_ui_border/` — border rendering tests
 - `test/test_ui_cmd/` — UI command dispatch tests
-- `test/test_ui_components/` — widget rendering tests
+- `test/test_ui_components/` — widget rendering + prefix visibility tests
 - `test/test_ui_core/` — widget tree / state tests
+- `test/test_ui_dirty/` — dirty-region tracking tests
+- `test/test_ui_dither/` — dithering tests
 - `test/test_ui_font/` — font rendering tests
+- `test/test_ui_format/` — text formatting tests
 - `test/test_ui_helpers/` — UI helper function tests
 - `test/test_ui_listmodel/` — list/menu model tests
 - `test/test_ui_meta/` — metadata & constraints tests
 - `test/test_ui_nav/` — focus navigation tests
+- `test/test_ui_rect/` — rectangle utility tests
 - `test/test_ui_render/` — render primitive tests
 - `test/test_ui_render_swbuf/` — software buffer renderer tests
+- `test/test_ui_render_text/` — text rendering tests
+- `test/test_ui_render_widgets/` — widget rendering pipeline tests
+- `test/test_ui_scene_util/` — scene utility tests
+- `test/test_ui_text_layout/` — text layout tests
+- `test/test_ui_widget_style/` — widget style tests
 
 ## Tests (Python)
 

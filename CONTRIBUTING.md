@@ -20,8 +20,12 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Native policy probe (Windows): `scripts/check_native_policy_probe.ps1`
 - Native preflight (shell): `./scripts/check_native_toolchain.sh`
 - Lokalni tolerant checks (Windows): `scripts/check_all_local.ps1 -Fast`
+- Lokalni guardrail test subset (Windows): `scripts/check_all_local.ps1 -Guardrails`
+	(stejny rychly designer-refactor subset jako v CI)
 - Lokalni tolerant checks + strict artefakty (Windows): `scripts/check_all_local.ps1 -Fast -StrictArtifacts`
 - Lokalni tolerant checks (shell): `./scripts/check_all_local.sh main_scene.json`
+- Lokalni guardrail test subset (shell): `./scripts/check_all_local.sh --guardrails`
+	(stejny rychly designer-refactor subset jako v CI)
 - Lokalni strict artefakty + triage gate (shell): `./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv`
 - Lokalni strict artefakty + delta triage gate (shell): `./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-delta-csv`
 
