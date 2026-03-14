@@ -6,8 +6,21 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+TEMPLATES_PATH = ROOT / "templates.json"
+
 from tools.validate_design import validate_file
 from ui_cli import create_cli_interface
+
+
+def _output_path_from_argv() -> Path:
+    if len(sys.argv) >= 2 and sys.argv[1].strip():
+        out = Path(sys.argv[1])
+        return out if out.is_absolute() else (ROOT / out)
+    return ROOT / "demo_scene.json"
+
+
+OUT_PATH = _output_path_from_argv()
+OUT_REL = OUT_PATH.relative_to(ROOT) if OUT_PATH.is_absolute() else OUT_PATH
 
 cmds = [
     "new demo_clean2",
@@ -71,14 +84,46 @@ cmds = [
     "edit 2 valign top",
     "edit 4 border true",
     "switch demo_clean2",
-    "save demo_scene.json",
+    f"save {OUT_REL.as_posix()}",
     "quit",
 ]
 
-create_cli_interface(cmds)
+_templates_before = TEMPLATES_PATH.read_text(encoding="utf-8") if TEMPLATES_PATH.exists() else None
+try:
+    create_cli_interface(cmds)
+finally:
+    if _templates_before is None:
+        if TEMPLATES_PATH.exists():
+            TEMPLATES_PATH.unlink()
+    elif TEMPLATES_PATH.read_text(encoding="utf-8") != _templates_before:
+        TEMPLATES_PATH.write_text(_templates_before, encoding="utf-8")
 
-OUT_PATH = ROOT / "demo_scene.json"
+SCHEMA_PATH = ROOT / "schemas" / "ui_design.schema.json"
 VALUE_WIDGET_TYPES = {"gauge", "progressbar", "slider", "chart"}
+
+
+def _normalize_widgets_to_schema(data: dict) -> dict:
+    with SCHEMA_PATH.open("r", encoding="utf-8") as sf:
+        schema = json.load(sf)
+
+    allowed = set(schema["$defs"]["widget"]["properties"].keys())
+    for scene in data.get("scenes", {}).values():
+        widgets = scene.get("widgets", [])
+        if not isinstance(widgets, list):
+            continue
+        normalized_widgets = []
+        for widget in widgets:
+            if not isinstance(widget, dict):
+                normalized_widgets.append(widget)
+                continue
+            normalized = {k: v for k, v in widget.items() if k in allowed}
+            if "items" in widget and "list_items" in allowed and "list_items" not in normalized:
+                normalized["list_items"] = widget.get("items")
+            normalized_widgets.append(normalized)
+        scene["widgets"] = normalized_widgets
+    return data
+
+
 with OUT_PATH.open("r", encoding="utf-8") as f:
     generated = json.load(f)
 
@@ -86,6 +131,8 @@ for scene in generated.get("scenes", {}).values():
     for widget in scene.get("widgets", []):
         if widget.get("type") not in VALUE_WIDGET_TYPES:
             widget.pop("max_value", None)
+
+generated = _normalize_widgets_to_schema(generated)
 
 with OUT_PATH.open("w", encoding="utf-8") as f:
     json.dump(generated, f, indent=2)
