@@ -21,7 +21,9 @@ def _run(step: str, args: list[str]) -> int:
 
 
 def main() -> int:
-    templates_before = TEMPLATES_PATH.read_text(encoding="utf-8") if TEMPLATES_PATH.exists() else None
+    templates_before = (
+        TEMPLATES_PATH.read_text(encoding="utf-8") if TEMPLATES_PATH.exists() else None
+    )
 
     DEMO_CHECK_PATH.parent.mkdir(parents=True, exist_ok=True)
 
