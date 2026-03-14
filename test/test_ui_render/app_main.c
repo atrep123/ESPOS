@@ -53,6 +53,18 @@ void test_render_icon_no_text_no_crash(void);
 void test_render_icon_empty_text_no_crash(void);
 void test_render_chart_tiny_no_crash(void);
 void test_render_textbox_null_text_no_crash(void);
+void test_render_scene_disabled_widget_still_drawn(void);
+void test_render_label_right_align_draws_text(void);
+void test_render_panel_with_text_draws(void);
+void test_render_button_highlight_border_double(void);
+void test_render_slider_equal_min_max_no_crash(void);
+void test_render_list_draws_items(void);
+void test_render_list_active_item_fills(void);
+void test_render_list_scrollbar_when_overflow(void);
+void test_render_list_null_text_no_crash(void);
+void test_render_list_empty_text_no_crash(void);
+void test_render_list_scroll_offset(void);
+void test_render_list_zero_size_no_crash(void);
 
 void app_main(void)
 {
@@ -108,6 +120,18 @@ void app_main(void)
     RUN_TEST(test_render_icon_empty_text_no_crash);
     RUN_TEST(test_render_chart_tiny_no_crash);
     RUN_TEST(test_render_textbox_null_text_no_crash);
+    RUN_TEST(test_render_scene_disabled_widget_still_drawn);
+    RUN_TEST(test_render_label_right_align_draws_text);
+    RUN_TEST(test_render_panel_with_text_draws);
+    RUN_TEST(test_render_button_highlight_border_double);
+    RUN_TEST(test_render_slider_equal_min_max_no_crash);
+    RUN_TEST(test_render_list_draws_items);
+    RUN_TEST(test_render_list_active_item_fills);
+    RUN_TEST(test_render_list_scrollbar_when_overflow);
+    RUN_TEST(test_render_list_null_text_no_crash);
+    RUN_TEST(test_render_list_empty_text_no_crash);
+    RUN_TEST(test_render_list_scroll_offset);
+    RUN_TEST(test_render_list_zero_size_no_crash);
     UNITY_END();
 }
 
@@ -164,6 +188,18 @@ void test_render_icon_no_text_no_crash(void);
 void test_render_icon_empty_text_no_crash(void);
 void test_render_chart_tiny_no_crash(void);
 void test_render_textbox_null_text_no_crash(void);
+void test_render_scene_disabled_widget_still_drawn(void);
+void test_render_label_right_align_draws_text(void);
+void test_render_panel_with_text_draws(void);
+void test_render_button_highlight_border_double(void);
+void test_render_slider_equal_min_max_no_crash(void);
+void test_render_list_draws_items(void);
+void test_render_list_active_item_fills(void);
+void test_render_list_scrollbar_when_overflow(void);
+void test_render_list_null_text_no_crash(void);
+void test_render_list_empty_text_no_crash(void);
+void test_render_list_scroll_offset(void);
+void test_render_list_zero_size_no_crash(void);
 
 int main(void)
 {
@@ -219,6 +255,18 @@ int main(void)
     RUN_TEST(test_render_icon_empty_text_no_crash);
     RUN_TEST(test_render_chart_tiny_no_crash);
     RUN_TEST(test_render_textbox_null_text_no_crash);
+    RUN_TEST(test_render_scene_disabled_widget_still_drawn);
+    RUN_TEST(test_render_label_right_align_draws_text);
+    RUN_TEST(test_render_panel_with_text_draws);
+    RUN_TEST(test_render_button_highlight_border_double);
+    RUN_TEST(test_render_slider_equal_min_max_no_crash);
+    RUN_TEST(test_render_list_draws_items);
+    RUN_TEST(test_render_list_active_item_fills);
+    RUN_TEST(test_render_list_scrollbar_when_overflow);
+    RUN_TEST(test_render_list_null_text_no_crash);
+    RUN_TEST(test_render_list_empty_text_no_crash);
+    RUN_TEST(test_render_list_scroll_offset);
+    RUN_TEST(test_render_list_zero_size_no_crash);
     UNITY_END();
     return 0;
 }

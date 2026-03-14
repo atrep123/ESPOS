@@ -363,3 +363,57 @@ void test_toast_long_message_truncation(void)
     /* Message should be truncated to UI_TOAST_MSG_LEN - 1 */
     TEST_ASSERT_EQUAL_INT(UI_TOAST_MSG_LEN - 1, (int)strlen(item.message));
 }
+
+/* ================================================================== */
+/* New edge-case tests                                                 */
+/* ================================================================== */
+
+void test_parse_uint_dec_leading_zeros(void)
+{
+    int v = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_uint_dec("007", &v));
+    TEST_ASSERT_EQUAL_INT(7, v);
+}
+
+void test_parse_item_root_slot_item_no_number(void)
+{
+    /* "list.item" with no digit after "item" → should fail */
+    char root[32];
+    int slot = -1;
+    TEST_ASSERT_EQUAL_INT(0, ui_parse_item_root_slot("list.item", root, sizeof(root), &slot));
+}
+
+void test_toast_reset_then_push_pop(void)
+{
+    UiToast toast;
+    memset(&toast, 0, sizeof(toast));
+    ui_toast_queue_push(&toast, "before", 100);
+    ui_toast_queue_push(&toast, "before2", 200);
+    ui_toast_reset(&toast);
+    TEST_ASSERT_EQUAL_UINT(0, toast.count);
+
+    /* Push after reset should work fresh */
+    ui_toast_queue_push(&toast, "after", 300);
+    TEST_ASSERT_EQUAL_UINT(1, toast.count);
+    UiToastItem item;
+    TEST_ASSERT_EQUAL_INT(1, ui_toast_queue_pop(&toast, &item));
+    TEST_ASSERT_EQUAL_STRING("after", item.message);
+    TEST_ASSERT_EQUAL_UINT32(300, item.duration_ms);
+}
+
+void test_parse_uint_dec_just_below_overflow(void)
+{
+    /* 2147483646 is INT_MAX - 1 */
+    int v = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_uint_dec("2147483646", &v));
+    TEST_ASSERT_EQUAL_INT(2147483646, v);
+}
+
+void test_parse_item_root_slot_multi_digit(void)
+{
+    char root[32];
+    int slot = -1;
+    TEST_ASSERT_EQUAL_INT(1, ui_parse_item_root_slot("xyz.item999", root, sizeof(root), &slot));
+    TEST_ASSERT_EQUAL_STRING("xyz", root);
+    TEST_ASSERT_EQUAL_INT(999, slot);
+}

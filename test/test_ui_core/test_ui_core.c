@@ -1,5 +1,6 @@
 #include "unity.h"
 
+#include <limits.h>
 #include <string.h>
 
 #include "services/ui/ui_core.h"
@@ -169,5 +170,87 @@ void test_ui_core_button_a_press_sets_btnA(void)
 
     ui_core_on_button(&st, 0, false);
     TEST_ASSERT_EQUAL_UINT8(0, st.btnA);
+}
+
+/* ================================================================== */
+/* Additional edge cases                                               */
+/* ================================================================== */
+
+void test_ui_core_tick_overflow(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    st.t = INT32_MAX;
+    ui_core_on_tick(&st);
+    /* Standard signed overflow wraps to INT32_MIN (undefined in C but
+     * this is how the firmware behaves on the target). */
+    TEST_ASSERT_EQUAL_INT32(INT32_MIN, st.t);
+}
+
+void test_ui_core_rgb565_intermediate(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    /* 0x0B1E3A → R=0x0B, G=0x1E, B=0x3A */
+    ui_core_on_rpc_bg(&st, 0x0B1E3A);
+    uint16_t expected = ((uint16_t)(0x0B & 0xF8) << 8) |
+                        ((uint16_t)(0x1E & 0xFC) << 3) |
+                        (uint16_t)(0x3A >> 3);
+    TEST_ASSERT_EQUAL_UINT16(expected, st.bg);
+}
+
+void test_ui_core_rapid_button_repress(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    /* Press twice without release — btnA stays 1, scene advances twice */
+    ui_core_on_button(&st, 0, true);
+    TEST_ASSERT_EQUAL(UI_SCENE_SETTINGS, st.scene);
+    ui_core_on_button(&st, 0, true);
+    TEST_ASSERT_EQUAL(UI_SCENE_METRICS, st.scene);
+    TEST_ASSERT_EQUAL_UINT8(1, st.btnA);
+}
+
+void test_ui_core_rpc_bg_preserves_other_fields(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    st.t = 42;
+    st.btnA = 1;
+    st.scene = UI_SCENE_METRICS;
+    st.metrics_free_heap = 1234;
+
+    ui_core_on_rpc_bg(&st, 0xFF0000);
+
+    TEST_ASSERT_EQUAL_UINT16(0xF800, st.bg);
+    TEST_ASSERT_EQUAL_INT32(42, st.t);
+    TEST_ASSERT_EQUAL_UINT8(1, st.btnA);
+    TEST_ASSERT_EQUAL(UI_SCENE_METRICS, st.scene);
+    TEST_ASSERT_EQUAL_UINT32(1234, st.metrics_free_heap);
+}
+
+void test_ui_core_multiple_full_scene_loops(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    /* Cycle through all scenes twice (6 presses) */
+    for (int i = 0; i < 6; ++i) {
+        ui_core_on_button(&st, 0, true);
+        ui_core_on_button(&st, 0, false);
+    }
+    /* 6 presses: HOME→S→M→H→S→M→H → back at HOME */
+    TEST_ASSERT_EQUAL(UI_SCENE_HOME, st.scene);
+}
+
+/* --- Fuzz: rapid tick stress (large t) --- */
+void test_ui_core_rapid_tick_stress(void)
+{
+    ui_state_t st;
+    ui_core_init(&st);
+    /* Tick 10000 times - must not overflow or crash */
+    for (int i = 0; i < 10000; ++i) {
+        ui_core_on_tick(&st);
+    }
+    TEST_ASSERT_EQUAL_INT32(10000, st.t);
 }
 

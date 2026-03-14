@@ -1,5 +1,6 @@
 #include "unity.h"
 
+#include <limits.h>
 #include <string.h>
 
 #include "kernel/msgbus.h"
@@ -22,7 +23,7 @@ void test_bus_make_queue_returns_handle(void)
 void test_bus_subscribe_and_publish_delivers(void)
 {
     QueueHandle_t q = bus_make_queue(4);
-    bus_subscribe(TOP_TICK_10MS, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
 
     msg_t out;
     memset(&out, 0, sizeof(out));
@@ -48,7 +49,7 @@ void test_bus_publish_null_msg_no_crash(void)
 void test_bus_publish_wrong_topic_not_delivered(void)
 {
     QueueHandle_t q = bus_make_queue(4);
-    bus_subscribe(TOP_INPUT_BTN, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_INPUT_BTN, q));
 
     msg_t out;
     memset(&out, 0, sizeof(out));
@@ -67,8 +68,8 @@ void test_bus_multiple_subscribers(void)
 {
     QueueHandle_t q1 = bus_make_queue(4);
     QueueHandle_t q2 = bus_make_queue(4);
-    bus_subscribe(TOP_RPC_CALL, q1);
-    bus_subscribe(TOP_RPC_CALL, q2);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_RPC_CALL, q1));
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_RPC_CALL, q2));
 
     msg_t out;
     memset(&out, 0, sizeof(out));
@@ -89,15 +90,15 @@ void test_bus_multiple_subscribers(void)
 void test_bus_subscribe_out_of_range_topic_no_crash(void)
 {
     QueueHandle_t q = bus_make_queue(4);
-    /* topic value larger than MAX_TOPICS should be silently ignored */
-    bus_subscribe((topic_t)99, q);
+    /* topic value larger than MAX_TOPICS should return error */
+    TEST_ASSERT_NOT_EQUAL(ESP_OK, bus_subscribe((topic_t)99, q));
     vQueueDelete(q);
 }
 
 void test_bus_ui_cmd_message(void)
 {
     QueueHandle_t q = bus_make_queue(4);
-    bus_subscribe(TOP_UI_CMD, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_UI_CMD, q));
 
     msg_t out;
     memset(&out, 0, sizeof(out));
@@ -120,7 +121,7 @@ void test_bus_publish_queue_full_silent_drop(void)
 {
     /* Create a queue with depth 1, publish 2 messages — second is silently dropped */
     QueueHandle_t q = bus_make_queue(1);
-    bus_subscribe(TOP_TICK_10MS, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
 
     msg_t m1 = {0};
     m1.topic = TOP_TICK_10MS;
@@ -142,11 +143,16 @@ void test_bus_publish_queue_full_silent_drop(void)
 
 void test_bus_subscribe_max_subs_exceeded_no_crash(void)
 {
-    /* MAX_SUBS is 8 — subscribing a 9th should be silently ignored */
+    /* MAX_SUBS is 8 — subscribing a 9th should return error */
     QueueHandle_t queues[10];
     for (int i = 0; i < 10; ++i) {
         queues[i] = bus_make_queue(4);
-        bus_subscribe(TOP_TICK_10MS, queues[i]);
+        esp_err_t err = bus_subscribe(TOP_TICK_10MS, queues[i]);
+        if (i < 8) {
+            TEST_ASSERT_EQUAL_INT(ESP_OK, err);
+        } else {
+            TEST_ASSERT_NOT_EQUAL(ESP_OK, err);
+        }
     }
 
     msg_t m = {0};
@@ -181,7 +187,7 @@ void test_bus_publish_negative_topic_no_crash(void)
 void test_bus_reinit_clears_subscriptions(void)
 {
     QueueHandle_t q = bus_make_queue(4);
-    bus_subscribe(TOP_TICK_10MS, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
 
     /* Re-init should clear all subscriptions */
     bus_init();
@@ -201,8 +207,8 @@ void test_bus_subscribe_multiple_topics(void)
 {
     QueueHandle_t q1 = bus_make_queue(4);
     QueueHandle_t q2 = bus_make_queue(4);
-    bus_subscribe(TOP_INPUT_BTN, q1);
-    bus_subscribe(TOP_UI_ACTION, q2);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_INPUT_BTN, q1));
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_UI_ACTION, q2));
 
     msg_t m1 = {0};
     m1.topic = TOP_INPUT_BTN;
@@ -232,11 +238,11 @@ void test_bus_subscribe_multiple_topics(void)
 
 void test_bus_subscribe_null_queue_ignored(void)
 {
-    /* NULL queue should be silently rejected, not waste a subscriber slot */
-    bus_subscribe(TOP_TICK_10MS, NULL);
+    /* NULL queue should be rejected with error, not waste a subscriber slot */
+    TEST_ASSERT_NOT_EQUAL(ESP_OK, bus_subscribe(TOP_TICK_10MS, NULL));
 
     QueueHandle_t q = bus_make_queue(4);
-    bus_subscribe(TOP_TICK_10MS, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
 
     msg_t m = {0};
     m.topic = TOP_TICK_10MS;
@@ -253,7 +259,7 @@ void test_bus_subscribe_null_queue_ignored(void)
 void test_bus_metrics_union_delivery(void)
 {
     QueueHandle_t q = bus_make_queue(4);
-    bus_subscribe(TOP_METRICS_RET, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_METRICS_RET, q));
 
     msg_t m = {0};
     m.topic = TOP_METRICS_RET;
@@ -279,7 +285,7 @@ void test_bus_drop_count_initially_zero(void)
 void test_bus_drop_count_increments_on_full_queue(void)
 {
     QueueHandle_t q = bus_make_queue(1);
-    bus_subscribe(TOP_TICK_10MS, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
 
     msg_t m = {0};
     m.topic = TOP_TICK_10MS;
@@ -299,7 +305,7 @@ void test_bus_drop_count_increments_on_full_queue(void)
 void test_bus_drop_count_reset_on_reinit(void)
 {
     QueueHandle_t q = bus_make_queue(1);
-    bus_subscribe(TOP_TICK_10MS, q);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
 
     msg_t m = {0};
     m.topic = TOP_TICK_10MS;
@@ -317,4 +323,213 @@ void test_bus_drop_count_invalid_topic_returns_zero(void)
 {
     TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)-1));
     TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)99));
+}
+
+/* ================================================================== */
+/* Additional edge cases                                               */
+/* ================================================================== */
+
+void test_bus_publish_no_subscribers(void)
+{
+    /* Publishing to a topic with zero subscribers is a no-op */
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 42;
+    bus_publish(&m); /* no crash */
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count(TOP_TICK_10MS));
+}
+
+void test_bus_subscribe_same_queue_twice(void)
+{
+    /* Subscribing same queue twice → message delivered twice */
+    QueueHandle_t q = bus_make_queue(8);
+    bus_subscribe(TOP_TICK_10MS, q);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 55;
+    bus_publish(&m);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+    TEST_ASSERT_EQUAL_UINT32(55, recv.u.tick.tick);
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+    TEST_ASSERT_EQUAL_UINT32(55, recv.u.tick.tick);
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q, &recv, 0)); /* no more */
+
+    vQueueDelete(q);
+}
+
+void test_bus_drop_count_per_subscriber(void)
+{
+    /* Two subscribers on same topic: one with depth 1, one with depth 4 */
+    QueueHandle_t q_small = bus_make_queue(1);
+    QueueHandle_t q_big = bus_make_queue(4);
+    bus_subscribe(TOP_RPC_CALL, q_small);
+    bus_subscribe(TOP_RPC_CALL, q_big);
+
+    msg_t m = {0};
+    m.topic = TOP_RPC_CALL;
+    bus_publish(&m); /* both receive */
+    bus_publish(&m); /* q_small full → drop, q_big receives */
+
+    /* Only 1 drop (from q_small being full) */
+    TEST_ASSERT_EQUAL_UINT32(1, bus_drop_count(TOP_RPC_CALL));
+
+    /* q_big should have 2 messages */
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q_big, &recv, 0));
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q_big, &recv, 0));
+
+    vQueueDelete(q_small);
+    vQueueDelete(q_big);
+}
+
+void test_bus_publish_all_topics_isolated(void)
+{
+    /* Subscribe to two different topics, publish to one — other stays empty */
+    QueueHandle_t q_tick = bus_make_queue(4);
+    QueueHandle_t q_btn = bus_make_queue(4);
+    bus_subscribe(TOP_TICK_10MS, q_tick);
+    bus_subscribe(TOP_INPUT_BTN, q_btn);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 77;
+    bus_publish(&m);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q_tick, &recv, 0));
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q_btn, &recv, 0)); /* isolated */
+
+    vQueueDelete(q_tick);
+    vQueueDelete(q_btn);
+}
+
+void test_bus_burst_publish(void)
+{
+    /* Burst of messages — queue depth 4, publish 6 → 2 drops */
+    QueueHandle_t q = bus_make_queue(4);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    for (int i = 0; i < 6; ++i) {
+        m.u.tick.tick = (uint32_t)i;
+        bus_publish(&m);
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(2, bus_drop_count(TOP_TICK_10MS));
+
+    /* First 4 should be in the queue */
+    for (int i = 0; i < 4; ++i) {
+        msg_t recv;
+        TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+        TEST_ASSERT_EQUAL_UINT32((uint32_t)i, recv.u.tick.tick);
+    }
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q, &recv, 0));
+
+    vQueueDelete(q);
+}
+
+void test_bus_make_queue_depth_one(void)
+{
+    QueueHandle_t q = bus_make_queue(1);
+    TEST_ASSERT_NOT_NULL(q);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 1;
+    bus_publish(&m);
+    m.u.tick.tick = 2;
+    bus_publish(&m);
+
+    TEST_ASSERT_EQUAL_UINT32(1, bus_drop_count(TOP_TICK_10MS));
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q, &recv, 0));
+    TEST_ASSERT_EQUAL_UINT32(1, recv.u.tick.tick);
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q, &recv, 0));
+    vQueueDelete(q);
+}
+
+void test_bus_publish_extreme_topic_values(void)
+{
+    /* INT32_MIN and INT32_MAX cast to topic_t should not crash */
+    msg_t m = {0};
+    m.topic = (topic_t)INT32_MIN;
+    bus_publish(&m);
+    m.topic = (topic_t)INT32_MAX;
+    bus_publish(&m);
+    m.topic = (topic_t)(-1);
+    bus_publish(&m);
+}
+
+void test_bus_subscribe_extreme_topic_values(void)
+{
+    QueueHandle_t q = bus_make_queue(1);
+    TEST_ASSERT_NOT_EQUAL_INT(ESP_OK, bus_subscribe((topic_t)INT32_MIN, q));
+    TEST_ASSERT_NOT_EQUAL_INT(ESP_OK, bus_subscribe((topic_t)INT32_MAX, q));
+    TEST_ASSERT_NOT_EQUAL_INT(ESP_OK, bus_subscribe((topic_t)(-1), q));
+    vQueueDelete(q);
+}
+
+void test_bus_drop_count_extreme_topics(void)
+{
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)INT32_MIN));
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)INT32_MAX));
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count((topic_t)(-1)));
+}
+
+/* ================================================================== */
+/* bus_deinit lifecycle tests                                           */
+/* ================================================================== */
+
+void test_bus_deinit_no_crash(void)
+{
+    bus_deinit();
+}
+
+void test_bus_deinit_clears_subscriptions(void)
+{
+    /* Subscribe, deinit frees queues + clears state, reinit works */
+    QueueHandle_t q = bus_make_queue(4);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q));
+    /* q is now owned by subs array; deinit will free it */
+    bus_deinit();
+
+    /* Reinitialize and verify clean slate */
+    bus_init();
+    QueueHandle_t q2 = bus_make_queue(4);
+    TEST_ASSERT_EQUAL_INT(ESP_OK, bus_subscribe(TOP_TICK_10MS, q2));
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    m.u.tick.tick = 99;
+    bus_publish(&m);
+
+    msg_t recv;
+    TEST_ASSERT_EQUAL_INT(1, xQueueReceive(q2, &recv, 0));
+    TEST_ASSERT_EQUAL_UINT32(99, recv.u.tick.tick);
+    TEST_ASSERT_EQUAL_INT(0, xQueueReceive(q2, &recv, 0)); /* only one subscriber */
+    vQueueDelete(q2);
+}
+
+void test_bus_deinit_resets_drop_counts(void)
+{
+    QueueHandle_t q = bus_make_queue(1);
+    bus_subscribe(TOP_TICK_10MS, q);
+
+    msg_t m = {0};
+    m.topic = TOP_TICK_10MS;
+    bus_publish(&m);
+    bus_publish(&m); /* 1 drop */
+    TEST_ASSERT_EQUAL_UINT32(1, bus_drop_count(TOP_TICK_10MS));
+
+    bus_deinit();
+    bus_init();
+    TEST_ASSERT_EQUAL_UINT32(0, bus_drop_count(TOP_TICK_10MS));
 }

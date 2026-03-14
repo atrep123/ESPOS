@@ -24,6 +24,8 @@ typedef enum {
     UIW_PANEL = 9,
     UIW_ICON = 10,
     UIW_CHART = 11,
+    UIW_LIST = 12,
+    UIW_TOGGLE = 13,
     UIW__COUNT          /* sentinel — must remain last */
 } UiWidgetType;
 

@@ -21,6 +21,7 @@ static size_t s_last_write_len = 0;
 static uint8_t s_last_write_addr = 0;
 static size_t s_write_calls = 0;
 static size_t s_read_calls = 0;
+static size_t s_write_fail_after = 0;
 
 void i2c_stub_reset(void)
 {
@@ -33,10 +34,12 @@ void i2c_stub_reset(void)
     s_last_write_addr = 0;
     s_write_calls = 0;
     s_read_calls = 0;
+    s_write_fail_after = 0;
 }
 
 void i2c_stub_set_write_err(esp_err_t err) { s_write_err = err; }
 void i2c_stub_set_read_err(esp_err_t err) { s_read_err = err; }
+void i2c_stub_set_write_fail_after(size_t n) { s_write_fail_after = n; }
 
 void i2c_stub_set_read_data(const uint8_t *data, size_t len)
 {
@@ -79,6 +82,12 @@ esp_err_t i2c_master_write_to_device(i2c_port_t port, uint8_t addr,
     }
     if (write_buffer && s_last_write_len > 0) {
         memcpy(s_last_write, write_buffer, s_last_write_len);
+    }
+    if (s_write_fail_after > 0 && s_write_calls > s_write_fail_after) {
+        return s_write_err;
+    }
+    if (s_write_fail_after > 0) {
+        return ESP_OK;
     }
     return s_write_err;
 }

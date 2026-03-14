@@ -55,6 +55,30 @@ void test_move_focus_right_wraps(void);
 void test_move_focus_invalid_dir_above_range(void);
 void test_move_focus_invalid_dir_negative(void);
 void test_cycle_focus_many_focusables_no_crash(void);
+void test_move_focus_all_non_focusable(void);
+void test_move_focus_overlapping_widgets(void);
+void test_move_focus_3x3_grid(void);
+void test_cycle_focus_large_delta(void);
+void test_first_focus_in_rect_zero_size(void);
+void test_move_focus_single_widget(void);
+void test_is_focusable_textbox_returns_false(void);
+void test_first_focus_all_disabled_returns_neg1(void);
+void test_cycle_focus_backward_skips_nonfocusable(void);
+void test_move_focus_up_from_top_wraps(void);
+void test_move_focus_in_rect_single_widget_stays(void);
+void test_move_focus_large_coords_no_overflow(void);
+void test_move_focus_extreme_diagonal_no_overflow(void);
+void test_move_focus_in_rect_large_coords_no_overflow(void);
+void test_move_focus_all_same_position(void);
+void test_cycle_focus_empty_scene(void);
+void test_first_focus_empty_scene(void);
+void test_move_focus_negative_current_idx(void);
+void test_is_focusable_list_returns_true(void);
+void test_is_focusable_toggle_returns_true(void);
+void test_is_focusable_gauge_returns_true(void);
+void test_is_focusable_progressbar_returns_true(void);
+void test_is_focusable_icon_returns_false(void);
+void test_is_focusable_chart_returns_false(void);
 
 void app_main(void)
 {
@@ -112,6 +136,30 @@ void app_main(void)
     RUN_TEST(test_move_focus_invalid_dir_above_range);
     RUN_TEST(test_move_focus_invalid_dir_negative);
     RUN_TEST(test_cycle_focus_many_focusables_no_crash);
+    RUN_TEST(test_move_focus_all_non_focusable);
+    RUN_TEST(test_move_focus_overlapping_widgets);
+    RUN_TEST(test_move_focus_3x3_grid);
+    RUN_TEST(test_cycle_focus_large_delta);
+    RUN_TEST(test_first_focus_in_rect_zero_size);
+    RUN_TEST(test_move_focus_single_widget);
+    RUN_TEST(test_is_focusable_textbox_returns_false);
+    RUN_TEST(test_first_focus_all_disabled_returns_neg1);
+    RUN_TEST(test_cycle_focus_backward_skips_nonfocusable);
+    RUN_TEST(test_move_focus_up_from_top_wraps);
+    RUN_TEST(test_move_focus_in_rect_single_widget_stays);
+    RUN_TEST(test_move_focus_large_coords_no_overflow);
+    RUN_TEST(test_move_focus_extreme_diagonal_no_overflow);
+    RUN_TEST(test_move_focus_in_rect_large_coords_no_overflow);
+    RUN_TEST(test_move_focus_all_same_position);
+    RUN_TEST(test_cycle_focus_empty_scene);
+    RUN_TEST(test_first_focus_empty_scene);
+    RUN_TEST(test_move_focus_negative_current_idx);
+    RUN_TEST(test_is_focusable_list_returns_true);
+    RUN_TEST(test_is_focusable_toggle_returns_true);
+    RUN_TEST(test_is_focusable_gauge_returns_true);
+    RUN_TEST(test_is_focusable_progressbar_returns_true);
+    RUN_TEST(test_is_focusable_icon_returns_false);
+    RUN_TEST(test_is_focusable_chart_returns_false);
     UNITY_END();
 }
 
@@ -170,6 +218,30 @@ void test_move_focus_right_wraps(void);
 void test_move_focus_invalid_dir_above_range(void);
 void test_move_focus_invalid_dir_negative(void);
 void test_cycle_focus_many_focusables_no_crash(void);
+void test_move_focus_all_non_focusable(void);
+void test_move_focus_overlapping_widgets(void);
+void test_move_focus_3x3_grid(void);
+void test_cycle_focus_large_delta(void);
+void test_first_focus_in_rect_zero_size(void);
+void test_move_focus_single_widget(void);
+void test_is_focusable_textbox_returns_false(void);
+void test_first_focus_all_disabled_returns_neg1(void);
+void test_cycle_focus_backward_skips_nonfocusable(void);
+void test_move_focus_up_from_top_wraps(void);
+void test_move_focus_in_rect_single_widget_stays(void);
+void test_move_focus_large_coords_no_overflow(void);
+void test_move_focus_extreme_diagonal_no_overflow(void);
+void test_move_focus_in_rect_large_coords_no_overflow(void);
+void test_move_focus_all_same_position(void);
+void test_cycle_focus_empty_scene(void);
+void test_first_focus_empty_scene(void);
+void test_move_focus_negative_current_idx(void);
+void test_is_focusable_list_returns_true(void);
+void test_is_focusable_toggle_returns_true(void);
+void test_is_focusable_gauge_returns_true(void);
+void test_is_focusable_progressbar_returns_true(void);
+void test_is_focusable_icon_returns_false(void);
+void test_is_focusable_chart_returns_false(void);
 
 int main(void)
 {
@@ -227,6 +299,30 @@ int main(void)
     RUN_TEST(test_move_focus_invalid_dir_above_range);
     RUN_TEST(test_move_focus_invalid_dir_negative);
     RUN_TEST(test_cycle_focus_many_focusables_no_crash);
+    RUN_TEST(test_move_focus_all_non_focusable);
+    RUN_TEST(test_move_focus_overlapping_widgets);
+    RUN_TEST(test_move_focus_3x3_grid);
+    RUN_TEST(test_cycle_focus_large_delta);
+    RUN_TEST(test_first_focus_in_rect_zero_size);
+    RUN_TEST(test_move_focus_single_widget);
+    RUN_TEST(test_is_focusable_textbox_returns_false);
+    RUN_TEST(test_first_focus_all_disabled_returns_neg1);
+    RUN_TEST(test_cycle_focus_backward_skips_nonfocusable);
+    RUN_TEST(test_move_focus_up_from_top_wraps);
+    RUN_TEST(test_move_focus_in_rect_single_widget_stays);
+    RUN_TEST(test_move_focus_large_coords_no_overflow);
+    RUN_TEST(test_move_focus_extreme_diagonal_no_overflow);
+    RUN_TEST(test_move_focus_in_rect_large_coords_no_overflow);
+    RUN_TEST(test_move_focus_all_same_position);
+    RUN_TEST(test_cycle_focus_empty_scene);
+    RUN_TEST(test_first_focus_empty_scene);
+    RUN_TEST(test_move_focus_negative_current_idx);
+    RUN_TEST(test_is_focusable_list_returns_true);
+    RUN_TEST(test_is_focusable_toggle_returns_true);
+    RUN_TEST(test_is_focusable_gauge_returns_true);
+    RUN_TEST(test_is_focusable_progressbar_returns_true);
+    RUN_TEST(test_is_focusable_icon_returns_false);
+    RUN_TEST(test_is_focusable_chart_returns_false);
     return UNITY_END();
 }
 

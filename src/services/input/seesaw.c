@@ -67,6 +67,8 @@ esp_err_t seesaw_write(uint8_t addr, uint8_t base, uint8_t reg, const uint8_t *d
     buf[1] = reg;
     if (data && len) {
         memcpy(&buf[2], data, len);
+    } else {
+        len = 0;
     }
 
     return i2c_master_write_to_device(

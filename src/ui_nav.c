@@ -1,85 +1,12 @@
 #include "ui_nav.h"
 
 #include <stddef.h>
+#include <stdint.h>
+#include "esp_log.h"
+#include "ui_rect.h"
+#include "ui_widget_style.h"
 
-typedef struct {
-    int x;
-    int y;
-    int w;
-    int h;
-} UiRect;
-
-static int ui_widget_has_extended(const UiWidget *w)
-{
-    if (w == NULL) {
-        return 0;
-    }
-    return (w->fg != 0) ||
-           (w->bg != 0) ||
-           (w->border_style != 0) ||
-           (w->text_overflow != 0) ||
-           (w->max_lines != 0) ||
-           (w->style != 0) ||
-           (w->visible != 0) ||
-           (w->enabled != 0);
-}
-
-static int ui_widget_is_visible(const UiWidget *w)
-{
-    if (!ui_widget_has_extended(w)) {
-        return 1;
-    }
-    return (w->visible != 0);
-}
-
-static int ui_widget_is_enabled(const UiWidget *w)
-{
-    if (!ui_widget_has_extended(w)) {
-        return 1;
-    }
-    return (w->enabled != 0);
-}
-
-static UiRect ui_rect_from_widget(const UiWidget *w)
-{
-    UiRect r = {0, 0, 0, 0};
-    if (!w) {
-        return r;
-    }
-    r.x = (int)w->x;
-    r.y = (int)w->y;
-    r.w = (int)w->width;
-    r.h = (int)w->height;
-    return r;
-}
-
-static int ui_rect_center_x(UiRect r)
-{
-    return r.x + (r.w / 2);
-}
-
-static int ui_rect_center_y(UiRect r)
-{
-    return r.y + (r.h / 2);
-}
-
-static int ui_rect_right(UiRect r)
-{
-    return r.x + r.w;
-}
-
-static int ui_rect_bottom(UiRect r)
-{
-    return r.y + r.h;
-}
-
-static int ui_rect_overlap(int a0, int a1, int b0, int b1)
-{
-    int lo = (a0 > b0) ? a0 : b0;
-    int hi = (a1 < b1) ? a1 : b1;
-    int span = hi - lo;
-    return (span > 0) ? span : 0;
-}
+static const char *TAG = "ui_nav";
 
 bool ui_nav_is_focusable(const UiWidget *w)
 {
@@ -94,15 +21,14 @@ bool ui_nav_is_focusable(const UiWidget *w)
         case UIW_CHECKBOX:
         case UIW_RADIOBUTTON:
         case UIW_SLIDER:
+        case UIW_LIST:
+        case UIW_TOGGLE:
+        case UIW_GAUGE:
+        case UIW_PROGRESSBAR:
             return true;
         default:
             return false;
     }
-}
-
-static int ui_rect_contains_point(UiRect r, int x, int y)
-{
-    return (x >= r.x) && (y >= r.y) && (x < ui_rect_right(r)) && (y < ui_rect_bottom(r));
 }
 
 static int ui_nav_is_focusable_in_rect(const UiWidget *w, UiRect bounds)
@@ -188,7 +114,7 @@ static int ui_nav_next_focusable_sorted(const UiScene *scene, int current_idx, i
         return current_idx;
     }
 
-    int order[128];
+    int order[256];
     int n = 0;
     int truncated = 0;
     for (uint16_t i = 0; i < scene->widget_count; ++i) {
@@ -203,7 +129,9 @@ static int ui_nav_next_focusable_sorted(const UiScene *scene, int current_idx, i
     if (n == 0) {
         return -1;
     }
-    (void)truncated;  /* logged once if needed; focus chain is capped */
+    if (truncated) {
+        ESP_LOGW(TAG, "focus chain truncated at 256 widgets");
+    }
 
     for (int i = 0; i < n - 1; ++i) {
         for (int j = i + 1; j < n; ++j) {
@@ -247,7 +175,7 @@ static int ui_nav_next_focusable_sorted_in_rect(const UiScene *scene, int curren
         return current_idx;
     }
 
-    int order[128];
+    int order[256];
     int n = 0;
     int truncated = 0;
     for (uint16_t i = 0; i < scene->widget_count; ++i) {
@@ -262,7 +190,9 @@ static int ui_nav_next_focusable_sorted_in_rect(const UiScene *scene, int curren
     if (n == 0) {
         return -1;
     }
-    (void)truncated;
+    if (truncated) {
+        ESP_LOGW(TAG, "focus chain (in_rect) truncated at 256 widgets");
+    }
 
     for (int i = 0; i < n - 1; ++i) {
         for (int j = i + 1; j < n; ++j) {
@@ -333,9 +263,9 @@ int ui_nav_move_focus(const UiScene *scene, int current_idx, ui_nav_dir_t dir)
     int cy = ui_rect_center_y(cr);
 
     int beam_idx = -1;
-    int beam_score = 0;
+    int64_t beam_score = 0;
     int loose_idx = -1;
-    int loose_score = 0;
+    int64_t loose_score = 0;
 
     bool vertical = (dir == UI_NAV_UP || dir == UI_NAV_DOWN);
 
@@ -369,13 +299,13 @@ int ui_nav_move_focus(const UiScene *scene, int current_idx, ui_nav_dir_t dir)
 
         int primary = vertical ? (dy < 0 ? -dy : dy) : (dx < 0 ? -dx : dx);
         int secondary = vertical ? (dx < 0 ? -dx : dx) : (dy < 0 ? -dy : dy);
-        int dist2 = dx * dx + dy * dy;
+        int64_t dist2 = (int64_t)dx * dx + (int64_t)dy * dy;
 
-        int score;
+        int64_t score;
         if (vertical) {
             int overlap = ui_rect_overlap(cr.x, ui_rect_right(cr), r.x, ui_rect_right(r));
             if (overlap > 0) {
-                score = primary * 10000 + secondary * 100 + dist2;
+                score = (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (beam_idx < 0 || score < beam_score) {
                     beam_idx = (int)i;
                     beam_score = score;
@@ -389,7 +319,7 @@ int ui_nav_move_focus(const UiScene *scene, int current_idx, ui_nav_dir_t dir)
                 } else {
                     gap = 0;
                 }
-                score = 1000000 + gap * 10000 + primary * 10000 + secondary * 100 + dist2;
+                score = 1000000LL + (int64_t)gap * 10000 + (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (loose_idx < 0 || score < loose_score) {
                     loose_idx = (int)i;
                     loose_score = score;
@@ -398,7 +328,7 @@ int ui_nav_move_focus(const UiScene *scene, int current_idx, ui_nav_dir_t dir)
         } else {
             int overlap = ui_rect_overlap(cr.y, ui_rect_bottom(cr), r.y, ui_rect_bottom(r));
             if (overlap > 0) {
-                score = primary * 10000 + secondary * 100 + dist2;
+                score = (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (beam_idx < 0 || score < beam_score) {
                     beam_idx = (int)i;
                     beam_score = score;
@@ -412,7 +342,7 @@ int ui_nav_move_focus(const UiScene *scene, int current_idx, ui_nav_dir_t dir)
                 } else {
                     gap = 0;
                 }
-                score = 1000000 + gap * 10000 + primary * 10000 + secondary * 100 + dist2;
+                score = 1000000LL + (int64_t)gap * 10000 + (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (loose_idx < 0 || score < loose_score) {
                     loose_idx = (int)i;
                     loose_score = score;
@@ -456,9 +386,9 @@ int ui_nav_move_focus_in_rect(const UiScene *scene, int current_idx, ui_nav_dir_
     int cy = ui_rect_center_y(cr);
 
     int beam_idx = -1;
-    int beam_score = 0;
+    int64_t beam_score = 0;
     int loose_idx = -1;
-    int loose_score = 0;
+    int64_t loose_score = 0;
 
     bool vertical = (dir == UI_NAV_UP || dir == UI_NAV_DOWN);
 
@@ -492,13 +422,13 @@ int ui_nav_move_focus_in_rect(const UiScene *scene, int current_idx, ui_nav_dir_
 
         int primary = vertical ? (dy < 0 ? -dy : dy) : (dx < 0 ? -dx : dx);
         int secondary = vertical ? (dx < 0 ? -dx : dx) : (dy < 0 ? -dy : dy);
-        int dist2 = dx * dx + dy * dy;
+        int64_t dist2 = (int64_t)dx * dx + (int64_t)dy * dy;
 
-        int score;
+        int64_t score;
         if (vertical) {
             int overlap = ui_rect_overlap(cr.x, ui_rect_right(cr), r.x, ui_rect_right(r));
             if (overlap > 0) {
-                score = primary * 10000 + secondary * 100 + dist2;
+                score = (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (beam_idx < 0 || score < beam_score) {
                     beam_idx = (int)i;
                     beam_score = score;
@@ -512,7 +442,7 @@ int ui_nav_move_focus_in_rect(const UiScene *scene, int current_idx, ui_nav_dir_
                 } else {
                     gap = 0;
                 }
-                score = 1000000 + gap * 10000 + primary * 10000 + secondary * 100 + dist2;
+                score = 1000000LL + (int64_t)gap * 10000 + (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (loose_idx < 0 || score < loose_score) {
                     loose_idx = (int)i;
                     loose_score = score;
@@ -521,7 +451,7 @@ int ui_nav_move_focus_in_rect(const UiScene *scene, int current_idx, ui_nav_dir_
         } else {
             int overlap = ui_rect_overlap(cr.y, ui_rect_bottom(cr), r.y, ui_rect_bottom(r));
             if (overlap > 0) {
-                score = primary * 10000 + secondary * 100 + dist2;
+                score = (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (beam_idx < 0 || score < beam_score) {
                     beam_idx = (int)i;
                     beam_score = score;
@@ -535,7 +465,7 @@ int ui_nav_move_focus_in_rect(const UiScene *scene, int current_idx, ui_nav_dir_
                 } else {
                     gap = 0;
                 }
-                score = 1000000 + gap * 10000 + primary * 10000 + secondary * 100 + dist2;
+                score = 1000000LL + (int64_t)gap * 10000 + (int64_t)primary * 10000 + (int64_t)secondary * 100 + dist2;
                 if (loose_idx < 0 || score < loose_score) {
                     loose_idx = (int)i;
                     loose_score = score;

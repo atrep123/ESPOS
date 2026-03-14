@@ -11,12 +11,10 @@ static void ui_publish_cmd(ui_cmd_kind_t kind, const char *id, const char *text,
     m.topic = TOP_UI_CMD;
     m.u.ui_cmd.kind = (uint8_t)kind;
     if (id != NULL) {
-        strncpy(m.u.ui_cmd.id, id, sizeof(m.u.ui_cmd.id) - 1);
-        m.u.ui_cmd.id[sizeof(m.u.ui_cmd.id) - 1] = '\0';
+        snprintf(m.u.ui_cmd.id, sizeof(m.u.ui_cmd.id), "%s", id);
     }
     if (text != NULL) {
-        strncpy(m.u.ui_cmd.text, text, sizeof(m.u.ui_cmd.text) - 1);
-        m.u.ui_cmd.text[sizeof(m.u.ui_cmd.text) - 1] = '\0';
+        snprintf(m.u.ui_cmd.text, sizeof(m.u.ui_cmd.text), "%s", text);
     }
     m.u.ui_cmd.value = value;
     bus_publish(&m);

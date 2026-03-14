@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "esp_err.h"
 
 typedef enum {
     INPUT_ID_A = 0,
@@ -50,4 +51,35 @@ typedef enum {
     INPUT_ID_ENC5_CCW = 35,
 } input_id_t;
 
-void input_start(void);
+/* Button debounce state (sample-counting algorithm). */
+typedef struct {
+    int stable; /* debounced level */
+    int last;   /* last published level */
+    int cnt;    /* consecutive differing samples */
+} input_btn_state_t;
+
+/*
+ * Update button debounce state with a new raw sample.
+ * Returns 1 when the stable state has changed, 0 otherwise.
+ * `threshold` is the number of consecutive differing samples required.
+ */
+int input_debounce_update(input_btn_state_t *st, int raw_level, int threshold);
+
+/*
+ * Process one quadrature encoder sample (Gray-code A/B lines).
+ * prev_ab: pointer to previous (A<<1|B) state — updated in-place.
+ * accum:   pointer to sub-detent accumulator — reset on detent.
+ * a, b:    current levels of encoder channels (0 or 1).
+ * Returns: +1 for CW detent, -1 for CCW detent, 0 otherwise.
+ */
+int input_encoder_step(uint8_t *prev_ab, int *accum, int a, int b);
+
+/*
+ * Joystick axis hysteresis update.
+ * Returns 1 when direction state changed, 0 otherwise.
+ * `state` is updated in-place: -1 (neg), 0 (center), +1 (pos).
+ */
+int input_axis_update(int value, int center, int deadzone, int hyst, int *state);
+
+esp_err_t input_start(void);
+void input_stop(void);

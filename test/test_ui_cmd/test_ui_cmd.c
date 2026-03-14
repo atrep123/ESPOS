@@ -304,3 +304,55 @@ void test_cmd_listmodel_set_item_both_null(void)
     TEST_ASSERT_EQUAL_INT(UI_CMD_LISTMODEL_SET_ITEM, m.u.ui_cmd.kind);
     TEST_ASSERT_EQUAL_STRING("", m.u.ui_cmd.text);
 }
+
+/* ------------------------------------------------------------------ */
+/* New edge-case tests                                                 */
+/* ------------------------------------------------------------------ */
+
+void test_cmd_set_value_extreme_int32(void)
+{
+    ui_cmd_set_value("g", 2147483647); /* INT32_MAX */
+    msg_t m = recv_one();
+    TEST_ASSERT_EQUAL_INT(UI_CMD_SET_VALUE, m.u.ui_cmd.kind);
+    TEST_ASSERT_EQUAL_INT32(2147483647, m.u.ui_cmd.value);
+
+    ui_cmd_set_value("g", -2147483647 - 1); /* INT32_MIN */
+    m = recv_one();
+    TEST_ASSERT_EQUAL_INT32(-2147483647 - 1, m.u.ui_cmd.value);
+}
+
+void test_cmd_listmodel_set_len_zero(void)
+{
+    ui_cmd_listmodel_set_len("lst", 0);
+    msg_t m = recv_one();
+    TEST_ASSERT_EQUAL_INT(UI_CMD_LISTMODEL_SET_LEN, m.u.ui_cmd.kind);
+    TEST_ASSERT_EQUAL_STRING("lst", m.u.ui_cmd.id);
+    TEST_ASSERT_EQUAL_INT32(0, m.u.ui_cmd.value);
+}
+
+void test_cmd_switch_scene_negative(void)
+{
+    ui_cmd_switch_scene(-1);
+    msg_t m = recv_one();
+    TEST_ASSERT_EQUAL_INT(UI_CMD_SWITCH_SCENE, m.u.ui_cmd.kind);
+    TEST_ASSERT_EQUAL_INT32(-1, m.u.ui_cmd.value);
+}
+
+void test_cmd_set_text_empty_strings(void)
+{
+    ui_cmd_set_text("", "");
+    msg_t m = recv_one();
+    TEST_ASSERT_EQUAL_INT(UI_CMD_SET_TEXT, m.u.ui_cmd.kind);
+    TEST_ASSERT_EQUAL_STRING("", m.u.ui_cmd.id);
+    TEST_ASSERT_EQUAL_STRING("", m.u.ui_cmd.text);
+}
+
+void test_cmd_toast_enqueue_zero_duration(void)
+{
+    ui_cmd_toast_enqueue("t", "msg", 0);
+    msg_t m = recv_one();
+    TEST_ASSERT_EQUAL_INT(UI_CMD_TOAST_ENQUEUE, m.u.ui_cmd.kind);
+    TEST_ASSERT_EQUAL_STRING("t", m.u.ui_cmd.id);
+    TEST_ASSERT_EQUAL_STRING("msg", m.u.ui_cmd.text);
+    TEST_ASSERT_EQUAL_INT32(0, m.u.ui_cmd.value);
+}

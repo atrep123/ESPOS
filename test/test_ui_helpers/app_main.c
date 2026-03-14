@@ -33,6 +33,11 @@ void test_toast_push_null_toast(void);
 void test_toast_pop_null_toast(void);
 void test_toast_push_pop_wraparound(void);
 void test_toast_long_message_truncation(void);
+void test_parse_uint_dec_leading_zeros(void);
+void test_parse_item_root_slot_item_no_number(void);
+void test_toast_reset_then_push_pop(void);
+void test_parse_uint_dec_just_below_overflow(void);
+void test_parse_item_root_slot_multi_digit(void);
 
 void app_main(void)
 {
@@ -72,6 +77,11 @@ void app_main(void)
     RUN_TEST(test_toast_pop_null_toast);
     RUN_TEST(test_toast_push_pop_wraparound);
     RUN_TEST(test_toast_long_message_truncation);
+    RUN_TEST(test_parse_uint_dec_leading_zeros);
+    RUN_TEST(test_parse_item_root_slot_item_no_number);
+    RUN_TEST(test_toast_reset_then_push_pop);
+    RUN_TEST(test_parse_uint_dec_just_below_overflow);
+    RUN_TEST(test_parse_item_root_slot_multi_digit);
     UNITY_END();
 }
 
@@ -112,6 +122,11 @@ void test_toast_push_null_toast(void);
 void test_toast_pop_null_toast(void);
 void test_toast_push_pop_wraparound(void);
 void test_toast_long_message_truncation(void);
+void test_parse_uint_dec_leading_zeros(void);
+void test_parse_item_root_slot_item_no_number(void);
+void test_toast_reset_then_push_pop(void);
+void test_parse_uint_dec_just_below_overflow(void);
+void test_parse_item_root_slot_multi_digit(void);
 
 int main(void)
 {
@@ -151,6 +166,11 @@ int main(void)
     RUN_TEST(test_toast_pop_null_toast);
     RUN_TEST(test_toast_push_pop_wraparound);
     RUN_TEST(test_toast_long_message_truncation);
+    RUN_TEST(test_parse_uint_dec_leading_zeros);
+    RUN_TEST(test_parse_item_root_slot_item_no_number);
+    RUN_TEST(test_toast_reset_then_push_pop);
+    RUN_TEST(test_parse_uint_dec_just_below_overflow);
+    RUN_TEST(test_parse_item_root_slot_multi_digit);
     return UNITY_END();
 }
 

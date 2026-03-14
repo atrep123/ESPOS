@@ -3,7 +3,12 @@
 #include <string.h>
 #include "display/ssd1363.h"
 #include "display_config.h"
+#include "esp_log.h"
 #include "ui_font_6x8.h"
+
+static const char *TAG = "ui_swbuf";
+
+#define SWBUF_MAX_BLIT_STRIDE  1024  /* max stride_bytes for mono blit */
 
 #if DISPLAY_COLOR_BITS == 4
 static inline uint8_t _gray4_level(uint8_t c)
@@ -22,7 +27,7 @@ static inline uint8_t _gray4_level(uint8_t c)
 static inline void set_px_raw_gray4(UiSwBuf *b, int x, int y, uint8_t v)
 {
     if ((unsigned)x >= (unsigned)b->width || (unsigned)y >= (unsigned)b->height) return;
-    int byte_index = y * b->stride_bytes + (x >> 1);
+    size_t byte_index = (size_t)y * (size_t)b->stride_bytes + (size_t)(x >> 1);
     uint8_t cur = b->data[byte_index];
     v = (uint8_t)(v & 0x0F);
     if ((x & 1) == 0) {
@@ -51,7 +56,7 @@ static inline uint8_t get_px_gray4_row(const uint8_t *row, int x)
 static inline void set_px(UiSwBuf *b, int x, int y, uint8_t c)
 {
     if ((unsigned)x >= (unsigned)b->width || (unsigned)y >= (unsigned)b->height) return;
-    int byte_index = y * b->stride_bytes + (x >> 3);
+    size_t byte_index = (size_t)y * (size_t)b->stride_bytes + (size_t)(x >> 3);
     uint8_t mask = (uint8_t)(0x80u >> (x & 7));
     if (c) b->data[byte_index] |= mask; else b->data[byte_index] &= (uint8_t)~mask;
 }
@@ -66,6 +71,7 @@ static inline uint8_t get_px_1bpp_row(const uint8_t *row, int x)
 
 void ui_swbuf_init(UiSwBuf *b, void *mem, int width, int height)
 {
+    if (!b || !mem) return;
     b->width = width;
     b->height = height;
 #if DISPLAY_COLOR_BITS == 4
@@ -81,6 +87,7 @@ void ui_swbuf_init(UiSwBuf *b, void *mem, int width, int height)
 
 void ui_swbuf_clear(UiSwBuf *b, uint8_t color)
 {
+    if (!b || !b->data) return;
 #if DISPLAY_COLOR_BITS == 4
     uint8_t v = _gray4_level(color);
     uint8_t byte = (uint8_t)((v << 4) | v);
@@ -95,7 +102,7 @@ void ui_swbuf_clear(UiSwBuf *b, uint8_t color)
 void ui_swbuf_fill_rect(void *ctx, int x, int y, int w, int h, uint8_t color)
 {
     UiSwBuf *b = (UiSwBuf *)ctx;
-    if (w <= 0 || h <= 0) return;
+    if (b == NULL || w <= 0 || h <= 0) return;
     int x0 = (x < 0) ? 0 : x;
     int y0 = (y < 0) ? 0 : y;
     int x1 = x + w; if (x1 > b->width)  x1 = b->width;
@@ -113,7 +120,8 @@ void ui_swbuf_fill_rect(void *ctx, int x, int y, int w, int h, uint8_t color)
 void ui_swbuf_hline(void *ctx, int x, int y, int w, uint8_t color)
 {
     UiSwBuf *b = (UiSwBuf *)ctx;
-    if ((unsigned)y >= (unsigned)b->height || w <= 0) return;
+    if (b == NULL || w <= 0) return;
+    if ((unsigned)y >= (unsigned)b->height) return;
     int x0 = x; if (x0 < 0) x0 = 0;
     int x1 = x + w; if (x1 > b->width) x1 = b->width;
     for (int xx = x0; xx < x1; ++xx) set_px(b, xx, y, color);
@@ -123,7 +131,8 @@ void ui_swbuf_hline(void *ctx, int x, int y, int w, uint8_t color)
 void ui_swbuf_vline(void *ctx, int x, int y, int h, uint8_t color)
 {
     UiSwBuf *b = (UiSwBuf *)ctx;
-    if ((unsigned)x >= (unsigned)b->width || h <= 0) return;
+    if (b == NULL || h <= 0) return;
+    if ((unsigned)x >= (unsigned)b->width) return;
     int y0 = y; if (y0 < 0) y0 = 0;
     int y1 = y + h; if (y1 > b->height) y1 = b->height;
     for (int yy = y0; yy < y1; ++yy) set_px(b, x, yy, color);
@@ -211,7 +220,7 @@ void ui_swbuf_blit_mono(
     if (stride_bytes < ((w + 7) >> 3)) {
         return;  /* stride too small for declared width */
     }
-    if (stride_bytes > 1024) {
+    if (stride_bytes > SWBUF_MAX_BLIT_STRIDE) {
         return;  /* unreasonably large stride */
     }
 
@@ -314,7 +323,10 @@ void ui_swbuf_flush_ssd1363(const UiSwBuf *b)
      * pixel format (e.g., 4-bit grayscale), convert here before sending.
      */
     size_t total = (size_t)b->stride_bytes * (size_t)b->height;
-    (void)ssd1363_write_data(b->data, total);
+    esp_err_t werr = ssd1363_write_data(b->data, total);
+    if (werr != ESP_OK) {
+        ESP_LOGW(TAG, "flush write_data failed: %s", esp_err_to_name(werr));
+    }
 }
 
 void ui_swbuf_flush_gray4_ssd1363(const UiSwBuf *b)
@@ -331,7 +343,12 @@ void ui_swbuf_flush_gray4_ssd1363(const UiSwBuf *b)
 #if DISPLAY_COLOR_BITS == 4
     for (int y = 0; y < H; ++y) {
         const uint8_t *row = b->data + (size_t)b->stride_bytes * (size_t)y;
-        (void)ssd1363_write_data(row, (size_t)out_row_bytes);
+        esp_err_t werr = ssd1363_write_data(row, (size_t)out_row_bytes);
+        if (werr != ESP_OK) {
+            ESP_LOGW(TAG, "flush_gray4 write_data failed at row %d: %s",
+                     y, esp_err_to_name(werr));
+            return;
+        }
     }
     return;
 #else
@@ -353,7 +370,7 @@ void ui_swbuf_flush_gray4_ssd1363(const UiSwBuf *b)
             byte = (uint8_t)((b0 << 4) | (b1 & 0xF));
             line[out_idx++] = byte;
         }
-        (void)ssd1363_write_data(line, out_row_bytes);
+        (void)ssd1363_write_data(line, (size_t)out_row_bytes);
     }
 #endif
 }

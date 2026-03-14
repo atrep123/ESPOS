@@ -45,4 +45,6 @@ esp_err_t store_set_display_col_offset(uint8_t offset_units)
     return ESP_OK;
 }
 
+void store_deinit(void) { /* no-op for native builds */ }
+
 #endif

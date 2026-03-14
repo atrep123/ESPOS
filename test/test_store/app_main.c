@@ -19,6 +19,15 @@ void test_set_col_offset_boundary(void);
 void test_set_col_offset_clamped(void);
 void test_set_col_offset_clamped_max(void);
 void test_store_init_truncated_blob_resets(void);
+void test_set_display_invert_before_init(void);
+void test_store_double_init_returns_cached(void);
+void test_set_col_offset_zero(void);
+void test_store_init_new_version_found_erases(void);
+void test_set_bg_rgb_open_failure_rollback(void);
+void test_store_init_mutex_failure_returns_no_mem(void);
+void test_store_deinit_no_crash(void);
+void test_store_deinit_then_reinit(void);
+void test_store_deinit_before_init_no_crash(void);
 
 #ifdef ESP_PLATFORM
 
@@ -44,6 +53,15 @@ void app_main(void)
     RUN_TEST(test_set_col_offset_clamped);
     RUN_TEST(test_set_col_offset_clamped_max);
     RUN_TEST(test_store_init_truncated_blob_resets);
+    RUN_TEST(test_set_display_invert_before_init);
+    RUN_TEST(test_store_double_init_returns_cached);
+    RUN_TEST(test_set_col_offset_zero);
+    RUN_TEST(test_store_init_new_version_found_erases);
+    RUN_TEST(test_set_bg_rgb_open_failure_rollback);
+    RUN_TEST(test_store_init_mutex_failure_returns_no_mem);
+    RUN_TEST(test_store_deinit_no_crash);
+    RUN_TEST(test_store_deinit_then_reinit);
+    RUN_TEST(test_store_deinit_before_init_no_crash);
     UNITY_END();
 }
 
@@ -74,6 +92,15 @@ int main(void)
     RUN_TEST(test_set_col_offset_clamped);
     RUN_TEST(test_set_col_offset_clamped_max);
     RUN_TEST(test_store_init_truncated_blob_resets);
+    RUN_TEST(test_set_display_invert_before_init);
+    RUN_TEST(test_store_double_init_returns_cached);
+    RUN_TEST(test_set_col_offset_zero);
+    RUN_TEST(test_store_init_new_version_found_erases);
+    RUN_TEST(test_set_bg_rgb_open_failure_rollback);
+    RUN_TEST(test_store_init_mutex_failure_returns_no_mem);
+    RUN_TEST(test_store_deinit_no_crash);
+    RUN_TEST(test_store_deinit_then_reinit);
+    RUN_TEST(test_store_deinit_before_init_no_crash);
     return UNITY_END();
 }
 

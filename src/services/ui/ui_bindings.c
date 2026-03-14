@@ -77,17 +77,19 @@ void ui_bind_clear_all(void)
     BIND_UNLOCK();
 }
 
-void ui_bind_init(void)
+esp_err_t ui_bind_init(void)
 {
 #ifndef ESPOS_NATIVE
     if (s_mtx == NULL) {
         s_mtx = xSemaphoreCreateMutex();
         if (s_mtx == NULL) {
             ESP_LOGE(TAG, "mutex creation failed");
+            return ESP_ERR_NO_MEM;
         }
     }
 #endif
     ui_bind_clear_all();
+    return ESP_OK;
 }
 
 /* ---------------------------------------------------------------------------
@@ -108,8 +110,10 @@ bool ui_bind_get_int(const char *key, int *out)
 
     /* Hardware-backed display keys */
     if (strcmp(key, "contrast") == 0 || strcmp(key, "col_offset") == 0) {
+        BIND_LOCK();
         store_conf_t conf;
         if (store_get_conf(&conf) != ESP_OK) {
+            BIND_UNLOCK();
             return false;
         }
         if (strcmp(key, "contrast") == 0) {
@@ -117,6 +121,7 @@ bool ui_bind_get_int(const char *key, int *out)
         } else {
             *out = (int)conf.display_col_offset;
         }
+        BIND_UNLOCK();
         return true;
     }
 
@@ -192,11 +197,14 @@ bool ui_bind_get_bool(const char *key, bool *out)
 
     /* Hardware-backed key */
     if (strcmp(key, "invert") == 0) {
+        BIND_LOCK();
         store_conf_t conf;
         if (store_get_conf(&conf) != ESP_OK) {
+            BIND_UNLOCK();
             return false;
         }
         *out = (conf.display_invert != 0);
+        BIND_UNLOCK();
         return true;
     }
 

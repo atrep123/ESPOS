@@ -14,6 +14,7 @@
 #include "services/store/store.h"
 #include "services/ui/ui.h"
 #include "services/ui/ui_bindings.h"
+#include "ui_design.h"
 
 static const char *TAG = "ui_app";
 
@@ -35,6 +36,10 @@ static uint8_t s_last_input_id = 0;
 static uint8_t s_last_input_pressed = 0;
 static bool s_have_input = false;
 
+#ifdef UI_SCENE_COUNT
+static int s_scene_index = 0;
+#endif
+
 static void ui_app_hide_all_roots(void)
 {
     ui_cmd_set_prefix_visible("menu", false);
@@ -52,95 +57,9 @@ static void ui_app_show_list_root(const char *title)
     ui_cmd_set_text("list.title", title);
 }
 
-static void ui_app_format_heap(char *out, size_t out_cap, uint32_t bytes)
-{
-    if (out == NULL || out_cap == 0) {
-        return;
-    }
-
-    if (bytes >= (1024U * 1024U)) {
-        snprintf(out, out_cap, "%" PRIu32 "M", bytes / (1024U * 1024U));
-    } else if (bytes >= 1024U) {
-        snprintf(out, out_cap, "%" PRIu32 "K", bytes / 1024U);
-    } else {
-        snprintf(out, out_cap, "%" PRIu32 "B", bytes);
-    }
-}
-
-static const char *ui_app_input_name(uint8_t id)
-{
-    switch (id) {
-        case INPUT_ID_A: return "A";
-        case INPUT_ID_B: return "B";
-        case INPUT_ID_C: return "C";
-        case INPUT_ID_UP: return "Up";
-        case INPUT_ID_DOWN: return "Down";
-        case INPUT_ID_LEFT: return "Left";
-        case INPUT_ID_RIGHT: return "Right";
-        case INPUT_ID_ENC: return "Enc";
-        case INPUT_ID_ENC_PRESS: return "Enc press";
-        case INPUT_ID_ENC_HOLD: return "Enc hold";
-        case INPUT_ID_ENC_CW: return "Enc CW";
-        case INPUT_ID_ENC_CCW: return "Enc CCW";
-        case INPUT_ID_X: return "X";
-        case INPUT_ID_Y: return "Y";
-        case INPUT_ID_SELECT: return "Select";
-        case INPUT_ID_START: return "Start";
-        case INPUT_ID_ENC2: return "Enc2";
-        case INPUT_ID_ENC2_PRESS: return "Enc2 press";
-        case INPUT_ID_ENC2_HOLD: return "Enc2 hold";
-        case INPUT_ID_ENC2_CW: return "Enc2 CW";
-        case INPUT_ID_ENC2_CCW: return "Enc2 CCW";
-        case INPUT_ID_ENC3: return "Enc3";
-        case INPUT_ID_ENC3_PRESS: return "Enc3 press";
-        case INPUT_ID_ENC3_HOLD: return "Enc3 hold";
-        case INPUT_ID_ENC3_CW: return "Enc3 CW";
-        case INPUT_ID_ENC3_CCW: return "Enc3 CCW";
-        case INPUT_ID_ENC4: return "Enc4";
-        case INPUT_ID_ENC4_PRESS: return "Enc4 press";
-        case INPUT_ID_ENC4_HOLD: return "Enc4 hold";
-        case INPUT_ID_ENC4_CW: return "Enc4 CW";
-        case INPUT_ID_ENC4_CCW: return "Enc4 CCW";
-        case INPUT_ID_ENC5: return "Enc5";
-        case INPUT_ID_ENC5_PRESS: return "Enc5 press";
-        case INPUT_ID_ENC5_HOLD: return "Enc5 hold";
-        case INPUT_ID_ENC5_CW: return "Enc5 CW";
-        case INPUT_ID_ENC5_CCW: return "Enc5 CCW";
-        default: return "Unknown";
-    }
-}
-
-static const char *ui_app_input_state(uint8_t id, uint8_t pressed)
-{
-    switch (id) {
-        case INPUT_ID_ENC_PRESS:
-        case INPUT_ID_ENC2_PRESS:
-        case INPUT_ID_ENC3_PRESS:
-        case INPUT_ID_ENC4_PRESS:
-        case INPUT_ID_ENC5_PRESS:
-            return "press";
-        case INPUT_ID_ENC_HOLD:
-        case INPUT_ID_ENC2_HOLD:
-        case INPUT_ID_ENC3_HOLD:
-        case INPUT_ID_ENC4_HOLD:
-        case INPUT_ID_ENC5_HOLD:
-            return "hold";
-        case INPUT_ID_ENC_CW:
-        case INPUT_ID_ENC2_CW:
-        case INPUT_ID_ENC3_CW:
-        case INPUT_ID_ENC4_CW:
-        case INPUT_ID_ENC5_CW:
-            return "cw";
-        case INPUT_ID_ENC_CCW:
-        case INPUT_ID_ENC2_CCW:
-        case INPUT_ID_ENC3_CCW:
-        case INPUT_ID_ENC4_CCW:
-        case INPUT_ID_ENC5_CCW:
-            return "ccw";
-        default:
-            return pressed ? "down" : "up";
-    }
-}
+/* ui_app_format_heap, ui_app_input_name, ui_app_input_state,
+ * and ui_app_is_back_button live in ui_app_logic.c (testable
+ * without FreeRTOS). Declared in ui_app.h. */
 
 static void ui_app_update_display_list_items(void)
 {
@@ -463,14 +382,7 @@ static void ui_app_handle_back(const msg_t *m)
     }
 
     uint8_t id = m->u.btn.id;
-    int is_back = 0;
-    if (id == INPUT_ID_B || id == INPUT_ID_ENC_HOLD) {
-        is_back = 1;
-    }
-    if (id == INPUT_ID_ENC2_HOLD || id == INPUT_ID_ENC3_HOLD || id == INPUT_ID_ENC4_HOLD || id == INPUT_ID_ENC5_HOLD) {
-        is_back = 1;
-    }
-    if (!is_back) {
+    if (!ui_app_is_back_button(id)) {
         return;
     }
 
@@ -495,16 +407,44 @@ static void ui_app_handle_back(const msg_t *m)
     }
 }
 
+#ifdef UI_SCENE_COUNT
+static void ui_app_handle_scene_cycle(const msg_t *m)
+{
+    if (m == NULL || !m->u.btn.pressed) {
+        return;
+    }
+    if (m->u.btn.id != INPUT_ID_C) {
+        return;
+    }
+    int next = (s_scene_index + 1) % UI_SCENE_COUNT;
+    s_scene_index = next;
+    ui_cmd_switch_scene(next);
+    ESP_LOGI(TAG, "scene cycle -> %d", next);
+
+    /* Reset app screen to menu when returning to scene 0. */
+    if (next == 0) {
+        s_screen = UI_APP_SCREEN_MENU;
+    }
+}
+#endif
+
 static void ui_app_task(void *arg)
 {
     (void)arg;
 
     QueueHandle_t q = bus_make_queue(12);
-    if (q != NULL) {
-        bus_subscribe(TOP_UI_ACTION, q);
-        bus_subscribe(TOP_INPUT_BTN, q);
+    if (q == NULL) {
+        ESP_LOGE(TAG, "bus_make_queue failed");
+        vTaskDelete(NULL);
+        return;
+    }
+    if (bus_subscribe(TOP_UI_ACTION, q) != ESP_OK ||
+        bus_subscribe(TOP_INPUT_BTN, q) != ESP_OK ||
         /* The app layer updates list content from runtime telemetry. */
-        bus_subscribe(TOP_METRICS_RET, q);
+        bus_subscribe(TOP_METRICS_RET, q) != ESP_OK) {
+        ESP_LOGE(TAG, "bus_subscribe failed");
+        vTaskDelete(NULL);
+        return;
     }
 
     vTaskDelay(pdMS_TO_TICKS(150));
@@ -512,10 +452,6 @@ static void ui_app_task(void *arg)
 
     for (;;) {
         msg_t m;
-        if (q == NULL) {
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            continue;
-        }
         if (xQueueReceive(q, &m, portMAX_DELAY) != pdTRUE) {
             continue;
         }
@@ -525,6 +461,9 @@ static void ui_app_task(void *arg)
             ui_app_handle_metrics(&m);
         } else if (m.topic == TOP_INPUT_BTN) {
             ui_app_handle_input_telemetry(&m);
+#ifdef UI_SCENE_COUNT
+            ui_app_handle_scene_cycle(&m);
+#endif
             ui_app_handle_back(&m);
         }
     }
@@ -535,8 +474,17 @@ void ui_app_start(void)
     if (s_ui_app_task != NULL) {
         return;
     }
+    /* 4096 bytes: app-level UI logic, binding updates, snprintf formatting */
     if (xTaskCreatePinnedToCore(ui_app_task, "ui_app", 4096, NULL, 5, &s_ui_app_task, 0) != pdPASS) {
         ESP_LOGE(TAG, "xTaskCreatePinnedToCore(ui_app) failed");
+        s_ui_app_task = NULL;
+    }
+}
+
+void ui_app_stop(void)
+{
+    if (s_ui_app_task != NULL) {
+        vTaskDelete(s_ui_app_task);
         s_ui_app_task = NULL;
     }
 }

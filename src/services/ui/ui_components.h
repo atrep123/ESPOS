@@ -38,6 +38,16 @@ bool ui_components_set_prefix_visible(
     void *dirty_ctx
 );
 
+/* Select a radiobutton by widget index.  All other radiobuttons in the
+ * scene are unchecked; the widget at `idx` is checked.  Returns true if
+ * anything changed. */
+bool ui_components_select_radiobutton(
+    UiScene *scene,
+    int idx,
+    ui_components_dirty_add_fn_t dirty_add,
+    void *dirty_ctx
+);
+
 /* Component convenience: when focus moves to a component role (e.g. "menu.item2" or
  * "tabs.tab3"), automatically sync the component's active/highlighted element. */
 bool ui_components_sync_active_from_focus(

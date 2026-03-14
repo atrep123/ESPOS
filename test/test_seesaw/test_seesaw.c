@@ -339,3 +339,95 @@ void test_hw_id_supported_unknown(void)
     TEST_ASSERT_FALSE(seesaw_hw_id_supported(0x01));
     TEST_ASSERT_FALSE(seesaw_hw_id_supported(0xFF));
 }
+
+/* ------------------------------------------------------------------ */
+/* seesaw_write: exactly 64 bytes accepted (boundary)                  */
+/* ------------------------------------------------------------------ */
+
+void test_write_exactly_64_bytes_accepted(void)
+{
+    uint8_t payload[64];
+    memset(payload, 0xAA, sizeof(payload));
+    esp_err_t err = seesaw_write(TEST_ADDR, 0x01, 0x02, payload, 64);
+    TEST_ASSERT_EQUAL(ESP_OK, err);
+    TEST_ASSERT_EQUAL(1, i2c_stub_write_call_count());
+    TEST_ASSERT_EQUAL(66, i2c_stub_last_write_len()); /* 2 prefix + 64 data */
+}
+
+/* ------------------------------------------------------------------ */
+/* seesaw_write: I2C write error propagates                            */
+/* ------------------------------------------------------------------ */
+
+void test_write_error_propagates(void)
+{
+    i2c_stub_set_write_err(ESP_FAIL);
+    uint8_t data[] = { 0x01 };
+    esp_err_t err = seesaw_write(TEST_ADDR, 0x00, 0x01, data, 1);
+    TEST_ASSERT_EQUAL(ESP_FAIL, err);
+}
+
+/* ------------------------------------------------------------------ */
+/* seesaw_write: non-NULL data with len=0 sends prefix only            */
+/* ------------------------------------------------------------------ */
+
+void test_write_nonzero_data_zero_len_sends_prefix_only(void)
+{
+    uint8_t data[] = { 0xFF, 0xFE };
+    esp_err_t err = seesaw_write(TEST_ADDR, 0x03, 0x04, data, 0);
+    TEST_ASSERT_EQUAL(ESP_OK, err);
+    TEST_ASSERT_EQUAL(1, i2c_stub_write_call_count());
+    TEST_ASSERT_EQUAL(2, i2c_stub_last_write_len()); /* prefix only */
+    uint8_t wr[4];
+    size_t n = i2c_stub_copy_last_write(wr, sizeof(wr));
+    TEST_ASSERT_EQUAL(2, n);
+    TEST_ASSERT_EQUAL_HEX8(0x03, wr[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x04, wr[1]);
+}
+
+/* ------------------------------------------------------------------ */
+/* seesaw_read_u8: read error propagates                               */
+/* ------------------------------------------------------------------ */
+
+void test_read_u8_read_error_propagates(void)
+{
+    i2c_stub_set_read_err(ESP_FAIL);
+    uint8_t out = 0;
+    esp_err_t err = seesaw_read_u8(TEST_ADDR, 0x00, 0x01, &out);
+    TEST_ASSERT_EQUAL(ESP_FAIL, err);
+}
+
+/* ------------------------------------------------------------------ */
+/* seesaw_pin_mode_bulk: INPUT_PULLUP – second write fails             */
+/* ------------------------------------------------------------------ */
+
+void test_pin_mode_bulk_pullup_second_write_fails(void)
+{
+    /* First write (DIRCLR_BULK) succeeds, second (PULLENSET) fails. */
+    i2c_stub_set_write_err(ESP_FAIL);
+    i2c_stub_set_write_fail_after(1);
+
+    esp_err_t err = seesaw_pin_mode_bulk(TEST_ADDR, 0x01, SEESAW_PIN_INPUT_PULLUP);
+    TEST_ASSERT_EQUAL(ESP_FAIL, err);
+    /* First write succeeded, second failed — exactly 2 write calls. */
+    TEST_ASSERT_EQUAL(2, i2c_stub_write_call_count());
+}
+
+/* ------------------------------------------------------------------ */
+/* seesaw_write: NULL data with nonzero len sends prefix only          */
+/* ------------------------------------------------------------------ */
+
+void test_write_null_data_nonzero_len_sends_prefix_only(void)
+{
+    /* Before the fix, NULL data with len>0 would send uninitialized
+       stack bytes. Now len is reset to 0 internally. */
+    esp_err_t err = seesaw_write(TEST_ADDR, 0x05, 0x06, NULL, 10);
+    TEST_ASSERT_EQUAL(ESP_OK, err);
+    TEST_ASSERT_EQUAL(1, i2c_stub_write_call_count());
+    /* Should send only 2-byte prefix, not 2+10 */
+    TEST_ASSERT_EQUAL(2, i2c_stub_last_write_len());
+    uint8_t wr[4];
+    size_t n = i2c_stub_copy_last_write(wr, sizeof(wr));
+    TEST_ASSERT_EQUAL(2, n);
+    TEST_ASSERT_EQUAL_HEX8(0x05, wr[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x06, wr[1]);
+}

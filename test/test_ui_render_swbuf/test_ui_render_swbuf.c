@@ -11,6 +11,42 @@
 void setUp(void) {}
 void tearDown(void) {}
 
+/* ================================================================== */
+/* NULL guard stress tests for ui_swbuf_init / ui_swbuf_clear          */
+/* ================================================================== */
+
+void test_swbuf_init_null_buf_no_crash(void)
+{
+    uint8_t backing[128];
+    /* NULL UiSwBuf* should be silently ignored */
+    ui_swbuf_init(NULL, backing, 32, 8);
+}
+
+void test_swbuf_init_null_mem_no_crash(void)
+{
+    UiSwBuf b;
+    memset(&b, 0xCC, sizeof(b));
+    /* NULL mem should be silently ignored, struct untouched */
+    ui_swbuf_init(&b, NULL, 32, 8);
+    /* b should not have been modified (still 0xCC pattern) */
+}
+
+void test_swbuf_clear_null_buf_no_crash(void)
+{
+    ui_swbuf_clear(NULL, 0);
+}
+
+void test_swbuf_clear_null_data_no_crash(void)
+{
+    UiSwBuf b;
+    memset(&b, 0, sizeof(b));
+    b.data = NULL;
+    b.stride_bytes = 16;
+    b.height = 8;
+    /* Should not crash (memset on NULL would segfault without guard) */
+    ui_swbuf_clear(&b, 0);
+}
+
 void test_swbuf_clear_marks_full_dirty(void)
 {
     uint8_t backing[128];
@@ -1411,4 +1447,284 @@ void test_render_icon_tiny_no_text(void)
     /* width=3, border=1 → iw = -1 → guard skips text */
     ui_render_widget(&w, &ops);
     TEST_ASSERT_EQUAL_INT(0, cap.count);
+}
+
+/* ======================== ui_swbuf_flush_ssd1363 (1bpp) ===================== */
+
+void test_swbuf_flush_ssd1363_begin_frame_params(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ssd1363_stub_reset();
+
+    ui_swbuf_flush_ssd1363(&b);
+
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_x0());
+    TEST_ASSERT_EQUAL_UINT16(0, ssd1363_stub_last_y0());
+    TEST_ASSERT_EQUAL_UINT16(15, ssd1363_stub_last_x1());
+    TEST_ASSERT_EQUAL_UINT16(7, ssd1363_stub_last_y1());
+}
+
+void test_swbuf_flush_ssd1363_sends_correct_bytes(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    ssd1363_stub_reset();
+
+    ui_swbuf_flush_ssd1363(&b);
+
+    /* stride_bytes * height = total bytes sent */
+    size_t expected = (size_t)b.stride_bytes * (size_t)b.height;
+    TEST_ASSERT_EQUAL(expected, ssd1363_stub_total_bytes());
+    TEST_ASSERT_EQUAL(1, ssd1363_stub_write_calls());
+}
+
+void test_swbuf_flush_ssd1363_sends_buffer_content(void)
+{
+    uint8_t backing[128];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    /* Set a known pixel pattern */
+    backing[0] = 0xAA;
+    backing[1] = 0x55;
+    ssd1363_stub_reset();
+
+    ui_swbuf_flush_ssd1363(&b);
+
+    uint8_t out[128];
+    size_t copied = ssd1363_stub_copy_first_write(out, sizeof(out));
+    TEST_ASSERT_GREATER_OR_EQUAL(2, (int)copied);
+    TEST_ASSERT_EQUAL_UINT8(0xAA, out[0]);
+    TEST_ASSERT_EQUAL_UINT8(0x55, out[1]);
+}
+
+/* ------------------------------------------------------------------ */
+/* Round 9 additions                                                   */
+/* ------------------------------------------------------------------ */
+
+void test_swbuf_clear_with_midrange_color(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 8);
+    /* Color 8 → each nibble = 8, byte = 0x88 */
+    for (int i = 0; i < 4 * b.stride_bytes; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0x88, b.data[i]);
+    }
+}
+
+void test_swbuf_hline_zero_width_no_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_hline(&b, 2, 1, 0, 5);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_fill_rect_fully_outside_no_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Completely outside the buffer */
+    ui_swbuf_fill_rect(&b, 100, 100, 5, 5, 7);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_vline_zero_height_no_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_vline(&b, 2, 1, 0, 5);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_blit_mono_fully_outside_no_dirty(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    static const uint8_t mask[] = { 0xFF };
+    ui_swbuf_blit_mono(&b, 100, 100, 4, 1, 1, mask, 5, 0);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_fill_rect_zero_size_no_crash(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    ui_swbuf_fill_rect(&b, 0, 0, 0, 0, 5);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_fill_rect_negative_origin_clipped(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    /* Draw rect starting at (-2,-1) size 4x3 — should clip to (0,0)-(2,2) */
+    ui_swbuf_fill_rect(&b, -2, -1, 4, 3, 5);
+    TEST_ASSERT_TRUE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_render_scene_zero_widgets(void)
+{
+    uint8_t backing[UI_SWBUF_BYTES(16, 8)];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 16, 8);
+    ui_swbuf_clear(&b, 0);
+    UiDrawOps ops;
+    ui_swbuf_make_ops(&b, &ops);
+
+    UiScene scene = { .name = "empty", .widget_count = 0, .widgets = NULL,
+                      .width = 16, .height = 8 };
+    ui_swbuf_clear_dirty(&b);
+    ui_render_scene(&scene, &ops);
+    /* No widgets - no dirty region from rendering */
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+void test_swbuf_blit_mono_stride_too_large_rejected(void)
+{
+    uint8_t backing[64];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 8, 4);
+    ui_swbuf_clear(&b, 0);
+    ui_swbuf_clear_dirty(&b);
+
+    static const uint8_t mask[] = { 0xFF };
+    /* stride=1025 exceeds the 1024 limit */
+    ui_swbuf_blit_mono(&b, 0, 0, 4, 1, 1025, mask, 5, 0);
+    TEST_ASSERT_FALSE(ui_swbuf_get_dirty(&b, NULL, NULL, NULL, NULL));
+}
+
+/* --- Fuzz: render all widget types with NULL text --- */
+void test_render_all_types_null_text_no_crash(void)
+{
+    uint8_t backing[UI_SWBUF_BYTES(64, 32)];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 64, 32);
+    UiDrawOps ops;
+    ui_swbuf_make_ops(&b, &ops);
+
+    for (int t = 0; t < UIW__COUNT; t++) {
+        UiWidget w;
+        memset(&w, 0, sizeof(w));
+        w.type = (uint8_t)t;
+        w.x = 2; w.y = 2;
+        w.width = 30; w.height = 16;
+        w.visible = 1; w.enabled = 1;
+        w.fg = 15; w.bg = 0;
+        w.text = NULL;
+        w.id = NULL;
+        ui_swbuf_clear(&b, 0);
+        ui_render_widget(&w, &ops);
+        /* Must not crash */
+    }
+    TEST_PASS();
+}
+
+/* --- Fuzz: render widgets with zero dimensions --- */
+void test_render_all_types_zero_dims_no_crash(void)
+{
+    uint8_t backing[UI_SWBUF_BYTES(64, 32)];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 64, 32);
+    UiDrawOps ops;
+    ui_swbuf_make_ops(&b, &ops);
+
+    for (int t = 0; t < UIW__COUNT; t++) {
+        UiWidget w;
+        memset(&w, 0, sizeof(w));
+        w.type = (uint8_t)t;
+        w.x = 5; w.y = 5;
+        w.width = 0; w.height = 0;
+        w.visible = 1; w.enabled = 1;
+        w.fg = 15; w.bg = 0;
+        w.text = "test";
+        ui_swbuf_clear(&b, 0);
+        ui_render_widget(&w, &ops);
+    }
+    TEST_PASS();
+}
+
+/* --- Fuzz: slider/gauge/progressbar with degenerate range (min == max) --- */
+void test_render_degenerate_range_no_crash(void)
+{
+    uint8_t backing[UI_SWBUF_BYTES(64, 32)];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 64, 32);
+    UiDrawOps ops;
+    ui_swbuf_make_ops(&b, &ops);
+
+    uint8_t types[] = { UIW_SLIDER, UIW_GAUGE, UIW_PROGRESSBAR };
+    for (int i = 0; i < 3; i++) {
+        UiWidget w;
+        memset(&w, 0, sizeof(w));
+        w.type = types[i];
+        w.x = 2; w.y = 2;
+        w.width = 40; w.height = 12;
+        w.visible = 1; w.enabled = 1;
+        w.fg = 15; w.bg = 0;
+        w.min_value = 100; w.max_value = 100; w.value = 100;
+        ui_swbuf_clear(&b, 0);
+        ui_render_widget(&w, &ops);
+    }
+    TEST_PASS();
+}
+
+/* --- Fuzz: slider/gauge value far exceeding max --- */
+void test_render_value_overflow_no_crash(void)
+{
+    uint8_t backing[UI_SWBUF_BYTES(64, 32)];
+    UiSwBuf b;
+    ui_swbuf_init(&b, backing, 64, 32);
+    UiDrawOps ops;
+    ui_swbuf_make_ops(&b, &ops);
+
+    uint8_t types[] = { UIW_SLIDER, UIW_GAUGE, UIW_PROGRESSBAR };
+    int16_t vals[] = { 30000, -30000, 0 };
+    for (int i = 0; i < 3; i++) {
+        for (int v = 0; v < 3; v++) {
+            UiWidget w;
+            memset(&w, 0, sizeof(w));
+            w.type = types[i];
+            w.x = 2; w.y = 2;
+            w.width = 40; w.height = 12;
+            w.visible = 1; w.enabled = 1;
+            w.fg = 15; w.bg = 0;
+            w.min_value = 0; w.max_value = 100;
+            w.value = vals[v];
+            ui_swbuf_clear(&b, 0);
+            ui_render_widget(&w, &ops);
+        }
+    }
+    TEST_PASS();
 }

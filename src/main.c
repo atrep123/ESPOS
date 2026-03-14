@@ -102,6 +102,20 @@ static void test_spiffs(void)
 }
 #endif /* ENABLE_SPIFFS_STARTUP_TEST */
 
+void system_shutdown(void)
+{
+    ESP_LOGI(TAG, "System shutting down...");
+    ui_app_stop();
+    ui_stop();
+    metrics_stop();
+    rpc_stop();
+    input_stop();
+    kernel_stop_ticker();
+    bus_deinit();
+    store_deinit();
+    ESP_LOGI(TAG, "Shutdown complete.");
+}
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "ESP32-S3 OS Started!");
@@ -131,9 +145,15 @@ void app_main(void)
 
     bus_init();
     kernel_start_ticker();
-    input_start();
-    rpc_start();
-    metrics_start();
+    if (input_start() != ESP_OK) {
+        ESP_LOGE(TAG, "input_start failed");
+    }
+    if (rpc_start() != ESP_OK) {
+        ESP_LOGE(TAG, "rpc_start failed");
+    }
+    if (metrics_start() != ESP_OK) {
+        ESP_LOGE(TAG, "metrics_start failed");
+    }
 
     /* Start runtime UI service (SSD1363). */
     ui_start();

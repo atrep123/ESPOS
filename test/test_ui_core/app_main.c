@@ -32,6 +32,12 @@ void test_ui_core_scene_wraps_after_metrics(void);
 void test_ui_core_init_sets_bg_dark(void);
 void test_ui_core_init_clears_metrics(void);
 void test_ui_core_button_a_press_sets_btnA(void);
+void test_ui_core_tick_overflow(void);
+void test_ui_core_rgb565_intermediate(void);
+void test_ui_core_rapid_button_repress(void);
+void test_ui_core_rpc_bg_preserves_other_fields(void);
+void test_ui_core_multiple_full_scene_loops(void);
+void test_ui_core_rapid_tick_stress(void);
 
 int main(void)
 {
@@ -51,6 +57,12 @@ int main(void)
     RUN_TEST(test_ui_core_init_sets_bg_dark);
     RUN_TEST(test_ui_core_init_clears_metrics);
     RUN_TEST(test_ui_core_button_a_press_sets_btnA);
+    RUN_TEST(test_ui_core_tick_overflow);
+    RUN_TEST(test_ui_core_rgb565_intermediate);
+    RUN_TEST(test_ui_core_rapid_button_repress);
+    RUN_TEST(test_ui_core_rpc_bg_preserves_other_fields);
+    RUN_TEST(test_ui_core_multiple_full_scene_loops);
+    RUN_TEST(test_ui_core_rapid_tick_stress);
     return UNITY_END();
 }
 

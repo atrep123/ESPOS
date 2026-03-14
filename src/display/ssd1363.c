@@ -13,6 +13,8 @@
 static const char *TAG = "ssd1363";
 
 #define I2C_TIMEOUT_MS 1000
+#define I2C_SCAN_TIMEOUT_MS 20
+#define I2C_SCAN_MAX_ADDR 0x7F
 
 static bool s_i2c_inited = false;
 static uint8_t s_col_offset_units = SSD1363_COL_OFFSET;
@@ -46,7 +48,7 @@ static void ssd1363_scan_i2c(void)
     int found = 0;
     int found_display = 0;
 
-    for (int addr = 1; addr < 0x7F; ++addr) {
+    for (int addr = 1; addr < I2C_SCAN_MAX_ADDR; ++addr) {
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
         if (cmd == NULL) {
             ESP_LOGE(TAG, "i2c_cmd_link_create failed during scan");
@@ -64,7 +66,7 @@ static void ssd1363_scan_i2c(void)
             continue;
         }
 
-        err = i2c_master_cmd_begin(DISPLAY_I2C_PORT, cmd, pdMS_TO_TICKS(20));
+        err = i2c_master_cmd_begin(DISPLAY_I2C_PORT, cmd, pdMS_TO_TICKS(I2C_SCAN_TIMEOUT_MS));
         i2c_cmd_link_delete(cmd);
 
         if (err == ESP_OK) {
@@ -73,6 +75,8 @@ static void ssd1363_scan_i2c(void)
                 found_display = 1;
             }
             ESP_LOGI(TAG, "I2C device @0x%02X", addr);
+        } else if (err != ESP_ERR_TIMEOUT && err != ESP_FAIL) {
+            ESP_LOGW(TAG, "I2C scan addr 0x%02X: %s", addr, esp_err_to_name(err));
         }
     }
 

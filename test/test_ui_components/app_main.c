@@ -20,6 +20,30 @@ void test_ui_components_menu_no_match_returns_false(void);
 void test_ui_components_tabs_out_of_range_clears_all(void);
 void test_ui_components_sync_extreme_focus_idx(void);
 void test_ui_components_sync_overflow_item_index(void);
+void test_ui_components_menu_same_index_no_change(void);
+void test_ui_components_menu_many_items(void);
+void test_ui_components_tabs_tab0_not_matched(void);
+void test_ui_components_sync_empty_root(void);
+void test_ui_components_sync_trailing_dot(void);
+void test_ui_components_prefix_visible_idempotent(void);
+void test_ui_components_menu_preserves_other_styles(void);
+void test_ui_components_empty_widget_count(void);
+void test_ui_components_sync_tab_zero_returns_false(void);
+void test_ui_components_dirty_coords_match_widget(void);
+void test_radio_select_basic(void);
+void test_radio_select_already_selected(void);
+void test_radio_select_null_scene(void);
+void test_radio_select_oob_index(void);
+void test_radio_select_non_radio_idx(void);
+void test_radio_select_mixed_types(void);
+void test_radio_select_dirty_coords(void);
+void test_ui_components_list_null_root(void);
+void test_ui_components_tabs_no_dirty_fn(void);
+void test_radio_select_single_widget(void);
+void test_ui_components_prefix_visible_many_widgets(void);
+void test_ui_components_menu_negative_index(void);
+void test_ui_components_deeply_nested_panels(void);
+void test_ui_components_extreme_coordinates(void);
 
 void app_main(void)
 {
@@ -42,6 +66,30 @@ void app_main(void)
     RUN_TEST(test_ui_components_tabs_out_of_range_clears_all);
     RUN_TEST(test_ui_components_sync_extreme_focus_idx);
     RUN_TEST(test_ui_components_sync_overflow_item_index);
+    RUN_TEST(test_ui_components_menu_same_index_no_change);
+    RUN_TEST(test_ui_components_menu_many_items);
+    RUN_TEST(test_ui_components_tabs_tab0_not_matched);
+    RUN_TEST(test_ui_components_sync_empty_root);
+    RUN_TEST(test_ui_components_sync_trailing_dot);
+    RUN_TEST(test_ui_components_prefix_visible_idempotent);
+    RUN_TEST(test_ui_components_menu_preserves_other_styles);
+    RUN_TEST(test_ui_components_empty_widget_count);
+    RUN_TEST(test_ui_components_sync_tab_zero_returns_false);
+    RUN_TEST(test_ui_components_dirty_coords_match_widget);
+    RUN_TEST(test_radio_select_basic);
+    RUN_TEST(test_radio_select_already_selected);
+    RUN_TEST(test_radio_select_null_scene);
+    RUN_TEST(test_radio_select_oob_index);
+    RUN_TEST(test_radio_select_non_radio_idx);
+    RUN_TEST(test_radio_select_mixed_types);
+    RUN_TEST(test_radio_select_dirty_coords);
+    RUN_TEST(test_ui_components_list_null_root);
+    RUN_TEST(test_ui_components_tabs_no_dirty_fn);
+    RUN_TEST(test_radio_select_single_widget);
+    RUN_TEST(test_ui_components_prefix_visible_many_widgets);
+    RUN_TEST(test_ui_components_menu_negative_index);
+    RUN_TEST(test_ui_components_deeply_nested_panels);
+    RUN_TEST(test_ui_components_extreme_coordinates);
     UNITY_END();
 }
 
@@ -65,6 +113,30 @@ void test_ui_components_menu_no_match_returns_false(void);
 void test_ui_components_tabs_out_of_range_clears_all(void);
 void test_ui_components_sync_extreme_focus_idx(void);
 void test_ui_components_sync_overflow_item_index(void);
+void test_ui_components_menu_same_index_no_change(void);
+void test_ui_components_menu_many_items(void);
+void test_ui_components_tabs_tab0_not_matched(void);
+void test_ui_components_sync_empty_root(void);
+void test_ui_components_sync_trailing_dot(void);
+void test_ui_components_prefix_visible_idempotent(void);
+void test_ui_components_menu_preserves_other_styles(void);
+void test_ui_components_empty_widget_count(void);
+void test_ui_components_sync_tab_zero_returns_false(void);
+void test_ui_components_dirty_coords_match_widget(void);
+void test_radio_select_basic(void);
+void test_radio_select_already_selected(void);
+void test_radio_select_null_scene(void);
+void test_radio_select_oob_index(void);
+void test_radio_select_non_radio_idx(void);
+void test_radio_select_mixed_types(void);
+void test_radio_select_dirty_coords(void);
+void test_ui_components_list_null_root(void);
+void test_ui_components_tabs_no_dirty_fn(void);
+void test_radio_select_single_widget(void);
+void test_ui_components_prefix_visible_many_widgets(void);
+void test_ui_components_menu_negative_index(void);
+void test_ui_components_deeply_nested_panels(void);
+void test_ui_components_extreme_coordinates(void);
 
 int main(void)
 {
@@ -87,6 +159,30 @@ int main(void)
     RUN_TEST(test_ui_components_tabs_out_of_range_clears_all);
     RUN_TEST(test_ui_components_sync_extreme_focus_idx);
     RUN_TEST(test_ui_components_sync_overflow_item_index);
+    RUN_TEST(test_ui_components_menu_same_index_no_change);
+    RUN_TEST(test_ui_components_menu_many_items);
+    RUN_TEST(test_ui_components_tabs_tab0_not_matched);
+    RUN_TEST(test_ui_components_sync_empty_root);
+    RUN_TEST(test_ui_components_sync_trailing_dot);
+    RUN_TEST(test_ui_components_prefix_visible_idempotent);
+    RUN_TEST(test_ui_components_menu_preserves_other_styles);
+    RUN_TEST(test_ui_components_empty_widget_count);
+    RUN_TEST(test_ui_components_sync_tab_zero_returns_false);
+    RUN_TEST(test_ui_components_dirty_coords_match_widget);
+    RUN_TEST(test_radio_select_basic);
+    RUN_TEST(test_radio_select_already_selected);
+    RUN_TEST(test_radio_select_null_scene);
+    RUN_TEST(test_radio_select_oob_index);
+    RUN_TEST(test_radio_select_non_radio_idx);
+    RUN_TEST(test_radio_select_mixed_types);
+    RUN_TEST(test_radio_select_dirty_coords);
+    RUN_TEST(test_ui_components_list_null_root);
+    RUN_TEST(test_ui_components_tabs_no_dirty_fn);
+    RUN_TEST(test_radio_select_single_widget);
+    RUN_TEST(test_ui_components_prefix_visible_many_widgets);
+    RUN_TEST(test_ui_components_menu_negative_index);
+    RUN_TEST(test_ui_components_deeply_nested_panels);
+    RUN_TEST(test_ui_components_extreme_coordinates);
     return UNITY_END();
 }
 

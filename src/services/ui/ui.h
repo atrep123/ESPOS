@@ -13,6 +13,7 @@
  *  - flush only dirty regions to the SSD1363 panel (I2C-friendly).
  */
 void ui_start(void);
+void ui_stop(void);
 
 /* UI commands (thread-safe): publish requests to the UI task via msgbus. */
 void ui_cmd_set_text(const char *id, const char *text);

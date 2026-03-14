@@ -15,6 +15,7 @@ typedef struct {
 } store_conf_t;
 
 esp_err_t store_init(store_conf_t *out);
+void store_deinit(void);
 esp_err_t store_get_conf(store_conf_t *out);
 esp_err_t store_set_bg_rgb(uint32_t rgb);
 

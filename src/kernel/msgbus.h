@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
@@ -75,7 +76,8 @@ typedef struct {
 } msg_t;
 
 void bus_init(void);
+void bus_deinit(void);
 QueueHandle_t bus_make_queue(size_t depth);
-void bus_subscribe(topic_t t, QueueHandle_t q);
+esp_err_t bus_subscribe(topic_t t, QueueHandle_t q);
 void bus_publish(const msg_t *m);
 uint32_t bus_drop_count(topic_t t);

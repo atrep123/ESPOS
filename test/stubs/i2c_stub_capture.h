@@ -23,5 +23,9 @@ size_t i2c_stub_last_write_len(void);
 size_t i2c_stub_copy_last_write(uint8_t *out, size_t max_out);
 uint8_t i2c_stub_last_write_addr(void);
 
+/* Make the first n writes succeed (ESP_OK), then apply s_write_err.
+ * Pass 0 to disable (default: all writes use s_write_err). */
+void i2c_stub_set_write_fail_after(size_t n);
+
 /* Query the last read request size. */
 size_t i2c_stub_read_call_count(void);

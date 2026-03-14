@@ -58,6 +58,11 @@ void app_main(void)
     RUN_TEST(test_cmd_text_truncation);
     RUN_TEST(test_cmd_listmodel_set_item_truncation);
     RUN_TEST(test_cmd_listmodel_set_item_both_null);
+    RUN_TEST(test_cmd_set_value_extreme_int32);
+    RUN_TEST(test_cmd_listmodel_set_len_zero);
+    RUN_TEST(test_cmd_switch_scene_negative);
+    RUN_TEST(test_cmd_set_text_empty_strings);
+    RUN_TEST(test_cmd_toast_enqueue_zero_duration);
     UNITY_END();
 }
 
@@ -90,6 +95,11 @@ void test_cmd_id_truncation(void);
 void test_cmd_text_truncation(void);
 void test_cmd_listmodel_set_item_truncation(void);
 void test_cmd_listmodel_set_item_both_null(void);
+void test_cmd_set_value_extreme_int32(void);
+void test_cmd_listmodel_set_len_zero(void);
+void test_cmd_switch_scene_negative(void);
+void test_cmd_set_text_empty_strings(void);
+void test_cmd_toast_enqueue_zero_duration(void);
 
 int main(void)
 {
@@ -121,6 +131,11 @@ int main(void)
     RUN_TEST(test_cmd_text_truncation);
     RUN_TEST(test_cmd_listmodel_set_item_truncation);
     RUN_TEST(test_cmd_listmodel_set_item_both_null);
+    RUN_TEST(test_cmd_set_value_extreme_int32);
+    RUN_TEST(test_cmd_listmodel_set_len_zero);
+    RUN_TEST(test_cmd_switch_scene_negative);
+    RUN_TEST(test_cmd_set_text_empty_strings);
+    RUN_TEST(test_cmd_toast_enqueue_zero_duration);
     return UNITY_END();
 }
 

@@ -19,15 +19,21 @@
 
 #include "ui_design.h"
 #include "ui_bindings.h"
+#include "ui_dirty.h"
+#include "ui_format.h"
 #include "ui_helpers.h"
+#include "ui_scene_util.h"
 #include "ui_meta.h"
 #include "ui_nav.h"
 #include "ui_render.h"
 #include "ui_render_swbuf.h"
 #include "ui_components.h"
 #include "ui_listmodel.h"
+#include "ui_anim.h"
 
 static const char *TAG = "ui";
+
+#define UI_POLL_INTERVAL_MS  50  /* flash animation / fallback poll rate */
 
 static TaskHandle_t s_ui_task = NULL;
 
@@ -37,21 +43,20 @@ static UiScene s_scene;
 
 static UiListModels s_listmodels;
 
+#ifdef UI_SCENE_COUNT
+static int s_current_scene_idx;
+#endif
+
 enum { UI_TEXT_OVERRIDE_LEN = 64 };
 static const char *s_text_original[UI_MAX_WIDGETS];
 static char s_text_override[UI_MAX_WIDGETS][UI_TEXT_OVERRIDE_LEN];
-
-typedef struct {
-    int dirty;
-    int x0, y0;
-    int x1, y1; /* exclusive */
-} UiDirty;
 
 typedef enum {
     UI_EDIT_NONE = 0,
     UI_EDIT_SLIDER = 1,
     UI_EDIT_BIND_INT = 2,
     UI_EDIT_BIND_ENUM = 3,
+    UI_EDIT_LIST = 4,
 } UiEditKind;
 
 typedef struct {
@@ -75,80 +80,25 @@ typedef enum {
     UI_ACT_ACTION_PUBLISHED = 2,
 } UiActivateResult;
 
-static void ui_dirty_clear(UiDirty *d)
+/* Thin wrapper passing display dimensions to the extracted function. */
+static void ui_dirty_add_local(UiDirty *d, int x, int y, int w, int h)
 {
-    if (d == NULL) {
-        return;
-    }
-    d->dirty = 0;
-    d->x0 = d->y0 = 0;
-    d->x1 = d->y1 = 0;
-}
-
-static void ui_dirty_add(UiDirty *d, int x, int y, int w, int h)
-{
-    if (d == NULL) {
-        return;
-    }
-    if (w <= 0 || h <= 0) {
-        return;
-    }
-
-    int x0 = x;
-    int y0 = y;
-    int x1 = x + w;
-    int y1 = y + h;
-
-    if (x0 < 0) x0 = 0;
-    if (y0 < 0) y0 = 0;
-    if (x1 > DISPLAY_WIDTH) x1 = DISPLAY_WIDTH;
-    if (y1 > DISPLAY_HEIGHT) y1 = DISPLAY_HEIGHT;
-    if (x0 >= x1 || y0 >= y1) {
-        return;
-    }
-
-    if (!d->dirty) {
-        d->dirty = 1;
-        d->x0 = x0;
-        d->y0 = y0;
-        d->x1 = x1;
-        d->y1 = y1;
-        return;
-    }
-
-    if (x0 < d->x0) d->x0 = x0;
-    if (y0 < d->y0) d->y0 = y0;
-    if (x1 > d->x1) d->x1 = x1;
-    if (y1 > d->y1) d->y1 = y1;
+    ui_dirty_add(d, x, y, w, h, DISPLAY_WIDTH, DISPLAY_HEIGHT);
 }
 
 static void ui_dirty_add_adapter(void *ctx, int x, int y, int w, int h)
 {
-    ui_dirty_add((UiDirty *)ctx, x, y, w, h);
+    ui_dirty_add_local((UiDirty *)ctx, x, y, w, h);
 }
 
 static void ui_dirty_full(UiDirty *d)
 {
-    ui_dirty_add(d, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    ui_dirty_add_local(d, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
 }
 
-static void ui_widget_rect(const UiScene *scene, int idx, int *x, int *y, int *w, int *h)
+static inline void ui_widget_rect(const UiScene *scene, int idx, int *x, int *y, int *w, int *h)
 {
-    if (x) *x = 0;
-    if (y) *y = 0;
-    if (w) *w = 0;
-    if (h) *h = 0;
-    if (scene == NULL || scene->widgets == NULL) {
-        return;
-    }
-    if (idx < 0 || (uint16_t)idx >= scene->widget_count) {
-        return;
-    }
-    const UiWidget *ww = &scene->widgets[(uint16_t)idx];
-    if (x) *x = (int)ww->x;
-    if (y) *y = (int)ww->y;
-    if (w) *w = (int)ww->width;
-    if (h) *h = (int)ww->height;
+    ui_scene_widget_rect(scene, idx, x, y, w, h);
 }
 
 static void ui_draw_focus(UiDrawOps *ops, const UiScene *scene, int idx)
@@ -184,24 +134,36 @@ static void ui_draw_focus(UiDrawOps *ops, const UiScene *scene, int idx)
     }
 }
 
-static int ui_scene_clone(const UiScene *src, UiScene *dst, UiWidget *dst_widgets, int max_widgets)
+#ifdef UI_SCENE_COUNT
+/* Draw small dot indicators centered at the bottom of the screen.
+ * Active scene dot is bright, others are dim. */
+static void ui_draw_scene_indicator(UiSwBuf *sw, int scene_idx, int scene_count, int screen_w, int screen_h)
 {
-    if (src == NULL || dst == NULL || dst_widgets == NULL || src->widgets == NULL) {
-        return 0;
+    if (sw == NULL || scene_count <= 1) {
+        return;
     }
-
-    uint16_t count = src->widget_count;
-    if (count > (uint16_t)max_widgets) {
-        ESP_LOGE(TAG, "scene too large: %" PRIu16 " widgets (max %d)", count, max_widgets);
-        count = (uint16_t)max_widgets;
+    const int dot_w = 4;
+    const int dot_h = 3;
+    const int gap = 3;
+    int total_w = scene_count * dot_w + (scene_count - 1) * gap;
+    int x0 = (screen_w - total_w) / 2;
+    int y0 = screen_h - dot_h - 1;
+#if DISPLAY_COLOR_BITS == 4
+    const uint8_t bright = 12;
+    const uint8_t dim = 3;
+#else
+    const uint8_t bright = 1;
+    const uint8_t dim = 1;
+#endif
+    for (int i = 0; i < scene_count; ++i) {
+        int dx = x0 + i * (dot_w + gap);
+        uint8_t c = (i == scene_idx) ? bright : dim;
+        ui_swbuf_fill_rect(sw, dx, y0, dot_w, dot_h, c);
     }
-
-    memcpy(dst_widgets, src->widgets, (size_t)count * sizeof(UiWidget));
-    *dst = *src;
-    dst->widget_count = count;
-    dst->widgets = dst_widgets;
-    return 1;
 }
+#endif
+
+/* ui_scene_clone is now in ui_scene_util.c */
 
 static UiWidget *ui_scene_widget_mut(UiScene *scene, int idx)
 {
@@ -214,19 +176,7 @@ static UiWidget *ui_scene_widget_mut(UiScene *scene, int idx)
     return (UiWidget *)&scene->widgets[(uint16_t)idx];
 }
 
-static int ui_scene_find_by_id(const UiScene *scene, const char *id)
-{
-    if (scene == NULL || scene->widgets == NULL || id == NULL || *id == '\0') {
-        return -1;
-    }
-    for (uint16_t i = 0; i < scene->widget_count; ++i) {
-        const UiWidget *w = &scene->widgets[i];
-        if (w->id != NULL && strcmp(w->id, id) == 0) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
+/* ui_scene_find_by_id is now in ui_scene_util.c */
 
 static void ui_scene_set_text(UiScene *scene, int idx, const char *text)
 {
@@ -253,17 +203,6 @@ static void ui_scene_set_text(UiScene *scene, int idx, const char *text)
     w->text = s_text_override[idx];
 }
 
-static int ui_text_equals(const char *a, const char *b)
-{
-    if (a == NULL) {
-        a = "";
-    }
-    if (b == NULL) {
-        b = "";
-    }
-    return (strcmp(a, b) == 0) ? 1 : 0;
-}
-
 static void ui_scene_set_text_if_changed(UiScene *scene, int idx, const char *text, UiDirty *dirty)
 {
     UiWidget *w = ui_scene_widget_mut(scene, idx);
@@ -279,27 +218,11 @@ static void ui_scene_set_text_if_changed(UiScene *scene, int idx, const char *te
     if (dirty != NULL) {
         int x, y, ww, hh;
         ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-        ui_dirty_add(dirty, x, y, ww, hh);
+        ui_dirty_add_local(dirty, x, y, ww, hh);
     }
 }
 
-static int ui_scene_count_item_slots(const UiScene *scene, const char *root)
-{
-    if (scene == NULL || root == NULL || *root == '\0') {
-        return 0;
-    }
-
-    char id[48];
-    int count = 0;
-    for (int i = 0; i < 32; ++i) {
-        snprintf(id, sizeof(id), "%s.item%d", root, i);
-        if (ui_scene_find_by_id(scene, id) < 0) {
-            break;
-        }
-        count += 1;
-    }
-    return count;
-}
+/* ui_scene_count_item_slots is now in ui_scene_util.c */
 
 static void ui_listmodel_apply_to_scene(UiScene *scene, UiListModel *m, UiDirty *dirty)
 {
@@ -361,7 +284,7 @@ static void ui_listmodel_apply_to_scene(UiScene *scene, UiListModel *m, UiDirty 
         if (dirty != NULL && (btn->visible != before_visible || btn->enabled != before_enabled || btn->value != before_value)) {
             int x, y, ww, hh;
             ui_widget_rect(scene, item_idx, &x, &y, &ww, &hh);
-            ui_dirty_add(dirty, x, y, ww, hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
         }
 
         char label_id[64];
@@ -428,70 +351,72 @@ static void ui_listmodel_sync_from_focus(UiScene *scene, UiListModels *lists, in
 static void ui_toggle_checkbox(UiScene *scene, int idx, UiDirty *dirty)
 {
     UiWidget *w = ui_scene_widget_mut(scene, idx);
-    if (w == NULL) {
+    if (!ui_widget_toggle_checked(w)) {
         return;
     }
-    if ((UiWidgetType)w->type != UIW_CHECKBOX) {
-        return;
-    }
-    w->checked = (uint8_t)(w->checked ? 0 : 1);
     int x, y, ww, hh;
     ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-    ui_dirty_add(dirty, x, y, ww, hh);
+    ui_dirty_add_local(dirty, x, y, ww, hh);
 }
 
-static void ui_select_radiobutton(UiScene *scene, int idx, UiDirty *dirty)
-{
-    UiWidget *w = ui_scene_widget_mut(scene, idx);
-    if (w == NULL) {
-        return;
-    }
-    if ((UiWidgetType)w->type != UIW_RADIOBUTTON) {
-        return;
-    }
-
-    for (uint16_t i = 0; i < scene->widget_count; ++i) {
-        UiWidget *rw = ui_scene_widget_mut(scene, (int)i);
-        if (rw == NULL) {
-            continue;
-        }
-        if ((UiWidgetType)rw->type != UIW_RADIOBUTTON) {
-            continue;
-        }
-        uint8_t desired = (i == (uint16_t)idx) ? 1 : 0;
-        if (rw->checked == desired) {
-            continue;
-        }
-        rw->checked = desired;
-        int x, y, ww, hh;
-        ui_widget_rect(scene, (int)i, &x, &y, &ww, &hh);
-        ui_dirty_add(dirty, x, y, ww, hh);
-    }
-}
+/* ui_select_radiobutton is now in ui_components.c */
 
 static void ui_adjust_slider(UiScene *scene, int idx, int delta, UiDirty *dirty)
 {
     UiWidget *w = ui_scene_widget_mut(scene, idx);
-    if (w == NULL) {
+    if (!ui_widget_clamp_value(w, delta)) {
         return;
     }
-    if ((UiWidgetType)w->type != UIW_SLIDER) {
-        return;
-    }
+    int x, y, ww, hh;
+    ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
+    ui_dirty_add_local(dirty, x, y, ww, hh);
+}
 
-    int v = (int)w->value + delta;
-    int vmin = (int)w->min_value;
-    int vmax = (int)w->max_value;
-    if (v < vmin) v = vmin;
-    if (v > vmax) v = vmax;
-    if (v == (int)w->value) {
+static int ui_list_count_items(const UiWidget *w)
+{
+    if (w == NULL || w->text == NULL || w->text[0] == '\0') {
+        return 0;
+    }
+    int count = 1;
+    for (const char *p = w->text; *p; p++) {
+        if (*p == '\n') count++;
+    }
+    return count;
+}
+
+static void ui_adjust_list(UiScene *scene, int idx, int delta, UiDirty *dirty)
+{
+    UiWidget *w = ui_scene_widget_mut(scene, idx);
+    if (w == NULL || (UiWidgetType)w->type != UIW_LIST) {
         return;
     }
-    w->value = (int16_t)v;
+    int total = ui_list_count_items(w);
+    if (total <= 0) return;
+
+    int active = (int)w->value + delta;
+    if (active < 0) active = 0;
+    if (active >= total) active = total - 1;
+    if (active == (int)w->value) return;
+    w->value = (int16_t)active;
+
+    /* Calculate visible rows and auto-scroll. */
+    int inset = w->border ? 1 : 0;
+    int pad = 1;
+    int ih = (int)w->height - (inset + pad) * 2;
+    int visible = ih / UI_FONT_CHAR_H;
+    if (visible <= 0) visible = 1;
+
+    int scroll = (int)w->min_value;
+    if (active < scroll) scroll = active;
+    if (active >= scroll + visible) scroll = active - visible + 1;
+    if (scroll < 0) scroll = 0;
+    if (scroll > total - visible) scroll = total - visible;
+    if (scroll < 0) scroll = 0;
+    w->min_value = (int16_t)scroll;
 
     int x, y, ww, hh;
     ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-    ui_dirty_add(dirty, x, y, ww, hh);
+    ui_dirty_add_local(dirty, x, y, ww, hh);
 }
 
 static int ui_update_bound_text(UiScene *scene, int idx)
@@ -520,89 +445,35 @@ static int ui_update_bound_text(UiScene *scene, int idx)
         base = meta.bind_key;
     }
 
-    char vbuf[UI_TEXT_OVERRIDE_LEN - 28];
-    vbuf[0] = '\0';
+    /* Fetch raw value from bindings */
+    int int_val = 0;
+    int bool_val = 0;
+    char str_val[UI_TEXT_OVERRIDE_LEN - 28];
+    str_val[0] = '\0';
 
     if (meta.kind == UI_META_KIND_BOOL) {
         bool cur = false;
         if (!ui_bind_get_bool(meta.bind_key, &cur)) {
             return 0;
         }
-        if (meta.values[0] != '\0' && ui_meta_values_count(meta.values) >= 2) {
-            (void)ui_meta_values_get(meta.values, cur ? 1 : 0, vbuf, sizeof(vbuf));
-        } else {
-            snprintf(vbuf, sizeof(vbuf), "%s", cur ? "on" : "off");
-        }
-    } else if (meta.kind == UI_META_KIND_INT) {
-        int cur = 0;
-        if (!ui_bind_get_int(meta.bind_key, &cur)) {
+        bool_val = cur ? 1 : 0;
+    } else if (meta.kind == UI_META_KIND_INT || meta.kind == UI_META_KIND_ENUM || meta.kind == UI_META_KIND_FLOAT) {
+        if (!ui_bind_get_int(meta.bind_key, &int_val)) {
             return 0;
-        }
-        if (meta.prefix[0] != '\0' || meta.suffix[0] != '\0') {
-            snprintf(vbuf, sizeof(vbuf), "%s%d%s",
-                     meta.prefix, cur, meta.suffix);
-        } else {
-            snprintf(vbuf, sizeof(vbuf), "%d", cur);
-        }
-    } else if (meta.kind == UI_META_KIND_ENUM) {
-        int cur = 0;
-        if (!ui_bind_get_int(meta.bind_key, &cur)) {
-            return 0;
-        }
-        int cnt = ui_meta_values_count(meta.values);
-        if (cnt <= 0) {
-            snprintf(vbuf, sizeof(vbuf), "%d", cur);
-        } else {
-            if (cur < 0) cur = 0;
-            if (cur >= cnt) cur = cnt - 1;
-            if (!ui_meta_values_get(meta.values, cur, vbuf, sizeof(vbuf))) {
-                snprintf(vbuf, sizeof(vbuf), "%d", cur);
-            }
         }
     } else if (meta.kind == UI_META_KIND_STR) {
-        if (!ui_bind_get_str(meta.bind_key, vbuf, sizeof(vbuf))) {
+        if (!ui_bind_get_str(meta.bind_key, str_val, sizeof(str_val))) {
             return 0;
         }
-    } else if (meta.kind == UI_META_KIND_FLOAT) {
-        int cur = 0;
-        if (!ui_bind_get_int(meta.bind_key, &cur)) {
-            return 0;
-        }
-        /* Configurable fixed-point: scale (default 100), precision (default 2) */
-        int sc = (meta.scale > 0) ? meta.scale : 100;
-        int prec = (meta.precision >= 0) ? meta.precision : 2;
-        int whole = cur / sc;
-        int frac = cur % sc;
-        if (frac < 0) frac = -frac;
+    }
 
-        if (prec == 0) {
-            /* Round: if frac >= sc/2, bump whole */
-            int rounded = whole;
-            if (cur >= 0 && frac >= sc / 2) rounded++;
-            else if (cur < 0 && frac >= sc / 2) rounded--;
-            snprintf(vbuf, sizeof(vbuf), "%s%d%s",
-                     meta.prefix, rounded, meta.suffix);
-        } else {
-            /* Scale frac to requested precision digits */
-            int pow10 = 1;
-            for (int i = 0; i < prec; i++) pow10 *= 10;
-            int frac_scaled = (int)(((int64_t)frac * pow10) / sc);
-
-            if (cur < 0 && whole == 0) {
-                snprintf(vbuf, sizeof(vbuf), "%s-%d.%0*d%s",
-                         meta.prefix, whole, prec, frac_scaled, meta.suffix);
-            } else {
-                snprintf(vbuf, sizeof(vbuf), "%s%d.%0*d%s",
-                         meta.prefix, whole, prec, frac_scaled, meta.suffix);
-            }
-        }
-    } else {
+    char vbuf[UI_TEXT_OVERRIDE_LEN - 28];
+    if (!ui_format_meta_value(&meta, int_val, bool_val, str_val, vbuf, sizeof(vbuf))) {
         return 0;
     }
 
     char out[UI_TEXT_OVERRIDE_LEN];
-    int n = snprintf(out, sizeof(out), "%s: %s", base, vbuf);
-    (void)n; /* truncation is safe — display width is limited anyway */
+    (void)ui_format_label_value(base, vbuf, out, sizeof(out));
 
     const char *cur_txt = (w->text != NULL) ? w->text : "";
     if (strcmp(cur_txt, out) == 0) {
@@ -628,7 +499,7 @@ static void ui_update_status_bar(UiScene *scene, uint32_t free_heap, uint32_t mi
         ui_scene_set_text(scene, left, buf);
         int x, y, w, h;
         ui_widget_rect(scene, left, &x, &y, &w, &h);
-        ui_dirty_add(dirty, x, y, w, h);
+        ui_dirty_add_local(dirty, x, y, w, h);
     }
     if (right >= 0) {
         char buf[UI_TEXT_OVERRIDE_LEN];
@@ -636,7 +507,7 @@ static void ui_update_status_bar(UiScene *scene, uint32_t free_heap, uint32_t mi
         ui_scene_set_text(scene, right, buf);
         int x, y, w, h;
         ui_widget_rect(scene, right, &x, &y, &w, &h);
-        ui_dirty_add(dirty, x, y, w, h);
+        ui_dirty_add_local(dirty, x, y, w, h);
     }
 }
 
@@ -652,7 +523,7 @@ static void ui_edit_exit(UiScene *scene, UiEdit *edit, UiDirty *dirty)
         if (dirty != NULL) {
             int x, y, ww, hh;
             ui_widget_rect(scene, edit->idx, &x, &y, &ww, &hh);
-            ui_dirty_add(dirty, x, y, ww, hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
         }
     }
 
@@ -721,12 +592,15 @@ static UiActivateResult ui_activate_widget(UiScene *scene, int idx, UiEdit *edit
     }
 
     UiWidgetType t = (UiWidgetType)w->type;
-    if (t == UIW_CHECKBOX) {
+    if (t == UIW_CHECKBOX || t == UIW_TOGGLE) {
         ui_toggle_checkbox(scene, idx, dirty);
+        if (t == UIW_TOGGLE) {
+            ui_publish_action(w);
+        }
         return UI_ACT_NONE;
     }
     if (t == UIW_RADIOBUTTON) {
-        ui_select_radiobutton(scene, idx, dirty);
+        ui_components_select_radiobutton(scene, idx, ui_dirty_add_adapter, dirty);
         return UI_ACT_NONE;
     }
     if (t == UIW_SLIDER) {
@@ -739,7 +613,35 @@ static UiActivateResult ui_activate_widget(UiScene *scene, int idx, UiEdit *edit
         if (dirty != NULL) {
             int x, y, ww, hh;
             ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-            ui_dirty_add(dirty, x, y, ww, hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
+        }
+        return UI_ACT_EDIT_ENTERED;
+    }
+    if (t == UIW_LIST) {
+        if (edit != NULL) {
+            edit->kind = UI_EDIT_LIST;
+            edit->idx = idx;
+            edit->saved_style = w->style;
+            w->style = (uint8_t)(w->style | UI_STYLE_HIGHLIGHT);
+        }
+        if (dirty != NULL) {
+            int x, y, ww, hh;
+            ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
+        }
+        return UI_ACT_EDIT_ENTERED;
+    }
+    if (t == UIW_GAUGE || t == UIW_PROGRESSBAR) {
+        if (edit != NULL) {
+            edit->kind = UI_EDIT_SLIDER;
+            edit->idx = idx;
+            edit->saved_style = w->style;
+            w->style = (uint8_t)(w->style | UI_STYLE_HIGHLIGHT);
+        }
+        if (dirty != NULL) {
+            int x, y, ww, hh;
+            ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
         }
         return UI_ACT_EDIT_ENTERED;
     }
@@ -754,7 +656,7 @@ static UiActivateResult ui_activate_widget(UiScene *scene, int idx, UiEdit *edit
                 if (ui_update_bound_text(scene, idx) && dirty != NULL) {
                     int x, y, ww, hh;
                     ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-                    ui_dirty_add(dirty, x, y, ww, hh);
+                    ui_dirty_add_local(dirty, x, y, ww, hh);
                 }
             }
             return UI_ACT_NONE;
@@ -773,7 +675,7 @@ static UiActivateResult ui_activate_widget(UiScene *scene, int idx, UiEdit *edit
         if (dirty != NULL) {
             int x, y, ww, hh;
             ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-            ui_dirty_add(dirty, x, y, ww, hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
         }
         return UI_ACT_EDIT_ENTERED;
     }
@@ -783,41 +685,14 @@ static UiActivateResult ui_activate_widget(UiScene *scene, int idx, UiEdit *edit
         *flash = 6;
     }
     if (dirty != NULL) {
-        ui_dirty_add(dirty, 0, 0, 6, 6);
+        ui_dirty_add_local(dirty, 0, 0, 6, 6);
     }
     return UI_ACT_ACTION_PUBLISHED;
 }
 
-static int ui_modal_find_rect(UiScene *scene, const char *root, int *x, int *y, int *w, int *h)
+static inline int ui_modal_find_rect(UiScene *scene, const char *root, int *x, int *y, int *w, int *h)
 {
-    if (x) *x = 0;
-    if (y) *y = 0;
-    if (w) *w = 0;
-    if (h) *h = 0;
-    if (scene == NULL || root == NULL || *root == '\0') {
-        return 0;
-    }
-
-    char id[48];
-    snprintf(id, sizeof(id), "%s.dialog", root);
-    int idx = ui_scene_find_by_id(scene, id);
-    if (idx < 0) {
-        snprintf(id, sizeof(id), "%s.panel", root);
-        idx = ui_scene_find_by_id(scene, id);
-    }
-    if (idx < 0) {
-        return 0;
-    }
-    int rx, ry, rw, rh;
-    ui_widget_rect(scene, idx, &rx, &ry, &rw, &rh);
-    if (rw <= 0 || rh <= 0) {
-        return 0;
-    }
-    if (x) *x = rx;
-    if (y) *y = ry;
-    if (w) *w = rw;
-    if (h) *h = rh;
-    return 1;
+    return ui_scene_modal_find_rect(scene, root, x, y, w, h);
 }
 
 static void ui_modal_show(UiScene *scene, UiModal *modal, const char *root, int *focus, UiEdit *edit, UiDirty *dirty)
@@ -924,7 +799,7 @@ static void ui_toast_apply_message(UiScene *scene, const char *root, const char 
         ui_scene_set_text(scene, idx, message);
         int x, y, ww, hh;
         ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-        ui_dirty_add(dirty, x, y, ww, hh);
+        ui_dirty_add_local(dirty, x, y, ww, hh);
     }
 
     /* Keep toast non-focusable by hiding any optional action button. */
@@ -935,7 +810,7 @@ static void ui_toast_apply_message(UiScene *scene, const char *root, const char 
         btn->visible = 0;
         int x, y, ww, hh;
         ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-        ui_dirty_add(dirty, x, y, ww, hh);
+        ui_dirty_add_local(dirty, x, y, ww, hh);
     }
 }
 
@@ -1022,7 +897,7 @@ static void ui_handle_ui_cmd(
                 ui_scene_set_text(scene, idx, m->u.ui_cmd.text);
                 int x, y, w, h;
                 ui_widget_rect(scene, idx, &x, &y, &w, &h);
-                ui_dirty_add(dirty, x, y, w, h);
+                ui_dirty_add_local(dirty, x, y, w, h);
             }
             break;
         }
@@ -1064,7 +939,7 @@ static void ui_handle_ui_cmd(
 
             int x, y, ww, hh;
             ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
-            ui_dirty_add(dirty, x, y, ww, hh);
+            ui_dirty_add_local(dirty, x, y, ww, hh);
 
             if (focus != NULL && idx == *focus) {
                 uint8_t now_focusable = ui_nav_is_focusable(w) ? 1 : 0;
@@ -1169,9 +1044,9 @@ static void ui_handle_ui_cmd(
                     if (focus_in_root && focus != NULL && nf >= 0 && nf != *focus) {
                         int x, y, w, h;
                         ui_widget_rect(scene, *focus, &x, &y, &w, &h);
-                        ui_dirty_add(dirty, x, y, w, h);
+                        ui_dirty_add_local(dirty, x, y, w, h);
                         ui_widget_rect(scene, nf, &x, &y, &w, &h);
-                        ui_dirty_add(dirty, x, y, w, h);
+                        ui_dirty_add_local(dirty, x, y, w, h);
                         *focus = nf;
                     }
                 }
@@ -1207,9 +1082,14 @@ static void ui_task(void *arg)
 {
     (void)arg;
 
-    store_conf_t conf;
+    store_conf_t conf = {0};
     esp_err_t conf_err = store_get_conf(&conf);
-    if (conf_err == ESP_OK) {
+    if (conf_err != ESP_OK) {
+        ESP_LOGW(TAG, "store_get_conf failed: %s — using defaults", esp_err_to_name(conf_err));
+        conf.display_contrast = 0xFF;
+        conf.display_invert = 0;
+        conf.display_col_offset = SSD1363_COL_OFFSET;
+    } else {
         esp_err_t coerr = ssd1363_set_col_offset_units(conf.display_col_offset);
         if (coerr != ESP_OK) {
             ESP_LOGW(TAG, "ssd1363_set_col_offset_units failed: %s", esp_err_to_name(coerr));
@@ -1220,7 +1100,7 @@ static void ui_task(void *arg)
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "ssd1363_init_panel failed: %d", (int)err);
     }
-    if (conf_err == ESP_OK) {
+    if (err == ESP_OK) {
         esp_err_t cerr = ssd1363_set_contrast(conf.display_contrast);
         if (cerr != ESP_OK) {
             ESP_LOGW(TAG, "ssd1363_set_contrast failed: %s", esp_err_to_name(cerr));
@@ -1240,15 +1120,24 @@ static void ui_task(void *arg)
     ui_swbuf_make_ops(&sw, &ops);
 
     QueueHandle_t q = bus_make_queue(16);
-    if (q != NULL) {
-        bus_subscribe(TOP_INPUT_BTN, q);
-        bus_subscribe(TOP_METRICS_RET, q);
-        bus_subscribe(TOP_UI_CMD, q);
-    } else {
-        ESP_LOGE(TAG, "bus_make_queue failed — UI events disabled");
+    if (q == NULL) {
+        ESP_LOGE(TAG, "bus_make_queue failed");
+        vTaskDelete(NULL);
+        return;
+    }
+    if (bus_subscribe(TOP_INPUT_BTN, q) != ESP_OK ||
+        bus_subscribe(TOP_METRICS_RET, q) != ESP_OK ||
+        bus_subscribe(TOP_UI_CMD, q) != ESP_OK) {
+        ESP_LOGE(TAG, "bus_subscribe failed");
+        vTaskDelete(NULL);
+        return;
     }
 
-    ui_bind_init();
+    if (ui_bind_init() != ESP_OK) {
+        ESP_LOGE(TAG, "ui_bind_init failed");
+        vTaskDelete(NULL);
+        return;
+    }
 
     if (!ui_scene_clone(&UI_SCENE_DEMO, &s_scene, s_widgets, (int)UI_MAX_WIDGETS)) {
         ESP_LOGE(TAG, "ui_scene_clone failed");
@@ -1296,6 +1185,10 @@ static void ui_task(void *arg)
     ui_dirty_clear(&dirty);
     ui_dirty_full(&dirty);
 
+    static UiAnimState anim_state;
+    ui_anim_init(&anim_state);
+    ui_anim_start(&anim_state, scene, esp_timer_get_time());
+
     /* Perf aggregation (very cheap; logs at INFO occasionally). */
     struct {
         uint32_t frames;
@@ -1310,7 +1203,7 @@ static void ui_task(void *arg)
 
         timeout = portMAX_DELAY;
         if (flash > 0) {
-            timeout = pdMS_TO_TICKS(50);
+            timeout = pdMS_TO_TICKS(UI_POLL_INTERVAL_MS);
         }
         if (toast.active) {
             int64_t now_us = esp_timer_get_time();
@@ -1324,6 +1217,12 @@ static void ui_task(void *arg)
                 timeout = toast_ticks;
             }
         }
+        if (ui_anim_is_active(&anim_state)) {
+            TickType_t anim_ticks = pdMS_TO_TICKS(UI_POLL_INTERVAL_MS);
+            if (anim_ticks < timeout) {
+                timeout = anim_ticks;
+            }
+        }
         if (dirty.dirty) {
             timeout = 0;
         }
@@ -1331,13 +1230,13 @@ static void ui_task(void *arg)
         if (q != NULL) {
             got = (xQueueReceive(q, &m, timeout) == pdTRUE) ? 1 : 0;
         } else {
-            vTaskDelay(pdMS_TO_TICKS(50));
+            vTaskDelay(pdMS_TO_TICKS(UI_POLL_INTERVAL_MS));
         }
 
         /* Timeout tick: animate the flash overlay. */
         if (!got && flash > 0) {
             flash -= 1;
-            ui_dirty_add(&dirty, 0, 0, 6, 6);
+            ui_dirty_add_local(&dirty, 0, 0, 6, 6);
         }
 
         if (got && m.topic == TOP_METRICS_RET) {
@@ -1376,7 +1275,9 @@ static void ui_task(void *arg)
                         (void)ui_components_set_prefix_visible(scene, "notification", false, NULL, NULL);
                         focus = ui_nav_first_focus(scene);
                         (void)ui_components_sync_active_from_focus(scene, focus, NULL, NULL);
+                        ui_anim_start(&anim_state, scene, esp_timer_get_time());
                         ui_dirty_full(&dirty);
+                        s_current_scene_idx = si;
                         ESP_LOGI(TAG, "switched to scene %d (%s)", si, scene->name ? scene->name : "?");
                     }
                 } else {
@@ -1440,7 +1341,9 @@ static void ui_task(void *arg)
                         break;
                 }
                 if (delta != 0 && edit.idx >= 0) {
-                    if (edit.kind == UI_EDIT_SLIDER) {
+                    if (edit.kind == UI_EDIT_LIST) {
+                        ui_adjust_list(scene, edit.idx, delta, &dirty);
+                    } else if (edit.kind == UI_EDIT_SLIDER) {
                         ui_adjust_slider(scene, edit.idx, delta, &dirty);
                     } else if (edit.kind == UI_EDIT_BIND_INT) {
                         int cur = 0;
@@ -1460,7 +1363,7 @@ static void ui_task(void *arg)
                                 if (ui_update_bound_text(scene, edit.idx)) {
                                     int x, y, ww, hh;
                                     ui_widget_rect(scene, edit.idx, &x, &y, &ww, &hh);
-                                    ui_dirty_add(&dirty, x, y, ww, hh);
+                                    ui_dirty_add_local(&dirty, x, y, ww, hh);
                                 }
                             }
                         }
@@ -1478,7 +1381,7 @@ static void ui_task(void *arg)
                                 if (ui_update_bound_text(scene, edit.idx)) {
                                     int x, y, ww, hh;
                                     ui_widget_rect(scene, edit.idx, &x, &y, &ww, &hh);
-                                    ui_dirty_add(&dirty, x, y, ww, hh);
+                                    ui_dirty_add_local(&dirty, x, y, ww, hh);
                                 }
                             }
                         }
@@ -1637,7 +1540,7 @@ static void ui_task(void *arg)
                             case INPUT_ID_ENC4_HOLD:
                             case INPUT_ID_ENC5_HOLD:
                                 flash = 0;
-                                ui_dirty_add(&dirty, 0, 0, 6, 6);
+                                ui_dirty_add_local(&dirty, 0, 0, 6, 6);
                                 break;
                             default:
                                 break;
@@ -1648,9 +1551,9 @@ static void ui_task(void *arg)
                 if (focus != old_focus) {
                     int x, y, w, h;
                     ui_widget_rect(scene, old_focus, &x, &y, &w, &h);
-                    ui_dirty_add(&dirty, x, y, w, h);
+                    ui_dirty_add_local(&dirty, x, y, w, h);
                     ui_widget_rect(scene, focus, &x, &y, &w, &h);
-                    ui_dirty_add(&dirty, x, y, w, h);
+                    ui_dirty_add_local(&dirty, x, y, w, h);
                     (void)ui_components_sync_active_from_focus(scene, focus, ui_dirty_add_adapter, &dirty);
                     ui_listmodel_sync_from_focus(scene, &s_listmodels, focus, &dirty);
                 }
@@ -1659,6 +1562,10 @@ static void ui_task(void *arg)
 
         if (toast.active) {
             ui_toast_tick(scene, &toast, esp_timer_get_time(), &dirty);
+        }
+
+        if (ui_anim_is_active(&anim_state)) {
+            ui_anim_tick(&anim_state, scene, esp_timer_get_time(), &dirty);
         }
 
         if (!dirty.dirty) {
@@ -1676,6 +1583,11 @@ static void ui_task(void *arg)
 #endif
         }
         ui_draw_focus(&ops, scene, focus);
+
+#ifdef UI_SCENE_COUNT
+        ui_draw_scene_indicator(&sw, s_current_scene_idx, UI_SCENE_COUNT,
+                                (int)scene->width, (int)scene->height);
+#endif
 
         ui_swbuf_clear_dirty(&sw);
         ui_swbuf_mark_dirty(&sw, dirty.x0, dirty.y0, dirty.x1 - dirty.x0, dirty.y1 - dirty.y0);
@@ -1714,8 +1626,17 @@ void ui_start(void)
         return;
     }
 
+    /* 6144 bytes: renders framebuf + runs widget tree + dirty tracking */
     if (xTaskCreatePinnedToCore(ui_task, "ui", 6144, NULL, 6, &s_ui_task, 1) != pdPASS) {
         ESP_LOGE(TAG, "xTaskCreatePinnedToCore(ui) failed");
+        s_ui_task = NULL;
+    }
+}
+
+void ui_stop(void)
+{
+    if (s_ui_task != NULL) {
+        vTaskDelete(s_ui_task);
         s_ui_task = NULL;
     }
 }

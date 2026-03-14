@@ -1,5 +1,7 @@
 #include "unity.h"
 
+#include <string.h>
+
 #include "services/ui/ui_meta.h"
 
 void setUp(void) {}
@@ -243,4 +245,57 @@ void test_ui_meta_combined_formatting_fields(void)
     TEST_ASSERT_EQUAL_INT(1, m.precision);
     TEST_ASSERT_EQUAL_STRING("\xc2\xb0""C", m.suffix);
     TEST_ASSERT_EQUAL_STRING(" ", m.prefix);
+}
+
+/* ================================================================== */
+/* Additional edge cases                                               */
+/* ================================================================== */
+
+void test_ui_meta_bind_key_truncation(void)
+{
+    ui_meta_t m;
+    /* bind_key buffer is char[24]; key longer than 23 should be truncated */
+    TEST_ASSERT_TRUE(ui_meta_parse(
+        "bind=abcdefghijklmnopqrstuvwxyz01234567;kind=int", &m));
+    /* Should parse successfully, key truncated to 23 chars */
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_INT, (int)m.kind);
+    TEST_ASSERT_EQUAL_UINT32(23, strlen(m.bind_key));
+}
+
+void test_ui_meta_values_truncation(void)
+{
+    ui_meta_t m;
+    /* values buffer is char[64]; long values string should be truncated */
+    TEST_ASSERT_TRUE(ui_meta_parse(
+        "bind=x;kind=enum;values="
+        "AAAAAAAAA|BBBBBBBBB|CCCCCCCCC|DDDDDDDDD|EEEEEEEEE|FFFFFFFFF|GGGGGGGGG",
+        &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_ENUM, (int)m.kind);
+    /* Should have parsed some values (up to 63 chars) */
+    TEST_ASSERT_TRUE(ui_meta_values_count(m.values) >= 1);
+}
+
+void test_ui_meta_duplicate_bind_key(void)
+{
+    ui_meta_t m;
+    /* Second bind= should overwrite the first */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=first;bind=second;kind=int", &m));
+    TEST_ASSERT_EQUAL_STRING("second", m.bind_key);
+}
+
+void test_ui_meta_negative_step(void)
+{
+    ui_meta_t m;
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=x;kind=int;step=-5", &m));
+    TEST_ASSERT_TRUE(m.has_step);
+    /* Negative step is stored as-is (step=0 → 1 rule only applies to zero) */
+    TEST_ASSERT_EQUAL_INT(-5, m.step);
+}
+
+void test_ui_meta_unknown_kind_with_values(void)
+{
+    ui_meta_t m;
+    /* Unknown kind but values present → should fallback to ENUM */
+    TEST_ASSERT_TRUE(ui_meta_parse("bind=x;kind=foobar;values=A|B", &m));
+    TEST_ASSERT_EQUAL_INT(UI_META_KIND_ENUM, (int)m.kind);
 }

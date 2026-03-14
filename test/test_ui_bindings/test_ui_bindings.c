@@ -291,3 +291,71 @@ void test_ui_bind_contrast_boundary_adjacent(void)
     TEST_ASSERT_TRUE(ui_bind_get_int("contrast", &val));
     TEST_ASSERT_EQUAL_INT(255, val);
 }
+
+/* ================================================================== */
+/* Additional edge cases                                               */
+/* ================================================================== */
+
+void test_ui_bind_key_at_max_length(void)
+{
+    /* Key exactly 23 chars (BIND_KEY_LEN - 1) should be stored and retrieved */
+    const char *key23 = "abcdefghijklmnopqrstuvw"; /* 23 chars */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int(key23, 777));
+    int val;
+    TEST_ASSERT_TRUE(ui_bind_get_int(key23, &val));
+    TEST_ASSERT_EQUAL_INT(777, val);
+}
+
+void test_ui_bind_long_key_truncated_unretrievable(void)
+{
+    /* Key > 23 chars: slot_alloc truncates via strncpy, but slot_find
+     * compares with strcmp on the full input key.  The truncated stored key
+     * will never match the full lookup key → effectively unretrievable. */
+    const char *longkey = "abcdefghijklmnopqrstuvwAAAA"; /* 27 chars */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int(longkey, 100));
+    /* Cannot retrieve with the original long key */
+    int val = -1;
+    TEST_ASSERT_FALSE(ui_bind_get_int(longkey, &val));
+    /* But CAN retrieve with the truncated form (first 23 chars) */
+    TEST_ASSERT_TRUE(ui_bind_get_int("abcdefghijklmnopqrstuvw", &val));
+    TEST_ASSERT_EQUAL_INT(100, val);
+}
+
+void test_ui_bind_type_crossover_int_then_str(void)
+{
+    /* ival and sval are separate fields in the same slot */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int("cross", 42));
+    char buf[32];
+    /* get_str should find the slot but sval is empty */
+    TEST_ASSERT_TRUE(ui_bind_get_str("cross", buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_STRING("", buf);
+    /* ival should be untouched */
+    int val;
+    TEST_ASSERT_TRUE(ui_bind_get_int("cross", &val));
+    TEST_ASSERT_EQUAL_INT(42, val);
+}
+
+void test_ui_bind_get_str_cap_one(void)
+{
+    /* out_cap=1 → room for only '\0', should return true with empty string */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_str("msg", "hello"));
+    char buf[1] = { 'X' };
+    TEST_ASSERT_TRUE(ui_bind_get_str("msg", buf, 1));
+    TEST_ASSERT_EQUAL_STRING("", buf);
+}
+
+void test_ui_bind_clear_all_then_refill(void)
+{
+    /* Fill all 96 slots, clear, then refill — verifies slot reuse */
+    char key[24];
+    for (int i = 0; i < 96; ++i) {
+        snprintf(key, sizeof(key), "fill%d", i);
+        TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int(key, i));
+    }
+    ui_bind_clear_all();
+    /* All slots freed — can insert again */
+    TEST_ASSERT_EQUAL(ESP_OK, ui_bind_set_int("new_key", 999));
+    int val;
+    TEST_ASSERT_TRUE(ui_bind_get_int("new_key", &val));
+    TEST_ASSERT_EQUAL_INT(999, val);
+}

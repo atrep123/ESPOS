@@ -116,7 +116,9 @@ static void ui_demo_task(void *arg)
 
     QueueHandle_t q = bus_make_queue(8);
     if (q) {
-        bus_subscribe(TOP_INPUT_BTN, q);
+        if (bus_subscribe(TOP_INPUT_BTN, q) != ESP_OK) {
+            ESP_LOGE(TAG, "bus_subscribe failed");
+        }
     }
 
     int t = 0;
@@ -269,5 +271,10 @@ void ui_demo_start(void)
     if (s_demo_task != NULL) {
         return;
     }
-    xTaskCreate(ui_demo_task, "ui_demo", 4096, NULL, 5, &s_demo_task);
+    /* 4096 bytes: demo render loop — framebuffer + widget tree traversal */
+    BaseType_t rc = xTaskCreate(ui_demo_task, "ui_demo", 4096, NULL, 5, &s_demo_task);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "demo task creation failed");
+        s_demo_task = NULL;
+    }
 }

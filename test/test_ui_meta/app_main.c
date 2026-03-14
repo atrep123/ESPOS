@@ -20,6 +20,11 @@ void test_ui_meta_parse_prefix(void);
 void test_ui_meta_parse_precision(void);
 void test_ui_meta_parse_scale(void);
 void test_ui_meta_combined_formatting_fields(void);
+void test_ui_meta_bind_key_truncation(void);
+void test_ui_meta_values_truncation(void);
+void test_ui_meta_duplicate_bind_key(void);
+void test_ui_meta_negative_step(void);
+void test_ui_meta_unknown_kind_with_values(void);
 
 void app_main(void)
 {
@@ -42,6 +47,11 @@ void app_main(void)
     RUN_TEST(test_ui_meta_parse_precision);
     RUN_TEST(test_ui_meta_parse_scale);
     RUN_TEST(test_ui_meta_combined_formatting_fields);
+    RUN_TEST(test_ui_meta_bind_key_truncation);
+    RUN_TEST(test_ui_meta_values_truncation);
+    RUN_TEST(test_ui_meta_duplicate_bind_key);
+    RUN_TEST(test_ui_meta_negative_step);
+    RUN_TEST(test_ui_meta_unknown_kind_with_values);
     UNITY_END();
 }
 
@@ -65,6 +75,11 @@ void test_ui_meta_parse_prefix(void);
 void test_ui_meta_parse_precision(void);
 void test_ui_meta_parse_scale(void);
 void test_ui_meta_combined_formatting_fields(void);
+void test_ui_meta_bind_key_truncation(void);
+void test_ui_meta_values_truncation(void);
+void test_ui_meta_duplicate_bind_key(void);
+void test_ui_meta_negative_step(void);
+void test_ui_meta_unknown_kind_with_values(void);
 
 int main(void)
 {
@@ -87,6 +102,11 @@ int main(void)
     RUN_TEST(test_ui_meta_parse_precision);
     RUN_TEST(test_ui_meta_parse_scale);
     RUN_TEST(test_ui_meta_combined_formatting_fields);
+    RUN_TEST(test_ui_meta_bind_key_truncation);
+    RUN_TEST(test_ui_meta_values_truncation);
+    RUN_TEST(test_ui_meta_duplicate_bind_key);
+    RUN_TEST(test_ui_meta_negative_step);
+    RUN_TEST(test_ui_meta_unknown_kind_with_values);
     return UNITY_END();
 }
 

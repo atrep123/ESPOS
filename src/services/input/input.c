@@ -13,6 +13,7 @@
 #include "seesaw.h"
 
 static const char *TAG = "input";
+static TaskHandle_t s_input_task = NULL;
 
 /* Maximum encoder delta accepted per poll — clamps sensor glitches and
  * prevents -INT32_MIN overflow when inverting direction. */
@@ -23,11 +24,7 @@ typedef struct {
     uint8_t id;
 } input_btn_cfg_t;
 
-typedef struct {
-    int stable; /* raw gpio level */
-    int last;   /* raw gpio level */
-    int cnt;
-} input_btn_state_t;
+/* input_btn_state_t is defined in input.h */
 
 static int input_is_used_pin(int pin)
 {
@@ -211,28 +208,8 @@ typedef struct {
     uint8_t ccw_id[4];
 } input_seesaw_quad_t;
 
-static int input_axis_update(int value, int center, int deadzone, int hyst, int *state)
-{
-    int s = *state;
-    if (s < 0) {
-        if (value >= (center - deadzone + hyst)) {
-            s = 0;
-        }
-    } else if (s > 0) {
-        if (value <= (center + deadzone - hyst)) {
-            s = 0;
-        }
-    } else {
-        if (value <= (center - deadzone)) {
-            s = -1;
-        } else if (value >= (center + deadzone)) {
-            s = 1;
-        }
-    }
-    int changed = (s != *state);
-    *state = s;
-    return changed;
-}
+/* input_debounce_update, input_encoder_step, input_axis_update
+ * are implemented in input_logic.c (pure functions, no HW deps). */
 
 static void input_publish_axis_lr(int old_s, int new_s)
 {
@@ -615,17 +592,7 @@ static void input_task(void *arg)
             }
 
             int v = input_read_level(pin);
-            if (v != st[i].stable) {
-                st[i].cnt += 1;
-                if (st[i].cnt >= INPUT_DEBOUNCE_SAMPLES) {
-                    st[i].stable = v;
-                    st[i].cnt = 0;
-                }
-            } else {
-                st[i].cnt = 0;
-            }
-
-            if (st[i].stable != st[i].last) {
+            if (input_debounce_update(&st[i], v, INPUT_DEBOUNCE_SAMPLES)) {
                 int pressed = input_level_to_pressed(st[i].stable);
                 input_publish_btn(btns[i].id, pressed);
 
@@ -643,7 +610,6 @@ static void input_task(void *arg)
                     }
                 }
 
-                st[i].last = st[i].stable;
             }
         }
 
@@ -657,33 +623,17 @@ static void input_task(void *arg)
         }
 
         if (input_has_encoder()) {
-            static const int8_t trans[16] = {
-                0, -1, +1, 0,
-                +1, 0, 0, -1,
-                -1, 0, 0, +1,
-                0, +1, -1, 0,
-            };
             int a = input_read_level(INPUT_PIN_ENC_A);
             int b = input_read_level(INPUT_PIN_ENC_B);
 #if INPUT_ACTIVE_LOW
             a = a ? 0 : 1;
             b = b ? 0 : 1;
 #endif
-            uint8_t ab = (uint8_t)((a << 1) | b);
-            uint8_t idx = (uint8_t)(((enc_prev_ab & 0x03) << 2) | (ab & 0x03));
-            int8_t step = trans[idx];
-            if (step != 0) {
-                enc_accum += (int)step;
-                enc_prev_ab = ab;
-                if (enc_accum >= 4) {
-                    input_publish_btn(INPUT_ID_ENC_CW, 1);
-                    enc_accum = 0;
-                } else if (enc_accum <= -4) {
-                    input_publish_btn(INPUT_ID_ENC_CCW, 1);
-                    enc_accum = 0;
-                }
-            } else {
-                enc_prev_ab = ab;
+            int detent = input_encoder_step(&enc_prev_ab, &enc_accum, a, b);
+            if (detent > 0) {
+                input_publish_btn(INPUT_ID_ENC_CW, 1);
+            } else if (detent < 0) {
+                input_publish_btn(INPUT_ID_ENC_CCW, 1);
             }
         }
 
@@ -703,10 +653,25 @@ static void input_task(void *arg)
     }
 }
 
-void input_start(void)
+esp_err_t input_start(void)
 {
-    BaseType_t rc = xTaskCreatePinnedToCore(input_task, "in", 2048, NULL, 5, NULL, 0);
+    if (s_input_task != NULL) {
+        return ESP_OK;
+    }
+    /* 2048 bytes: polls I2C peripherals + posts input events to msgbus */
+    BaseType_t rc = xTaskCreatePinnedToCore(input_task, "in", 2048, NULL, 5, &s_input_task, 0);
     if (rc != pdPASS) {
         ESP_LOGE(TAG, "input task creation failed");
+        s_input_task = NULL;
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}
+
+void input_stop(void)
+{
+    if (s_input_task != NULL) {
+        vTaskDelete(s_input_task);
+        s_input_task = NULL;
     }
 }

@@ -6,10 +6,18 @@
 
 void test_swbuf_clear_marks_full_dirty(void);
 void test_swbuf_mark_dirty_merges_regions(void);
+void test_swbuf_init_null_buf_no_crash(void);
+void test_swbuf_init_null_mem_no_crash(void);
+void test_swbuf_clear_null_buf_no_crash(void);
+void test_swbuf_clear_null_data_no_crash(void);
 
 void app_main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_swbuf_init_null_buf_no_crash);
+    RUN_TEST(test_swbuf_init_null_mem_no_crash);
+    RUN_TEST(test_swbuf_clear_null_buf_no_crash);
+    RUN_TEST(test_swbuf_clear_null_data_no_crash);
     RUN_TEST(test_swbuf_clear_marks_full_dirty);
     RUN_TEST(test_swbuf_mark_dirty_merges_regions);
     UNITY_END();
@@ -23,6 +31,10 @@ void test_render_label_overflow_ellipsis_truncates(void);
 void test_render_label_overflow_clip_truncates_without_ellipsis(void);
 void test_render_label_overflow_wrap_wraps_and_ellipsizes_last_line(void);
 void test_render_checkbox_overflow_clip_truncates_without_ellipsis(void);
+void test_swbuf_init_null_buf_no_crash(void);
+void test_swbuf_init_null_mem_no_crash(void);
+void test_swbuf_clear_null_buf_no_crash(void);
+void test_swbuf_clear_null_data_no_crash(void);
 #if DISPLAY_COLOR_BITS == 4
 void test_swbuf_flush_dirty_gray4_aligns_x_to_columns(void);
 void test_swbuf_flush_gray4_full_sends_all_rows(void);
@@ -83,11 +95,31 @@ void test_render_textbox_tiny_no_text(void);
 void test_render_slider_narrow_no_crash(void);
 void test_render_chart_small_no_crash(void);
 void test_render_icon_tiny_no_text(void);
+void test_swbuf_flush_ssd1363_begin_frame_params(void);
+void test_swbuf_flush_ssd1363_sends_correct_bytes(void);
+void test_swbuf_flush_ssd1363_sends_buffer_content(void);
+void test_swbuf_clear_with_midrange_color(void);
+void test_swbuf_hline_zero_width_no_dirty(void);
+void test_swbuf_fill_rect_fully_outside_no_dirty(void);
+void test_swbuf_vline_zero_height_no_dirty(void);
+void test_swbuf_blit_mono_fully_outside_no_dirty(void);
+void test_swbuf_fill_rect_zero_size_no_crash(void);
+void test_swbuf_fill_rect_negative_origin_clipped(void);
+void test_render_scene_zero_widgets(void);
+void test_swbuf_blit_mono_stride_too_large_rejected(void);
+void test_render_all_types_null_text_no_crash(void);
+void test_render_all_types_zero_dims_no_crash(void);
+void test_render_degenerate_range_no_crash(void);
+void test_render_value_overflow_no_crash(void);
 #endif
 
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_swbuf_init_null_buf_no_crash);
+    RUN_TEST(test_swbuf_init_null_mem_no_crash);
+    RUN_TEST(test_swbuf_clear_null_buf_no_crash);
+    RUN_TEST(test_swbuf_clear_null_data_no_crash);
     RUN_TEST(test_swbuf_clear_marks_full_dirty);
     RUN_TEST(test_swbuf_mark_dirty_merges_regions);
     RUN_TEST(test_render_label_overflow_ellipsis_truncates);
@@ -154,6 +186,22 @@ int main(void)
     RUN_TEST(test_render_slider_narrow_no_crash);
     RUN_TEST(test_render_chart_small_no_crash);
     RUN_TEST(test_render_icon_tiny_no_text);
+    RUN_TEST(test_swbuf_flush_ssd1363_begin_frame_params);
+    RUN_TEST(test_swbuf_flush_ssd1363_sends_correct_bytes);
+    RUN_TEST(test_swbuf_flush_ssd1363_sends_buffer_content);
+    RUN_TEST(test_swbuf_clear_with_midrange_color);
+    RUN_TEST(test_swbuf_hline_zero_width_no_dirty);
+    RUN_TEST(test_swbuf_fill_rect_fully_outside_no_dirty);
+    RUN_TEST(test_swbuf_vline_zero_height_no_dirty);
+    RUN_TEST(test_swbuf_blit_mono_fully_outside_no_dirty);
+    RUN_TEST(test_swbuf_fill_rect_zero_size_no_crash);
+    RUN_TEST(test_swbuf_fill_rect_negative_origin_clipped);
+    RUN_TEST(test_render_scene_zero_widgets);
+    RUN_TEST(test_swbuf_blit_mono_stride_too_large_rejected);
+    RUN_TEST(test_render_all_types_null_text_no_crash);
+    RUN_TEST(test_render_all_types_zero_dims_no_crash);
+    RUN_TEST(test_render_degenerate_range_no_crash);
+    RUN_TEST(test_render_value_overflow_no_crash);
 #endif
     return UNITY_END();
 }

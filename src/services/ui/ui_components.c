@@ -148,6 +148,43 @@ bool ui_components_set_prefix_visible(
     return any;
 }
 
+bool ui_components_select_radiobutton(
+    UiScene *scene,
+    int idx,
+    ui_components_dirty_add_fn_t dirty_add,
+    void *dirty_ctx
+)
+{
+    if (scene == NULL || scene->widgets == NULL) {
+        return false;
+    }
+    if (idx < 0 || (uint16_t)idx >= scene->widget_count) {
+        return false;
+    }
+    if ((UiWidgetType)scene->widgets[idx].type != UIW_RADIOBUTTON) {
+        return false;
+    }
+
+    bool any = false;
+    for (uint16_t i = 0; i < scene->widget_count; ++i) {
+        UiWidget *rw = (UiWidget *)&scene->widgets[i];
+        if ((UiWidgetType)rw->type != UIW_RADIOBUTTON) {
+            continue;
+        }
+        uint8_t desired = (i == (uint16_t)idx) ? 1 : 0;
+        if (rw->checked == desired) {
+            continue;
+        }
+        rw->checked = desired;
+        any = true;
+        if (dirty_add != NULL) {
+            dirty_add(dirty_ctx, (int)rw->x, (int)rw->y,
+                      (int)rw->width, (int)rw->height);
+        }
+    }
+    return any;
+}
+
 bool ui_components_sync_active_from_focus(
     UiScene *scene,
     int focus_idx,

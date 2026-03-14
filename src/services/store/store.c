@@ -27,6 +27,17 @@ static SemaphoreHandle_t s_store_mtx;
 #define STORE_LOCK()   do { if (s_store_mtx) xSemaphoreTake(s_store_mtx, portMAX_DELAY); } while (0)
 #define STORE_UNLOCK() do { if (s_store_mtx) xSemaphoreGive(s_store_mtx); } while (0)
 
+void store_deinit(void)
+{
+    STORE_LOCK();
+    s_inited = false;
+    STORE_UNLOCK();
+    if (s_store_mtx != NULL) {
+        vSemaphoreDelete(s_store_mtx);
+        s_store_mtx = NULL;
+    }
+}
+
 esp_err_t store_init(store_conf_t *out)
 {
     if (out == NULL) {
@@ -34,7 +45,9 @@ esp_err_t store_init(store_conf_t *out)
     }
 
     if (s_inited) {
+        STORE_LOCK();
         *out = g_conf;
+        STORE_UNLOCK();
         return ESP_OK;
     }
 
@@ -42,6 +55,7 @@ esp_err_t store_init(store_conf_t *out)
         s_store_mtx = xSemaphoreCreateMutex();
         if (s_store_mtx == NULL) {
             ESP_LOGE(TAG, "mutex creation failed");
+            return ESP_ERR_NO_MEM;
         }
     }
 
@@ -81,9 +95,15 @@ esp_err_t store_init(store_conf_t *out)
     }
 
     nvs_close(h);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "NVS default write failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
     s_inited = true;
     *out = g_conf;
-    return err;
+    return ESP_OK;
 }
 
 esp_err_t store_get_conf(store_conf_t *out)

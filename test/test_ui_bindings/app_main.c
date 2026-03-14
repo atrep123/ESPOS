@@ -29,6 +29,11 @@ void test_ui_bind_set_str_empty_key(void);
 void test_ui_bind_get_str_small_buf(void);
 void test_ui_bind_int_negative_value(void);
 void test_ui_bind_contrast_boundary_adjacent(void);
+void test_ui_bind_key_at_max_length(void);
+void test_ui_bind_long_key_truncated_unretrievable(void);
+void test_ui_bind_type_crossover_int_then_str(void);
+void test_ui_bind_get_str_cap_one(void);
+void test_ui_bind_clear_all_then_refill(void);
 
 int main(void)
 {
@@ -52,6 +57,11 @@ int main(void)
     RUN_TEST(test_ui_bind_get_str_small_buf);
     RUN_TEST(test_ui_bind_int_negative_value);
     RUN_TEST(test_ui_bind_contrast_boundary_adjacent);
+    RUN_TEST(test_ui_bind_key_at_max_length);
+    RUN_TEST(test_ui_bind_long_key_truncated_unretrievable);
+    RUN_TEST(test_ui_bind_type_crossover_int_then_str);
+    RUN_TEST(test_ui_bind_get_str_cap_one);
+    RUN_TEST(test_ui_bind_clear_all_then_refill);
     return UNITY_END();
 }
 
