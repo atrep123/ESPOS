@@ -335,7 +335,11 @@ def validate_data(
                     all_int = False
             if not all_int:
                 continue
-            x, y, ww, hh = int(x), int(y), int(ww), int(hh)  # type: ignore[arg-type]
+            xi = int(x)
+            yi = int(y)
+            wwi = int(ww)
+            hhi = int(hh)
+            x, y, ww, hh = xi, yi, wwi, hhi
 
             # ── Rule 3: Positive dimensions ──
             if ww < 1 or hh < 1:
@@ -1481,8 +1485,8 @@ def validate_data(
                 continue
             gx, gy, gw, gh = w.get("x"), w.get("y"), w.get("width"), w.get("height")
             if _is_int(gx) and _is_int(gy) and _is_int(gw) and _is_int(gh):
-                key = (int(gx), int(gy), int(gw), int(gh))
-                geo_map.setdefault(key, []).append(idx)
+                geo_key = (int(gx), int(gy), int(gw), int(gh))
+                geo_map.setdefault(geo_key, []).append(idx)
         for geo, indices in geo_map.items():
             if len(indices) >= 2:
                 refs = ", ".join(str(i) for i in indices)

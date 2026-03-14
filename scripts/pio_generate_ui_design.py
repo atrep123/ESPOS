@@ -11,6 +11,7 @@ Env overrides:
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import sys
@@ -94,8 +95,8 @@ def _main() -> None:
     # Optional pre-flight validation (ESP32OS_UI_VALIDATE=1)
     validate_flag = os.environ.get("ESP32OS_UI_VALIDATE", "0").strip().lower()
     if validate_flag in {"1", "true", "on", "yes"}:
-        from tools.validate_design import validate_file
-
+        validate_module = importlib.import_module("tools.validate_design")
+        validate_file = validate_module.validate_file
         issues = validate_file(json_path, warnings_as_errors=False)
         errors = [i for i in issues if i.level == "ERROR"]
         if errors:
