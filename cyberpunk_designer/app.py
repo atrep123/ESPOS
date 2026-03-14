@@ -42,6 +42,7 @@ from . import (
     text_metrics,
     windowing,
 )
+from . import constants as _constants
 from .component_fields import component_field_specs
 from .components import component_blueprints
 from .constants import (
@@ -72,6 +73,9 @@ from .constants import (
 from .inspector_logic import compute_inspector_rows, inspector_commit_edit, inspector_field_to_str
 from .perf import RenderCache, compute_dirty_rects
 from .state import EditorState
+
+# Backward-compatible module symbol used by tests and legacy monkeypatches.
+PROFILE_ORDER = _constants.PROFILE_ORDER
 
 
 class CyberpunkEditorApp:
