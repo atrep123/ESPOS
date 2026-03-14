@@ -138,7 +138,7 @@ class TestWrapTextCharsEdges:
 
 class TestPruneDegenerateNone:
     def test_no_degenerate_widgets(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import remove_degenerate_widgets
+        from cyberpunk_designer.selection_ops import remove_degenerate_widgets
 
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
@@ -154,7 +154,7 @@ class TestPruneDegenerateNone:
 
 class TestAssignToParentPanel:
     def test_child_enclosed_by_panel(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import fill_parent
+        from cyberpunk_designer.selection_ops import fill_parent
 
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()

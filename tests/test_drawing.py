@@ -9,12 +9,37 @@ from types import SimpleNamespace
 
 import pygame
 
-from cyberpunk_designer.constants import PALETTE
+from cyberpunk_designer.constants import (
+    PALETTE,
+    SHADE_BTN_FILL,
+    SHADE_BTN_FILL_PRESS,
+    SHADE_BTN_HOVER,
+    SHADE_GRID_CANVAS,
+    SHADE_GRID_H,
+    SHADE_GRID_V,
+    SHADE_HOVER,
+    SHADE_NORMAL,
+    SHADE_PALETTE_HOVER,
+    SHADE_PRESSED,
+    SHADE_SCANLINE,
+    SHADE_SEL_FILL,
+    SHADE_SHADOW,
+    SHADE_THUMB,
+    SHADE_THUMB_BORDER,
+    SHADE_TITLE_SHADOW,
+    SHADE_TOOLBAR_DARK,
+    SHADE_TOOLBAR_LIGHT,
+    SHADE_TOOLBAR_SEP,
+    SHADE_TRACK,
+    SHADE_WIDGET_BG_OFF,
+    SHADE_WIDGET_HOVER,
+    SHADE_WIDGET_PRESS,
+)
 from cyberpunk_designer.drawing import (
-    _draw_dashed_rect,
     draw_bevel_frame,
     draw_border_style,
     draw_context_menu,
+    draw_dashed_rect,
     draw_frame,
     draw_help_overlay,
     draw_overflow_marker,
@@ -92,7 +117,7 @@ class TestTextWidthPx:
 
     def test_broken_font(self):
         app = SimpleNamespace(
-            pixel_font=SimpleNamespace(size=lambda t: (_ for _ in ()).throw(RuntimeError))
+            pixel_font=SimpleNamespace(size=lambda t: (_ for _ in ()).throw(TypeError))
         )
         assert text_width_px(app, "abc") == 0
 
@@ -189,23 +214,23 @@ class TestWrapTextPx:
 
 
 # ---------------------------------------------------------------------------
-# _draw_dashed_rect
+# draw_dashed_rect
 # ---------------------------------------------------------------------------
 
 
 class TestDrawDashedRect:
     def test_basic(self):
         surface = pygame.Surface((100, 100))
-        _draw_dashed_rect(surface, (255, 255, 255), pygame.Rect(10, 10, 50, 50))
+        draw_dashed_rect(surface, (255, 255, 255), pygame.Rect(10, 10, 50, 50))
         # No crash; just verify it runs
 
     def test_small_rect(self):
         surface = pygame.Surface((20, 20))
-        _draw_dashed_rect(surface, (128, 128, 128), pygame.Rect(0, 0, 5, 5), dash=1, gap=1)
+        draw_dashed_rect(surface, (128, 128, 128), pygame.Rect(0, 0, 5, 5), dash=1, gap=1)
 
     def test_zero_rect(self):
         surface = pygame.Surface((10, 10))
-        _draw_dashed_rect(surface, (255, 0, 0), pygame.Rect(0, 0, 0, 0))
+        draw_dashed_rect(surface, (255, 0, 0), pygame.Rect(0, 0, 0, 0))
 
 
 # ---------------------------------------------------------------------------
@@ -1083,3 +1108,138 @@ class TestDrawWidgetPreviewTypes:
         self._draw(
             self._app(tmp_path, monkeypatch), "label", color_fg="#ffffff", color_bg="#333333"
         )
+
+
+# ---------------------------------------------------------------------------
+# LIST widget rendering
+# ---------------------------------------------------------------------------
+
+
+class TestDrawWidgetPreviewList:
+    def _app(self, tmp_path, monkeypatch):
+        return _make_app(tmp_path, monkeypatch)
+
+    def _draw(self, app, **kw):
+        from cyberpunk_designer.drawing import draw_widget_preview
+
+        defaults = dict(type="list", x=0, y=0, width=80, height=48, text="A\nB\nC")
+        defaults.update(kw)
+        w = WidgetConfig(**defaults)
+        draw_widget_preview(
+            app,
+            app.logical_surface,
+            w,
+            pygame.Rect(0, 0, defaults["width"], defaults["height"]),
+            PALETTE["bg"],
+            2,
+            False,
+        )
+
+    def test_list_multi_items(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), text="Foo\nBar\nBaz\nQux")
+
+    def test_list_active_index(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), text="A\nB\nC", value=1)
+
+    def test_list_scroll(self, tmp_path, monkeypatch):
+        self._draw(
+            self._app(tmp_path, monkeypatch),
+            text="A\nB\nC\nD\nE\nF\nG\nH",
+            height=24,
+            value=5,
+            min_value=3,
+        )
+
+    def test_list_empty(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), text="")
+
+    def test_list_single_item(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), text="Only")
+
+    def test_list_no_scrollbar(self, tmp_path, monkeypatch):
+        """When items fit in view, no scrollbar is drawn."""
+        self._draw(self._app(tmp_path, monkeypatch), text="A\nB", height=60)
+
+
+# ---------------------------------------------------------------------------
+# TOGGLE widget rendering
+# ---------------------------------------------------------------------------
+
+
+class TestDrawWidgetPreviewToggle:
+    def _app(self, tmp_path, monkeypatch):
+        return _make_app(tmp_path, monkeypatch)
+
+    def _draw(self, app, **kw):
+        from cyberpunk_designer.drawing import draw_widget_preview
+
+        defaults = dict(type="toggle", x=0, y=0, width=80, height=14, text="WiFi")
+        defaults.update(kw)
+        w = WidgetConfig(**defaults)
+        draw_widget_preview(
+            app,
+            app.logical_surface,
+            w,
+            pygame.Rect(0, 0, defaults["width"], defaults["height"]),
+            PALETTE["bg"],
+            2,
+            False,
+        )
+
+    def test_toggle_checked(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), checked=True)
+
+    def test_toggle_unchecked(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), checked=False)
+
+    def test_toggle_with_label(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), text="Bluetooth", checked=True)
+
+    def test_toggle_no_label(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), text="")
+
+    def test_toggle_narrow(self, tmp_path, monkeypatch):
+        """Toggle that is too narrow for label — should not crash."""
+        self._draw(self._app(tmp_path, monkeypatch), text="LongLabel", width=20, height=10)
+
+    def test_toggle_tall(self, tmp_path, monkeypatch):
+        self._draw(self._app(tmp_path, monkeypatch), width=120, height=40)
+
+
+# ===================================================================
+# BP — shade constants validation
+# ===================================================================
+
+_POSITIVE_SHADES = [
+    SHADE_SCANLINE, SHADE_GRID_V, SHADE_THUMB, SHADE_HOVER,
+    SHADE_NORMAL, SHADE_TOOLBAR_LIGHT, SHADE_TOOLBAR_SEP,
+    SHADE_PALETTE_HOVER, SHADE_BTN_HOVER, SHADE_WIDGET_HOVER,
+    SHADE_GRID_CANVAS,
+]
+_NEGATIVE_SHADES = [
+    SHADE_GRID_H, SHADE_TRACK, SHADE_THUMB_BORDER, SHADE_PRESSED,
+    SHADE_SHADOW, SHADE_TOOLBAR_DARK, SHADE_TITLE_SHADOW,
+    SHADE_BTN_FILL_PRESS, SHADE_BTN_FILL, SHADE_SEL_FILL,
+    SHADE_WIDGET_BG_OFF, SHADE_WIDGET_PRESS,
+]
+
+
+class TestShadeConstants:
+    def test_positive_shades_are_positive(self):
+        for val in _POSITIVE_SHADES:
+            assert val > 0, f"Expected positive shade, got {val}"
+
+    def test_negative_shades_are_negative(self):
+        for val in _NEGATIVE_SHADES:
+            assert val < 0, f"Expected negative shade, got {val}"
+
+    def test_hover_brighter_than_normal(self):
+        assert SHADE_HOVER > SHADE_NORMAL
+
+    def test_pressed_darker_than_shadow(self):
+        assert SHADE_PRESSED < SHADE_SHADOW
+
+    def test_all_shades_in_range(self):
+        all_shades = _POSITIVE_SHADES + _NEGATIVE_SHADES
+        for val in all_shades:
+            assert -255 <= val <= 255, f"Shade {val} out of 8-bit range"

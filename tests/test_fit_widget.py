@@ -344,3 +344,87 @@ class TestFitWidgetDeep:
         fit_selection_to_widget(app)
         status_calls = [str(c) for c in app._set_status.call_args_list]
         assert any("empty" in s.lower() or "text" in s.lower() for s in status_calls)
+
+
+# ---------------------------------------------------------------------------
+# LIST widget fitting
+# ---------------------------------------------------------------------------
+
+
+class TestFitWidgetList:
+    def test_list_device_shrinks_height(self):
+        """LIST with 3 items in a tall box should shrink height to fit content."""
+        w = _w("list", text="A\nB\nC", width=80, height=100, items=["A", "B", "C"])
+        app = _app([w], profile="esp32os_256x128_gray4")
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].height < 100
+
+    def test_list_device_width_fits_longest(self):
+        """LIST width should fit the longest item."""
+        w = _w(
+            "list",
+            text="Short\nVeryLongItemName\nMed",
+            width=20,
+            height=40,
+            items=["Short", "VeryLongItemName", "Med"],
+        )
+        app = _app([w], profile="esp32os_256x128_gray4")
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].width > 20
+
+    def test_list_pixel_font(self):
+        """LIST fitting via pixel font path (no device profile)."""
+        w = _w("list", text="Foo\nBar\nBaz", width=200, height=100, items=["Foo", "Bar", "Baz"])
+        app = _app([w], profile=None, char_w=7, line_h=12)
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].height < 100
+
+    def test_list_empty_items_from_text(self):
+        """LIST with only text (no items attr) should parse items from newlines."""
+        w = _w("list", text="X\nY", width=200, height=100)
+        app = _app([w], profile="esp32os_256x128_gray4")
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].height < 100
+
+
+# ---------------------------------------------------------------------------
+# TOGGLE widget fitting
+# ---------------------------------------------------------------------------
+
+
+class TestFitWidgetToggle:
+    def test_toggle_device_shrinks(self):
+        """TOGGLE with short label should shrink from large box."""
+        w = _w("toggle", text="On", width=200, height=100)
+        app = _app([w], profile="esp32os_256x128_gray4")
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].width < 200
+        assert sc.widgets[0].height < 100
+
+    def test_toggle_pixel_font(self):
+        """TOGGLE fitting via pixel font path."""
+        w = _w("toggle", text="WiFi", width=200, height=100)
+        app = _app([w], profile=None, char_w=7, line_h=12)
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].width < 200
+
+    def test_toggle_no_label(self):
+        """TOGGLE with empty label should still produce valid size (track only)."""
+        w = _w("toggle", text="", width=200, height=100)
+        # Empty text is skipped by fit_widget, so it should remain unchanged
+        app = _app([w], profile="esp32os_256x128_gray4")
+        app.state.selected = [0]
+        fit_selection_to_widget(app)
+        # No crash — empty text is skipped

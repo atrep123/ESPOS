@@ -262,7 +262,7 @@ class TestDispatchEventSubPaths:
         # text attr that raises on str()
         class BadText:
             def __str__(self):
-                raise RuntimeError("bad")
+                raise TypeError("bad")
 
         ev = SimpleNamespace(type=pygame.TEXTINPUT, text=BadText())
         app._dispatch_event(ev)

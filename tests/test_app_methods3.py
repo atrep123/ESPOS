@@ -612,10 +612,10 @@ class TestAddWidget:
 
     def test_unknown_kind(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
+        before = len(app.state.current_scene().widgets)
         app._add_widget("nonexistent")
-        sc = app.state.current_scene()
-        # Should still add, just with generic defaults
-        assert sc.widgets[-1].type == "nonexistent"
+        # Unknown type is rejected — no widget added
+        assert len(app.state.current_scene().widgets) == before
 
     def test_selects_new_widget(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -841,3 +841,299 @@ class TestComponentInfoFromGroupExtended:
     def test_comp_two_parts_no_type(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         assert app._component_info_from_group("comp::") is None
+
+
+# ===================================================================
+# BD – _coalesce_motion_and_wheel
+# ===================================================================
+
+
+class TestCoalesceMotionAndWheel:
+    """Only the *last* MOUSEMOTION and MOUSEWHEEL per frame survive."""
+
+    def test_multiple_motions_keep_last(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        evs = [
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(1, 1), buttons=(0, 0, 0)),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(2, 2), buttons=(0, 0, 0)),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(3, 3), buttons=(0, 0, 0)),
+        ]
+        out = app._coalesce_motion_and_wheel(evs)
+        motions = [e for e in out if e.type == pygame.MOUSEMOTION]
+        assert len(motions) == 1
+        assert motions[0].pos == (3, 3)
+
+    def test_multiple_wheels_keep_last(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        evs = [
+            pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1),
+            pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1),
+        ]
+        out = app._coalesce_motion_and_wheel(evs)
+        wheels = [e for e in out if e.type == pygame.MOUSEWHEEL]
+        assert len(wheels) == 1
+        assert wheels[0].y == -1
+
+    def test_non_motion_events_pass_through(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        kd = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, mod=0)
+        evs = [kd]
+        out = app._coalesce_motion_and_wheel(evs)
+        assert len(out) == 1
+        assert out[0].type == pygame.KEYDOWN
+
+    def test_empty_input(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        assert app._coalesce_motion_and_wheel([]) == []
+
+    def test_mixed_events_preserves_order(self, tmp_path, monkeypatch):
+        """Non-motion events stay ordered; motion/wheel go to the end."""
+        app = _make_app(tmp_path, monkeypatch)
+        k1 = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, mod=0)
+        m1 = pygame.event.Event(pygame.MOUSEMOTION, pos=(5, 5), buttons=(0, 0, 0))
+        k2 = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_b, mod=0)
+        out = app._coalesce_motion_and_wheel([k1, m1, k2])
+        # k1, k2 first, then the motion at the end
+        assert out[0].type == pygame.KEYDOWN
+        assert out[1].type == pygame.KEYDOWN
+        assert out[2].type == pygame.MOUSEMOTION
+
+
+# ===================================================================
+# BD – _dedupe_keydowns
+# ===================================================================
+
+
+class TestDedupeKeydowns:
+    """Only the first KEYDOWN per key survives in a single frame batch."""
+
+    def test_duplicate_key_dropped(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        evs = [
+            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, mod=0),
+            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, mod=0),
+        ]
+        out = app._dedupe_keydowns(evs)
+        kds = [e for e in out if e.type == pygame.KEYDOWN]
+        assert len(kds) == 1
+
+    def test_different_keys_both_kept(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        evs = [
+            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, mod=0),
+            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_b, mod=0),
+        ]
+        out = app._dedupe_keydowns(evs)
+        assert len(out) == 2
+
+    def test_repeat_flag_dropped(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        evs = [
+            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_x, mod=0, repeat=True),
+        ]
+        out = app._dedupe_keydowns(evs)
+        kds = [e for e in out if e.type == pygame.KEYDOWN]
+        assert len(kds) == 0
+
+    def test_non_keydown_passes_through(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        evs = [
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(1, 1), buttons=(0, 0, 0)),
+        ]
+        out = app._dedupe_keydowns(evs)
+        assert len(out) == 1
+
+    def test_empty_input(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        assert app._dedupe_keydowns([]) == []
+
+
+# ===================================================================
+# BD – _dispatch_event: QUIT double-confirm
+# ===================================================================
+
+
+class TestDispatchQuit:
+    """QUIT requires double-press when there are dirty scenes."""
+
+    def test_quit_clean_exits_immediately(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app._dirty_scenes.clear()
+        ev = pygame.event.Event(pygame.QUIT)
+        app._dispatch_event(ev)
+        assert app.running is False
+
+    def test_quit_dirty_first_press_warns(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app._dirty_scenes.add("main")
+        app._quit_confirm_ts = 0.0
+        ev = pygame.event.Event(pygame.QUIT)
+        app._dispatch_event(ev)
+        # First press: still running, status message set
+        assert app.running is True
+        assert "Unsaved" in app.dialog_message
+
+    def test_quit_dirty_second_press_exits(self, tmp_path, monkeypatch):
+        import time as _time
+
+        app = _make_app(tmp_path, monkeypatch)
+        app._dirty_scenes.add("main")
+        # Simulate first press happened recently (within 3s)
+        app._quit_confirm_ts = _time.time()
+        ev = pygame.event.Event(pygame.QUIT)
+        app._dispatch_event(ev)
+        assert app.running is False
+
+
+# ===================================================================
+# BD – _dispatch_event: VIDEORESIZE
+# ===================================================================
+
+
+class TestDispatchVideoResize:
+    def test_videoresize_calls_handler(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        called = {}
+
+        def fake_resize(a, w, h):
+            called["w"] = w
+            called["h"] = h
+
+        import cyberpunk_designer.app as app_mod
+
+        monkeypatch.setattr(app_mod.windowing, "handle_video_resize", fake_resize)
+        ev = pygame.event.Event(pygame.VIDEORESIZE, w=800, h=600)
+        app._dispatch_event(ev)
+        assert called == {"w": 800, "h": 600}
+
+
+# ===================================================================
+# BD – _dispatch_event: MOUSEWHEEL edge cases
+# ===================================================================
+
+
+class TestDispatchMouseWheel:
+    def test_mousewheel_non_numeric_attrs(self, tmp_path, monkeypatch):
+        """MOUSEWHEEL with non-numeric x/y shouldn't crash."""
+        app = _make_app(tmp_path, monkeypatch)
+        called = []
+        app._on_mouse_wheel = lambda dx, dy: called.append((dx, dy))
+        ev = pygame.event.Event(pygame.MOUSEWHEEL, x="bad", y="bad")
+        app._dispatch_event(ev)
+        assert called == [(0, 0)]
+
+    def test_mousewheel_missing_attrs(self, tmp_path, monkeypatch):
+        """MOUSEWHEEL with missing x/y defaults to 0."""
+        app = _make_app(tmp_path, monkeypatch)
+        called = []
+        app._on_mouse_wheel = lambda dx, dy: called.append((dx, dy))
+        ev = pygame.event.Event(pygame.MOUSEWHEEL)
+        app._dispatch_event(ev)
+        assert called == [(0, 0)]
+
+
+# ===================================================================
+# BD – _dispatch_event: TEXTINPUT edge cases
+# ===================================================================
+
+
+class TestDispatchTextInput:
+    def test_textinput_normal(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        called = []
+        app._on_text_input = lambda t: called.append(t)
+        ev = pygame.event.Event(pygame.TEXTINPUT, text="abc")
+        app._dispatch_event(ev)
+        assert called == ["abc"]
+
+    def test_textinput_missing_text_attr(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        called = []
+        app._on_text_input = lambda t: called.append(t)
+        ev = pygame.event.Event(pygame.TEXTINPUT)
+        app._dispatch_event(ev)
+        assert called == [""]
+
+
+# ===================================================================
+# BD – _maybe_hide_help_overlay
+# ===================================================================
+
+
+class TestMaybeHideHelpOverlay:
+    def test_no_op_when_not_shown(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.show_help_overlay = False
+        app._maybe_hide_help_overlay()
+        assert app.show_help_overlay is False
+
+    def test_no_op_when_help_already_dismissed(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.show_help_overlay = True
+        app._help_shown_once = True
+        app._maybe_hide_help_overlay()
+        # _help_shown_once prevents auto-hide logic
+        assert app.show_help_overlay is True
+
+    def test_no_op_when_pinned(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.show_help_overlay = True
+        app._help_shown_once = False
+        app._help_pinned = True
+        app._maybe_hide_help_overlay()
+        assert app.show_help_overlay is True
+
+    def test_hides_after_timeout(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.show_help_overlay = True
+        app._help_shown_once = False
+        app._help_pinned = False
+        # Simulate timeout elapsed
+        app._help_timer_start = 0.0
+        app._help_timeout_sec = 0.001
+        import time as _time
+
+        monkeypatch.setattr(_time, "time", lambda: 999.0)
+        app._maybe_hide_help_overlay()
+        assert app.show_help_overlay is False
+
+
+# ===================================================================
+# BD – _auto_adjust_quality
+# ===================================================================
+
+
+class TestAutoAdjustQuality:
+    def test_no_op_when_disabled(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.auto_optimize = False
+        app.fps_history.extend([1.0] * 50)
+        app._auto_adjust_quality()
+        # Should not crash or change anything
+
+    def test_no_op_with_insufficient_history(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.auto_optimize = True
+        app.fps_history.clear()
+        app.fps_history.extend([10.0] * 5)  # < 30 samples
+        app._auto_adjust_quality()
+
+    def test_low_fps_disables_grid(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.auto_optimize = True
+        app.show_grid = True
+        app.min_acceptable_fps = 30.0
+        app.fps_history.clear()
+        app.fps_history.extend([5.0] * 40)  # well below threshold
+        app._auto_adjust_quality()
+        assert app.show_grid is False
+
+    def test_high_fps_enables_grid(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.auto_optimize = True
+        app.show_grid = False
+        app.min_acceptable_fps = 30.0
+        app.fps_history.clear()
+        app.fps_history.extend([120.0] * 40)  # well above 2x threshold
+        app._auto_adjust_quality()
+        assert app.show_grid is True

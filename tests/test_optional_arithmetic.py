@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from ui_designer import UIDesigner, WidgetConfig
-from ui_models import _make_baseline
+from ui_models import make_baseline
 
 
 def test_apply_best_offset_handles_missing_hline_bounds():
@@ -51,8 +51,8 @@ def test_clone_template_applies_overrides():
     assert cloned.text == "X"
 
 
-def test_make_baseline_coerces_optional_ints():
-    b = _make_baseline(None, "2", 3.7, None, "5", None)  # type: ignore[arg-type]
+def testmake_baseline_coerces_optional_ints():
+    b = make_baseline(None, "2", 3.7, None, "5", None)  # type: ignore[arg-type]
     assert b["x"] == 0
     assert b["y"] == 2
     assert b["width"] == 3

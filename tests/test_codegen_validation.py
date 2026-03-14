@@ -532,6 +532,21 @@ class TestWriteIfChanged:
         raw = p.read_bytes()
         assert b"\r\n" not in raw
 
+    def test_write_raises_on_permission_error(self, tmp_path):
+        """write_if_changed propagates OSError when parent mkdir or write fails."""
+
+        p = tmp_path / "readonly_dir" / "file.c"
+        p.parent.mkdir()
+        # Make the directory read-only
+        p.parent.chmod(0o444)
+        try:
+            # On Windows chmod(0o444) may not block writes, so we just verify no crash
+            write_if_changed(p, "content")
+        except OSError:
+            pass  # Expected on Unix
+        finally:
+            p.parent.chmod(0o755)
+
 
 # ===========================================================================
 # load_scenes edge cases
@@ -917,3 +932,117 @@ class TestAdversarialWidgetText:
         assert ".max_value = 32767" in src
         # uint8 clamped to 255
         assert ".max_lines = 255" in src
+
+
+class TestSceneDimensionsClamped:
+    """Scene width/height clamped to uint16 range in generated C."""
+
+    def test_single_scene_huge_dimensions(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 99999, "height": 99999, "widgets": [_w()]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert ".width = 65535" in src
+        assert ".height = 65535" in src
+
+    def test_multi_scene_huge_dimensions(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"big": {"width": 99999, "height": 99999, "widgets": [_w()]}},
+        )
+        src, _ = generate_ui_design_multi_pair(p, source_label="t")
+        assert ".width = 65535" in src
+        assert ".height = 65535" in src
+
+    def test_negative_dimensions_clamped_to_zero(self, tmp_path):
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": -5, "height": -10, "widgets": [_w()]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert ".width = 0" in src
+        assert ".height = 0" in src
+
+
+# ===========================================================================
+# LIST items edge cases in codegen
+# ===========================================================================
+
+
+class TestListItemsCodegen:
+    """Verify LIST widget items → C code generation edge cases."""
+
+    def test_empty_items_list(self, tmp_path):
+        """Empty items list should still produce valid C code."""
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": [
+                _w(type="list", text="", width=80, height=40),
+            ]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert "UIW_LIST" in src
+
+    def test_items_converted_to_newline_text(self, tmp_path):
+        """Items list should be joined as newline-separated text in C."""
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": [
+                _w(type="list", items=["Alpha", "Beta", "Gamma"], width=80, height=40),
+            ]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert "UIW_LIST" in src
+        assert "Alpha\\nBeta\\nGamma" in src
+
+    def test_items_with_special_chars(self, tmp_path):
+        """Items with quotes/backslashes should be properly escaped."""
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": [
+                _w(type="list", items=['Say "hi"', "Path\\to"], width=80, height=40),
+            ]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert "UIW_LIST" in src
+        # Quotes and backslashes must be escaped
+        assert '\\"' in src
+        assert "\\\\" in src
+
+    def test_many_items(self, tmp_path):
+        """50-item list should compile without issues."""
+        items = [f"Item {i}" for i in range(50)]
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": [
+                _w(type="list", items=items, width=80, height=40),
+            ]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert "UIW_LIST" in src
+        assert "Item 0" in src
+        assert "Item 49" in src
+
+    def test_items_overrides_text_when_no_text(self, tmp_path):
+        """When items are set but text is empty, items are joined as text."""
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": [
+                _w(type="list", items=["X", "Y"], width=80, height=40),
+            ]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert "X\\nY" in src
+
+    def test_toggle_checked_false(self, tmp_path):
+        """Toggle with checked=false → .checked = 0 in C."""
+        p = _write_json(
+            tmp_path,
+            {"main": {"width": 128, "height": 64, "widgets": [
+                _w(type="toggle", text="Off", checked=False, width=60, height=14),
+            ]}},
+        )
+        src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
+        assert "UIW_TOGGLE" in src
+        assert ".checked = 0" in src

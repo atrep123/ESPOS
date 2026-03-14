@@ -232,3 +232,108 @@ def test_make_scene_creates_scene_like():
     scene = _make_scene({"name": "test", "widgets": []})
     assert hasattr(scene, "_raw_data")
     assert scene._raw_data["name"] == "test"
+
+
+# ── Edge case tests ──────────────────────────────────────────────────
+
+
+def test_search_empty_query(tmp_path: Path):
+    """Empty search string matches everything."""
+    storage = tmp_path / "templates.json"
+    lib = TemplateLibrary(storage_path=str(storage))
+    result = lib.search_templates("")
+    assert len(result) == len(lib.templates)
+
+
+def test_add_duplicate_name_keeps_both(tmp_path: Path):
+    """Adding two templates with the same name keeps both."""
+    storage = tmp_path / "templates.json"
+    lib = TemplateLibrary(storage_path=str(storage))
+    initial = len(lib.templates)
+    for _ in range(2):
+        lib.add_template(
+            Template(
+                metadata=TemplateMetadata(name="DupeName", category="Custom", description=""),
+                scene=DummyScene(),
+            )
+        )
+    assert len(lib.templates) == initial + 2
+    dupes = [t for t in lib.templates if t.metadata.name == "DupeName"]
+    assert len(dupes) == 2
+
+
+def test_metadata_empty_name():
+    """TemplateMetadata with empty name still works."""
+    meta = TemplateMetadata(name="", category="Custom", description="d", tags=[])
+    assert meta.name == ""
+    t = Template(meta, DummyScene())
+    d = t.to_dict()
+    assert d["metadata"]["name"] == ""
+
+
+def test_metadata_empty_tags():
+    """Default tags is empty list."""
+    meta = TemplateMetadata(name="X", category="Y", description="Z")
+    assert meta.tags == []
+
+
+def test_template_to_dict_scene_without_raw_data():
+    """If scene has no _raw_data, to_dict returns empty dict for scene."""
+    meta = TemplateMetadata(name="N", category="C", description="D")
+
+    class BareScene:
+        pass
+
+    t = Template(meta, BareScene())
+    d = t.to_dict()
+    assert d["scene"] == {}
+
+
+def test_categories_constant():
+    """TemplateLibrary.CATEGORIES includes expected values."""
+    assert "Custom" in TemplateLibrary.CATEGORIES
+    assert "Layouts" in TemplateLibrary.CATEGORIES
+    assert "Dashboards" in TemplateLibrary.CATEGORIES
+    assert len(TemplateLibrary.CATEGORIES) >= 5
+
+
+def test_get_all_categories_covered(tmp_path: Path):
+    """Default templates cover at least 5 distinct categories."""
+    storage = tmp_path / "templates.json"
+    lib = TemplateLibrary(storage_path=str(storage))
+    cats = {t.metadata.category for t in lib.templates}
+    assert len(cats) >= 5
+
+
+def test_search_case_insensitive(tmp_path: Path):
+    storage = tmp_path / "templates.json"
+    lib = TemplateLibrary(storage_path=str(storage))
+    lib.add_template(
+        Template(
+            metadata=TemplateMetadata(
+                name="MixedCase",
+                category="Custom",
+                description="UPPERCASE desc",
+                tags=["myTAG"],
+            ),
+            scene=DummyScene(),
+        )
+    )
+    assert any(t.metadata.name == "MixedCase" for t in lib.search_templates("mixedcase"))
+    assert any(t.metadata.name == "MixedCase" for t in lib.search_templates("uppercase"))
+    assert any(t.metadata.name == "MixedCase" for t in lib.search_templates("mytag"))
+
+
+def test_from_dict_preserves_scene_widgets():
+    d = {
+        "metadata": {"name": "W", "category": "Layouts", "description": ""},
+        "scene": {
+            "name": "s",
+            "widgets": [
+                {"type": "label", "x": 0, "y": 0, "width": 10, "height": 5, "text": "hi"},
+            ],
+        },
+    }
+    t = Template.from_dict(d)
+    assert len(t.scene._raw_data["widgets"]) == 1
+    assert t.scene._raw_data["widgets"][0]["text"] == "hi"

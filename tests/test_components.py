@@ -149,3 +149,114 @@ class TestAllComponentsReturn:
         for name in ALL_NAMES:
             for w in component_blueprints(name, SC):
                 assert isinstance(w.get("type"), str), f"component '{name}' has non-string type"
+
+
+# ===================================================================
+# BH – Blueprint validation & scene-dependent sizing
+# ===================================================================
+
+REQUIRED_KEYS = {"type", "x", "y", "width", "height"}
+
+
+class TestAllBlueprintsHaveRequiredKeys:
+    """Every widget dict from every component must have the 5 required keys."""
+
+    def test_all_components_all_widgets(self):
+        for name in ALL_NAMES:
+            bps = component_blueprints(name, SC)
+            for i, bp in enumerate(bps):
+                missing = REQUIRED_KEYS - set(bp.keys())
+                assert not missing, (
+                    f"component '{name}' widget {i} missing keys: {missing}"
+                )
+
+
+class TestBlueprintGeometry:
+    """Widget dimensions must be positive integers."""
+
+    def test_positive_dimensions(self):
+        for name in ALL_NAMES:
+            for bp in component_blueprints(name, SC):
+                w = int(bp.get("width", 0))
+                h = int(bp.get("height", 0))
+                assert w > 0, f"component '{name}' widget has width={w}"
+                assert h > 0, f"component '{name}' widget has height={h}"
+
+    def test_coords_are_integers(self):
+        for name in ALL_NAMES:
+            for bp in component_blueprints(name, SC):
+                for key in ("x", "y", "width", "height"):
+                    val = bp.get(key, 0)
+                    assert isinstance(val, int), (
+                        f"component '{name}' widget has {key}={val!r} ({type(val).__name__})"
+                    )
+
+
+class TestSceneSizeAdaptation:
+    """Components that use scene dimensions should adapt to smaller screens."""
+
+    def test_toast_adapts_to_small_scene(self):
+        bps_big = component_blueprints("toast", SC)
+        bps_small = component_blueprints("toast", SC_SMALL)
+        # Toast should be narrower on the smaller scene
+        big_w = max(int(b["width"]) for b in bps_big if b.get("role") == "panel")
+        small_w = max(int(b["width"]) for b in bps_small if b.get("role") == "panel")
+        assert small_w <= big_w
+
+    def test_modal_adapts_to_small_scene(self):
+        bps_big = component_blueprints("modal", SC)
+        bps_small = component_blueprints("modal", SC_SMALL)
+        # Modal dialog panels (not the overlay) should scale
+        big_w = max(int(b["width"]) for b in bps_big if b.get("role") != "overlay")
+        small_w = max(int(b["width"]) for b in bps_small if b.get("role") != "overlay")
+        assert small_w <= big_w
+
+    def test_notification_adapts_to_small_scene(self):
+        bps_big = component_blueprints("notification", SC)
+        bps_small = component_blueprints("notification", SC_SMALL)
+        big_w = max(int(b["width"]) for b in bps_big if b.get("role") == "panel")
+        small_w = max(int(b["width"]) for b in bps_small if b.get("role") == "panel")
+        assert small_w <= big_w
+
+    def test_status_bar_stretches_to_scene_width(self):
+        bps = component_blueprints("status_bar", SC)
+        bar_panel = [b for b in bps if b.get("role") == "bar"][0]
+        assert bar_panel["width"] >= 200  # at least most of 256 wide
+
+    def test_none_scene_uses_defaults(self):
+        """Passing sc=None shouldn't crash; uses safe fallback dimensions."""
+        for name in ALL_NAMES:
+            bps = component_blueprints(name, None)
+            assert isinstance(bps, list)
+            if bps:
+                assert all("type" in b for b in bps)
+
+
+class TestBlueprintRoles:
+    """Components should have unique role names per blueprint."""
+
+    def test_roles_are_unique(self):
+        for name in ALL_NAMES:
+            bps = component_blueprints(name, SC)
+            roles = [bp.get("role") for bp in bps if bp.get("role")]
+            # Some may share role prefix (like item0, item1), but exact duplicates are bad
+            assert len(roles) == len(set(roles)), (
+                f"component '{name}' has duplicate roles: {roles}"
+            )
+
+    def test_all_widgets_have_role(self):
+        """Every widget in a component should have a role for identification."""
+        for name in ALL_NAMES:
+            for bp in component_blueprints(name, SC):
+                assert "role" in bp, f"component '{name}' widget missing 'role'"
+
+
+class TestToggleComponent:
+    def test_toggle_returns_widgets(self):
+        bps = component_blueprints("toggle", SC)
+        assert len(bps) >= 1  # at least the toggle widget itself
+
+    def test_toggle_type_is_toggle(self):
+        bps = component_blueprints("toggle", SC)
+        types = {bp["type"] for bp in bps}
+        assert "toggle" in types

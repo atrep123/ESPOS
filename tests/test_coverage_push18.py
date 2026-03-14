@@ -67,7 +67,7 @@ class TestExceptBranches:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hi")])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        with patch.object(pygame.key, "start_text_input", side_effect=Exception("mock")):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError("mock")):
             app._inspector_start_edit("text")
         assert app.state.inspector_selected_field == "text"
 
@@ -75,7 +75,7 @@ class TestExceptBranches:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=Exception("boom"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
         app._z_order_step(1)
         assert int(getattr(app.state.current_scene().widgets[0], "z_index", 0) or 0) == 1
 
@@ -83,14 +83,14 @@ class TestExceptBranches:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(x=8)])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=Exception("boom"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
         app._z_order_bring_to_front()
         assert int(getattr(app.state.current_scene().widgets[0], "z_index", 0) or 0) > 0
 
     def test_z_order_back_save_state_throws(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(x=8)])
         app.state.selected = [1]
-        app.designer._save_state = MagicMock(side_effect=Exception("boom"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
         app._z_order_send_to_back()
         z = int(getattr(app.state.current_scene().widgets[1], "z_index", 0) or 0)
         assert z < 0
@@ -99,7 +99,7 @@ class TestExceptBranches:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=Exception("boom"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
         app._toggle_lock_selection()
 
     def test_zoom_to_fit_exception(self, tmp_path, monkeypatch):
@@ -107,7 +107,7 @@ class TestExceptBranches:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         # Replace window with a mock that raises on get_size
         mock_win = MagicMock()
-        mock_win.get_size.side_effect = Exception("no window")
+        mock_win.get_size.side_effect = ValueError("no window")
         app.window = mock_win
         app._zoom_to_fit()  # should not crash
 
@@ -115,7 +115,7 @@ class TestExceptBranches:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=Exception("boom"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
         app._apply_color_preset("#ff0000", "#000000")
         w = app.state.current_scene().widgets[0]
         assert w.color_fg == "#ff0000"
@@ -395,7 +395,7 @@ class TestGroupUngroup:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(x=8)])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
-        app.designer.create_group = MagicMock(side_effect=Exception("fail"))
+        app.designer.create_group = MagicMock(side_effect=TypeError("fail"))
         app._group_selection()
 
     def test_group_single_widget(self, tmp_path, monkeypatch):
@@ -437,7 +437,7 @@ class TestGroupUngroup:
         app.designer.groups = {"grp1": [0, 1]}
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
-        app.designer.delete_group = MagicMock(side_effect=Exception("fail"))
+        app.designer.delete_group = MagicMock(side_effect=TypeError("fail"))
         app._ungroup_selection()
 
 
@@ -796,7 +796,7 @@ class TestSaveTemplate:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        with patch.object(pygame.key, "start_text_input", side_effect=Exception("mock")):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError("mock")):
             app._save_selection_as_template()
         assert app.state.inspector_selected_field == "_template_name"
 
@@ -1002,14 +1002,14 @@ class TestAddWidgetAutoComplete:
     def test_add_widget_auto_complete_exception(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         # Mock auto_complete to raise
-        app._auto_complete_widget = MagicMock(side_effect=Exception("fail"))
+        app._auto_complete_widget = MagicMock(side_effect=AttributeError("fail"))
         before = len(app.state.current_scene().widgets)
         app._add_widget("label")
         assert len(app.state.current_scene().widgets) == before + 1
 
     def test_add_widget_find_position_exception(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        app._find_best_position = MagicMock(side_effect=Exception("fail"))
+        app._find_best_position = MagicMock(side_effect=ValueError("fail"))
         app._add_widget("button")
         assert len(app.state.current_scene().widgets) >= 1
 

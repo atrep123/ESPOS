@@ -381,7 +381,7 @@ class TestSelectedWidgetsException:
         """When scene access fails, _scene_size returns (0, 0) (lines 33-34)."""
         app = _app()
         # Break the scene access
-        app.state.current_scene = MagicMock(side_effect=RuntimeError("broken"))
+        app.state.current_scene = MagicMock(side_effect=AttributeError("broken"))
         assert _scene_size(app) == (0, 0)
 
 
@@ -418,7 +418,7 @@ class TestClearGuidesException:
 
             @active_guides.setter
             def active_guides(self, val):
-                raise RuntimeError("read-only")
+                raise AttributeError("read-only")
 
         app.state = ReadOnlyState()
         clear_active_guides(app)  # Should not raise
@@ -520,3 +520,155 @@ class TestMatchSizeAlreadySame:
         match_size_selection(app, "width")
         # Nothing to change message
         app._set_status.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# BC — layout_tools boundary stress tests
+# ---------------------------------------------------------------------------
+
+
+class TestAlignSingleAtEdge:
+    """1x1 widget alignment edge cases."""
+
+    def test_align_left_1x1(self):
+        app = _app([_w(x=100, y=50, width=2, height=2)])
+        app.snap_enabled = False
+        set_selection(app, [0])
+        align_selection(app, "left")
+        assert app.state.current_scene().widgets[0].x == 0
+
+    def test_align_bottom_1x1(self):
+        app = _app([_w(x=10, y=10, width=2, height=2)])
+        app.snap_enabled = False
+        set_selection(app, [0])
+        align_selection(app, "bottom")
+        # Widget height < GRID(8) is treated as GRID → max_y = 128 - 8 = 120
+        assert app.state.current_scene().widgets[0].y == 120
+
+    def test_align_hcenter_1x1(self):
+        app = _app([_w(x=0, y=0, width=2, height=2)])
+        app.snap_enabled = False
+        set_selection(app, [0])
+        align_selection(app, "hcenter")
+        # Widget width < GRID(8) is treated as GRID → (256-8)//2 = 124
+        assert app.state.current_scene().widgets[0].x == 124
+
+
+class TestDistributeEdgeCases:
+    def test_distribute_identical_positions(self):
+        """All 3 widgets at same x — should not crash."""
+        ws = [
+            _w(x=50, y=0, width=10, height=10),
+            _w(x=50, y=10, width=10, height=10),
+            _w(x=50, y=20, width=10, height=10),
+        ]
+        app = _app(ws)
+        app.snap_enabled = False
+        set_selection(app, [0, 1, 2])
+        distribute_selection(app, "h")
+        # Should not crash — first and last stay, middle gets positioned
+        assert len(app.state.current_scene().widgets) == 3
+
+    def test_distribute_two_widgets_rejected(self):
+        ws = [_w(x=0), _w(x=100)]
+        app = _app(ws)
+        set_selection(app, [0, 1])
+        distribute_selection(app, "v")
+        app._set_status.assert_called()
+
+    def test_distribute_one_widget_rejected(self):
+        app = _app([_w()])
+        set_selection(app, [0])
+        distribute_selection(app, "h")
+        app._set_status.assert_called()
+
+
+class TestClampXyEdgeCases:
+    def test_widget_exactly_scene_size(self):
+        """Widget same size as scene → forced to (0, 0)."""
+        app = _app([_w(x=50, y=50, width=256, height=128)])
+        app.snap_enabled = False
+        from cyberpunk_designer.layout_tools import _clamp_xy_in_scene
+        w = app.state.current_scene().widgets[0]
+        x, y = _clamp_xy_in_scene(app, 50, 50, w)
+        assert x == 0
+        assert y == 0
+
+    def test_widget_larger_than_scene(self):
+        """Widget larger than scene → forced to (0, 0)."""
+        app = _app([_w(x=0, y=0, width=300, height=200)])
+        app.snap_enabled = False
+        from cyberpunk_designer.layout_tools import _clamp_xy_in_scene
+        w = app.state.current_scene().widgets[0]
+        x, y = _clamp_xy_in_scene(app, 100, 100, w)
+        assert x == 0
+        assert y == 0
+
+
+class TestSnapDragBoundaryStress:
+    def test_snap_at_exact_tolerance(self):
+        """Desired position exactly at GUIDE_TOL from edge → should snap."""
+        from cyberpunk_designer.constants import GUIDE_TOL
+        app = _app([_w(x=100, y=50, width=20, height=10)])
+        set_selection(app, [0])
+        bounds = pygame.Rect(100, 50, 20, 10)
+        rx, ry = snap_drag_to_guides(app, GUIDE_TOL, 50, bounds)
+        assert rx == 0  # snapped to left edge
+
+    def test_snap_one_beyond_tolerance(self):
+        """Desired position just beyond GUIDE_TOL → should NOT snap."""
+        from cyberpunk_designer.constants import GUIDE_TOL
+        app = _app([_w(x=100, y=50, width=20, height=10)])
+        set_selection(app, [0])
+        bounds = pygame.Rect(100, 50, 20, 10)
+        rx, ry = snap_drag_to_guides(app, GUIDE_TOL + 1, 50, bounds)
+        assert rx == GUIDE_TOL + 1  # not snapped
+
+    def test_snap_y_to_scene_bottom(self):
+        app = _app([_w(x=0, y=0, width=20, height=10)])
+        set_selection(app, [0])
+        bounds = pygame.Rect(0, 0, 20, 10)
+        # Position near bottom edge: desired_y + bounds.height ≈ 128
+        rx, ry = snap_drag_to_guides(app, 0, 117, bounds)
+        # bounds.bottom = 117+10 = 127, close to 128 → should snap
+        assert ry == 118  # snapped so bottom = 128
+
+    def test_snap_sets_active_guides(self):
+        app = _app([_w(x=100, y=50, width=20, height=10)])
+        set_selection(app, [0])
+        bounds = pygame.Rect(100, 50, 20, 10)
+        snap_drag_to_guides(app, 1, 50, bounds)
+        # Should have set at least one guide
+        assert len(app.state.active_guides) >= 1
+
+    def test_no_snap_clears_active_guides(self):
+        """When nothing is close enough, active_guides should be cleared."""
+        app = _app([_w(x=100, y=50, width=20, height=10)])
+        set_selection(app, [0])
+        app.state.active_guides = [("v", 50)]
+        bounds = pygame.Rect(100, 50, 20, 10)
+        snap_drag_to_guides(app, 100, 50, bounds)
+        assert app.state.active_guides == []
+
+
+class TestMatchSizeBoundary:
+    def test_match_width_clamped_to_scene(self):
+        """Anchor has width=200 but target at x=100 → target max_width = 156."""
+        ws = [_w(x=0, y=0, width=200, height=10), _w(x=100, y=0, width=20, height=10)]
+        app = _app(ws)
+        app.snap_enabled = False
+        set_selection(app, [0, 1])
+        app.state.selected_idx = 0
+        match_size_selection(app, "width")
+        # Width should be clamped to 256 - 100 = 156
+        assert app.state.current_scene().widgets[1].width <= 156
+
+    def test_match_size_all_locked(self):
+        ws = [_w(width=40, locked=True), _w(width=20, locked=True)]
+        app = _app(ws)
+        app.snap_enabled = False
+        set_selection(app, [0, 1])
+        app.state.selected_idx = 0
+        match_size_selection(app, "width")
+        # Nothing changed (all locked)
+        assert app.state.current_scene().widgets[1].width == 20

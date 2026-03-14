@@ -340,7 +340,7 @@ class TestAutoSaveLoadRaises:
 
         def raising_load(path):
             if "autosave" in str(path):
-                raise RuntimeError("corrupt")
+                raise OSError("corrupt")
             return real_load(path)
 
         app.designer.load_from_json = raising_load

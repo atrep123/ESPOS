@@ -40,7 +40,7 @@ def _make_app(tmp_path, monkeypatch, *, widgets=None, snap=False):
 
 def _make_save_raise(app):
     """Make _save_state raise so except-branches are covered."""
-    app.designer._save_state = MagicMock(side_effect=RuntimeError("boom"))
+    app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
 
 
 def _make_asdict_raise(monkeypatch):
@@ -82,7 +82,7 @@ class TestClipboardExceptions:
         def bad_asdict(obj):
             call_count[0] += 1
             if call_count[0] <= 1:
-                raise RuntimeError("broken asdict")
+                raise TypeError("broken asdict")
             return original_asdict(obj)
 
         monkeypatch.setattr(clipboard, "asdict", bad_asdict)
@@ -148,7 +148,7 @@ class TestClipboardExceptions:
         app.clipboard = [_w(x=10, y=10)]
         app.pointer_pos = (100, 100)
 
-        monkeypatch.setattr(clipboard, "asdict", MagicMock(side_effect=RuntimeError("bad")))
+        monkeypatch.setattr(clipboard, "asdict", MagicMock(side_effect=TypeError("bad")))
         clipboard.paste_clipboard(app)
         # asdict fails → continue → 0 pasted
         assert len(app.state.current_scene().widgets) == 1  # no new widgets
@@ -177,7 +177,7 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
-        monkeypatch.setattr(clipboard, "asdict", MagicMock(side_effect=RuntimeError("bad")))
+        monkeypatch.setattr(clipboard, "asdict", MagicMock(side_effect=TypeError("bad")))
         clipboard.duplicate_selection(app)
         # asdict fails → 0 duplicated
         assert len(app.state.current_scene().widgets) == 1
@@ -262,7 +262,7 @@ class TestClipboardExceptions:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.clipboard = [_w(x=10, y=10)]
-        monkeypatch.setattr(clipboard, "asdict", MagicMock(side_effect=RuntimeError("bad")))
+        monkeypatch.setattr(clipboard, "asdict", MagicMock(side_effect=TypeError("bad")))
         clipboard.paste_in_place(app)
         assert len(app.state.current_scene().widgets) == 1
 
@@ -415,7 +415,7 @@ class TestClipboardExceptions:
             pygame,
             "scrap",
             MagicMock(
-                init=MagicMock(side_effect=RuntimeError("no scrap")),
+                init=MagicMock(side_effect=pygame.error("no scrap")),
             ),
         )
         clipboard.export_selection_json(app)
@@ -1419,7 +1419,7 @@ class TestBatchOpsEdges:
 
     @pytest.mark.parametrize("func_name", _BATCH_SAVE_STATE)
     def test_batch_save_state_exception(self, tmp_path, monkeypatch, func_name):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10, text="hello")])
         app.state.selected = [0]
@@ -1427,7 +1427,7 @@ class TestBatchOpsEdges:
         getattr(batch_ops, func_name)(app)
 
     def test_reorder_nothing_selected(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
@@ -1435,14 +1435,14 @@ class TestBatchOpsEdges:
 
     def test_reorder_single_widget(self, tmp_path, monkeypatch):
         """n < 2 → return."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         batch_ops.reorder_selection(app, -1)
 
     def test_reorder_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
         app.state.selected = [1]
@@ -1451,7 +1451,7 @@ class TestBatchOpsEdges:
 
     def test_reorder_boundary_first_up(self, tmp_path, monkeypatch):
         """First widget can't go up → return."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
         app.state.selected = [0]
@@ -1459,21 +1459,21 @@ class TestBatchOpsEdges:
 
     def test_reorder_boundary_last_down(self, tmp_path, monkeypatch):
         """Last widget can't go down → return."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
         app.state.selected = [1]
         batch_ops.reorder_selection(app, 1)
 
     def test_reset_to_defaults_nothing_selected(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
         batch_ops.reset_to_defaults(app)
 
     def test_widget_info_nothing(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
@@ -1481,14 +1481,14 @@ class TestBatchOpsEdges:
         batch_ops.widget_info(app)
 
     def test_array_duplicate_nothing_selected(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
         batch_ops.array_duplicate(app, 2, 8, 8)
 
     def test_array_duplicate_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
@@ -1496,22 +1496,22 @@ class TestBatchOpsEdges:
         batch_ops.array_duplicate(app, 2, 8, 8)
 
     def test_array_duplicate_oob(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [999]
         batch_ops.array_duplicate(app, 2, 8, 8)
 
     def test_array_duplicate_asdict_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer.selection_ops import batch_ops as _batch_ops_mod
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
-        monkeypatch.setattr(batch_ops, "asdict", MagicMock(side_effect=RuntimeError("bad")))
-        batch_ops.array_duplicate(app, 2, 8, 8)
+        monkeypatch.setattr(_batch_ops_mod, "asdict", MagicMock(side_effect=TypeError("bad")))
+        _batch_ops_mod.array_duplicate(app, 2, 8, 8)
 
     def test_auto_rename_oob(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [999]
@@ -1519,34 +1519,34 @@ class TestBatchOpsEdges:
 
     def test_scene_stats_with_disabled(self, tmp_path, monkeypatch):
         """Cover disabled widget counter (line 204) and disabled flag (line 212)."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.current_scene().widgets[0].enabled = False
         batch_ops.scene_stats(app)
 
     def test_clear_margins_oob(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [999]
         batch_ops.clear_margins(app)
 
     def test_remove_degenerate_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(width=0, height=0)])
         _make_save_raise(app)
         batch_ops.remove_degenerate_widgets(app)
 
     def test_remove_degenerate_nothing_removed(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(width=60, height=20)])
         batch_ops.remove_degenerate_widgets(app)
 
     def test_enable_all_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         _make_save_raise(app)
@@ -1554,60 +1554,60 @@ class TestBatchOpsEdges:
 
     def test_enable_all_already_enabled(self, tmp_path, monkeypatch):
         """All widgets already enabled → 0 changed."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         batch_ops.enable_all_widgets(app)
 
     def test_sort_widgets_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
         _make_save_raise(app)
         batch_ops.sort_widgets_by_position(app)
 
     def test_sort_widgets_empty(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         batch_ops.sort_widgets_by_position(app)
 
     def test_snap_sizes_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         _make_save_raise(app)
         batch_ops.snap_sizes_to_grid(app)
 
     def test_snap_sizes_empty(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         batch_ops.snap_sizes_to_grid(app)
 
     def test_snap_sizes_no_change(self, tmp_path, monkeypatch):
         """Widget already grid-aligned → 0 changed."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=8, y=8, width=24, height=16)])
         batch_ops.snap_sizes_to_grid(app)
 
     def test_clear_padding_oob(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [999]
         batch_ops.clear_padding(app)
 
     def test_flatten_z_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         _make_save_raise(app)
         batch_ops.flatten_z_indices(app)
 
     def test_flatten_z_empty(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         batch_ops.flatten_z_indices(app)
@@ -1788,54 +1788,54 @@ class TestPropertyCyclesEdges:
         pc.cycle_color_preset(app)
 
     def test_reverse_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
         _make_save_raise(app)
         batch_ops.reverse_widget_order(app)
 
     def test_reverse_empty(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         batch_ops.reverse_widget_order(app)
 
     def test_reverse_single(self, tmp_path, monkeypatch):
         """Single widget → return early."""
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         batch_ops.reverse_widget_order(app)
 
     def test_normalize_sizes_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         _make_save_raise(app)
         batch_ops.normalize_sizes(app)
 
     def test_auto_name_scene_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         _make_save_raise(app)
         batch_ops.auto_name_scene(app)
 
     def test_remove_duplicates_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=0, y=0), _w(x=0, y=0)])
         _make_save_raise(app)
         batch_ops.remove_duplicates(app)
 
     def test_remove_duplicates_empty(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         batch_ops.remove_duplicates(app)
 
     def test_increment_text_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="Item 1")])
         app.state.selected = [0]
@@ -1843,35 +1843,35 @@ class TestPropertyCyclesEdges:
         batch_ops.increment_text(app)
 
     def test_increment_text_nothing_selected(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
         batch_ops.increment_text(app)
 
     def test_measure_selection_nothing(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []
         batch_ops.measure_selection(app)
 
     def test_replace_text_save_state_exception(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hello")])
         _make_save_raise(app)
         batch_ops.replace_text_in_scene(app)
 
     def test_zoom_to_selection_save_state(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         batch_ops.zoom_to_selection(app)
 
     def test_zoom_to_selection_nothing(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops import batch_ops
+        from cyberpunk_designer import selection_ops as batch_ops
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = []

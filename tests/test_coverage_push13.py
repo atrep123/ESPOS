@@ -256,14 +256,14 @@ class TestRootRenameGroupsRaises:
 
         # Replace designer with one that raises on .groups access
         class DesignerWithBadGroups:
-            """Proxy that raises RuntimeError on .groups access."""
+            """Proxy that raises AttributeError on .groups access."""
 
             def __init__(self, real):
                 object.__setattr__(self, "_real", real)
 
             @property
             def groups(self):
-                raise RuntimeError("groups broken")
+                raise AttributeError("groups broken")
 
             def __getattr__(self, name):
                 return getattr(object.__getattribute__(self, "_real"), name)
@@ -314,7 +314,7 @@ class TestRootRenameModelsRaises:
 
             @property
             def _sim_listmodels(self):
-                raise RuntimeError("models broken")
+                raise AttributeError("models broken")
 
             def __getattr__(self, name):
                 return getattr(object.__getattribute__(self, "_real"), name)
@@ -360,7 +360,7 @@ class TestListCountModelsRaises:
 
             @property
             def _sim_listmodels(self):
-                raise RuntimeError("models broken")
+                raise AttributeError("models broken")
 
             def __getattr__(self, name):
                 return getattr(object.__getattribute__(self, "_real"), name)
@@ -433,7 +433,7 @@ class TestRemoveDegenerateSaveStateRaises:
     """L369-370: save_state raises during remove_degenerate_widgets."""
 
     def test_save_raises(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import remove_degenerate_widgets
+        from cyberpunk_designer.selection_ops import remove_degenerate_widgets
 
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -447,7 +447,7 @@ class TestRemoveDegenerateSaveStateRaises:
         w._width = 0  # Force degenerate (bypass setter)
         sc.widgets.append(w)
         # Make _save_state raise
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("no undo"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("no undo"))
         remove_degenerate_widgets(app)
         # Widget was removed despite save_state raising
         assert len(sc.widgets) == 0
@@ -463,7 +463,7 @@ class TestFillParentNonPanel:
     panel (the inner `continue`)."""
 
     def test_non_panel_skipped(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import fill_parent
+        from cyberpunk_designer.selection_ops import fill_parent
 
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")

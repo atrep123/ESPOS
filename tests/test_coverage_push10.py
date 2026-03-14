@@ -288,8 +288,8 @@ class TestSnapDragException:
         cr = app.layout.canvas_rect
         app.scene_rect = pygame.Rect(cr.x, cr.y, 256, 128)
         monkeypatch.setattr(
-            "cyberpunk_designer.input_handlers.layout_tools.snap_drag_to_guides",
-            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("snap fail")),
+            "cyberpunk_designer.mouse_handlers.layout_tools.snap_drag_to_guides",
+            lambda *a, **kw: (_ for _ in ()).throw(ValueError("snap fail")),
         )
         on_mouse_move(app, (cr.x + 60, cr.y + 60), (1, 0, 0))
 
@@ -316,7 +316,7 @@ class TestResizeClearGuidesException:
         cr = app.layout.canvas_rect
         app.scene_rect = pygame.Rect(cr.x, cr.y, 256, 128)
         monkeypatch.setattr(
-            "cyberpunk_designer.input_handlers.layout_tools.clear_active_guides",
-            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("clear fail")),
+            "cyberpunk_designer.mouse_handlers.layout_tools.clear_active_guides",
+            lambda *a, **kw: (_ for _ in ()).throw(AttributeError("clear fail")),
         )
         on_mouse_move(app, (cr.x + 80, cr.y + 80), (1, 0, 0))

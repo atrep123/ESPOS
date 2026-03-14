@@ -712,9 +712,9 @@ class TestIsWidgetFocusableExtended:
         w = _w("panel")
         assert is_widget_focusable(w) is False
 
-    def test_gauge_not_focusable(self):
+    def test_gauge_focusable(self):
         w = _w("gauge")
-        assert is_widget_focusable(w) is False
+        assert is_widget_focusable(w) is True
 
     def test_disabled_button(self):
         w = _w("button", enabled=False)

@@ -327,3 +327,181 @@ def test_collaborative_merge_history():
         remote_ops.append(op)
     collab.merge_history(remote_ops)
     assert len(collab.remote_operations.get("u2", [])) == 3
+
+
+# ---------------------------------------------------------------------------
+# BA — UndoRedoManager edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_max_history_exact_boundary():
+    """Execute exactly max_history ops — nothing should be trimmed."""
+    mgr = UndoRedoManager(max_history=5)
+    for i in range(5):
+        mgr.execute(OperationBuilder.add_widget(f"w{i}", "box", i, 0, 10, 10))
+    assert len(mgr.operations) == 5
+    assert mgr.operations[0].widget_id == "w0"
+
+
+def test_max_history_one_over_trims():
+    mgr = UndoRedoManager(max_history=5)
+    for i in range(6):
+        mgr.execute(OperationBuilder.add_widget(f"w{i}", "box", i, 0, 10, 10))
+    assert len(mgr.operations) == 5
+    assert mgr.operations[0].widget_id == "w1"
+
+
+def test_undo_then_branch_clears_redo():
+    """Undo several, then execute new → redo branch is gone."""
+    mgr = UndoRedoManager()
+    for i in range(5):
+        mgr.execute(OperationBuilder.add_widget(f"w{i}", "box", i, 0, 10, 10))
+    mgr.undo()
+    mgr.undo()
+    assert mgr.can_redo()
+    mgr.execute(OperationBuilder.move_widget("w0", 0, 0, 99, 99))
+    assert not mgr.can_redo()
+    assert len(mgr.operations) == 4  # w0,w1,w2 + move
+
+
+def test_undo_all_then_redo_all():
+    mgr = UndoRedoManager()
+    for i in range(3):
+        mgr.execute(OperationBuilder.add_widget(f"w{i}", "box", 0, 0, 10, 10))
+    for _ in range(3):
+        mgr.undo()
+    assert not mgr.can_undo()
+    assert mgr.can_redo()
+    for _ in range(3):
+        mgr.redo()
+    assert mgr.can_undo()
+    assert not mgr.can_redo()
+
+
+def test_version_increments_on_execute_only():
+    mgr = UndoRedoManager()
+    assert mgr.version == 0
+    mgr.execute(OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10))
+    assert mgr.version == 1
+    mgr.undo()
+    assert mgr.version == 1  # undo doesn't change version
+    mgr.redo()
+    assert mgr.version == 1  # redo doesn't change version
+
+
+def test_clear_then_execute():
+    mgr = UndoRedoManager()
+    mgr.execute(OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10))
+    mgr.clear()
+    mgr.execute(OperationBuilder.add_widget("w2", "box", 0, 0, 10, 10))
+    assert len(mgr.operations) == 1
+    assert mgr.operations[0].widget_id == "w2"
+    assert mgr.version == 1
+
+
+def test_get_history_reflects_current_index():
+    mgr = UndoRedoManager()
+    for i in range(5):
+        mgr.execute(OperationBuilder.add_widget(f"w{i}", "box", 0, 0, 10, 10))
+    assert len(mgr.get_history()) == 5
+    mgr.undo()
+    mgr.undo()
+    assert len(mgr.get_history()) == 3
+
+
+def test_load_corrupt_json_raises(tmp_path):
+    path = str(tmp_path / "corrupt.json")
+    with open(path, "w") as f:
+        f.write("{not valid json")
+    mgr = UndoRedoManager()
+    import pytest
+    with pytest.raises(json.JSONDecodeError):
+        mgr.load_state(path)
+
+
+def test_load_nonexistent_file_raises(tmp_path):
+    mgr = UndoRedoManager()
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        mgr.load_state(str(tmp_path / "nope.json"))
+
+
+def test_operation_large_data():
+    """Operations can carry large data payloads without issue."""
+    data = {"pixels": list(range(10000))}
+    op = Operation(
+        type=OperationType.MODIFY_PROPERTY,
+        timestamp=0,
+        user_id="u1",
+        widget_id="w1",
+        data=data,
+    )
+    mgr = UndoRedoManager()
+    mgr.execute(op)
+    undone = mgr.undo()
+    assert len(undone.data["pixels"]) == 10000
+
+
+def test_execute_sets_metadata():
+    """Execute applies user_id, session_id, version, parent_version."""
+    mgr = UndoRedoManager(user_id="tester")
+    op = OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10)
+    mgr.execute(op)
+    assert op.user_id == "tester"
+    assert op.session_id == mgr.session_id
+    assert op.version == 0
+    assert op.parent_version == -1
+
+    op2 = OperationBuilder.add_widget("w2", "box", 0, 0, 10, 10)
+    mgr.execute(op2)
+    assert op2.version == 1
+    assert op2.parent_version == 0
+
+
+def test_max_history_one():
+    mgr = UndoRedoManager(max_history=1)
+    mgr.execute(OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10))
+    mgr.execute(OperationBuilder.add_widget("w2", "box", 0, 0, 10, 10))
+    assert len(mgr.operations) == 1
+    assert mgr.operations[0].widget_id == "w2"
+
+
+def test_collaborative_transform_move_conflict():
+    """Remote move on same widget that was locally moved."""
+    collab = CollaborativeUndoRedo(user_id="u1")
+    local_op = OperationBuilder.move_widget("w1", 0, 0, 100, 100)
+    collab.execute_local(local_op)
+    remote_op = OperationBuilder.move_widget("w1", 0, 0, 50, 50)
+    remote_op.user_id = "u2"
+    remote_op.timestamp = 0.0  # earlier than local
+    result = collab.receive_remote(remote_op)
+    assert result.widget_id == "w1"
+
+
+def test_collaborative_transform_remote_delete():
+    collab = CollaborativeUndoRedo(user_id="u1")
+    collab.execute_local(OperationBuilder.move_widget("w1", 0, 0, 10, 10))
+    remote_op = OperationBuilder.delete_widget("w1", {"x": 0})
+    remote_op.user_id = "u2"
+    remote_op.timestamp = 0.0
+    result = collab.receive_remote(remote_op)
+    assert result.data.get("deleted") is True
+
+
+def test_collaborative_transform_local_delete():
+    collab = CollaborativeUndoRedo(user_id="u1")
+    collab.execute_local(OperationBuilder.delete_widget("w1", {"x": 0}))
+    remote_op = OperationBuilder.move_widget("w1", 0, 0, 10, 10)
+    remote_op.user_id = "u2"
+    remote_op.timestamp = 0.0
+    result = collab.receive_remote(remote_op)
+    assert result.data.get("no_op") is True
+
+
+def test_collaborative_merge_ignores_own_user():
+    collab = CollaborativeUndoRedo(user_id="u1")
+    own_op = OperationBuilder.add_widget("w1", "box", 0, 0, 10, 10)
+    own_op.user_id = "u1"
+    own_op.timestamp = 1.0
+    collab.merge_history([own_op])
+    assert "u1" not in collab.remote_operations

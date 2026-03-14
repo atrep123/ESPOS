@@ -825,23 +825,25 @@ class TestClampInt:
 
 
 # ===========================================================================
-# _border_chars cached lookup
+# _get_border_chars method
 # ===========================================================================
 
 
 class TestBorderCharsFunc:
     def test_known_styles(self):
-        from ui_designer import _border_chars
+        from ui_designer import UIDesigner
 
+        d = UIDesigner.__new__(UIDesigner)
         for s in ("single", "double", "rounded", "bold", "dashed"):
-            chars = _border_chars(s)
+            chars = d._get_border_chars(s)
             assert "h" in chars and "v" in chars
 
     def test_unknown_fallback(self):
-        from ui_designer import _border_chars
+        from ui_designer import UIDesigner
 
-        chars = _border_chars("unknown_style")
-        assert chars == _border_chars("single")
+        d = UIDesigner.__new__(UIDesigner)
+        chars = d._get_border_chars("unknown_style")
+        assert chars == d._get_border_chars("single")
 
 
 # ===========================================================================

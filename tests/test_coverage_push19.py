@@ -60,7 +60,7 @@ class TestStopTextInputRaises:
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._inspector_start_edit("text")
-        with patch.object(pygame.key, "stop_text_input", side_effect=RuntimeError("no")):
+        with patch.object(pygame.key, "stop_text_input", side_effect=AttributeError("no")):
             app._inspector_cancel_edit()
         assert app.state.inspector_selected_field is None
 
@@ -71,7 +71,7 @@ class TestStopTextInputRaises:
 class TestStartTextInputRaises:
     def test_search_widgets_prompt(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        with patch.object(pygame.key, "start_text_input", side_effect=RuntimeError):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._search_widgets_prompt()
         assert app.state.inspector_selected_field == "_search"
 
@@ -79,7 +79,7 @@ class TestStartTextInputRaises:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        with patch.object(pygame.key, "start_text_input", side_effect=RuntimeError):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._array_duplicate_prompt()
         assert app.state.inspector_selected_field == "_array_dup"
 
@@ -87,19 +87,19 @@ class TestStartTextInputRaises:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        with patch.object(pygame.key, "start_text_input", side_effect=RuntimeError):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._set_all_spacing_prompt()
         assert app.state.inspector_selected_field == "_spacing"
 
     def test_rename_current_scene(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        with patch.object(pygame.key, "start_text_input", side_effect=RuntimeError):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._rename_current_scene()
         assert app.state.inspector_selected_field == "_scene_name"
 
     def test_goto_widget_prompt(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        with patch.object(pygame.key, "start_text_input", side_effect=RuntimeError):
+        with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._goto_widget_prompt()
         assert app.state.inspector_selected_field == "_goto_widget"
 
@@ -384,7 +384,7 @@ class TestExportCHeaderExcept:
         app = _make_app(tmp_path, monkeypatch)
         app.json_path = tmp_path / "scene.json"
         app.json_path.write_text("{}", encoding="utf-8")
-        with patch.object(app, "save_json", side_effect=RuntimeError("fail")):
+        with patch.object(app, "save_json", side_effect=OSError("fail")):
             with patch("tools.ui_codegen.generate_scenes_header", return_value="// ok"):
                 app._export_c_header()
 
@@ -404,7 +404,7 @@ class TestExportCHeaderExcept:
 class TestAddWidgetSaveStateRaises:
     def test_save_state_raises(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        with patch.object(app.designer, "_save_state", side_effect=RuntimeError("fail")):
+        with patch.object(app.designer, "_save_state", side_effect=TypeError("fail")):
             app._add_widget("label")
         sc = app.state.current_scene()
         assert len(sc.widgets) >= 1
@@ -418,7 +418,7 @@ class TestTogglePanelsWindowError:
         """L3144-3145: window.get_size() raises → win_size = None."""
         app = _make_app(tmp_path, monkeypatch)
         app.window = MagicMock()
-        app.window.get_size.side_effect = RuntimeError("no window")
+        app.window.get_size.side_effect = AttributeError("no window")
         app._toggle_panels()
 
 
@@ -631,12 +631,12 @@ class TestInputHandlersShortcuts:
             self._send_key(app, pygame.K_F4, 0, monkeypatch=monkeypatch)
             mock.assert_called_once()
 
-    def test_k0_add_textbox(self, tmp_path, monkeypatch):
-        """L550: K_0 without modifiers → _add_widget('textbox')."""
+    def test_k0_add_list(self, tmp_path, monkeypatch):
+        """L550: K_0 without modifiers → _add_widget('list')."""
         app = _make_app(tmp_path, monkeypatch)
         with patch.object(app, "_add_widget") as mock:
             self._send_key(app, pygame.K_0, 0, monkeypatch=monkeypatch)
-            mock.assert_called_once_with("textbox")
+            mock.assert_called_once_with("list")
 
 
 # ===================================================================
@@ -650,9 +650,9 @@ class TestCanvasDistanceLinesZeroScene:
         sc = app.state.current_scene()
         sc.width = 0  # zero width
         scene_rect = pygame.Rect(0, 0, 256, 128)
-        from cyberpunk_designer.drawing.canvas import _draw_distance_indicators
+        from cyberpunk_designer.drawing.canvas import draw_distance_indicators
 
-        _draw_distance_indicators(app, sc, 0, 0, scene_rect)
+        draw_distance_indicators(app, sc, 0, 0, scene_rect)
 
 
 # ===================================================================
@@ -1182,7 +1182,7 @@ class TestLoadPixelFontNonHeadless:
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.setattr(pygame.font, "match_font", lambda name: None)
-        monkeypatch.setattr(pygame.font, "SysFont", MagicMock(side_effect=Exception("no sysfont")))
+        monkeypatch.setattr(pygame.font, "SysFont", MagicMock(side_effect=pygame.error("no sysfont")))
         font = app._load_pixel_font(8)
         assert font is not None
 
@@ -1192,14 +1192,14 @@ class TestLoadPixelFontNonHeadless:
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.setattr(pygame.font, "match_font", lambda name: None)
-        monkeypatch.setattr(pygame.font, "SysFont", MagicMock(side_effect=Exception("no sysfont")))
+        monkeypatch.setattr(pygame.font, "SysFont", MagicMock(side_effect=pygame.error("no sysfont")))
         orig_Font = pygame.font.Font
         call_count = [0]
 
         def font_wrapper(*args, **kwargs):
             call_count[0] += 1
             if args and args[0] is None and call_count[0] <= 3:
-                raise Exception("no default")
+                raise pygame.error("no default")
             return orig_Font(*args, **kwargs)
 
         monkeypatch.setattr(pygame.font, "Font", font_wrapper)
@@ -1214,7 +1214,7 @@ class TestLoadPixelFontNonHeadless:
 
         def font_wrapper(path_or_none, size=None):
             if path_or_none is None:
-                raise Exception("no default font")
+                raise pygame.error("no default font")
             return orig_Font(path_or_none, size)
 
         monkeypatch.setattr(pygame.font, "Font", font_wrapper)

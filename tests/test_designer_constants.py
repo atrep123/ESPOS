@@ -1,8 +1,8 @@
 """Tests for cyberpunk_designer/constants.py — snap, hex_to_rgb, color_to_rgb."""
 
 from cyberpunk_designer.constants import (
-    _NAMED_COLORS,
     GRID,
+    NAMED_COLORS,
     color_to_rgb,
     hex_to_rgb,
     snap,
@@ -108,7 +108,7 @@ def test_color_named_gray_vs_grey():
 
 
 def test_color_all_named_colors():
-    for name, expected in _NAMED_COLORS.items():
+    for name, expected in NAMED_COLORS.items():
         assert color_to_rgb(name) == expected, f"failed for {name}"
 
 

@@ -5,101 +5,101 @@ from ui_models import (
     Scene,
     WidgetConfig,
     WidgetType,
-    _coerce_bool_flag,
-    _coerce_choice,
     _coerce_int,
-    _make_baseline,
-    _normalize_int_list,
+    coerce_bool_flag,
+    coerce_choice,
+    make_baseline,
+    normalize_int_list,
 )
 
-# ── _normalize_int_list ──
+# ── normalize_int_list ──
 
 
 class TestNormalizeIntList:
     def test_ints(self):
-        assert _normalize_int_list([1, 2, 3]) == [1, 2, 3]
+        assert normalize_int_list([1, 2, 3]) == [1, 2, 3]
 
     def test_strings(self):
-        assert _normalize_int_list(["10", "20"]) == [10, 20]
+        assert normalize_int_list(["10", "20"]) == [10, 20]
 
     def test_mixed(self):
-        assert _normalize_int_list([1, "two", 3, None, "4"]) == [1, 3, 4]
+        assert normalize_int_list([1, "two", 3, None, "4"]) == [1, 3, 4]
 
     def test_empty(self):
-        assert _normalize_int_list([]) == []
+        assert normalize_int_list([]) == []
 
     def test_none(self):
-        assert _normalize_int_list(None) == []
+        assert normalize_int_list(None) == []
 
     def test_floats_truncated(self):
-        assert _normalize_int_list([1.9, 2.1]) == [1, 2]
+        assert normalize_int_list([1.9, 2.1]) == [1, 2]
 
     def test_all_bad(self):
-        assert _normalize_int_list(["a", "b", None]) == []
+        assert normalize_int_list(["a", "b", None]) == []
 
 
-# ── _coerce_bool_flag ──
+# ── coerce_bool_flag ──
 
 
 class TestCoerceBoolFlag:
     def test_none_returns_default_true(self):
-        assert _coerce_bool_flag(None, True) is True
+        assert coerce_bool_flag(None, True) is True
 
     def test_none_returns_default_false(self):
-        assert _coerce_bool_flag(None, False) is False
+        assert coerce_bool_flag(None, False) is False
 
     def test_string_true(self):
-        assert _coerce_bool_flag("true", False) is True
+        assert coerce_bool_flag("true", False) is True
 
     def test_string_yes(self):
-        assert _coerce_bool_flag("YES", False) is True
+        assert coerce_bool_flag("YES", False) is True
 
     def test_string_on(self):
-        assert _coerce_bool_flag("on", False) is True
+        assert coerce_bool_flag("on", False) is True
 
     def test_string_1(self):
-        assert _coerce_bool_flag("1", False) is True
+        assert coerce_bool_flag("1", False) is True
 
     def test_string_false(self):
-        assert _coerce_bool_flag("false", True) is False
+        assert coerce_bool_flag("false", True) is False
 
     def test_string_no(self):
-        assert _coerce_bool_flag("no", True) is False
+        assert coerce_bool_flag("no", True) is False
 
     def test_string_off(self):
-        assert _coerce_bool_flag("OFF", True) is False
+        assert coerce_bool_flag("OFF", True) is False
 
     def test_string_0(self):
-        assert _coerce_bool_flag("0", True) is False
+        assert coerce_bool_flag("0", True) is False
 
     def test_bool_passthrough(self):
-        assert _coerce_bool_flag(True, False) is True
-        assert _coerce_bool_flag(False, True) is False
+        assert coerce_bool_flag(True, False) is True
+        assert coerce_bool_flag(False, True) is False
 
     def test_int_truthy(self):
-        assert _coerce_bool_flag(1, False) is True
-        assert _coerce_bool_flag(0, True) is False
+        assert coerce_bool_flag(1, False) is True
+        assert coerce_bool_flag(0, True) is False
 
     def test_random_string_truthy(self):
         # A non-empty string not in the recognized set is truthy via bool()
-        assert _coerce_bool_flag("maybe", False) is True
+        assert coerce_bool_flag("maybe", False) is True
 
 
-# ── _coerce_choice ──
+# ── coerce_choice ──
 
 
 class TestCoerceChoice:
     def test_valid_choice(self):
-        assert _coerce_choice("a", ["a", "b", "c"], "b") == "a"
+        assert coerce_choice("a", ["a", "b", "c"], "b") == "a"
 
     def test_invalid_choice(self):
-        assert _coerce_choice("x", ["a", "b", "c"], "b") == "b"
+        assert coerce_choice("x", ["a", "b", "c"], "b") == "b"
 
     def test_none_returns_default(self):
-        assert _coerce_choice(None, ["a", "b"], "a") == "a"
+        assert coerce_choice(None, ["a", "b"], "a") == "a"
 
     def test_int_coerced_to_string(self):
-        assert _coerce_choice(1, ["1", "2"], "2") == "1"
+        assert coerce_choice(1, ["1", "2"], "2") == "1"
 
 
 # ── _coerce_int ──
@@ -119,12 +119,12 @@ class TestCoerceInt:
         assert _coerce_int("abc") == 0  # type: ignore[arg-type]
 
 
-# ── _make_baseline ──
+# ── make_baseline ──
 
 
 class TestMakeBaseline:
     def test_basic(self):
-        b = _make_baseline(10, 20, 100, 50, 800, 600)
+        b = make_baseline(10, 20, 100, 50, 800, 600)
         assert b["x"] == 10
         assert b["y"] == 20
         assert b["width"] == 100
@@ -133,7 +133,7 @@ class TestMakeBaseline:
         assert b["bh"] == 600
 
     def test_none_dimensions(self):
-        b = _make_baseline(0, 0, None, None, None, None)
+        b = make_baseline(0, 0, None, None, None, None)
         assert b["width"] == 0
         assert b["height"] == 0
         assert b["bw"] == 0
@@ -158,6 +158,8 @@ class TestWidgetType:
             "panel",
             "icon",
             "chart",
+            "list",
+            "toggle",
         }
         values = {wt.value for wt in WidgetType}
         assert values == expected
@@ -356,7 +358,7 @@ class TestWidgetConfig:
         assert wc._to_color_str("red") == "red"
 
 
-# ── _coerce_bool_flag exception path ──
+# ── coerce_bool_flag exception path ──
 
 
 class TestCoerceBoolFlagException:
@@ -367,8 +369,8 @@ class TestCoerceBoolFlagException:
             def __bool__(self):
                 raise ValueError("no bool")
 
-        assert _coerce_bool_flag(BadBool(), True) is True
-        assert _coerce_bool_flag(BadBool(), False) is False
+        assert coerce_bool_flag(BadBool(), True) is True
+        assert coerce_bool_flag(BadBool(), False) is False
 
 
 # ── Scene backward-compat shim ──

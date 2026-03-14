@@ -169,7 +169,7 @@ class TestSceneRenameSameName:
         app.state.inspector_selected_field = "_scene_name"
         app.state.inspector_input_buffer = "main"  # Same as current
         monkeypatch.setattr(
-            "pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input"))
+            "pygame.key.stop_text_input", MagicMock(side_effect=AttributeError("no input"))
         )
         result = inspector_commit_edit(app)
         assert result is True
@@ -184,7 +184,7 @@ class TestSceneRenameSuccess:
         app.state.inspector_selected_field = "_scene_name"
         app.state.inspector_input_buffer = "settings"
         monkeypatch.setattr(
-            "pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input"))
+            "pygame.key.stop_text_input", MagicMock(side_effect=AttributeError("no input"))
         )
         result = inspector_commit_edit(app)
         assert result is True
@@ -375,7 +375,7 @@ class TestToolbarRefreshPorts:
         tr = app.layout.toolbar_rect
         hit_rect = pygame.Rect(tr.x + 2, tr.y + 2, 30, 20)
         app.toolbar_hitboxes = [(hit_rect, "refresh_ports")]
-        app._refresh_available_ports = MagicMock(side_effect=RuntimeError("fail"))
+        app._refresh_available_ports = MagicMock(side_effect=OSError("fail"))
         on_mouse_down(app, (hit_rect.centerx, hit_rect.centery))
 
 
@@ -428,7 +428,7 @@ class TestPaletteWidgetClick:
 
         # Action raises → triggers except at L763-765
         def bad_action():
-            raise RuntimeError("boom")
+            raise TypeError("boom")
 
         app.palette_sections = [("Actions", [("Boom", bad_action)])]
         on_mouse_down(app, (hit_rect.centerx, hit_rect.centery))
@@ -518,7 +518,7 @@ class TestFieldToStrSceneException:
         app = _inspector_app([_w()])
         w = app.state.current_scene().widgets[0]
         # Make current_scene raise
-        app.state.current_scene = MagicMock(side_effect=RuntimeError("boom"))
+        app.state.current_scene = MagicMock(side_effect=AttributeError("boom"))
         result = inspector_field_to_str(app, "x", w)
         # Falls through to the single-widget path with sc=None
         assert isinstance(result, str)
@@ -539,7 +539,7 @@ class TestTemplateSaveFails:
         app.state.inspector_input_buffer = "my_template"
         app._pending_template_widgets = [{"type": "label"}]
         app.template_library = SimpleNamespace(
-            add_template=MagicMock(side_effect=RuntimeError("disk full")),
+            add_template=MagicMock(side_effect=ValueError("disk full")),
         )
         result = inspector_commit_edit(app)
         assert result is False
@@ -562,7 +562,7 @@ class TestTemplateStopTextInputException:
             ""  # Empty name → False, but stop_text_input called first
         )
         monkeypatch.setattr(
-            "pygame.key.stop_text_input", MagicMock(side_effect=RuntimeError("no input"))
+            "pygame.key.stop_text_input", MagicMock(side_effect=AttributeError("no input"))
         )
         result = inspector_commit_edit(app)
         assert result is False  # Empty name

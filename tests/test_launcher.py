@@ -43,6 +43,12 @@ class TestRunDesigner:
             args = mock_popen.call_args[0][0]
             assert "run_designer.py" in args[-1]
 
+    def test_subprocess_oserror(self, capsys):
+        with patch("launcher.subprocess.Popen", side_effect=OSError("no such file")):
+            run_designer()
+        out = capsys.readouterr().out
+        assert "ERROR" in out or "Failed" in out
+
 
 # ===================================================================
 # main

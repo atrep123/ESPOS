@@ -7,6 +7,8 @@ adjust_value, toggle_checked, cycle_gray_fg, cycle_gray_bg.
 
 from __future__ import annotations
 
+import pytest
+
 from cyberpunk_designer.selection_ops.property_cycles import (
     adjust_value,
     cycle_align,
@@ -256,11 +258,9 @@ class TestCycleWidgetTypeGuards:
         assert app.state.current_scene().widgets[0].type == "button"
 
     def test_cycle_unknown_type(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
-        _add(app, type="custom_unknown")
-        _sel(app, 0)
-        cycle_widget_type(app)
-        assert app.state.current_scene().widgets[0].type == "label"
+        # WidgetConfig now rejects unknown types at construction
+        with pytest.raises(ValueError, match="Unknown widget type"):
+            WidgetConfig(type="custom_unknown", x=0, y=0, width=20, height=10)
 
 
 class TestCycleBorderStyleGuards:

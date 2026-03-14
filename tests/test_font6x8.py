@@ -100,6 +100,101 @@ def test_glyph_multichar_uses_first():
     assert _glyph_for_char("AB") == _GLYPHS["A"]
 
 
+# ---------------------------------------------------------------------------
+# AZ — glyph validation & bitmap integrity
+# ---------------------------------------------------------------------------
+
+
+def test_all_glyphs_have_8_rows():
+    for ch, glyph in _GLYPHS.items():
+        assert len(glyph) == 8, f"glyph {ch!r} has {len(glyph)} rows, expected 8"
+
+
+def test_all_glyph_rows_are_bytes():
+    for ch, glyph in _GLYPHS.items():
+        for i, row in enumerate(glyph):
+            assert isinstance(row, int), f"glyph {ch!r} row {i} is {type(row).__name__}"
+            assert 0 <= row <= 0xFF, f"glyph {ch!r} row {i} = {row:#x} out of byte range"
+
+
+def test_all_digits_non_trivial():
+    """Every digit glyph should have at least one non-zero row (visible pixels)."""
+    for d in "0123456789":
+        glyph = _GLYPHS[d]
+        assert any(row != 0 for row in glyph), f"digit {d!r} glyph is all-zero"
+
+
+def test_all_uppercase_letters_non_trivial():
+    for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        glyph = _GLYPHS[ch]
+        assert any(row != 0 for row in glyph), f"letter {ch!r} glyph is all-zero"
+
+
+def test_space_glyph_all_zero():
+    assert all(row == 0 for row in _GLYPHS[" "])
+
+
+def test_glyphs_coverage_digits():
+    for d in "0123456789":
+        assert d in _GLYPHS, f"digit {d!r} not in _GLYPHS"
+
+
+def test_glyphs_coverage_uppercase():
+    for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        assert ch in _GLYPHS, f"letter {ch!r} not in _GLYPHS"
+
+
+def test_glyphs_coverage_punctuation():
+    for ch in ".:_-/%?+<>!=(),#*":
+        assert ch in _GLYPHS, f"punctuation {ch!r} not in _GLYPHS"
+
+
+def test_row5_negative_value():
+    """Negative input should be masked to 5 bits."""
+    result = _row5(-1)
+    assert result == _row5(0x1F)  # -1 & 0x1F == 0x1F
+
+
+def test_row5_large_value():
+    assert _row5(0x100) == _row5(0x00)  # 0x100 & 0x1F == 0
+
+
+def test_glyph_lowercase_full_alphabet():
+    """Every lowercase letter maps to its uppercase glyph."""
+    for lo, up in zip("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+        assert _glyph_for_char(lo) == _GLYPHS[up], f"{lo!r} != {up!r}"
+
+
+def test_glyph_distinct_per_digit():
+    """Each digit should have a unique glyph pattern."""
+    seen = set()
+    for d in "0123456789":
+        g = _GLYPHS[d]
+        assert g not in seen, f"digit {d!r} duplicates another digit"
+        seen.add(g)
+
+
+def test_glyph_distinct_per_letter():
+    """Each uppercase letter should have a unique glyph pattern."""
+    seen = set()
+    for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        g = _GLYPHS[ch]
+        assert g not in seen, f"letter {ch!r} duplicates another letter"
+        seen.add(g)
+
+
+def test_last_row_zero():
+    """The 8th row (index 7) is typically 0x00 for baseline/spacing.
+
+    Some glyphs with descenders (comma, semicolon, etc.) may use row 7.
+    """
+    descenders = {',', ';', 'g', 'j', 'p', 'q', 'y'}
+    for ch, glyph in _GLYPHS.items():
+        if ch in descenders:
+            continue
+        assert glyph[7] == 0, f"glyph {ch!r} row 7 = {glyph[7]:#x}, expected 0x00"
+
+
 def test_all_glyph_tuples_are_length_8():
     for ch, glyph in _GLYPHS.items():
         assert len(glyph) == 8, f"glyph for {ch!r} has len {len(glyph)}"

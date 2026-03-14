@@ -145,6 +145,147 @@ def test_default_priority_is_10():
     assert events == [pygame.K_a, pygame.K_b]
 
 
+# ---------------------------------------------------------------------------
+# AV: Event manager re-entrancy and edge-case tests
+# ---------------------------------------------------------------------------
+
+
+def test_exception_in_handler_propagates():
+    """An exception in a handler propagates (no silent swallow)."""
+    mgr = EventManager()
+
+    def bad_handler(ev):
+        raise ValueError("boom")
+
+    mgr.subscribe(pygame.KEYDOWN, bad_handler)
+    mgr.post(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a}))
+    import pytest
+
+    with pytest.raises(ValueError, match="boom"):
+        mgr.dispatch_all()
+
+
+def test_exception_in_first_handler_stops_rest():
+    """If first handler raises, second handler is not called."""
+    mgr = EventManager()
+    called = []
+
+    def bad(ev):
+        raise RuntimeError("fail")
+
+    def good(ev):
+        called.append(ev)
+
+    mgr.subscribe(pygame.KEYDOWN, bad)
+    mgr.subscribe(pygame.KEYDOWN, good)
+    mgr.post(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a}))
+    import pytest
+
+    with pytest.raises(RuntimeError):
+        mgr.dispatch_all()
+    assert called == []
+
+
+def test_mass_subscriptions():
+    """100 handlers for the same event type all get called."""
+    mgr = EventManager()
+    counters = [0] * 100
+    for i in range(100):
+        idx = i
+        mgr.subscribe(pygame.KEYDOWN, lambda ev, j=idx: counters.__setitem__(j, 1))
+    mgr.post(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a}))
+    mgr.dispatch_all()
+    assert sum(counters) == 100
+
+
+def test_many_events_dispatched_in_order():
+    """50 events maintain priority + insertion order."""
+    mgr = EventManager()
+    received = []
+    mgr.subscribe(pygame.KEYDOWN, lambda ev: received.append(ev.key))
+    for i in range(50):
+        mgr.post(pygame.event.Event(pygame.KEYDOWN, {"key": i}), priority=10)
+    mgr.dispatch_all()
+    assert received == list(range(50))
+
+
+def test_debounce_exact_boundary():
+    """Click exactly at debounce boundary is allowed."""
+    times = [0.0]
+    mgr = EventManager(debounce_click_ms=100, monotonic=lambda: times[0])
+    click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1})
+    mgr.post(click)
+    times[0] = 0.1  # exactly 100ms
+    mgr.post(click)
+    events = []
+    mgr.dispatch_all(lambda ev: events.append(ev))
+    assert len(events) == 2
+
+
+def test_debounce_just_under_boundary():
+    """Click just under debounce boundary is dropped."""
+    times = [0.0]
+    mgr = EventManager(debounce_click_ms=100, monotonic=lambda: times[0])
+    click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1})
+    mgr.post(click)
+    times[0] = 0.099  # 99ms < 100ms
+    mgr.post(click)
+    events = []
+    mgr.dispatch_all(lambda ev: events.append(ev))
+    assert len(events) == 1
+
+
+def test_middle_click_not_debounced():
+    """Middle mouse button (button=2) is not debounced."""
+    times = [0.0]
+    mgr = EventManager(debounce_click_ms=100, monotonic=lambda: times[0])
+    click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 2})
+    mgr.post(click)
+    times[0] = 0.01
+    mgr.post(click)
+    events = []
+    mgr.dispatch_all(lambda ev: events.append(ev))
+    assert len(events) == 2
+
+
+def test_mixed_event_types_only_left_click_debounced():
+    """Other events between debounced clicks are not affected."""
+    times = [0.0]
+    mgr = EventManager(debounce_click_ms=100, monotonic=lambda: times[0])
+    click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1})
+    key = pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a})
+    mgr.post(click)
+    times[0] = 0.01
+    mgr.post(key)  # should not be debounced
+    mgr.post(click)  # should be debounced
+    events = []
+    mgr.dispatch_all(lambda ev: events.append(ev))
+    assert len(events) == 2  # click + key, second click dropped
+
+
+def test_dispatch_all_clears_queue():
+    """After dispatch_all, queue is empty."""
+    mgr = EventManager()
+    mgr.post(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a}))
+    mgr.dispatch_all()
+    second = []
+    mgr.dispatch_all(lambda ev: second.append(ev))
+    assert second == []
+
+
+def test_subscribe_multiple_types():
+    """One handler can subscribe to multiple event types."""
+    mgr = EventManager()
+    received = []
+    for etype in [pygame.KEYDOWN, pygame.KEYUP, pygame.MOUSEBUTTONDOWN]:
+        mgr.subscribe(etype, lambda ev: received.append(ev.type))
+    mgr.post(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a}))
+    mgr.post(pygame.event.Event(pygame.KEYUP, {"key": pygame.K_a}))
+    mgr.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3}))
+    mgr.dispatch_all()
+    assert received == [pygame.KEYDOWN, pygame.KEYUP, pygame.MOUSEBUTTONDOWN]
+
+
 def test_seq_increments_by_one():
     """Kill mutant: _seq += 1 → _seq += 2."""
     mgr = EventManager()

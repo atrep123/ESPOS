@@ -227,7 +227,7 @@ class TestMenuActiveFocusException:
             comp_type="menu_list",
             root="mymenu",
         )
-        app._set_focus = MagicMock(side_effect=RuntimeError("focus error"))
+        app._set_focus = MagicMock(side_effect=TypeError("focus error"))
         app.state.inspector_selected_field = "comp.active_item"
         app.state.inspector_input_buffer = "2"  # Switch to item1
         result = inspector_commit_edit(app)
@@ -363,7 +363,7 @@ class TestTabsActiveFocusException:
             comp_type="tabs",
             root="mytabs",
         )
-        app._set_focus = MagicMock(side_effect=RuntimeError("focus error"))
+        app._set_focus = MagicMock(side_effect=StopIteration("focus error"))
         app.state.inspector_selected_field = "comp.active_tab"
         app.state.inspector_input_buffer = "2"
         result = inspector_commit_edit(app)
@@ -770,7 +770,7 @@ class TestRemoveDegenerate:
         bad_w._width = 0  # Bypass setter to force zero dimension
         sc.widgets.append(bad_w)
         sc.widgets.append(_w(x=0, y=0, width=40, height=20, text="good"))
-        from cyberpunk_designer.selection_ops.batch_ops import remove_degenerate_widgets
+        from cyberpunk_designer.selection_ops import remove_degenerate_widgets
 
         remove_degenerate_widgets(app)
         assert len(sc.widgets) == 1

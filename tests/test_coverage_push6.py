@@ -1200,7 +1200,7 @@ class TestCommitEpilogue:
         monkeypatch.setattr(
             pygame.key,
             "stop_text_input",
-            lambda: (_ for _ in ()).throw(RuntimeError("no keyboard")),
+            lambda: (_ for _ in ()).throw(AttributeError("no keyboard")),
             raising=False,
         )
         result = inspector_commit_edit(app)

@@ -218,3 +218,238 @@ class TestSetScale:
         app._dirty = False
         set_scale(app, 2)
         assert app.scale == 2
+
+
+# ---------------------------------------------------------------------------
+# AU: Windowing extreme case tests
+# ---------------------------------------------------------------------------
+
+
+class TestScreenToLogicalExtreme:
+    def test_fractional_scale(self):
+        """Non-integer scale factors work correctly."""
+        app = _mock_app(scale_x=1.5, scale_y=1.5, offset_x=0, offset_y=0)
+        lx, ly = screen_to_logical(app, 150, 150)
+        assert lx == 100
+        assert ly == 100
+
+    def test_very_large_scale(self):
+        """Very large scale (100x) still produces correct results."""
+        app = _mock_app(scale_x=100.0, scale_y=100.0, offset_x=0, offset_y=0)
+        lx, ly = screen_to_logical(app, 10000, 5000)
+        assert lx == 100
+        assert ly == 50
+
+    def test_very_small_scale(self):
+        """Very small scale (0.1x) still produces correct results."""
+        app = _mock_app(scale_x=0.1, scale_y=0.1, offset_x=0, offset_y=0)
+        lx, ly = screen_to_logical(app, 10, 10)
+        assert lx == 100
+        assert ly == 100
+
+    def test_negative_offset(self):
+        """Negative offsets work correctly."""
+        app = _mock_app(scale_x=1.0, scale_y=1.0, offset_x=-50, offset_y=-50)
+        lx, ly = screen_to_logical(app, 0, 0)
+        assert lx == 50
+        assert ly == 50
+
+    def test_large_coordinates(self):
+        """Large screen coordinates survive without overflow."""
+        app = _mock_app(scale_x=1.0, scale_y=1.0, offset_x=0, offset_y=0)
+        lx, ly = screen_to_logical(app, 100000, 100000)
+        assert lx == 100000
+        assert ly == 100000
+
+
+class TestFitScaleExtreme:
+    def test_huge_window(self):
+        """Very large window should be capped by max_auto_scale."""
+        app = _mock_app(max_auto_scale=4)
+        assert _fit_scale(app, 10000, 10000, 100, 100) == 4
+
+    def test_tiny_window(self):
+        """Window smaller than base always returns 1."""
+        app = _mock_app(max_auto_scale=4)
+        assert _fit_scale(app, 10, 10, 800, 600) == 1
+
+    def test_one_pixel_base(self):
+        """Base of 1x1 pixel allows max scale."""
+        app = _mock_app(max_auto_scale=10)
+        assert _fit_scale(app, 10, 10, 1, 1) == 10
+
+    def test_max_scale_1(self):
+        """max_auto_scale=1 always returns 1."""
+        app = _mock_app(max_auto_scale=1)
+        assert _fit_scale(app, 5000, 5000, 100, 100) == 1
+
+
+class TestBaseLayoutSizeExtreme:
+    def test_negative_canvas_treated_as_zero(self):
+        """Negative canvas dimensions are clamped via max(1,...)."""
+        app = _layout_app(canvas_w=-10, canvas_h=-5, toolbar_h=0, scene_tabs_h=0, status_h=0)
+        w, h = _base_layout_size(app, palette_w=0, inspector_w=0)
+        assert w >= 1
+        assert h >= 1
+
+    def test_very_large_layout(self):
+        """Large dimensions don't cause integer overflow."""
+        app = _layout_app(canvas_w=4000, canvas_h=2000, toolbar_h=50, scene_tabs_h=30, status_h=20)
+        w, h = _base_layout_size(app, palette_w=200, inspector_w=400)
+        assert w == 4600
+        assert h == 2100
+
+
+class TestRecomputeScaleExtreme:
+    def test_zero_window(self):
+        """Zero window size results in scale=1."""
+        app = _recompute_app()
+        recompute_scale_for_window(app, 0, 0)
+        assert app.scale == 1
+
+    def test_negative_window(self):
+        """Negative window size results in scale=1."""
+        app = _recompute_app()
+        recompute_scale_for_window(app, -100, -100)
+        assert app.scale == 1
+
+    def test_scale_10x(self):
+        """Window 10x base size with max_auto_scale=10 → scale=10."""
+        app = _recompute_app(
+            canvas_w=100,
+            canvas_h=50,
+            toolbar_h=0,
+            scene_tabs_h=0,
+            status_h=0,
+            max_auto_scale=10,
+            palette_w=0,
+            inspector_w=0,
+        )
+        recompute_scale_for_window(app, 1000, 500)
+        assert app.scale == 10
+
+
+class TestSetScaleExtreme:
+    def test_negative_clamped_to_1(self):
+        app = _recompute_app(max_auto_scale=4)
+        app.window = None
+        app._mark_dirty = lambda: setattr(app, "_dirty", True)
+        set_scale(app, -5)
+        assert app.scale == 1
+
+    def test_very_large_clamped(self):
+        app = _recompute_app(max_auto_scale=4)
+        app.window = None
+        app._mark_dirty = lambda: setattr(app, "_dirty", True)
+        set_scale(app, 999)
+        assert app.scale == 4
+
+    def test_set_1(self):
+        app = _recompute_app(max_auto_scale=4)
+        app.window = None
+        app._mark_dirty = lambda: setattr(app, "_dirty", True)
+        set_scale(app, 1)
+        assert app.scale == 1
+
+
+# ===================================================================
+# BG – windowing edge cases
+# ===================================================================
+
+
+class TestScreenToLogicalFractional:
+    def test_fractional_scale(self):
+        """Non-integer scale produces valid integer coordinates."""
+        app = _mock_app(scale_x=1.5, scale_y=1.5, offset_x=0, offset_y=0)
+        result = screen_to_logical(app, 150, 150)
+        assert result == (100, 100)
+
+    def test_large_offset(self):
+        """Large offsets produce negative logical coordinates."""
+        app = _mock_app(scale_x=1.0, scale_y=1.0, offset_x=1000, offset_y=1000)
+        result = screen_to_logical(app, 0, 0)
+        assert result == (-1000, -1000)
+
+    def test_both_scale_and_offset(self):
+        app = _mock_app(scale_x=2.0, scale_y=3.0, offset_x=10, offset_y=20)
+        lx, ly = screen_to_logical(app, 110, 320)
+        assert lx == int((110 - 10) / 2.0)
+        assert ly == int((320 - 20) / 3.0)
+
+
+class TestFitScaleBoundary:
+    def test_exact_multiple(self):
+        """Window is exactly N times base size."""
+        app = _mock_app(max_auto_scale=10)
+        assert _fit_scale(app, 300, 300, 100, 100) == 3
+
+    def test_just_below_next_scale(self):
+        """Window is just below 3x size → returns 2."""
+        app = _mock_app(max_auto_scale=10)
+        assert _fit_scale(app, 299, 300, 100, 100) == 2
+
+    def test_negative_window_clamped(self):
+        app = _mock_app(max_auto_scale=4)
+        result = _fit_scale(app, -10, -10, 100, 100)
+        assert result >= 1
+
+    def test_negative_base_clamped(self):
+        app = _mock_app(max_auto_scale=4)
+        result = _fit_scale(app, 800, 600, -100, -50)
+        assert result >= 1
+
+
+class TestBaseLayoutSizeEdge:
+    def test_missing_toolbar_attrs(self):
+        """Missing toolbar/scene_tabs/status treated as 0."""
+        app = SimpleNamespace(designer=SimpleNamespace(width=256, height=128))
+        w, h = _base_layout_size(app, palette_w=0, inspector_w=0)
+        assert w >= 1
+        assert h >= 1
+
+    def test_very_large_panels(self):
+        app = _layout_app(canvas_w=10, canvas_h=10, toolbar_h=0, scene_tabs_h=0, status_h=0)
+        w, h = _base_layout_size(app, palette_w=5000, inspector_w=5000)
+        assert w == 10010
+        assert h == 10
+
+
+class TestRecomputeScaleEdge:
+    def test_zero_window_size(self):
+        """Zero window size shouldn't crash."""
+        app = _recompute_app(max_auto_scale=4)
+        recompute_scale_for_window(app, 0, 0)
+        assert app.scale >= 1
+
+    def test_very_small_canvas(self):
+        """Tiny canvas can scale up more."""
+        app = _recompute_app(canvas_w=1, canvas_h=1, toolbar_h=0,
+                             scene_tabs_h=0, status_h=0,
+                             palette_w=0, inspector_w=0, max_auto_scale=10)
+        recompute_scale_for_window(app, 10, 10)
+        assert app.scale == 10
+
+    def test_asymmetric_window(self):
+        """Window much wider than tall limits scale."""
+        app = _recompute_app(canvas_w=100, canvas_h=100, toolbar_h=0,
+                             scene_tabs_h=0, status_h=0,
+                             palette_w=0, inspector_w=0, max_auto_scale=10)
+        recompute_scale_for_window(app, 1000, 200)
+        # Height limits: 200 // 100 = 2
+        assert app.scale == 2
+
+
+class TestSetScaleEdge:
+    def test_set_zero_becomes_1(self):
+        app = _recompute_app(max_auto_scale=4)
+        app.window = None
+        app._mark_dirty = lambda: None
+        set_scale(app, 0)
+        assert app.scale == 1
+
+    def test_set_exact_max(self):
+        app = _recompute_app(max_auto_scale=3)
+        app.window = None
+        app._mark_dirty = lambda: None
+        set_scale(app, 3)
+        assert app.scale == 3

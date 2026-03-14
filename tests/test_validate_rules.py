@@ -572,21 +572,53 @@ def test_rule22_non_empty_no_warning():
 def test_rule24_right_edge_too_close():
     # scene 128x64, widget at x=110, w=17 → right=127 > 128-2=126
     w = [{"type": "box", "x": 110, "y": 0, "width": 17, "height": 10}]
-    warns = _warns(_make(w, scene_w=128, scene_h=64))
-    assert any("right edge" in i.message.lower() or "boundary" in i.message.lower() for i in warns)
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
+    assert any("right edge" in i.message.lower() or "boundary" in i.message.lower() for i in errs)
 
 
 def test_rule24_bottom_edge_too_close():
     w = [{"type": "box", "x": 0, "y": 50, "width": 10, "height": 13}]
-    warns = _warns(_make(w, scene_w=128, scene_h=64))
-    assert any("bottom edge" in i.message.lower() or "boundary" in i.message.lower() for i in warns)
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
+    assert any("bottom edge" in i.message.lower() or "boundary" in i.message.lower() for i in errs)
 
 
 def test_rule24_full_span_no_warning():
     # Full-width widget (w==scene_w) should not trigger edge margin
     w = [{"type": "box", "x": 0, "y": 0, "width": 128, "height": 10}]
     warns = _warns(_make(w, scene_w=128, scene_h=64))
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
     assert not any("edge" in i.message.lower() and "boundary" in i.message.lower() for i in warns)
+    assert not any("edge" in i.message.lower() and "boundary" in i.message.lower() for i in errs)
+
+
+def test_rule24_left_edge_too_close():
+    # x=1, which is < MIN_EDGE_MARGIN=2
+    w = [{"type": "box", "x": 1, "y": 10, "width": 20, "height": 10}]
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
+    assert any("left edge" in i.message.lower() for i in errs)
+
+
+def test_rule24_top_edge_too_close():
+    # y=1, which is < MIN_EDGE_MARGIN=2
+    w = [{"type": "box", "x": 10, "y": 1, "width": 20, "height": 10}]
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
+    assert any("top edge" in i.message.lower() for i in errs)
+
+
+def test_rule24_flush_right_no_border_ok():
+    # Non-bordered widget flush to right edge is allowed
+    w = [{"type": "label", "x": 64, "y": 0, "width": 64, "height": 12, "text": "OK",
+          "border": False}]
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
+    assert not any("right edge" in i.message.lower() for i in errs)
+
+
+def test_rule24_flush_right_with_border_error():
+    # Bordered widget flush to right edge is an error
+    w = [{"type": "label", "x": 64, "y": 10, "width": 64, "height": 14, "text": "OK",
+          "border": True}]
+    errs = _errors(_make(w, scene_w=128, scene_h=64))
+    assert any("right edge" in i.message.lower() for i in errs)
 
 
 # ── Rule 25: Text widget with no text and no runtime binding ──

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ui_designer import UIDesigner
-from ui_models import WidgetConfig, _empty_constraints
+from ui_models import WidgetConfig, empty_constraints
 
 
 def _designer(width: int = 256, height: int = 128) -> UIDesigner:
@@ -197,6 +197,24 @@ class TestCoerceGroups:
         d = UIDesigner()
         d.current_scene = None
         assert d._coerce_groups({"g": [0]}) == {}
+
+    def test_non_int_members_skipped(self):
+        d = _designer()
+        d.scenes["main"].widgets = [_widget(), _widget()]
+        result = d._coerce_groups({"g": [0, "abc", None, 1.5, 1]})
+        assert result == {"g": [0, 1]}
+
+    def test_non_string_keys_coerced(self):
+        d = _designer()
+        d.scenes["main"].widgets = [_widget()]
+        result = d._coerce_groups({42: [0]})
+        assert result == {"42": [0]}
+
+    def test_negative_indices_filtered(self):
+        d = _designer()
+        d.scenes["main"].widgets = [_widget()]
+        result = d._coerce_groups({"g": [-1, -100, 0]})
+        assert result == {"g": [0]}
 
 
 # ===========================================================================
@@ -593,7 +611,7 @@ class TestSetDefaultConstraints:
     def test_sets_all_defaults(self):
         d = _designer()
         w = _widget()
-        w.constraints = _empty_constraints()
+        w.constraints = empty_constraints()
         d._set_default_constraints(w)
         assert w.constraints["ax"] == "left"
         assert w.constraints["ay"] == "top"
@@ -607,7 +625,7 @@ class TestSetDefaultConstraints:
     def test_does_not_overwrite_existing(self):
         d = _designer()
         w = _widget()
-        w.constraints = _empty_constraints()
+        w.constraints = empty_constraints()
         w.constraints["ax"] = "right"
         w.constraints["sx"] = True
         d._set_default_constraints(w)

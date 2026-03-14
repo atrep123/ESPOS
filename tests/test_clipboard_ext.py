@@ -569,7 +569,7 @@ class TestExportSelectionJson:
         app = _app([_w(text="ok")])
         set_selection(app, [0])
         with patch("cyberpunk_designer.selection_ops.clipboard.pygame.scrap") as mock_scrap:
-            mock_scrap.init.side_effect = RuntimeError("no display")
+            mock_scrap.init.side_effect = pygame.error("no display")
             # Should not raise
             export_selection_json(app)
 

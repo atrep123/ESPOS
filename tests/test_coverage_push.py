@@ -98,7 +98,7 @@ class TestReportingScreenshotFail:
             state=MagicMock(),
             _set_status=MagicMock(),
         )
-        app.state.current_scene.side_effect = RuntimeError("boom")
+        app.state.current_scene.side_effect = OSError("boom")
         screenshot_canvas(app)
         assert "failed" in app._set_status.call_args[0][0].lower()
 
@@ -165,7 +165,7 @@ class TestToolbarSceneTabsException:
         app = _make_app(tmp_path, monkeypatch)
         # Break app.designer.scenes to raise on keys()
         app.designer.scenes = MagicMock()
-        app.designer.scenes.keys.side_effect = RuntimeError("fail")
+        app.designer.scenes.keys.side_effect = AttributeError("fail")
         # Should not raise — just returns early (lines 51-52)
         draw_scene_tabs(app)
 
@@ -245,7 +245,7 @@ class TestFitWidgetEdge:
         )
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         fit_selection_to_widget(app)
 
 
@@ -295,7 +295,7 @@ class TestFitTextEdge:
         )
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         fit_selection_to_text(app)
 
 
@@ -322,7 +322,7 @@ class TestCoreEdge:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         delete_selected(app)
         assert app.state.selected == []
 
@@ -343,7 +343,7 @@ class TestCoreEdge:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._reindex_after_delete = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._reindex_after_delete = MagicMock(side_effect=AttributeError("fail"))
         delete_selected(app)
         assert len(app.state.current_scene().widgets) == 0
 
@@ -467,6 +467,25 @@ class TestIoOpsEdge:
         save_json(app)
         assert app.json_path.exists()
 
+    def test_save_json_tempfile_failure_falls_back(self, tmp_path, monkeypatch):
+        """save_json falls back to direct write when tempfile fails."""
+        import tempfile as _tempfile
+
+        from cyberpunk_designer.io_ops import save_json
+
+        app = _make_app(tmp_path, monkeypatch)
+        app.json_path = tmp_path / "fallback_save.json"
+        app._dirty = True
+        app._dirty_scenes = set()
+        # Make mkstemp fail so fallback direct write is exercised
+        monkeypatch.setattr(
+            _tempfile, "mkstemp",
+            lambda **kw: (_ for _ in ()).throw(OSError("disk full")),
+        )
+        save_json(app)
+        assert app.json_path.exists()
+        assert not app._dirty
+
     def test_write_audit_report_fails(self, tmp_path, monkeypatch):
         """write_audit_report when exception occurs (lines 185-186)."""
         from cyberpunk_designer.io_ops import write_audit_report
@@ -489,7 +508,7 @@ class TestIoOpsEdge:
             designer=MagicMock(),
             autosave_path=tmp_path / "no_dir" / "autosave.json",
         )
-        app.designer.save_to_json.side_effect = RuntimeError("fail")
+        app.designer.save_to_json.side_effect = OSError("fail")
         maybe_autosave(app)
 
 
@@ -518,7 +537,7 @@ class TestLayoutToolsExceptions:
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=50, y=50)])
         app.state.selected = [0]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         align_selection(app, "left")
         assert app.state.current_scene().widgets[0].x == 0
 
@@ -531,7 +550,7 @@ class TestLayoutToolsExceptions:
         app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         align_selection(app, "left")
 
     def test_distribute_h_save_state_exc(self, tmp_path, monkeypatch):
@@ -544,7 +563,7 @@ class TestLayoutToolsExceptions:
         app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2, w3])
         app.state.selected = [0, 1, 2]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         distribute_selection(app, "h")
 
     def test_distribute_v_save_state_exc(self, tmp_path, monkeypatch):
@@ -557,7 +576,7 @@ class TestLayoutToolsExceptions:
         app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2, w3])
         app.state.selected = [0, 1, 2]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         distribute_selection(app, "v")
 
     def test_match_size_save_state_exc(self, tmp_path, monkeypatch):
@@ -569,7 +588,7 @@ class TestLayoutToolsExceptions:
         app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         match_size_selection(app, "width")
 
     def test_snap_drag_widget_exc(self, tmp_path, monkeypatch):
@@ -582,11 +601,11 @@ class TestLayoutToolsExceptions:
 
             @property
             def x(self):
-                raise RuntimeError("fail")
+                raise ValueError("fail")
 
             @property
             def y(self):
-                raise RuntimeError("fail")
+                raise ValueError("fail")
 
             width = 20
             height = 20
@@ -608,7 +627,7 @@ class TestLayoutToolsExceptions:
 
         def _bad_setattr(self, name, value):
             if name == "active_guides":
-                raise RuntimeError("fail")
+                raise AttributeError("fail")
             orig_setattr(self, name, value)
 
         monkeypatch.setattr(type(app.state), "__setattr__", _bad_setattr)
@@ -628,7 +647,7 @@ class TestLayoutToolsExceptions:
 
         def _bad_setattr(self, name, value):
             if name == "active_guides":
-                raise RuntimeError("fail")
+                raise AttributeError("fail")
             orig_setattr(self, name, value)
 
         monkeypatch.setattr(type(app.state), "__setattr__", _bad_setattr)

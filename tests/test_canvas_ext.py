@@ -6,10 +6,10 @@ from __future__ import annotations
 import pygame
 
 from cyberpunk_designer.drawing.canvas import (
-    _draw_distance_indicators,
-    _draw_rulers,
     draw_canvas,
+    draw_distance_indicators,
     draw_overflow_marker,
+    draw_rulers,
     draw_widget_preview,
 )
 from cyberpunk_editor import CyberpunkEditorApp
@@ -159,7 +159,7 @@ class TestDrawCanvasSelectionInfo:
 
 
 # ---------------------------------------------------------------------------
-# _draw_distance_indicators (lines 282-335)
+# draw_distance_indicators (lines 282-335)
 # ---------------------------------------------------------------------------
 
 
@@ -172,7 +172,7 @@ class TestDrawDistanceIndicators:
         app.state.dragging = True
         sc = app.state.current_scene()
         sr = app.layout.canvas_rect
-        _draw_distance_indicators(app, sc, sr.x, sr.y, sr)
+        draw_distance_indicators(app, sc, sr.x, sr.y, sr)
 
     def test_indicators_at_origin(self, tmp_path, monkeypatch):
         """Widget at origin → left_d=0, top_d=0."""
@@ -182,7 +182,7 @@ class TestDrawDistanceIndicators:
         app.state.selected_idx = idx
         sc = app.state.current_scene()
         sr = app.layout.canvas_rect
-        _draw_distance_indicators(app, sc, sr.x, sr.y, sr)
+        draw_distance_indicators(app, sc, sr.x, sr.y, sr)
 
     def test_indicators_at_far_corner(self, tmp_path, monkeypatch):
         """Widget at far corner → right_d=0, bottom_d=0."""
@@ -194,13 +194,13 @@ class TestDrawDistanceIndicators:
         app.state.selected = [idx]
         app.state.selected_idx = idx
         sr = app.layout.canvas_rect
-        _draw_distance_indicators(app, sc, sr.x, sr.y, sr)
+        draw_distance_indicators(app, sc, sr.x, sr.y, sr)
 
     def test_indicators_no_selection(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         sc = app.state.current_scene()
         sr = app.layout.canvas_rect
-        _draw_distance_indicators(app, sc, sr.x, sr.y, sr)
+        draw_distance_indicators(app, sc, sr.x, sr.y, sr)
 
 
 # ---------------------------------------------------------------------------
@@ -390,7 +390,7 @@ class TestDrawCanvasBoxSelect:
 
 
 # ---------------------------------------------------------------------------
-# _draw_rulers (line 231, 241)
+# draw_rulers (line 231, 241)
 # ---------------------------------------------------------------------------
 
 
@@ -398,4 +398,4 @@ class TestDrawRulers:
     def test_rulers(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         sr = pygame.Rect(0, 0, 256, 128)
-        _draw_rulers(app, sr, 256, 128)
+        draw_rulers(app, sr, 256, 128)

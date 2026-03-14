@@ -583,10 +583,9 @@ class TestGetWidgetHelp:
         assert isinstance(info["tips"], list)
 
     def test_unknown_type_fallback(self):
-        w = WidgetConfig(type="unknown_xyz", x=0, y=0, width=10, height=10)
-        info = get_widget_help(w)
-        assert info["description"] == "Generic widget."
-        assert info["tips"] == []
+        # WidgetConfig now rejects unknown types at construction
+        with pytest.raises(ValueError, match="Unknown widget type"):
+            WidgetConfig(type="unknown_xyz", x=0, y=0, width=10, height=10)
 
 
 # ===================================================================

@@ -219,7 +219,7 @@ class TestAddComponentEdge:
             {"type": "label", "role": "t", "x": 0, "y": 0, "width": 50, "height": 10, "text": "T"},
         ]
         app = _app()
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         add_component(app, "card")
         sc = app.state.current_scene()
         assert len(sc.widgets) >= 1
@@ -288,7 +288,7 @@ class TestAddComponentEdge:
             {"type": "label", "role": "t", "x": 0, "y": 0, "width": 50, "height": 10, "text": "T"},
         ]
         app = _app()
-        app._auto_complete_widget = MagicMock(side_effect=RuntimeError("fail"))
+        app._auto_complete_widget = MagicMock(side_effect=AttributeError("fail"))
         add_component(app, "card")
         sc = app.state.current_scene()
         assert len(sc.widgets) >= 1
@@ -343,7 +343,7 @@ class TestAddComponentEdge:
             },
         ]
         app = _app()
-        app.designer.create_group = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer.create_group = MagicMock(side_effect=AttributeError("fail"))
         add_component(app, "card")
         sc = app.state.current_scene()
         assert len(sc.widgets) == 2
@@ -556,7 +556,7 @@ class TestWindowing:
         app = _make_app(tmp_path, monkeypatch)
         app.max_auto_scale = 4
         app.window = MagicMock()
-        app.window.get_size.side_effect = RuntimeError("no size")
+        app.window.get_size.side_effect = pygame.error("no size")
         set_scale(app, 2)
 
     def test_recompute_scale_for_window(self, tmp_path, monkeypatch):
@@ -662,7 +662,7 @@ class TestWindowingMock:
 
         class BadBool:
             def __bool__(self):
-                raise RuntimeError("bad bool")
+                raise TypeError("bad bool")
 
         app._scale_locked = BadBool()
         handle_video_resize(app, 512, 256)
@@ -688,7 +688,7 @@ class TestWindowingMock:
 
         class BadBool:
             def __bool__(self):
-                raise RuntimeError("bad bool")
+                raise TypeError("bad bool")
 
         app._scale_locked = BadBool()
         toggle_fullscreen(app)
@@ -699,7 +699,7 @@ class TestWindowingMock:
 
         app = _make_app(tmp_path, monkeypatch)
         app.state = MagicMock()
-        app.state.current_scene.side_effect = RuntimeError("no scene")
+        app.state.current_scene.side_effect = AttributeError("no scene")
         rebuild_layout(app, window_size=(800, 600))
 
     def test_rebuild_scene_larger_than_view(self, tmp_path, monkeypatch):
@@ -720,7 +720,7 @@ class TestWindowingMock:
         from cyberpunk_designer.windowing import rebuild_layout
 
         app = _make_app(tmp_path, monkeypatch)
-        app._mark_dirty = MagicMock(side_effect=RuntimeError("fail"))
+        app._mark_dirty = MagicMock(side_effect=AttributeError("fail"))
         rebuild_layout(app, window_size=(800, 600))
 
     def test_rebuild_state_layout_assign_fails(self, tmp_path, monkeypatch):
@@ -736,7 +736,7 @@ class TestWindowingMock:
 
             @layout.setter
             def layout(self, val):
-                raise RuntimeError("fail")
+                raise AttributeError("fail")
 
             def current_scene(self):
                 return SimpleNamespace(width=256, height=128)
@@ -761,7 +761,7 @@ class TestWindowingMock:
         class BrokenRect:
             @property
             def x(self):
-                raise RuntimeError("broken")
+                raise AttributeError("broken")
 
         # Monkey-patch the Layout class canvas_rect to return broken rect
         monkeypatch.setattr(Layout, "canvas_rect", property(lambda self: BrokenRect()))

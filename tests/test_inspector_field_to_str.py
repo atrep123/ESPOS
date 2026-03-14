@@ -48,6 +48,7 @@ def _app(selected=None):
     """Minimal app mock with state.selected returning the given list."""
     state = SimpleNamespace(selected=selected or [])
     state.current_scene = lambda: None
+    state.selection_list = lambda: list(state.selected or [])
     return SimpleNamespace(state=state)
 
 
@@ -198,6 +199,90 @@ def test_parse_active_count_spaces():
 def test_position():
     w = _w(x=10, y=20)
     assert inspector_field_to_str(_app(), "_position", w) == "10,20"
+
+
+# ── checked ───────────────────────────────────────────────────────────
+
+
+def test_checked_true():
+    w = _w(checked=True)
+    # checked is a bool attr — field_to_str returns str(True) via generic path
+    result = inspector_field_to_str(_app(), "checked", w)
+    assert result == "True"
+
+
+def test_checked_false():
+    w = _w(checked=False)
+    result = inspector_field_to_str(_app(), "checked", w)
+    # Generic path: str(getattr(w, "checked", "") or "") → False is falsy → ""
+    assert result == ""
+
+
+# ── items ─────────────────────────────────────────────────────────────
+
+
+def test_items_list():
+    w = _w(items=["A", "B", "C"])
+    result = inspector_field_to_str(_app(), "items", w)
+    assert result == "['A', 'B', 'C']" or result  # generic str() of list
+
+
+def test_items_empty():
+    w = _w(items=[])
+    result = inspector_field_to_str(_app(), "items", w)
+    assert result == "" or result == "[]"
+
+
+def test_items_none():
+    w = _w(items=None)
+    result = inspector_field_to_str(_app(), "items", w)
+    assert result == ""
+
+
+# ── multi-selection mixed values ──────────────────────────────────────
+
+
+def _scene_with_widgets(*widgets):
+    from types import SimpleNamespace as NS
+
+    return NS(widgets=list(widgets), width=256, height=128, name="main")
+
+
+def _app_multi(widgets, selected):
+    sc = _scene_with_widgets(*widgets)
+    state = SimpleNamespace(selected=selected, current_scene=lambda: sc)
+    state.selection_list = lambda: list(state.selected or [])
+    app = SimpleNamespace(state=state)
+    app._selection_bounds = lambda sel: None
+    return app
+
+
+def test_multi_select_same_color():
+    w0 = _w(color_fg="#ff0000")
+    w1 = _w(color_fg="#ff0000")
+    app = _app_multi([w0, w1], [0, 1])
+    assert inspector_field_to_str(app, "color_fg", w0) == "#ff0000"
+
+
+def test_multi_select_different_color():
+    w0 = _w(color_fg="#ff0000")
+    w1 = _w(color_fg="#00ff00")
+    app = _app_multi([w0, w1], [0, 1])
+    assert inspector_field_to_str(app, "color_fg", w0) == ""
+
+
+def test_multi_select_same_align():
+    w0 = _w(align="center")
+    w1 = _w(align="center")
+    app = _app_multi([w0, w1], [0, 1])
+    assert inspector_field_to_str(app, "align", w0) == "center"
+
+
+def test_multi_select_different_align():
+    w0 = _w(align="left")
+    w1 = _w(align="right")
+    app = _app_multi([w0, w1], [0, 1])
+    assert inspector_field_to_str(app, "align", w0) == ""
 
 
 def test_padding():

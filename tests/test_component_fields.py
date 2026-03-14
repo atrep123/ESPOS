@@ -105,6 +105,103 @@ class TestComponentFieldSpecs:
         assert "metric0_value" in specs
         assert "main_text" in specs
 
+
+# ===================================================================
+# BI – component_fields edge cases & field kind validation
+# ===================================================================
+
+_ALL_KINDS = {"str", "int", "int_list"}
+
+
+class TestFieldKindValues:
+    """All kind values should be one of the known types or a choice: prefix."""
+
+    @pytest.mark.parametrize("comp", _KNOWN_COMPONENTS)
+    def test_kind_is_valid(self, comp):
+        specs = component_field_specs(comp)
+        for key, (_role, _attr, kind) in specs.items():
+            if kind.startswith("choice:"):
+                options = kind.split(":")[1].split("|")
+                assert len(options) >= 2, (
+                    f"{comp}.{key}: choice kind must have >=2 options, got {options}"
+                )
+            elif kind in ("tabs_active", "menu_active", "list_count"):
+                pass  # special inspector kinds
+            else:
+                assert kind in _ALL_KINDS, (
+                    f"{comp}.{key}: unknown kind {kind!r}"
+                )
+
+
+class TestFieldRolesAreNonEmpty:
+    """Every field spec should have non-empty role and attr strings."""
+
+    @pytest.mark.parametrize("comp", _KNOWN_COMPONENTS)
+    def test_role_and_attr_non_empty(self, comp):
+        specs = component_field_specs(comp)
+        for key, (role, attr, _kind) in specs.items():
+            assert role, f"{comp}.{key}: role is empty"
+            assert attr, f"{comp}.{key}: attr is empty"
+
+
+class TestSettingComponents:
+    """Setting components (int/bool/enum) currently have no inspector field specs."""
+
+    def test_setting_int_returns_empty(self):
+        specs = component_field_specs("setting_int")
+        assert specs == {}
+
+    def test_setting_bool_returns_empty(self):
+        specs = component_field_specs("setting_bool")
+        assert specs == {}
+
+    def test_setting_enum_returns_empty(self):
+        specs = component_field_specs("setting_enum")
+        assert specs == {}
+
+
+class TestGaugeHudFields:
+    def test_gauge_hud_has_lines(self):
+        specs = component_field_specs("gauge_hud")
+        assert "line1" in specs
+        assert "line2" in specs
+        assert "gauge_value" in specs
+        assert "gauge_max" in specs
+
+    def test_gauge_int_fields_are_int(self):
+        specs = component_field_specs("gauge_hud")
+        assert specs["gauge_value"][2] == "int"
+        assert specs["gauge_max"][2] == "int"
+
+
+class TestNotificationFields:
+    def test_notification_has_button(self):
+        specs = component_field_specs("notification")
+        assert "button" in specs
+        assert specs["button"][2] == "str"
+
+
+class TestDialogFields:
+    def test_dialog_has_ok_cancel(self):
+        specs = component_field_specs("dialog")
+        assert "ok" in specs
+        assert "cancel" in specs
+
+    def test_dialog_confirm_has_confirm(self):
+        specs = component_field_specs("dialog_confirm")
+        assert "confirm" in specs
+
+
+class TestMenuListFields:
+    def test_menu_list_has_items(self):
+        specs = component_field_specs("menu_list")
+        for i in range(6):
+            assert f"item{i}" in specs
+
+    def test_menu_list_has_active(self):
+        specs = component_field_specs("menu_list")
+        assert "active_item" in specs
+
     def test_gauge_hud_fields(self):
         specs = component_field_specs("gauge_hud")
         assert "gauge_value" in specs

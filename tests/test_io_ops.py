@@ -178,17 +178,17 @@ class TestApplyPresetSlot:
         apply_preset_slot(app, 1)
         assert app.designer.scenes["main"].widgets[0].width == 99
 
-    def test_add_new_widget_without_xy_in_preset_is_noop(self, tmp_path):
-        """WidgetConfig requires x/y; if preset strips them, construction fails silently."""
+    def test_add_new_widget_places_at_10_10(self, tmp_path):
+        """add_new=True creates widget and overrides x/y to (10, 10)."""
         app = _make_app(tmp_path)
         app.widget_presets = [
             {"type": "label", "x": 0, "y": 0, "width": 50, "height": 20, "text": "new"}
         ]
         apply_preset_slot(app, 1, add_new=True)
         sc = app.designer.scenes["main"]
-        # The code strips x/y from preset dict before constructing WidgetConfig,
-        # so the constructor raises TypeError (missing x/y). The except returns early.
-        assert len(sc.widgets) == 0
+        assert len(sc.widgets) == 1
+        assert sc.widgets[0].x == 10
+        assert sc.widgets[0].y == 10
 
 
 # ---------------------------------------------------------------------------
@@ -540,3 +540,268 @@ class TestSaveWidgetPresetsDeep:
         app.preset_path.write_text("{invalid: json", encoding="utf-8")
         result = load_widget_presets(app)
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# AR: IO error scenarios — disk failures, permissions, edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestWriteAuditReportErrors:
+    def test_report_dir_creation(self, tmp_path, monkeypatch):
+        """write_audit_report creates reports/ directory."""
+        monkeypatch.chdir(tmp_path)
+        app = _make_app(tmp_path, widgets=[_make_widget(), _make_widget()])
+        write_audit_report(app)
+        report = (tmp_path / "reports" / "last_audit.txt").read_text(encoding="utf-8")
+        assert "widgets: 2" in report
+
+    def test_report_exception_silenced(self, tmp_path, monkeypatch):
+        """If write_audit_report can't write, it silently passes."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        # Point state to a scene that doesn't exist → exception in current_scene()
+
+        def broken_scene():
+            raise RuntimeError("broken")
+
+        app.state.current_scene = broken_scene
+        write_audit_report(app)  # Should not raise
+
+    def test_report_contents_include_file_path(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        write_audit_report(app)
+        report = (tmp_path / "reports" / "last_audit.txt").read_text(encoding="utf-8")
+        assert "file:" in report
+        assert "scene:" in report
+
+
+class TestMaybeAutosaveErrors:
+    def test_save_exception_silenced(self, tmp_path, monkeypatch):
+        """If save_to_json raises, autosave catches and continues."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app._last_autosave_ts = 0
+
+        def bad_save(path):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(app.designer, "save_to_json", bad_save)
+        maybe_autosave(app)
+        # Should not crash; _dirty remains True since save failed
+        # (exception caught silently in the except block)
+
+    def test_autosave_resets_dirty(self, tmp_path):
+        """Successful autosave clears _dirty and _dirty_scenes."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app._dirty_scenes = {"main"}
+        app._last_autosave_ts = 0
+        maybe_autosave(app)
+        assert app._dirty is False
+        assert app._dirty_scenes == set()
+
+    def test_autosave_updates_timestamp(self, tmp_path):
+        """After autosave, _last_autosave_ts is updated."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app._last_autosave_ts = 0
+        before = time.time()
+        maybe_autosave(app)
+        assert app._last_autosave_ts >= before
+
+
+class TestSaveJsonErrors:
+    def test_save_clears_dirty_scenes(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app._dirty_scenes = {"main", "settings"}
+        save_json(app)
+        assert app._dirty_scenes == set()
+
+    def test_save_with_many_widgets(self, tmp_path, monkeypatch):
+        """Saving a scene with many widgets works correctly."""
+        monkeypatch.chdir(tmp_path)
+        widgets = [_make_widget(text=f"w{i}") for i in range(50)]
+        app = _make_app(tmp_path, widgets=widgets)
+        app._dirty = True
+        save_json(app)
+        data = json.loads(app.json_path.read_text(encoding="utf-8"))
+        assert len(data["scenes"]["main"]["widgets"]) == 50
+
+
+class TestLoadOrDefaultEdge:
+    def test_autosave_with_zero_dimensions_uses_defaults(self, tmp_path):
+        """Autosave with width/height <= 0 → resets to positive dimensions."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        # Save base
+        app.designer.save_to_json(str(app.json_path))
+        # Create autosave with 0 dimensions
+        sc = app.designer.scenes["main"]
+        sc.width = 0
+        sc.height = 0
+        app.designer.save_to_json(str(app.autosave_path))
+        # Make autosave newer
+        base_mtime = app.json_path.stat().st_mtime
+        os.utime(str(app.autosave_path), (base_mtime + 10, base_mtime + 10))
+        # Clear and reload
+        app.designer.scenes.clear()
+        app.designer.current_scene = None
+        load_or_default(app)
+        sc = app.designer.scenes[app.designer.current_scene]
+        # Dimensions should be positive after fixup
+        assert sc.width > 0
+        assert sc.height > 0
+
+
+# ===================================================================
+# BJ – io_ops robustness edge cases
+# ===================================================================
+
+
+class TestLoadOrDefaultRobust:
+    def test_both_missing_creates_default_scene(self, tmp_path):
+        """Neither base nor autosave exists → creates fresh scene."""
+        app = _make_app(tmp_path, widgets=[])
+        app.designer.scenes.clear()
+        app.designer.current_scene = None
+        app.json_path = tmp_path / "nonexistent.json"
+        app.autosave_path = tmp_path / ".nonexistent_auto.json"
+        load_or_default(app)
+        assert app.designer.current_scene is not None
+        sc = app.designer.scenes[app.designer.current_scene]
+        assert sc.width > 0
+
+    def test_autosave_older_uses_base(self, tmp_path):
+        """When autosave is older than base, base is loaded."""
+        app = _make_app(tmp_path, widgets=[_make_widget(text="base")])
+        app.designer.save_to_json(str(app.json_path))
+        app.designer.save_to_json(str(app.autosave_path))
+        # Make base newer
+        auto_mtime = app.autosave_path.stat().st_mtime
+        os.utime(str(app.json_path), (auto_mtime + 10, auto_mtime + 10))
+        app.designer.scenes.clear()
+        app.designer.current_scene = None
+        load_or_default(app)
+        assert app.designer.current_scene is not None
+
+
+class TestSaveJsonRobust:
+    def test_save_creates_parent_dir(self, tmp_path, monkeypatch):
+        """save_json works even when parent dir already exists."""
+        monkeypatch.chdir(tmp_path)
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app._dirty_scenes = {"main"}
+        save_json(app)
+        assert app.json_path.exists()
+        assert app._dirty is False
+
+    def test_save_preserves_widget_data(self, tmp_path, monkeypatch):
+        """Round-tripping through save/load preserves widget text."""
+        monkeypatch.chdir(tmp_path)
+        app = _make_app(tmp_path, widgets=[_make_widget(text="preserved")])
+        save_json(app)
+        data = json.loads(app.json_path.read_text(encoding="utf-8"))
+        widgets = data["scenes"]["main"]["widgets"]
+        assert any(w.get("text") == "preserved" for w in widgets)
+
+
+class TestApplyPresetRobust:
+    def test_apply_to_multiple_selected(self, tmp_path):
+        """Preset is applied to all selected widgets."""
+        w0 = _make_widget(text="a")
+        w1 = _make_widget(text="b")
+        app = _make_app(tmp_path, widgets=[w0, w1])
+        app.widget_presets = [{"type": "button", "text": "preset"}]
+        app.state.selected = [0, 1]
+        apply_preset_slot(app, 1)
+        sc = app.state.current_scene()
+        assert sc.widgets[0].text == "preset"
+        assert sc.widgets[1].text == "preset"
+
+    def test_apply_skips_unknown_fields(self, tmp_path):
+        """Preset with extra fields doesn't crash."""
+        w = _make_widget()
+        app = _make_app(tmp_path, widgets=[w])
+        app.widget_presets = [{"type": "label", "text": "ok", "nonexistent_field": 42}]
+        app.state.selected = [0]
+        app.state.selected_idx = 0
+        apply_preset_slot(app, 1)
+        assert app.state.current_scene().widgets[0].text == "ok"
+
+    def test_add_new_from_preset(self, tmp_path):
+        """add_new=True creates a new widget at position (10, 10)."""
+        app = _make_app(tmp_path, widgets=[])
+        app.widget_presets = [
+            {"type": "button", "text": "new_btn", "width": 60, "height": 20,
+             "x": 50, "y": 50}
+        ]
+        apply_preset_slot(app, 1, add_new=True)
+        sc = app.state.current_scene()
+        assert len(sc.widgets) == 1
+        assert sc.widgets[0].x == 10
+        assert sc.widgets[0].y == 10
+        assert sc.widgets[0].text == "new_btn"
+
+    def test_add_new_without_xy_in_preset(self, tmp_path):
+        """add_new=True works even when preset has no x/y (defaults applied)."""
+        app = _make_app(tmp_path, widgets=[])
+        app.widget_presets = [
+            {"type": "label", "text": "hello", "width": 30, "height": 10}
+        ]
+        apply_preset_slot(app, 1, add_new=True)
+        sc = app.state.current_scene()
+        assert len(sc.widgets) == 1
+        assert sc.widgets[0].x == 10
+        assert sc.widgets[0].y == 10
+
+
+class TestMaybeAutosaveRobust:
+    def test_respects_disabled_flag(self, tmp_path):
+        """Autosave with enabled=False doesn't write."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app._last_autosave_ts = 0
+        app.autosave_enabled = False
+        maybe_autosave(app)
+        assert not app.autosave_path.exists()
+
+    def test_respects_interval_boundary(self, tmp_path):
+        """Autosave only triggers after interval has passed."""
+        app = _make_app(tmp_path, widgets=[_make_widget()])
+        app._dirty = True
+        app.autosave_interval = 999
+        app._last_autosave_ts = time.time()
+        maybe_autosave(app)
+        assert not app.autosave_path.exists()
+
+
+class TestPrefsRobust:
+    def test_favorite_ports_round_trip(self, tmp_path, monkeypatch):
+        """Favorite ports survive save/load cycle."""
+        import cyberpunk_designer.io_ops as _io_mod
+
+        prefs_path = tmp_path / "prefs.json"
+        monkeypatch.setattr(_io_mod, "PREFS_PATH", prefs_path)
+        app = _make_app(tmp_path, widgets=[])
+        app.favorite_ports = ["COM3", "/dev/ttyUSB0"]
+        save_prefs(app)
+        app.favorite_ports = []
+        app.prefs = {}
+        load_prefs(app)
+        assert app.favorite_ports == ["COM3", "/dev/ttyUSB0"]
+
+    def test_prefs_missing_favorite_ports(self, tmp_path, monkeypatch):
+        """Prefs file without favorite_ports key doesn't crash."""
+        import cyberpunk_designer.io_ops as _io_mod
+
+        prefs_path = tmp_path / "prefs.json"
+        monkeypatch.setattr(_io_mod, "PREFS_PATH", prefs_path)
+        prefs_path.write_text('{"theme": "dark"}', encoding="utf-8")
+        app = _make_app(tmp_path, widgets=[])
+        app.favorite_ports = ["original"]
+        load_prefs(app)
+        # favorite_ports not in prefs → stays at original
+        assert app.favorite_ports == ["original"]

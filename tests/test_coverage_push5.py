@@ -36,7 +36,7 @@ def _make_app(tmp_path, monkeypatch, *, widgets=None, snap=False):
 
 
 def _make_save_raise(app):
-    app.designer._save_state = MagicMock(side_effect=RuntimeError("boom"))
+    app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +321,7 @@ class TestBatchOpsEmptyAndLocked:
 
     def test_reset_to_defaults_locked(self, tmp_path, monkeypatch):
         """L64"""
-        from cyberpunk_designer.selection_ops.batch_ops import reset_to_defaults
+        from cyberpunk_designer.selection_ops import reset_to_defaults
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(locked=True)])
         app.state.selected = [0]
@@ -329,14 +329,14 @@ class TestBatchOpsEmptyAndLocked:
 
     def test_widget_info_oob(self, tmp_path, monkeypatch):
         """L98"""
-        from cyberpunk_designer.selection_ops.batch_ops import widget_info
+        from cyberpunk_designer.selection_ops import widget_info
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
         widget_info(app)
 
     def test_reset_to_defaults_oob(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import reset_to_defaults
+        from cyberpunk_designer.selection_ops import reset_to_defaults
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
@@ -344,7 +344,7 @@ class TestBatchOpsEmptyAndLocked:
 
     def test_remove_degenerate_empty(self, tmp_path, monkeypatch):
         """L358"""
-        from cyberpunk_designer.selection_ops.batch_ops import remove_degenerate_widgets
+        from cyberpunk_designer.selection_ops import remove_degenerate_widgets
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.current_scene().widgets.clear()
@@ -352,7 +352,7 @@ class TestBatchOpsEmptyAndLocked:
 
     def test_enable_all_empty(self, tmp_path, monkeypatch):
         """L385"""
-        from cyberpunk_designer.selection_ops.batch_ops import enable_all_widgets
+        from cyberpunk_designer.selection_ops import enable_all_widgets
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.current_scene().widgets.clear()
@@ -375,36 +375,36 @@ class TestBatchOpsSaveRaise:
         return app
 
     def test_reset_to_defaults(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import reset_to_defaults
+        from cyberpunk_designer.selection_ops import reset_to_defaults
 
         reset_to_defaults(self._app1(tmp_path, monkeypatch))
 
     def test_flatten_z_indices(self, tmp_path, monkeypatch):
         """L503"""
-        from cyberpunk_designer.selection_ops.batch_ops import flatten_z_indices
+        from cyberpunk_designer.selection_ops import flatten_z_indices
 
         flatten_z_indices(self._app2(tmp_path, monkeypatch))
 
     def test_reverse_widget_order(self, tmp_path, monkeypatch):
         """L533"""
-        from cyberpunk_designer.selection_ops.batch_ops import reverse_widget_order
+        from cyberpunk_designer.selection_ops import reverse_widget_order
 
         reverse_widget_order(self._app2(tmp_path, monkeypatch))
 
     def test_normalize_sizes(self, tmp_path, monkeypatch):
         """L555"""
-        from cyberpunk_designer.selection_ops.batch_ops import normalize_sizes
+        from cyberpunk_designer.selection_ops import normalize_sizes
 
         normalize_sizes(self._app2(tmp_path, monkeypatch))
 
     def test_increment_text(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import increment_text
+        from cyberpunk_designer.selection_ops import increment_text
 
         increment_text(self._app1(tmp_path, monkeypatch, text="Item 1"))
 
     def test_replace_text(self, tmp_path, monkeypatch):
         """L710"""
-        from cyberpunk_designer.selection_ops.batch_ops import replace_text_in_scene
+        from cyberpunk_designer.selection_ops import replace_text_in_scene
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hello")])
         _make_save_raise(app)
@@ -416,19 +416,19 @@ class TestBatchOpsSaveRaise:
 
     def test_remove_degenerate(self, tmp_path, monkeypatch):
         """L369"""
-        from cyberpunk_designer.selection_ops.batch_ops import remove_degenerate_widgets
+        from cyberpunk_designer.selection_ops import remove_degenerate_widgets
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(width=0, height=0)])
         _make_save_raise(app)
         remove_degenerate_widgets(app)
 
     def test_auto_rename(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import auto_rename
+        from cyberpunk_designer.selection_ops import auto_rename
 
         auto_rename(self._app1(tmp_path, monkeypatch, text="hello"))
 
     def test_enable_all(self, tmp_path, monkeypatch):
-        from cyberpunk_designer.selection_ops.batch_ops import enable_all_widgets
+        from cyberpunk_designer.selection_ops import enable_all_widgets
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(enabled=False)])
         _make_save_raise(app)
@@ -440,7 +440,7 @@ class TestBatchOpsOobGuards:
 
     def test_snap_sizes_oob(self, tmp_path, monkeypatch):
         """L434"""
-        from cyberpunk_designer.selection_ops.batch_ops import snap_sizes_to_grid
+        from cyberpunk_designer.selection_ops import snap_sizes_to_grid
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(width=37)])
         app.state.selected = [0, 999]
@@ -448,7 +448,7 @@ class TestBatchOpsOobGuards:
 
     def test_reverse_widget_order_oob(self, tmp_path, monkeypatch):
         """L530"""
-        from cyberpunk_designer.selection_ops.batch_ops import reverse_widget_order
+        from cyberpunk_designer.selection_ops import reverse_widget_order
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -456,7 +456,7 @@ class TestBatchOpsOobGuards:
 
     def test_normalize_sizes_oob(self, tmp_path, monkeypatch):
         """L552"""
-        from cyberpunk_designer.selection_ops.batch_ops import normalize_sizes
+        from cyberpunk_designer.selection_ops import normalize_sizes
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -464,7 +464,7 @@ class TestBatchOpsOobGuards:
 
     def test_increment_text_oob(self, tmp_path, monkeypatch):
         """L626"""
-        from cyberpunk_designer.selection_ops.batch_ops import increment_text
+        from cyberpunk_designer.selection_ops import increment_text
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
@@ -472,7 +472,7 @@ class TestBatchOpsOobGuards:
 
     def test_measure_selection_oob(self, tmp_path, monkeypatch):
         """L652"""
-        from cyberpunk_designer.selection_ops.batch_ops import measure_selection
+        from cyberpunk_designer.selection_ops import measure_selection
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
@@ -480,7 +480,7 @@ class TestBatchOpsOobGuards:
 
     def test_zoom_to_selection_oob(self, tmp_path, monkeypatch):
         """L730"""
-        from cyberpunk_designer.selection_ops.batch_ops import zoom_to_selection
+        from cyberpunk_designer.selection_ops import zoom_to_selection
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
@@ -488,7 +488,7 @@ class TestBatchOpsOobGuards:
 
     def test_zoom_to_selection_no_layout(self, tmp_path, monkeypatch):
         """L742"""
-        from cyberpunk_designer.selection_ops.batch_ops import zoom_to_selection
+        from cyberpunk_designer.selection_ops import zoom_to_selection
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
@@ -497,7 +497,7 @@ class TestBatchOpsOobGuards:
 
     def test_inset_widgets_oob(self, tmp_path, monkeypatch):
         """L841"""
-        from cyberpunk_designer.selection_ops.batch_ops import inset_widgets
+        from cyberpunk_designer.selection_ops import inset_widgets
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -505,7 +505,7 @@ class TestBatchOpsOobGuards:
 
     def test_outset_widgets_oob(self, tmp_path, monkeypatch):
         """L868"""
-        from cyberpunk_designer.selection_ops.batch_ops import outset_widgets
+        from cyberpunk_designer.selection_ops import outset_widgets
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -513,7 +513,7 @@ class TestBatchOpsOobGuards:
 
     def test_tile_fill_scene_oob(self, tmp_path, monkeypatch):
         """L931"""
-        from cyberpunk_designer.selection_ops.batch_ops import tile_fill_scene
+        from cyberpunk_designer.selection_ops import tile_fill_scene
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
@@ -521,7 +521,7 @@ class TestBatchOpsOobGuards:
 
     def test_match_first_width_oob(self, tmp_path, monkeypatch):
         """L968"""
-        from cyberpunk_designer.selection_ops.batch_ops import match_first_width
+        from cyberpunk_designer.selection_ops import match_first_width
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999, 1000]
@@ -529,7 +529,7 @@ class TestBatchOpsOobGuards:
 
     def test_match_first_height_oob(self, tmp_path, monkeypatch):
         """L988"""
-        from cyberpunk_designer.selection_ops.batch_ops import match_first_height
+        from cyberpunk_designer.selection_ops import match_first_height
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999, 1000]
@@ -537,7 +537,7 @@ class TestBatchOpsOobGuards:
 
     def test_scatter_random_oob(self, tmp_path, monkeypatch):
         """L1011"""
-        from cyberpunk_designer.selection_ops.batch_ops import scatter_random
+        from cyberpunk_designer.selection_ops import scatter_random
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -545,7 +545,7 @@ class TestBatchOpsOobGuards:
 
     def test_toggle_all_checked_oob(self, tmp_path, monkeypatch):
         """L1034"""
-        from cyberpunk_designer.selection_ops.batch_ops import toggle_all_checked
+        from cyberpunk_designer.selection_ops import toggle_all_checked
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(type="checkbox")])
         app.state.selected = [0, 999]
@@ -553,7 +553,7 @@ class TestBatchOpsOobGuards:
 
     def test_reset_all_values_oob(self, tmp_path, monkeypatch):
         """L1058"""
-        from cyberpunk_designer.selection_ops.batch_ops import reset_all_values
+        from cyberpunk_designer.selection_ops import reset_all_values
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(type="slider", value=50)])
         app.state.selected = [0, 999]
@@ -561,7 +561,7 @@ class TestBatchOpsOobGuards:
 
     def test_clone_to_grid_oob(self, tmp_path, monkeypatch):
         """L1132"""
-        from cyberpunk_designer.selection_ops.batch_ops import clone_to_grid
+        from cyberpunk_designer.selection_ops import clone_to_grid
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.selected = [999]
@@ -569,7 +569,7 @@ class TestBatchOpsOobGuards:
 
     def test_clamp_to_scene_oob(self, tmp_path, monkeypatch):
         """L1182"""
-        from cyberpunk_designer.selection_ops.batch_ops import clamp_to_scene
+        from cyberpunk_designer.selection_ops import clamp_to_scene
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -577,7 +577,7 @@ class TestBatchOpsOobGuards:
 
     def test_snap_all_to_grid_oob(self, tmp_path, monkeypatch):
         """L1215"""
-        from cyberpunk_designer.selection_ops.batch_ops import snap_all_to_grid
+        from cyberpunk_designer.selection_ops import snap_all_to_grid
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -585,7 +585,7 @@ class TestBatchOpsOobGuards:
 
     def test_size_to_text_oob(self, tmp_path, monkeypatch):
         """L1237"""
-        from cyberpunk_designer.selection_ops.batch_ops import size_to_text
+        from cyberpunk_designer.selection_ops import size_to_text
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -593,7 +593,7 @@ class TestBatchOpsOobGuards:
 
     def test_fill_parent_oob(self, tmp_path, monkeypatch):
         """L1264"""
-        from cyberpunk_designer.selection_ops.batch_ops import fill_parent
+        from cyberpunk_designer.selection_ops import fill_parent
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -601,7 +601,7 @@ class TestBatchOpsOobGuards:
 
     def test_fill_parent_no_panel(self, tmp_path, monkeypatch):
         """L1275: no enclosing panel found."""
-        from cyberpunk_designer.selection_ops.batch_ops import fill_parent
+        from cyberpunk_designer.selection_ops import fill_parent
 
         app = _make_app(
             tmp_path,
@@ -613,7 +613,7 @@ class TestBatchOpsOobGuards:
 
     def test_clear_all_text_oob(self, tmp_path, monkeypatch):
         """L1308"""
-        from cyberpunk_designer.selection_ops.batch_ops import clear_all_text
+        from cyberpunk_designer.selection_ops import clear_all_text
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -621,7 +621,7 @@ class TestBatchOpsOobGuards:
 
     def test_reset_padding_oob(self, tmp_path, monkeypatch):
         """L1373"""
-        from cyberpunk_designer.selection_ops.batch_ops import reset_padding
+        from cyberpunk_designer.selection_ops import reset_padding
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]
@@ -629,7 +629,7 @@ class TestBatchOpsOobGuards:
 
     def test_reset_colors_oob(self, tmp_path, monkeypatch):
         """L1396"""
-        from cyberpunk_designer.selection_ops.batch_ops import reset_colors
+        from cyberpunk_designer.selection_ops import reset_colors
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0, 999]

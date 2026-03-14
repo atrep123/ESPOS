@@ -110,7 +110,7 @@ class TestAlignmentEdges:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=3, y=5)])
         app.state.selected = [0]
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         snap_selection_to_grid(app)
 
     def test_center_in_scene_no_valid(self, tmp_path, monkeypatch):
@@ -127,7 +127,7 @@ class TestAlignmentEdges:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10)])
         app.state.selected = [0]
-        app.designer._save_state = MagicMock(side_effect=RuntimeError("fail"))
+        app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         center_in_scene(app)
 
     def test_center_in_parent_out_of_range(self, tmp_path, monkeypatch):
@@ -268,7 +268,7 @@ class TestFocusNavEdges:
 
         def _bad_set(self, name, value):
             if name == "text":
-                raise RuntimeError("fail")
+                raise AttributeError("fail")
             orig_set(self, name, value)
 
         monkeypatch.setattr(type_obj, "__setattr__", _bad_set)
@@ -353,7 +353,7 @@ class TestFocusNavEdges:
 
         def _bad(self, name, value):
             if name == "value" and isinstance(value, int):
-                raise RuntimeError("fail")
+                raise AttributeError("fail")
             orig_set(self, name, value)
 
         monkeypatch.setattr(type(w), "__setattr__", _bad)
@@ -379,7 +379,7 @@ class TestFocusNavEdges:
 
         def _bad(self, name, value):
             if name == "checked":
-                raise RuntimeError("fail")
+                raise AttributeError("fail")
             orig_set(self, name, value)
 
         monkeypatch.setattr(type(w), "__setattr__", _bad)

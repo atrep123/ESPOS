@@ -330,3 +330,77 @@ class TestDrawContextMenuExtra:
         app._context_menu = {"visible": True, "items": items, "pos": (10, 10)}
         draw_context_menu(app)
         assert len(app._context_menu["hitboxes"]) == 1
+
+    def test_right_edge_clamp(self, tmp_path, monkeypatch):
+        """Menu near right edge is clamped to stay on screen."""
+        app = _make_app(tmp_path, monkeypatch)
+        sw = app.logical_surface.get_width()
+        items = [("Long action label", "Ctrl+Shift+X", lambda: None)]
+        app._context_menu = {
+            "visible": True,
+            "items": items,
+            "pos": (sw - 5, 10),
+        }
+        draw_context_menu(app)
+        menu_rect = app._context_menu.get("rect")
+        assert menu_rect is not None
+        assert menu_rect.right <= sw
+
+    def test_bottom_edge_clamp(self, tmp_path, monkeypatch):
+        """Menu near bottom edge is clamped to stay on screen."""
+        app = _make_app(tmp_path, monkeypatch)
+        sh = app.logical_surface.get_height()
+        items = [
+            ("Act1", "", lambda: None),
+            ("Act2", "", lambda: None),
+            ("Act3", "", lambda: None),
+        ]
+        app._context_menu = {
+            "visible": True,
+            "items": items,
+            "pos": (10, sh - 5),
+        }
+        draw_context_menu(app)
+        menu_rect = app._context_menu.get("rect")
+        assert menu_rect is not None
+        assert menu_rect.bottom <= sh
+
+    def test_many_items_generates_hitboxes(self, tmp_path, monkeypatch):
+        """Menu with many items produces correct number of hitboxes."""
+        app = _make_app(tmp_path, monkeypatch)
+        items = [(f"Item {i}", "", lambda: None) for i in range(8)]
+        app._context_menu = {"visible": True, "items": items, "pos": (10, 10)}
+        draw_context_menu(app)
+        assert len(app._context_menu["hitboxes"]) == 8
+
+    def test_mixed_items_and_separators(self, tmp_path, monkeypatch):
+        """Separators are skipped in hitboxes."""
+        app = _make_app(tmp_path, monkeypatch)
+        items = [
+            ("Cut", "Ctrl+X", lambda: None),
+            (None, None, None),
+            ("Copy", "Ctrl+C", lambda: None),
+            (None, None, None),
+            ("Paste", "Ctrl+V", lambda: None),
+        ]
+        app._context_menu = {"visible": True, "items": items, "pos": (10, 10)}
+        draw_context_menu(app)
+        assert len(app._context_menu["hitboxes"]) == 3
+
+    def test_not_visible_noop(self, tmp_path, monkeypatch):
+        """Menu with visible=False does nothing."""
+        app = _make_app(tmp_path, monkeypatch)
+        app._context_menu = {
+            "visible": False,
+            "items": [("A", "", lambda: None)],
+            "pos": (0, 0),
+        }
+        draw_context_menu(app)
+        assert "hitboxes" not in app._context_menu
+
+    def test_no_menu_attr_noop(self, tmp_path, monkeypatch):
+        """No _context_menu attribute does nothing."""
+        app = _make_app(tmp_path, monkeypatch)
+        if hasattr(app, "_context_menu"):
+            del app._context_menu
+        draw_context_menu(app)

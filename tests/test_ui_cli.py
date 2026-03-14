@@ -5,17 +5,17 @@ import os
 import pytest
 
 from ui_cli import (
-    _NAMED_COLORS,
     MSG_FAILED,
     MSG_INDEX_INTEGER,
     MSG_INVALID_INDEX,
     MSG_NO_SCENE,
     MSG_UNKNOWN_ANIM,
-    _contrast_ratio,
-    _parse_color,
-    _rel_lum,
+    NAMED_COLORS,
+    contrast_ratio,
     create_cli_interface,
     get_widget_help,
+    parse_color,
+    rel_lum,
     show_command_help,
 )
 from ui_models import WidgetConfig
@@ -45,38 +45,38 @@ class TestMsgConstants:
 
 
 # ===========================================================================
-# _parse_color
+# parse_color
 # ===========================================================================
 
 
 class TestParseColor:
     def test_named_black(self):
-        assert _parse_color("black") == (0, 0, 0)
+        assert parse_color("black") == (0, 0, 0)
 
     def test_named_white(self):
-        assert _parse_color("white") == (255, 255, 255)
+        assert parse_color("white") == (255, 255, 255)
 
     def test_named_case_insensitive(self):
-        assert _parse_color("RED") == (255, 0, 0)
+        assert parse_color("RED") == (255, 0, 0)
 
     def test_hex_6_digit(self):
-        assert _parse_color("#ff8800") == (255, 136, 0)
+        assert parse_color("#ff8800") == (255, 136, 0)
 
     def test_hex_bad_digits(self):
-        assert _parse_color("#zzzzzz") == (0, 0, 0)
+        assert parse_color("#zzzzzz") == (0, 0, 0)
 
     def test_hex_short(self):
         # Not 6-digit hex -> fallback
-        assert _parse_color("#fff") == (0, 0, 0)
+        assert parse_color("#fff") == (0, 0, 0)
 
     def test_empty_string(self):
-        assert _parse_color("") == (0, 0, 0)
+        assert parse_color("") == (0, 0, 0)
 
     def test_none_coerced(self):
-        assert _parse_color(None) == (0, 0, 0)
+        assert parse_color(None) == (0, 0, 0)
 
     def test_unknown_name(self):
-        assert _parse_color("chartreuse") == (0, 0, 0)
+        assert parse_color("chartreuse") == (0, 0, 0)
 
     def test_all_named_present(self):
         expected_names = {
@@ -93,31 +93,31 @@ class TestParseColor:
             "orange",
             "purple",
         }
-        assert expected_names == set(_NAMED_COLORS.keys())
+        assert expected_names == set(NAMED_COLORS.keys())
 
 
 # ===========================================================================
-# _rel_lum / _contrast_ratio
+# rel_lum / contrast_ratio
 # ===========================================================================
 
 
 class TestContrastHelpers:
     def test_rel_lum_black(self):
-        assert _rel_lum((0, 0, 0)) == pytest.approx(0.0)
+        assert rel_lum((0, 0, 0)) == pytest.approx(0.0)
 
     def test_rel_lum_white(self):
-        assert _rel_lum((255, 255, 255)) == pytest.approx(1.0, abs=0.01)
+        assert rel_lum((255, 255, 255)) == pytest.approx(1.0, abs=0.01)
 
     def test_contrast_white_black(self):
-        ratio = _contrast_ratio("white", "black")
+        ratio = contrast_ratio("white", "black")
         assert ratio == pytest.approx(21.0, abs=0.1)
 
     def test_contrast_same_color(self):
-        assert _contrast_ratio("red", "red") == pytest.approx(1.0)
+        assert contrast_ratio("red", "red") == pytest.approx(1.0)
 
     def test_contrast_order_independent(self):
-        r1 = _contrast_ratio("white", "blue")
-        r2 = _contrast_ratio("blue", "white")
+        r1 = contrast_ratio("white", "blue")
+        r2 = contrast_ratio("blue", "white")
         assert r1 == pytest.approx(r2)
 
 
@@ -145,9 +145,9 @@ class TestHelpers:
         assert "tips" in info
 
     def test_get_widget_help_unknown_type(self):
-        w = WidgetConfig(type="alien", x=0, y=0, width=10, height=10)
-        info = get_widget_help(w)
-        assert info["description"] == "Generic widget."
+        # WidgetConfig now rejects unknown types at construction
+        with pytest.raises(ValueError, match="Unknown widget type"):
+            WidgetConfig(type="alien", x=0, y=0, width=10, height=10)
 
     def test_get_widget_help_all_known_types(self):
         known = [

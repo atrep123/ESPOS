@@ -592,8 +592,8 @@ class TestAddWidget:
         app = _make_app(tmp_path, monkeypatch)
         before = len(app.state.current_scene().widgets)
         app._add_widget("unknown_xyz")
-        # Should still add with default type
-        assert len(app.state.current_scene().widgets) >= before
+        # Unknown type is rejected — no widget added
+        assert len(app.state.current_scene().widgets) == before
 
 
 # ===========================================================================

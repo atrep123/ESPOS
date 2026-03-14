@@ -954,21 +954,21 @@ class TestNumberKeyWidgetCreation:
             on_key_down(app, _key_event(key))
             assert expected_type in called, f"key {key} should add {expected_type}"
 
-    def test_0_adds_textbox(self, tmp_path, monkeypatch):
+    def test_0_adds_list(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         called = []
         app._add_widget = lambda t: called.append(t)
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         on_key_down(app, _key_event(pygame.K_0))
-        assert "textbox" in called
+        assert "list" in called
 
-    def test_shift_0_adds_radiobutton(self, tmp_path, monkeypatch):
+    def test_shift_0_adds_list(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
         called = []
         app._add_widget = lambda t: called.append(t)
         monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
         on_key_down(app, _key_event(pygame.K_0, mod=SHIFT))
-        assert "radiobutton" in called
+        assert "list" in called
 
 
 # ===========================================================================
@@ -1502,3 +1502,253 @@ class TestCtrlNumberSceneJump:
         monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL)
         on_key_down(app, _key_event(pygame.K_3, mod=CTRL))
         assert called == [2]
+
+
+# ===========================================================================
+# AY — key dispatch gaps: sim mode edge cases, Ctrl+Tab, inspector edits
+# ===========================================================================
+
+
+class TestSimModeEscapeWithEditValue:
+    """sim_input_mode + focus_edit_value → Escape exits edit instead of B."""
+
+    def test_escape_exits_edit_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        app.focus_edit_value = True
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_ESCAPE))
+        assert app.focus_edit_value is False
+        assert app.running is True
+
+    def test_backspace_exits_edit_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        app.focus_edit_value = True
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_BACKSPACE))
+        assert app.focus_edit_value is False
+
+
+class TestSimModeArrowEditValue:
+    """In sim_input_mode with focus_edit_value, Up/Down adjust value."""
+
+    def test_up_adjusts_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        app.focus_edit_value = True
+        called = []
+        app._adjust_focused_value = lambda s: called.append(s)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_UP))
+        assert called == [-1]
+
+    def test_down_adjusts_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        app.focus_edit_value = True
+        called = []
+        app._adjust_focused_value = lambda s: called.append(s)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_DOWN))
+        assert called == [1]
+
+    def test_shift_up_adjusts_5(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        app.focus_edit_value = True
+        called = []
+        app._adjust_focused_value = lambda s: called.append(s)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        on_key_down(app, _key_event(pygame.K_UP, mod=SHIFT))
+        assert called == [-5]
+
+
+class TestSimModeShiftEnter:
+    def test_shift_enter_hold(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        # Should not crash — just sets status
+        on_key_down(app, _key_event(pygame.K_RETURN, mod=SHIFT))
+        assert app.running is True
+
+
+class TestSimModePageUpShift:
+    def test_shift_pageup_step_5(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        called = []
+        app._adjust_focused_value = lambda s: called.append(s)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        on_key_down(app, _key_event(pygame.K_PAGEUP, mod=SHIFT))
+        assert called == [5]
+
+    def test_shift_pagedown_step_5(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        called = []
+        app._adjust_focused_value = lambda s: called.append(s)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        on_key_down(app, _key_event(pygame.K_PAGEDOWN, mod=SHIFT))
+        assert called == [-5]
+
+
+class TestCtrlTabSceneSwitching:
+    def test_ctrl_tab_next_scene(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.designer.create_scene("second")
+        called = []
+        app._jump_to_scene = lambda i: called.append(i)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL)
+        on_key_down(app, _key_event(pygame.K_TAB, mod=CTRL))
+        assert len(called) == 1
+
+    def test_ctrl_shift_tab_prev_scene(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.designer.create_scene("second")
+        called = []
+        app._jump_to_scene = lambda i: called.append(i)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL | SHIFT)
+        on_key_down(app, _key_event(pygame.K_TAB, mod=CTRL | SHIFT))
+        assert len(called) == 1
+
+    def test_ctrl_pagedown_next(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.designer.create_scene("second")
+        called = []
+        app._jump_to_scene = lambda i: called.append(i)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL)
+        on_key_down(app, _key_event(pygame.K_PAGEDOWN, mod=CTRL))
+        assert len(called) == 1
+
+    def test_ctrl_pageup_prev(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.designer.create_scene("second")
+        called = []
+        app._jump_to_scene = lambda i: called.append(i)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL)
+        on_key_down(app, _key_event(pygame.K_PAGEUP, mod=CTRL))
+        assert len(called) == 1
+
+
+class TestInspectorFieldEdits:
+    """Bare keys that trigger inspector field editing when selected."""
+
+    def test_c_key_edit_color_fg(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_c))
+        assert "color_fg" in called
+
+    def test_shift_c_edit_color_bg(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        on_key_down(app, _key_event(pygame.K_c, mod=SHIFT))
+        assert "color_bg" in called
+
+    def test_r_key_edit_text(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_r))
+        assert "text" in called
+
+    def test_h_key_edit_size(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_h))
+        assert "_size" in called
+
+    def test_shift_h_edit_position(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        on_key_down(app, _key_event(pygame.K_h, mod=SHIFT))
+        assert "_position" in called
+
+    def test_u_key_edit_z_index(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_u))
+        assert "z_index" in called
+
+    def test_shift_e_edit_runtime(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: SHIFT)
+        on_key_down(app, _key_event(pygame.K_e, mod=SHIFT))
+        assert "runtime" in called
+
+    def test_k_key_edit_padding(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_k))
+        assert "_padding" in called
+
+    def test_d_key_edit_data_points(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _sel(app, 0)
+        called = []
+        app._inspector_start_edit = lambda f: called.append(f)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_d))
+        assert "data_points" in called
+
+
+class TestNumberKeysBlockedInSim:
+    """Number keys should not create widgets in sim_input_mode."""
+
+    def test_number_1_ignored_in_sim(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        app.sim_input_mode = True
+        called = []
+        app._add_widget = lambda t: called.append(t)
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_key_down(app, _key_event(pygame.K_1))
+        assert called == []
+
+
+class TestCtrlArrowPreciseNudge:
+    """Ctrl+Arrow = 1px precise nudge regardless of snap."""
+
+    def test_ctrl_right_nudge_1px(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app, x=50, y=50)
+        _sel(app, 0)
+        app.snap_enabled = True
+        called = []
+        app._move_selection = lambda dx, dy: called.append((dx, dy))
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL)
+        on_key_down(app, _key_event(pygame.K_RIGHT, mod=CTRL))
+        assert called == [(1, 0)]

@@ -925,7 +925,7 @@ class TestInspectorExceptionBranches:
         """Make designer._save_state() raise an exception."""
 
         def _broken():
-            raise RuntimeError("save failed")
+            raise TypeError("save failed")
 
         app.designer._save_state = _broken
 
@@ -1602,7 +1602,7 @@ class TestInspectorEdgeCases:
         _sel(app, 0)
 
         def _broken():
-            raise RuntimeError("save failed")
+            raise TypeError("save failed")
 
         app.designer._save_state = _broken
         self._setup_edit(app, "_scene_name", "new_name")
@@ -2114,7 +2114,7 @@ class TestRootRenameEdgeCases:
         class BrokenGroups:
             def __getattr__(self, name):
                 if name == "groups":
-                    raise RuntimeError("broken")
+                    raise AttributeError("broken")
                 raise AttributeError(name)
 
         self._setup_edit(app, "comp.root", "menu4")

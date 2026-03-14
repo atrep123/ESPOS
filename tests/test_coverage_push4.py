@@ -190,7 +190,7 @@ class TestDrawingPanelsEdges:
         from cyberpunk_designer.drawing.panels import draw_palette
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
-        app._palette_content_height = MagicMock(side_effect=RuntimeError("boom"))
+        app._palette_content_height = MagicMock(side_effect=ValueError("boom"))
         draw_palette(app)
 
     def test_draw_palette_scroll_exception(self, tmp_path, monkeypatch):
@@ -222,7 +222,7 @@ class TestDrawingPanelsEdges:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.state.selected = [0]
-        app._inspector_content_height = MagicMock(side_effect=RuntimeError("boom"))
+        app._inspector_content_height = MagicMock(side_effect=ValueError("boom"))
         draw_inspector(app)
 
     def test_draw_inspector_scroll_exception(self, tmp_path, monkeypatch):
@@ -334,7 +334,7 @@ class TestDrawingOverlaysEdges:
 
         app = _make_app(tmp_path, monkeypatch)
         app.show_help_overlay = True
-        app.state.current_scene = MagicMock(side_effect=RuntimeError("boom"))
+        app.state.current_scene = MagicMock(side_effect=AttributeError("boom"))
         draw_help_overlay(app)
 
     def test_help_overlay_profile_exception(self, tmp_path, monkeypatch):
@@ -354,6 +354,7 @@ class TestDrawingOverlaysEdges:
         app.show_help_overlay = True
         sc = app.state.current_scene()
         sc.width = MagicMock(side_effect=ValueError("bad"))
+        app.designer.estimate_resources = MagicMock(return_value=None)
         draw_help_overlay(app)
 
     def test_help_overlay_widgets_count_exception(self, tmp_path, monkeypatch):
@@ -365,10 +366,11 @@ class TestDrawingOverlaysEdges:
 
         class BadWidgets:
             def __len__(self):
-                raise RuntimeError("bad")
+                raise TypeError("bad")
 
         sc = app.state.current_scene()
         sc.widgets = BadWidgets()
+        app.designer.estimate_resources = MagicMock(return_value=None)
         draw_help_overlay(app)
 
     def test_help_overlay_estimate_exception(self, tmp_path, monkeypatch):
@@ -377,7 +379,7 @@ class TestDrawingOverlaysEdges:
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
         app.show_help_overlay = True
-        app.designer.estimate_resources = MagicMock(side_effect=RuntimeError("boom"))
+        app.designer.estimate_resources = MagicMock(side_effect=AttributeError("boom"))
         draw_help_overlay(app)
 
     def test_help_overlay_res_line_exception(self, tmp_path, monkeypatch):
@@ -478,13 +480,13 @@ class TestDrawingCanvasEdges:
         app.sim_input_mode = False
         # Make _load_pixel_font return something that will fail on render
         bad_font = MagicMock()
-        bad_font.render = MagicMock(side_effect=RuntimeError("render fail"))
+        bad_font.render = MagicMock(side_effect=pygame.error("render fail"))
         app._load_pixel_font = MagicMock(return_value=bad_font)
         draw_canvas(app)
 
     def test_draw_selection_info_dragging(self, tmp_path, monkeypatch):
         """L267,269: selection info label positioned to left/top when near edge."""
-        from cyberpunk_designer.drawing.canvas import _draw_selection_info
+        from cyberpunk_designer.drawing.canvas import draw_selection_info
 
         app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=220, y=110, width=30, height=20)])
         app.state.selected = [0]
@@ -492,11 +494,11 @@ class TestDrawingCanvasEdges:
         bounds = SimpleNamespace(x=220, y=110, width=30, height=20)
         sel_rect = pygame.Rect(220, 110, 30, 20)
         scene_rect = pygame.Rect(0, 0, 256, 128)
-        _draw_selection_info(app, sel_rect, bounds, scene_rect)
+        draw_selection_info(app, sel_rect, bounds, scene_rect)
 
     def test_draw_selection_info_exception(self, tmp_path, monkeypatch):
         """L274-275: selection info rendering exception."""
-        from cyberpunk_designer.drawing.canvas import _draw_selection_info
+        from cyberpunk_designer.drawing.canvas import draw_selection_info
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.resizing = True
@@ -504,9 +506,9 @@ class TestDrawingCanvasEdges:
         sel_rect = pygame.Rect(10, 10, 30, 20)
         scene_rect = pygame.Rect(0, 0, 256, 128)
         bad_font = MagicMock()
-        bad_font.render = MagicMock(side_effect=RuntimeError("fail"))
+        bad_font.render = MagicMock(side_effect=pygame.error("fail"))
         app._load_pixel_font = MagicMock(return_value=bad_font)
-        _draw_selection_info(app, sel_rect, bounds, scene_rect)
+        draw_selection_info(app, sel_rect, bounds, scene_rect)
 
     def test_draw_canvas_overflow_marker(self, tmp_path, monkeypatch):
         """L553: overflow marker for device profile with truncating text."""
@@ -523,20 +525,20 @@ class TestDrawingCanvasEdges:
 
     def test_draw_rulers(self, tmp_path, monkeypatch):
         """L231,241: ruler break conditions."""
-        from cyberpunk_designer.drawing.canvas import _draw_rulers
+        from cyberpunk_designer.drawing.canvas import draw_rulers
 
         app = _make_app(tmp_path, monkeypatch)
         scene_rect = pygame.Rect(0, 0, 256, 128)
-        _draw_rulers(app, scene_rect, 256, 128)
+        draw_rulers(app, scene_rect, 256, 128)
 
     def test_draw_rulers_beyond_rect(self, tmp_path, monkeypatch):
         """L231,241: ruler ticks beyond scene_rect → break."""
-        from cyberpunk_designer.drawing.canvas import _draw_rulers
+        from cyberpunk_designer.drawing.canvas import draw_rulers
 
         app = _make_app(tmp_path, monkeypatch)
         # scene_rect is small but scene dims are large → ticks exceed rect → break
         scene_rect = pygame.Rect(0, 0, 50, 50)
-        _draw_rulers(app, scene_rect, 500, 500)
+        draw_rulers(app, scene_rect, 500, 500)
 
     def test_draw_canvas_icon_overflow(self, tmp_path, monkeypatch):
         """L553: icon widget overflow marker uses icon_char."""
@@ -573,7 +575,7 @@ class TestDrawingCanvasEdges:
         app.show_widget_ids = True
         # Make _load_pixel_font return a font that fails render
         bad_font = MagicMock()
-        bad_font.render = MagicMock(side_effect=RuntimeError("fail"))
+        bad_font.render = MagicMock(side_effect=pygame.error("fail"))
         real_load = app._load_pixel_font
 
         def _patched_load(size):
@@ -593,7 +595,7 @@ class TestDrawingCanvasEdges:
         )
         app.show_focus_order = True
         bad_font = MagicMock()
-        bad_font.render = MagicMock(side_effect=RuntimeError("fail"))
+        bad_font.render = MagicMock(side_effect=pygame.error("fail"))
         real_load = app._load_pixel_font
 
         def _patched_load(size):
@@ -606,7 +608,7 @@ class TestDrawingCanvasEdges:
 
     def test_draw_selection_info_offscreen(self, tmp_path, monkeypatch):
         """L267,269,288: selection info offscreen → flip position; exception."""
-        from cyberpunk_designer.drawing.canvas import _draw_selection_info
+        from cyberpunk_designer.drawing.canvas import draw_selection_info
 
         app = _make_app(tmp_path, monkeypatch)
         app.state.dragging = True
@@ -614,7 +616,7 @@ class TestDrawingCanvasEdges:
         bounds = SimpleNamespace(x=240, y=120, width=16, height=8)
         sel_rect = pygame.Rect(240, 120, 16, 8)
         scene_rect = pygame.Rect(0, 0, 256, 128)
-        _draw_selection_info(app, sel_rect, bounds, scene_rect)
+        draw_selection_info(app, sel_rect, bounds, scene_rect)
 
 
 # ---------------------------------------------------------------------------
@@ -631,7 +633,7 @@ class TestDrawingPanelsStatusEdges:
 
         app = _make_app(tmp_path, monkeypatch)
         # Patch both current_scene and selected_widget (which also calls current_scene)
-        app.state.current_scene = MagicMock(side_effect=RuntimeError("boom"))
+        app.state.current_scene = MagicMock(side_effect=AttributeError("boom"))
         app.state.selected_widget = MagicMock(return_value=None)
         draw_status(app)
 
@@ -649,7 +651,7 @@ class TestDrawingPanelsStatusEdges:
             def keys(self):
                 self._keys_call += 1
                 if self._keys_call > 2:  # fail on later calls (status bar)
-                    raise RuntimeError("bad")
+                    raise AttributeError("bad")
                 return super().keys()
 
         ts = TrickyScenes(real_scenes)
@@ -664,7 +666,7 @@ class TestDrawingPanelsStatusEdges:
 
         class BadStack:
             def __len__(self):
-                raise RuntimeError("bad")
+                raise TypeError("bad")
 
         app.designer.undo_stack = BadStack()
         draw_status(app)
@@ -730,9 +732,10 @@ class TestDrawingOverlaysExtraEdges:
         app.show_help_overlay = True
         # Inject a bad profile entry that raises on .get()
         bad_profile = MagicMock()
-        bad_profile.get = MagicMock(side_effect=RuntimeError("bad"))
+        bad_profile.get = MagicMock(side_effect=TypeError("bad"))
         monkeypatch.setitem(HARDWARE_PROFILES, "test_bad", bad_profile)
         app.hardware_profile = "test_bad"
+        app.designer.estimate_resources = MagicMock(return_value=None)
         draw_help_overlay(app)
 
     def test_help_overlay_scene_dims_exception(self, tmp_path, monkeypatch):
@@ -748,6 +751,7 @@ class TestDrawingOverlaysExtraEdges:
                 raise ValueError("bad")
 
         sc.width = BadDim()
+        app.designer.estimate_resources = MagicMock(return_value=None)
         draw_help_overlay(app)
 
     def test_help_overlay_sel_count_exception(self, tmp_path, monkeypatch):
@@ -759,7 +763,7 @@ class TestDrawingOverlaysExtraEdges:
 
         class BadSelected:
             def __len__(self):
-                raise RuntimeError("bad")
+                raise TypeError("bad")
 
         app.state.selected = BadSelected()
         draw_help_overlay(app)

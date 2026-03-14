@@ -605,3 +605,236 @@ class TestInspectorFieldToStr:
 
         result = inspector_field_to_str(app, "color_fg", w)
         assert result == "#aabbcc"
+
+
+# ===================================================================
+# checked field
+# ===================================================================
+
+
+class TestCommitChecked:
+    def test_true_string(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = False
+        _sel(app, 0)
+        _commit(app, "checked", "true")
+        assert w.checked is True
+
+    def test_false_string(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = True
+        _sel(app, 0)
+        _commit(app, "checked", "false")
+        assert w.checked is False
+
+    def test_one_is_true(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = False
+        _sel(app, 0)
+        _commit(app, "checked", "1")
+        assert w.checked is True
+
+    def test_zero_is_false(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = True
+        _sel(app, 0)
+        _commit(app, "checked", "0")
+        assert w.checked is False
+
+    def test_yes_is_true(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = False
+        _sel(app, 0)
+        _commit(app, "checked", "yes")
+        assert w.checked is True
+
+    def test_on_is_true(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = False
+        _sel(app, 0)
+        _commit(app, "checked", "on")
+        assert w.checked is True
+
+    def test_no_is_false(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = True
+        _sel(app, 0)
+        _commit(app, "checked", "no")
+        assert w.checked is False
+
+    def test_mixed_case(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = False
+        _sel(app, 0)
+        _commit(app, "checked", "TRUE")
+        assert w.checked is True
+
+    def test_random_string_is_false(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.checked = True
+        _sel(app, 0)
+        _commit(app, "checked", "maybe")
+        assert w.checked is False
+
+    def test_multi_widget(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w1 = _add(app)
+        w0.checked = False
+        w1.checked = False
+        _sel(app, 0, 1)
+        _commit(app, "checked", "on")
+        assert w0.checked is True
+        assert w1.checked is True
+
+
+# ===================================================================
+# items field
+# ===================================================================
+
+
+class TestCommitItems:
+    def test_comma_separated(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.items = []
+        _sel(app, 0)
+        _commit(app, "items", "A,B,C")
+        assert w.items == ["A", "B", "C"]
+        assert w.text == "A\nB\nC"
+
+    def test_newline_separated(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.items = []
+        _sel(app, 0)
+        _commit(app, "items", "X\nY\nZ")
+        assert w.items == ["X", "Y", "Z"]
+        assert w.text == "X\nY\nZ"
+
+    def test_empty_string(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.items = ["old"]
+        _sel(app, 0)
+        _commit(app, "items", "")
+        assert w.items == []
+        assert w.text == ""
+
+    def test_whitespace_stripped(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.items = []
+        _sel(app, 0)
+        _commit(app, "items", " A , B , C ")
+        assert w.items == ["A", "B", "C"]
+
+    def test_blank_entries_removed(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.items = []
+        _sel(app, 0)
+        _commit(app, "items", "A,,B,,,C")
+        assert w.items == ["A", "B", "C"]
+
+    def test_single_item(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w = _add(app)
+        w.items = []
+        _sel(app, 0)
+        _commit(app, "items", "Only")
+        assert w.items == ["Only"]
+        assert w.text == "Only"
+
+    def test_multi_widget(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w1 = _add(app)
+        w0.items = []
+        w1.items = []
+        _sel(app, 0, 1)
+        _commit(app, "items", "P,Q")
+        assert w0.items == ["P", "Q"]
+        assert w1.items == ["P", "Q"]
+        assert w0.text == "P\nQ"
+
+
+# ===================================================================
+# Multi-select: z_index, value, min_value, max_value
+# ===================================================================
+
+
+class TestMultiSelectCommit:
+    def test_z_index(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w1 = _add(app)
+        _sel(app, 0, 1)
+        _commit(app, "z_index", "5")
+        assert w0.z_index == 5
+        assert w1.z_index == 5
+
+    def test_z_index_invalid(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w0.z_index = 0
+        _sel(app, 0)
+        # single sel uses different path, add second widget for multi
+        _add(app)
+        _sel(app, 0, 1)
+        result = _commit(app, "z_index", "abc")
+        assert result is False
+        assert w0.z_index == 0
+
+    def test_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w1 = _add(app)
+        _sel(app, 0, 1)
+        _commit(app, "value", "42")
+        assert w0.value == 42
+        assert w1.value == 42
+
+    def test_min_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w1 = _add(app)
+        _sel(app, 0, 1)
+        _commit(app, "min_value", "10")
+        assert w0.min_value == 10
+        assert w1.min_value == 10
+
+    def test_max_value(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        w0 = _add(app)
+        w1 = _add(app)
+        _sel(app, 0, 1)
+        _commit(app, "max_value", "200")
+        assert w0.max_value == 200
+        assert w1.max_value == 200
+
+    def test_value_invalid(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _add(app)
+        _sel(app, 0, 1)
+        result = _commit(app, "value", "nope")
+        assert result is False
+
+    def test_unsupported_field(self, tmp_path, monkeypatch):
+        app = _make_app(tmp_path, monkeypatch)
+        _add(app)
+        _add(app)
+        _sel(app, 0, 1)
+        # A field not in multi-select path → "Not editable"
+        result = _commit(app, "nonexistent_field", "x")
+        assert result is True  # returns True after cancel

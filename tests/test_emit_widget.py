@@ -76,6 +76,10 @@ class TestWidgetTypes:
         out = _emit({"type": "icon", "x": 0, "y": 0, "width": 24, "height": 24})
         assert "UIW_ICON" in out
 
+    def test_list(self):
+        out = _emit({"type": "list", "x": 0, "y": 0, "width": 100, "height": 48})
+        assert "UIW_LIST" in out
+
     def test_panel(self):
         out = _emit({"type": "panel", "x": 0, "y": 0, "width": 100, "height": 50})
         assert "UIW_PANEL" in out
