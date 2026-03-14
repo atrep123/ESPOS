@@ -2,6 +2,7 @@
 
 import inspect
 import os
+import subprocess
 import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -508,7 +509,12 @@ if Path("widget_catalog.json").exists():
         f"{sorted(all_types_in_catalog)}",
     )
 else:
-    check("widget_catalog.json exists", False, "not found — run gen_widget_catalog.py")
+    gen = subprocess.run([sys.executable, "gen_widget_catalog.py"], capture_output=True, text=True)
+    if gen.returncode == 0 and Path("widget_catalog.json").exists():
+        check("widget_catalog.json generated", True, "generated on demand")
+    else:
+        tail = "\n".join((gen.stdout + gen.stderr).strip().splitlines()[-10:])
+        check("widget_catalog.json exists", False, f"not found; generator failed: {tail}")
 
 # ══════════════════════════════════════════════
 print(f"\n{'=' * 50}")
