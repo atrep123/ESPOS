@@ -607,16 +607,18 @@ def test_rule24_top_edge_too_close():
 
 def test_rule24_flush_right_no_border_ok():
     # Non-bordered widget flush to right edge is allowed
-    w = [{"type": "label", "x": 64, "y": 0, "width": 64, "height": 12, "text": "OK",
-          "border": False}]
+    w = [
+        {"type": "label", "x": 64, "y": 0, "width": 64, "height": 12, "text": "OK", "border": False}
+    ]
     errs = _errors(_make(w, scene_w=128, scene_h=64))
     assert not any("right edge" in i.message.lower() for i in errs)
 
 
 def test_rule24_flush_right_with_border_error():
     # Bordered widget flush to right edge is an error
-    w = [{"type": "label", "x": 64, "y": 10, "width": 64, "height": 14, "text": "OK",
-          "border": True}]
+    w = [
+        {"type": "label", "x": 64, "y": 10, "width": 64, "height": 14, "text": "OK", "border": True}
+    ]
     errs = _errors(_make(w, scene_w=128, scene_h=64))
     assert any("right edge" in i.message.lower() for i in errs)
 
@@ -1021,10 +1023,7 @@ def test_rule33_hard_limit_errors():
 
 def test_rule21_skipped_above_hard_limit():
     """O(n^2) overlap checks are skipped when widget count exceeds hard limit."""
-    widgets = [
-        {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10}
-        for _ in range(257)
-    ]
+    widgets = [{"type": "box", "x": 0, "y": 0, "width": 10, "height": 10} for _ in range(257)]
     warns = _warns(_make(widgets, scene_w=256, scene_h=128))
     # All 257 widgets overlap at (0,0), but overlap detection should be skipped
     assert not any("OVERLAP" in w.message for w in warns)

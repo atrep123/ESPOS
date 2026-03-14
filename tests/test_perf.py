@@ -204,9 +204,7 @@ class TestSmartEventQueueEdgeCases:
 
     def test_all_parallel_events(self):
         q = SmartEventQueue()
-        events = [
-            _make_event(pygame.MOUSEMOTION, pos=(i, 0)) for i in range(10)
-        ] + [
+        events = [_make_event(pygame.MOUSEMOTION, pos=(i, 0)) for i in range(10)] + [
             _make_event(pygame.MOUSEWHEEL, y=i) for i in range(10)
         ]
         result = q.process_batch(events)

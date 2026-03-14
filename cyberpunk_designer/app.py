@@ -123,9 +123,7 @@ class CyberpunkEditorApp:
             self.designer.set_hardware_profile(self.hardware_profile)
         self.live_preview_port = os.getenv("ESP32OS_LIVE_PORT")
         try:
-            self.live_preview_baud = int(
-                os.getenv("ESP32OS_LIVE_BAUD", str(BAUD_DEFAULT))
-            )
+            self.live_preview_baud = int(os.getenv("ESP32OS_LIVE_BAUD", str(BAUD_DEFAULT)))
         except (ValueError, TypeError):
             self.live_preview_baud = BAUD_DEFAULT
         self.toolbar_h = TOOLBAR_H
@@ -138,9 +136,7 @@ class CyberpunkEditorApp:
         env_autosave = os.getenv("ESP32OS_AUTOSAVE", "0")
         self.autosave_enabled = env_autosave not in ("0", "false", "False", "")
         try:
-            self.autosave_interval = float(
-                os.getenv("ESP32OS_AUTOSAVE_SECS", str(AUTOSAVE_SEC))
-            )
+            self.autosave_interval = float(os.getenv("ESP32OS_AUTOSAVE_SECS", str(AUTOSAVE_SEC)))
         except (ValueError, TypeError):
             self.autosave_interval = AUTOSAVE_SEC
         self._last_autosave_ts: float = time.time()
@@ -369,7 +365,12 @@ class CyberpunkEditorApp:
             ("Presets", self._build_widget_presets_actions()),
         ]
         self.palette_collapsed: set = {
-            "Templates", "Colors", "Components", "Layout", "Profiles", "Presets",
+            "Templates",
+            "Colors",
+            "Components",
+            "Layout",
+            "Profiles",
+            "Presets",
         }
         self.inspector_collapsed: set = {"Layers"}
         self.palette_actions = []
@@ -560,7 +561,8 @@ class CyberpunkEditorApp:
     def load_json(self):
         io_ops.load_json(self)
 
-    def _new_scene(self): scene_ops.new_scene(self)
+    def _new_scene(self):
+        scene_ops.new_scene(self)
 
     # ------------------------------------------------------------------ #
     # Event handling
@@ -2081,20 +2083,38 @@ class CyberpunkEditorApp:
     # ------------------------------------------------------------------ #
     # Scene navigation and management (delegates to scene_ops)
     # ------------------------------------------------------------------ #
-    def _jump_to_scene(self, index: int) -> None: scene_ops.jump_to_scene(self, index)
-    def _save_selection_as_template(self) -> None: scene_ops.save_selection_as_template(self)
-    def _delete_current_scene(self) -> None: scene_ops.delete_current_scene(self)
-    def _close_other_scenes(self) -> None: scene_ops.close_other_scenes(self)
-    def _close_scenes_to_right(self) -> None: scene_ops.close_scenes_to_right(self)
-    def _add_new_scene(self) -> None: scene_ops.add_new_scene(self)
-    def _duplicate_current_scene(self) -> None: scene_ops.duplicate_current_scene(self)
-    def _rename_current_scene(self) -> None: scene_ops.rename_current_scene(self)
+    def _jump_to_scene(self, index: int) -> None:
+        scene_ops.jump_to_scene(self, index)
+
+    def _save_selection_as_template(self) -> None:
+        scene_ops.save_selection_as_template(self)
+
+    def _delete_current_scene(self) -> None:
+        scene_ops.delete_current_scene(self)
+
+    def _close_other_scenes(self) -> None:
+        scene_ops.close_other_scenes(self)
+
+    def _close_scenes_to_right(self) -> None:
+        scene_ops.close_scenes_to_right(self)
+
+    def _add_new_scene(self) -> None:
+        scene_ops.add_new_scene(self)
+
+    def _duplicate_current_scene(self) -> None:
+        scene_ops.duplicate_current_scene(self)
+
+    def _rename_current_scene(self) -> None:
+        scene_ops.rename_current_scene(self)
 
     # ------------------------------------------------------------------ #
     # Export, add widget, and utilities (delegates to scene_ops)
     # ------------------------------------------------------------------ #
-    def _export_c_header(self) -> None: scene_ops.export_c_header(self)
-    def _add_widget(self, kind: str): scene_ops.add_widget(self, kind)
+    def _export_c_header(self) -> None:
+        scene_ops.export_c_header(self)
+
+    def _add_widget(self, kind: str):
+        scene_ops.add_widget(self, kind)
 
     def _add_component(self, name: str):
         component_insert.add_component(self, name)
@@ -2103,9 +2123,14 @@ class CyberpunkEditorApp:
         """Backward compatible wrapper for older callers."""
         return component_blueprints(str(name or ""), sc)
 
-    def _auto_arrange_grid(self): scene_ops.auto_arrange_grid(self)
-    def _toggle_clean_preview(self) -> None: scene_ops.toggle_clean_preview(self)
-    def _goto_widget_prompt(self) -> None: scene_ops.goto_widget_prompt(self)
+    def _auto_arrange_grid(self):
+        scene_ops.auto_arrange_grid(self)
+
+    def _toggle_clean_preview(self) -> None:
+        scene_ops.toggle_clean_preview(self)
+
+    def _goto_widget_prompt(self) -> None:
+        scene_ops.goto_widget_prompt(self)
 
     def _toggle_panels(self):
         """Toggle panels visibility."""

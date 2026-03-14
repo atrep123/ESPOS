@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 # Z-order
 # ------------------------------------------------------------------ #
 
+
 def z_order_step(app: CyberpunkEditorApp, delta: int) -> None:
     """Move selected widgets z_index by delta."""
     if not app.state.selected:
@@ -98,6 +99,7 @@ def toggle_lock_selection(app: CyberpunkEditorApp) -> None:
 # ------------------------------------------------------------------ #
 # Scene navigation
 # ------------------------------------------------------------------ #
+
 
 def zoom_to_fit(app: CyberpunkEditorApp) -> None:
     """Auto-compute scale to fit the entire scene in the window."""
@@ -229,6 +231,7 @@ def cycle_profile(app: CyberpunkEditorApp) -> None:
 # Scene CRUD
 # ------------------------------------------------------------------ #
 
+
 def new_scene(app: CyberpunkEditorApp) -> None:
     """Clear current design to a fresh scene."""
     app.designer = UIDesigner(*app.default_size)
@@ -247,9 +250,7 @@ def jump_to_scene(app: CyberpunkEditorApp, index: int) -> None:
     """Jump to scene by 0-based index."""
     names = list(app.designer.scenes.keys())
     if index >= len(names):
-        app._set_status(
-            f"Scene #{index + 1} does not exist ({len(names)} scenes).", ttl_sec=2.0
-        )
+        app._set_status(f"Scene #{index + 1} does not exist ({len(names)} scenes).", ttl_sec=2.0)
         return
     app.designer.current_scene = names[index]
     app.state.selected = []
@@ -326,7 +327,7 @@ def close_scenes_to_right(app: CyberpunkEditorApp) -> None:
     names = list(app.designer.scenes.keys())
     cur = app.designer.current_scene
     idx = names.index(cur) if cur in names else 0
-    to_remove = names[idx + 1:]
+    to_remove = names[idx + 1 :]
     if not to_remove:
         return
     for n in to_remove:
@@ -414,6 +415,7 @@ def rename_current_scene(app: CyberpunkEditorApp) -> None:
 # Export
 # ------------------------------------------------------------------ #
 
+
 def export_c_header(app: CyberpunkEditorApp) -> None:
     """Quick-export current JSON to a C header."""
     from pathlib import Path
@@ -463,6 +465,7 @@ def export_c_header(app: CyberpunkEditorApp) -> None:
 # ------------------------------------------------------------------ #
 # Widget factory
 # ------------------------------------------------------------------ #
+
 
 def auto_complete_widget(app: CyberpunkEditorApp, w: WidgetConfig) -> None:
     """Automatically complete widget configuration with smart defaults."""

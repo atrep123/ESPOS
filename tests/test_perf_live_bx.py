@@ -99,9 +99,7 @@ class TestSmartEventQueueEdges:
         q = SmartEventQueue()
         events = [
             pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a),
-            pygame.event.Event(
-                pygame.MOUSEMOTION, pos=(10, 20), rel=(1, 1), buttons=(0, 0, 0)
-            ),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(10, 20), rel=(1, 1), buttons=(0, 0, 0)),
             pygame.event.Event(pygame.KEYUP, key=pygame.K_a),
         ]
         result = q.process_batch(events)

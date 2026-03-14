@@ -68,8 +68,14 @@ VALUE_TYPES = {"gauge", "progressbar", "slider"}
 
 # Focusable types in firmware (ui_nav.c)
 FOCUSABLE_TYPES = {
-    "button", "checkbox", "radiobutton", "slider",
-    "list", "toggle", "gauge", "progressbar",
+    "button",
+    "checkbox",
+    "radiobutton",
+    "slider",
+    "list",
+    "toggle",
+    "gauge",
+    "progressbar",
 }
 
 # Valid constraint dict keys (ui_models.py Constraints TypedDict)
@@ -77,8 +83,21 @@ ALLOWED_CONSTRAINT_KEYS = {"b", "ax", "ay", "sx", "sy", "mx", "my", "mr", "mb"}
 
 # Valid runtime meta keys (ui_meta.c ui_meta_parse)
 ALLOWED_RUNTIME_META_KEYS = {
-    "bind", "key", "kind", "type", "min", "max", "step", "values",
-    "suffix", "unit", "prefix", "precision", "decimals", "scale", "divisor",
+    "bind",
+    "key",
+    "kind",
+    "type",
+    "min",
+    "max",
+    "step",
+    "values",
+    "suffix",
+    "unit",
+    "prefix",
+    "precision",
+    "decimals",
+    "scale",
+    "divisor",
 }
 
 # Valid runtime kind values (must match parse_kind() in ui_meta.c)
@@ -404,12 +423,16 @@ def validate_data(
                 max_chars = inner_w // CHAR_W if inner_w > 0 else 0
                 if max_lines < 1:
                     issues.append(
-                        Issue("WARN", f"{wl}: text cannot fit: h={hh} (inner_h={inner_h}) < font_h={CHAR_H}")
+                        Issue(
+                            "WARN",
+                            f"{wl}: text cannot fit: h={hh} (inner_h={inner_h}) < font_h={CHAR_H}",
+                        )
                     )
                 if max_chars > 0 and len(text) > max_chars:
                     issues.append(
                         Issue(
-                            "WARN", f"{wl}: text '{text}' ({len(text)} ch) overflows max {max_chars} chars"
+                            "WARN",
+                            f"{wl}: text '{text}' ({len(text)} ch) overflows max {max_chars} chars",
                         )
                     )
 
@@ -481,8 +504,8 @@ def validate_data(
 
             # ── Rule 24: Edge margin (non-full-span widgets shouldn't touch edges) ──
             # Flush edge (x+w==sw) allowed for non-bordered widgets (e.g. topbar halves)
-            flush_right = (x + ww == sw)
-            flush_bottom = (y + hh == sh)
+            flush_right = x + ww == sw
+            flush_bottom = y + hh == sh
             # Right edge
             if (
                 ww < sw
@@ -1364,7 +1387,10 @@ def validate_data(
             if wt == "list" and r130_items is not None:
                 if not isinstance(r130_items, list):
                     issues.append(
-                        Issue("ERROR", f"{wl}: items field must be a list, got {type(r130_items).__name__}")
+                        Issue(
+                            "ERROR",
+                            f"{wl}: items field must be a list, got {type(r130_items).__name__}",
+                        )
                     )
                 else:
                     for r130_i, r130_v in enumerate(r130_items):
@@ -1439,7 +1465,8 @@ def validate_data(
                             ref_b = _wref(scene_name, b, j)
                             issues.append(
                                 Issue(
-                                    "WARN", f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}"
+                                    "WARN",
+                                    f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}",
                                 )
                             )
 
@@ -1565,7 +1592,9 @@ def validate_data(
                     y_gap = max(0, max(ay, by) - min(ay2, by2))
                     # Only flag when rects share a band on the perpendicular axis
                     too_close = False
-                    if (x_gap == 0 and 0 < y_gap < MIN_WIDGET_GAP_PX) or (y_gap == 0 and 0 < x_gap < MIN_WIDGET_GAP_PX):
+                    if (x_gap == 0 and 0 < y_gap < MIN_WIDGET_GAP_PX) or (
+                        y_gap == 0 and 0 < x_gap < MIN_WIDGET_GAP_PX
+                    ):
                         too_close = True
                     if too_close:
                         ref_a = _wref(scene_name, a, i)
@@ -1648,7 +1677,11 @@ def validate_file(
     except OSError as exc:
         return [Issue("ERROR", f"{path}: failed to read file ({exc})")]
     if len(raw) > MAX_JSON_FILE_SIZE:
-        return [Issue("ERROR", f"{path}: file exceeds {MAX_JSON_FILE_SIZE // (1024 * 1024)}MB size limit")]
+        return [
+            Issue(
+                "ERROR", f"{path}: file exceeds {MAX_JSON_FILE_SIZE // (1024 * 1024)}MB size limit"
+            )
+        ]
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, ValueError) as exc:
@@ -1673,12 +1706,14 @@ def validate_file(
     except Exception as exc:
         issues.append(Issue("WARN", f"{path}: schema validation skipped ({exc})"))
 
-    issues.extend(validate_data(
-        data,
-        file_label=str(path),
-        warnings_as_errors=warnings_as_errors,
-        strict_critical=strict_critical,
-    ))
+    issues.extend(
+        validate_data(
+            data,
+            file_label=str(path),
+            warnings_as_errors=warnings_as_errors,
+            strict_critical=strict_critical,
+        )
+    )
     return issues
 
 

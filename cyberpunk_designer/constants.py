@@ -42,29 +42,29 @@ DBLCLICK_PX = 6
 # --------------------------------------------------------------------------- #
 # Shade offsets — used by drawing.py/_shade() to lighten (+) or darken (-)
 # --------------------------------------------------------------------------- #
-SHADE_SCANLINE = 8          # subtle scanline / bg highlight
-SHADE_GRID_H = -6           # horizontal grid lines inside panels
-SHADE_GRID_V = 4            # vertical grid lines inside panels
-SHADE_TRACK = -18           # scrollbar track background
-SHADE_THUMB = 24            # scrollbar thumb fill
-SHADE_THUMB_BORDER = -28    # scrollbar thumb outline
-SHADE_HOVER = 32            # pixel-frame highlight on hover
-SHADE_NORMAL = 20           # pixel-frame highlight at rest
-SHADE_PRESSED = -42         # pixel-frame shadow when pressed
-SHADE_SHADOW = -28          # pixel-frame shadow at rest
-SHADE_TOOLBAR_LIGHT = 24    # toolbar border light edge
-SHADE_TOOLBAR_DARK = -32    # toolbar border dark edge
-SHADE_TOOLBAR_SEP = 12      # toolbar bottom separator
-SHADE_TITLE_SHADOW = -24    # palette / section title shadow
-SHADE_PALETTE_HOVER = 10    # palette item hover fill
-SHADE_BTN_FILL_PRESS = -4   # button fill when pressed
-SHADE_BTN_FILL = -2         # button fill at rest
-SHADE_BTN_HOVER = 8         # button hover brighten
-SHADE_SEL_FILL = -80        # selection color fill
-SHADE_WIDGET_BG_OFF = -6    # widget default bg offset
-SHADE_WIDGET_HOVER = 10     # widget bg hover brighten
-SHADE_WIDGET_PRESS = -22    # widget bg pressed darken
-SHADE_GRID_CANVAS = 14      # canvas grid fallback
+SHADE_SCANLINE = 8  # subtle scanline / bg highlight
+SHADE_GRID_H = -6  # horizontal grid lines inside panels
+SHADE_GRID_V = 4  # vertical grid lines inside panels
+SHADE_TRACK = -18  # scrollbar track background
+SHADE_THUMB = 24  # scrollbar thumb fill
+SHADE_THUMB_BORDER = -28  # scrollbar thumb outline
+SHADE_HOVER = 32  # pixel-frame highlight on hover
+SHADE_NORMAL = 20  # pixel-frame highlight at rest
+SHADE_PRESSED = -42  # pixel-frame shadow when pressed
+SHADE_SHADOW = -28  # pixel-frame shadow at rest
+SHADE_TOOLBAR_LIGHT = 24  # toolbar border light edge
+SHADE_TOOLBAR_DARK = -32  # toolbar border dark edge
+SHADE_TOOLBAR_SEP = 12  # toolbar bottom separator
+SHADE_TITLE_SHADOW = -24  # palette / section title shadow
+SHADE_PALETTE_HOVER = 10  # palette item hover fill
+SHADE_BTN_FILL_PRESS = -4  # button fill when pressed
+SHADE_BTN_FILL = -2  # button fill at rest
+SHADE_BTN_HOVER = 8  # button hover brighten
+SHADE_SEL_FILL = -80  # selection color fill
+SHADE_WIDGET_BG_OFF = -6  # widget default bg offset
+SHADE_WIDGET_HOVER = 10  # widget bg hover brighten
+SHADE_WIDGET_PRESS = -22  # widget bg pressed darken
+SHADE_GRID_CANVAS = 14  # canvas grid fallback
 PROFILE_ORDER = [
     "esp32os_256x128_gray4",
     "esp32os_240x128_mono",

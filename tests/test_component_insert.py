@@ -429,8 +429,15 @@ class TestEmptyBlueprintsGuard:
     def test_single_blueprint_widget(self, mock_bp):
         """A component with exactly one blueprint widget works."""
         mock_bp.return_value = [
-            {"type": "label", "role": "only", "x": 0, "y": 0,
-             "width": 50, "height": 20, "text": "Solo"},
+            {
+                "type": "label",
+                "role": "only",
+                "x": 0,
+                "y": 0,
+                "width": 50,
+                "height": 20,
+                "text": "Solo",
+            },
         ]
         app = _app()
         add_component(app, "solo")
@@ -442,8 +449,16 @@ class TestEmptyBlueprintsGuard:
     def test_z_index_on_empty_scene(self, mock_bp):
         """Inserting into an empty scene: base_z=0, no crash."""
         mock_bp.return_value = [
-            {"type": "label", "role": "item", "x": 0, "y": 0,
-             "width": 30, "height": 10, "text": "Z", "z": 5},
+            {
+                "type": "label",
+                "role": "item",
+                "x": 0,
+                "y": 0,
+                "width": 30,
+                "height": 10,
+                "text": "Z",
+                "z": 5,
+            },
         ]
         app = _app()
         assert len(app.state.current_scene().widgets) == 0
@@ -455,8 +470,15 @@ class TestEmptyBlueprintsGuard:
     def test_negative_xy_in_blueprint(self, mock_bp):
         """Blueprint with negative x/y coords → clamped to 0."""
         mock_bp.return_value = [
-            {"type": "panel", "role": "bg", "x": -10, "y": -20,
-             "width": 40, "height": 30, "text": ""},
+            {
+                "type": "panel",
+                "role": "bg",
+                "x": -10,
+                "y": -20,
+                "width": 40,
+                "height": 30,
+                "text": "",
+            },
         ]
         app = _app()
         add_component(app, "neg")

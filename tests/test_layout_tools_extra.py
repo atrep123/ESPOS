@@ -589,6 +589,7 @@ class TestClampXyEdgeCases:
         app = _app([_w(x=50, y=50, width=256, height=128)])
         app.snap_enabled = False
         from cyberpunk_designer.layout_tools import _clamp_xy_in_scene
+
         w = app.state.current_scene().widgets[0]
         x, y = _clamp_xy_in_scene(app, 50, 50, w)
         assert x == 0
@@ -599,6 +600,7 @@ class TestClampXyEdgeCases:
         app = _app([_w(x=0, y=0, width=300, height=200)])
         app.snap_enabled = False
         from cyberpunk_designer.layout_tools import _clamp_xy_in_scene
+
         w = app.state.current_scene().widgets[0]
         x, y = _clamp_xy_in_scene(app, 100, 100, w)
         assert x == 0
@@ -609,6 +611,7 @@ class TestSnapDragBoundaryStress:
     def test_snap_at_exact_tolerance(self):
         """Desired position exactly at GUIDE_TOL from edge → should snap."""
         from cyberpunk_designer.constants import GUIDE_TOL
+
         app = _app([_w(x=100, y=50, width=20, height=10)])
         set_selection(app, [0])
         bounds = pygame.Rect(100, 50, 20, 10)
@@ -618,6 +621,7 @@ class TestSnapDragBoundaryStress:
     def test_snap_one_beyond_tolerance(self):
         """Desired position just beyond GUIDE_TOL → should NOT snap."""
         from cyberpunk_designer.constants import GUIDE_TOL
+
         app = _app([_w(x=100, y=50, width=20, height=10)])
         set_selection(app, [0])
         bounds = pygame.Rect(100, 50, 20, 10)

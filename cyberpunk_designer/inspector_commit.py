@@ -778,9 +778,7 @@ def inspector_commit_edit(app) -> bool:
                     if 0 <= idx < len(sc.widgets):
                         sc.widgets[idx].checked = checked
             elif f == "items":
-                parts = [
-                    s.strip() for s in buf.replace(",", "\n").split("\n") if s.strip()
-                ]
+                parts = [s.strip() for s in buf.replace(",", "\n").split("\n") if s.strip()]
                 safe_save_state(app.designer)
                 for idx in selection:
                     if 0 <= idx < len(sc.widgets):

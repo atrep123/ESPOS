@@ -262,11 +262,7 @@ def _draw_canvas_overlays(
                 fw_w = max(GRID, int(getattr(fw, "width", GRID) or GRID))
                 fw_h = max(GRID, int(getattr(fw, "height", GRID) or GRID))
                 frect = pygame.Rect(fx, fy, fw_w, fw_h)
-                c = (
-                    PALETTE["accent_yellow"]
-                    if not app.focus_edit_value
-                    else PALETTE["accent_cyan"]
-                )
+                c = PALETTE["accent_yellow"] if not app.focus_edit_value else PALETTE["accent_cyan"]
                 pygame.draw.rect(app.logical_surface, c, frect.inflate(2, 2), 2)
 
 
@@ -544,6 +540,7 @@ def draw_widget_preview(
     elif kind == "gauge":
         pct = app._value_ratio(w)
         from .. import font6x8
+
         b_inset = 1 if border_on else 0
         # For small gauges, put label below the arc instead of above
         compact = rect.height < GRID * 4
@@ -560,7 +557,8 @@ def draw_widget_preview(
             # Too small for compact arc + label — use fallback bar
             use_arc = False
         gauge_area = pygame.Rect(
-            rect.x + b_inset + padding + 1, rect.y + b_inset + padding + label_h,
+            rect.x + b_inset + padding + 1,
+            rect.y + b_inset + padding + label_h,
             rect.width - (b_inset + padding + 1) * 2,
             max(8, natural_gauge_h),
         )
@@ -604,7 +602,11 @@ def draw_widget_preview(
                         a = math.radians(deg)
                         px = cx + int(r_cur * math.cos(math.pi - a))
                         py = cy - int(r_cur * math.sin(math.pi - a))
-                        if rect.left <= px < rect.right and rect.top <= py < rect.bottom and py <= cy:
+                        if (
+                            rect.left <= px < rect.right
+                            and rect.top <= py < rect.bottom
+                            and py <= cy
+                        ):
                             threshold = _BAYER4[py % 4][px % 4]
                             c = hi_inactive if threshold < 0.5 else lo_inactive
                             surface.set_at((px, py), c)
@@ -623,7 +625,11 @@ def draw_widget_preview(
                             a = math.radians(deg)
                             px = cx + int(r_cur * math.cos(math.pi - a))
                             py = cy - int(r_cur * math.sin(math.pi - a))
-                            if rect.left <= px < rect.right and rect.top <= py < rect.bottom and py <= cy:
+                            if (
+                                rect.left <= px < rect.right
+                                and rect.top <= py < rect.bottom
+                                and py <= cy
+                            ):
                                 threshold = _BAYER4[py % 4][px % 4]
                                 c = hi_c if r_ratio > threshold else lo_c
                                 surface.set_at((px, py), c)
@@ -632,7 +638,11 @@ def draw_widget_preview(
                         a = math.radians(deg)
                         px = cx + int((radius + 1) * math.cos(math.pi - a))
                         py = cy - int((radius + 1) * math.sin(math.pi - a))
-                        if rect.left <= px < rect.right and rect.top <= py < rect.bottom and py <= cy:
+                        if (
+                            rect.left <= px < rect.right
+                            and rect.top <= py < rect.bottom
+                            and py <= cy
+                        ):
                             surface.set_at((px, py), (176, 176, 176))
                 # Scale marks — small dots at outer rim at 0%, 25%, 50%, 75%, 100%
                 for mark_pct in (0.0, 0.25, 0.5, 0.75, 1.0):
@@ -683,8 +693,9 @@ def draw_widget_preview(
                     vy = cy - needle_r * 2 // 5 - th // 2
                     if vy >= rect.top + padding and vy + th <= rect.bottom - padding:
                         pad_x, pad_y = 1, 0
-                        panel_r = pygame.Rect(vx - pad_x, vy - pad_y,
-                                              tw + pad_x * 2, th + pad_y * 2)
+                        panel_r = pygame.Rect(
+                            vx - pad_x, vy - pad_y, tw + pad_x * 2, th + pad_y * 2
+                        )
                         pygame.draw.rect(surface, bg, panel_r)
                         surface.blit(txt_s, (vx, vy))
                 # Label — at top for normal, below arc for compact
@@ -712,6 +723,7 @@ def draw_widget_preview(
             pygame.draw.rect(surface, app._shade(fg, -40), fill_rect)
     elif kind == "chart":
         from .. import font6x8
+
         inner = rect.inflate(-padding * 2, -padding * 2)
         pygame.draw.rect(surface, app._shade(bg, -8), inner)
         points = list(getattr(w, "data_points", []) or [])
@@ -739,7 +751,9 @@ def draw_widget_preview(
                 for gx in range(chart_area.left + 3, chart_area.right, 3):
                     surface.set_at((gx, gy), grid_c)
                 # Y-axis tick marks (2px wide)
-                pygame.draw.line(surface, tick_c, (chart_area.left, gy), (chart_area.left + 1, gy), 1)
+                pygame.draw.line(
+                    surface, tick_c, (chart_area.left, gy), (chart_area.left + 1, gy), 1
+                )
             # Vertical dotted grid with X-axis ticks
             v_divs = max(2, min(n, 6))
             for vi in range(1, v_divs):
@@ -747,15 +761,41 @@ def draw_widget_preview(
                 for gy in range(chart_area.top, chart_area.bottom - 2, 3):
                     surface.set_at((gx, gy), grid_c)
                 # X-axis tick marks
-                pygame.draw.line(surface, tick_c, (gx, chart_area.bottom - 2), (gx, chart_area.bottom - 1), 1)
+                pygame.draw.line(
+                    surface, tick_c, (gx, chart_area.bottom - 2), (gx, chart_area.bottom - 1), 1
+                )
             # Axis lines (brighter than grid)
             axis_c = app._shade(bg, 40)
-            pygame.draw.line(surface, axis_c, (chart_area.left, chart_area.top), (chart_area.left, chart_area.bottom - 1), 1)
-            pygame.draw.line(surface, axis_c, (chart_area.left, chart_area.bottom - 1), (chart_area.right - 1, chart_area.bottom - 1), 1)
+            pygame.draw.line(
+                surface,
+                axis_c,
+                (chart_area.left, chart_area.top),
+                (chart_area.left, chart_area.bottom - 1),
+                1,
+            )
+            pygame.draw.line(
+                surface,
+                axis_c,
+                (chart_area.left, chart_area.bottom - 1),
+                (chart_area.right - 1, chart_area.bottom - 1),
+                1,
+            )
             # Thin top/right border for chart box feel
             border_dim = app._shade(bg, 12)
-            pygame.draw.line(surface, border_dim, (chart_area.left, chart_area.top), (chart_area.right - 1, chart_area.top), 1)
-            pygame.draw.line(surface, border_dim, (chart_area.right - 1, chart_area.top), (chart_area.right - 1, chart_area.bottom - 1), 1)
+            pygame.draw.line(
+                surface,
+                border_dim,
+                (chart_area.left, chart_area.top),
+                (chart_area.right - 1, chart_area.top),
+                1,
+            )
+            pygame.draw.line(
+                surface,
+                border_dim,
+                (chart_area.right - 1, chart_area.top),
+                (chart_area.right - 1, chart_area.bottom - 1),
+                1,
+            )
 
             if chart_mode == "bar":
                 bar_w = max(2, (chart_area.width // n) - 1)
@@ -779,7 +819,9 @@ def draw_widget_preview(
                             surface.set_at((cx, cy), (lum, lum, lum))
                     # Bright cap line
                     cap_c = (240, 240, 240) if i == peak_i else (208, 208, 208)
-                    pygame.draw.line(surface, cap_c, (bar.left, bar.top), (bar.right - 1, bar.top), 1)
+                    pygame.draw.line(
+                        surface, cap_c, (bar.left, bar.top), (bar.right - 1, bar.top), 1
+                    )
                     # Subtle side highlights (left edge brighter)
                     if bar.height > 4:
                         for row in range(1, min(bar.height - 1, bar.height)):
@@ -802,8 +844,10 @@ def draw_widget_preview(
                 coords: List[Tuple[int, int]] = []
                 for i, v in enumerate(points):
                     x = chart_area.left + 2 + int(i * (chart_area.width - 4) / max(1, n - 1))
-                    y = chart_area.bottom - 2 - int(
-                        (v - p_min) / denom * max(1, chart_area.height - 4)
+                    y = (
+                        chart_area.bottom
+                        - 2
+                        - int((v - p_min) / denom * max(1, chart_area.height - 4))
                     )
                     coords.append((x, y))
                 if len(coords) >= 2:
@@ -878,11 +922,17 @@ def draw_widget_preview(
                         pygame.draw.circle(surface, app._shade(bg, 25), (x, y), 4)
                         for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
                             nx, ny = x + dx, y + dy
-                            if chart_area.left <= nx < chart_area.right and chart_area.top <= ny < chart_area.bottom:
+                            if (
+                                chart_area.left <= nx < chart_area.right
+                                and chart_area.top <= ny < chart_area.bottom
+                            ):
                                 surface.set_at((nx, ny), (240, 240, 240))
                         for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1), (0, 0)]:
                             nx, ny = x + dx, y + dy
-                            if chart_area.left <= nx < chart_area.right and chart_area.top <= ny < chart_area.bottom:
+                            if (
+                                chart_area.left <= nx < chart_area.right
+                                and chart_area.top <= ny < chart_area.bottom
+                            ):
                                 surface.set_at((nx, ny), (240, 240, 240))
                     else:
                         # Normal dots: halo + bright center
@@ -899,9 +949,14 @@ def draw_widget_preview(
             surface.set_clip(old_clip)
     elif kind == "list":
         from .. import font6x8 as _font6x8
+
         inner = rect.inflate(-padding * 2, -padding * 2)
         items = (label or "").split("\n") if label else []
-        row_h = _font6x8.CHAR_H if use_device_font else (app.pixel_font.get_height() if app.pixel_font else 8)
+        row_h = (
+            _font6x8.CHAR_H
+            if use_device_font
+            else (app.pixel_font.get_height() if app.pixel_font else 8)
+        )
         vis_rows = max(1, inner.height // max(1, row_h))
         active = int(getattr(w, "value", 0) or 0)
         scroll = int(getattr(w, "min_value", 0) or 0)

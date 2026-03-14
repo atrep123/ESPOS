@@ -3,6 +3,8 @@ from __future__ import annotations
 from .core import save_undo
 
 """Style and property propagation across selected widgets."""
+
+
 def copy_style(app) -> None:
     """Copy visual style from selected widget to style clipboard."""
     w = app.state.selected_widget()

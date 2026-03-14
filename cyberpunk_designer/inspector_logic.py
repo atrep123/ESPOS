@@ -1,4 +1,4 @@
-﻿"""Property inspector: field display and row computation.
+"""Property inspector: field display and row computation.
 
 Commit-edit logic lives in :mod:`cyberpunk_designer.inspector_commit`.
 This module re-exports ``inspector_commit_edit`` for backward compatibility.
@@ -159,7 +159,6 @@ def inspector_field_to_str(app, field: str, w: WidgetConfig) -> str:
     if f in {"color_fg", "color_bg", "border_style", "align", "valign"}:
         return str(getattr(w, f, "") or "")
     return str(getattr(w, f, "") or "")
-
 
 
 def compute_inspector_rows(app) -> Tuple[List[Tuple[str, str]], bool, Optional[WidgetConfig]]:

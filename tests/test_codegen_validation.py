@@ -840,9 +840,7 @@ class TestEmptySceneCodegen:
             tmp_path,
             {"main": {"width": 128, "height": 64, "widgets": []}},
         )
-        src, hdr = generate_ui_design_pair(
-            p, scene_name="main", source_label="test"
-        )
+        src, hdr = generate_ui_design_pair(p, scene_name="main", source_label="test")
         assert "widget_count = 0" in src
         assert ".widgets = NULL" in src
         # Must not have sizeof on empty array
@@ -881,9 +879,7 @@ class TestAdversarialWidgetText:
         # No raw control chars in output (except \n as line terminators)
         for line in src.splitlines():
             for ch in line:
-                assert ord(ch) >= 0x20 or ch == "\t", (
-                    f"raw ctrl char {ord(ch):#x} in generated C"
-                )
+                assert ord(ch) >= 0x20 or ch == "\t", f"raw ctrl char {ord(ch):#x} in generated C"
 
     def test_scene_name_with_comment_injection(self, tmp_path):
         p = _write_json(
@@ -977,9 +973,15 @@ class TestListItemsCodegen:
         """Empty items list should still produce valid C code."""
         p = _write_json(
             tmp_path,
-            {"main": {"width": 128, "height": 64, "widgets": [
-                _w(type="list", text="", width=80, height=40),
-            ]}},
+            {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        _w(type="list", text="", width=80, height=40),
+                    ],
+                }
+            },
         )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert "UIW_LIST" in src
@@ -988,9 +990,15 @@ class TestListItemsCodegen:
         """Items list should be joined as newline-separated text in C."""
         p = _write_json(
             tmp_path,
-            {"main": {"width": 128, "height": 64, "widgets": [
-                _w(type="list", items=["Alpha", "Beta", "Gamma"], width=80, height=40),
-            ]}},
+            {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        _w(type="list", items=["Alpha", "Beta", "Gamma"], width=80, height=40),
+                    ],
+                }
+            },
         )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert "UIW_LIST" in src
@@ -1000,9 +1008,15 @@ class TestListItemsCodegen:
         """Items with quotes/backslashes should be properly escaped."""
         p = _write_json(
             tmp_path,
-            {"main": {"width": 128, "height": 64, "widgets": [
-                _w(type="list", items=['Say "hi"', "Path\\to"], width=80, height=40),
-            ]}},
+            {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        _w(type="list", items=['Say "hi"', "Path\\to"], width=80, height=40),
+                    ],
+                }
+            },
         )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert "UIW_LIST" in src
@@ -1015,9 +1029,15 @@ class TestListItemsCodegen:
         items = [f"Item {i}" for i in range(50)]
         p = _write_json(
             tmp_path,
-            {"main": {"width": 128, "height": 64, "widgets": [
-                _w(type="list", items=items, width=80, height=40),
-            ]}},
+            {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        _w(type="list", items=items, width=80, height=40),
+                    ],
+                }
+            },
         )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert "UIW_LIST" in src
@@ -1028,9 +1048,15 @@ class TestListItemsCodegen:
         """When items are set but text is empty, items are joined as text."""
         p = _write_json(
             tmp_path,
-            {"main": {"width": 128, "height": 64, "widgets": [
-                _w(type="list", items=["X", "Y"], width=80, height=40),
-            ]}},
+            {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        _w(type="list", items=["X", "Y"], width=80, height=40),
+                    ],
+                }
+            },
         )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert "X\\nY" in src
@@ -1039,9 +1065,15 @@ class TestListItemsCodegen:
         """Toggle with checked=false → .checked = 0 in C."""
         p = _write_json(
             tmp_path,
-            {"main": {"width": 128, "height": 64, "widgets": [
-                _w(type="toggle", text="Off", checked=False, width=60, height=14),
-            ]}},
+            {
+                "main": {
+                    "width": 128,
+                    "height": 64,
+                    "widgets": [
+                        _w(type="toggle", text="Off", checked=False, width=60, height=14),
+                    ],
+                }
+            },
         )
         src, _ = generate_ui_design_pair(p, scene_name="main", source_label="t")
         assert "UIW_TOGGLE" in src

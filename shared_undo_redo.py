@@ -7,6 +7,7 @@
 # - History persistence and replay
 
 """Undo/redo stack implementation with checkpoint management."""
+
 import copy
 import json
 from dataclasses import asdict, dataclass, field

@@ -479,7 +479,8 @@ class TestIoOpsEdge:
         app._dirty_scenes = set()
         # Make mkstemp fail so fallback direct write is exercised
         monkeypatch.setattr(
-            _tempfile, "mkstemp",
+            _tempfile,
+            "mkstemp",
             lambda **kw: (_ for _ in ()).throw(OSError("disk full")),
         )
         save_json(app)

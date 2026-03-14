@@ -38,7 +38,9 @@ def _app(tmp_path: Path, *, port: str = "", baud: int = 115200) -> SimpleNamespa
 class TestRefreshAvailablePorts:
     def test_no_pyserial(self, tmp_path):
         app = _app(tmp_path)
-        with patch.dict("sys.modules", {"serial": None, "serial.tools": None, "serial.tools.list_ports": None}):
+        with patch.dict(
+            "sys.modules", {"serial": None, "serial.tools": None, "serial.tools.list_ports": None}
+        ):
             refresh_available_ports(app)
         assert app.available_ports == []
         assert app.available_ports_idx == -1
@@ -52,11 +54,14 @@ class TestRefreshAvailablePorts:
         fake_serial = MagicMock()
         fake_serial.tools.list_ports = fake_lp
 
-        with patch.dict("sys.modules", {
-            "serial": fake_serial,
-            "serial.tools": fake_serial.tools,
-            "serial.tools.list_ports": fake_lp,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "serial": fake_serial,
+                "serial.tools": fake_serial.tools,
+                "serial.tools.list_ports": fake_lp,
+            },
+        ):
             refresh_available_ports(app)
         assert "COM3" in app.available_ports
         assert app.available_ports_idx == 0
@@ -69,11 +74,14 @@ class TestRefreshAvailablePorts:
         fake_serial = MagicMock()
         fake_serial.tools.list_ports = fake_lp
 
-        with patch.dict("sys.modules", {
-            "serial": fake_serial,
-            "serial.tools": fake_serial.tools,
-            "serial.tools.list_ports": fake_lp,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "serial": fake_serial,
+                "serial.tools": fake_serial.tools,
+                "serial.tools.list_ports": fake_lp,
+            },
+        ):
             refresh_available_ports(app)
         assert app.available_ports == []
         assert app.available_ports_idx == -1
@@ -168,11 +176,14 @@ class TestRefreshPortsEdge:
         fake_serial_tools = SimpleNamespace(list_ports=fake_list_ports)
         fake_serial = MagicMock()
         fake_serial.tools = fake_serial_tools
-        with patch.dict("sys.modules", {
-            "serial": fake_serial,
-            "serial.tools": fake_serial_tools,
-            "serial.tools.list_ports": fake_list_ports,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "serial": fake_serial,
+                "serial.tools": fake_serial_tools,
+                "serial.tools.list_ports": fake_list_ports,
+            },
+        ):
             refresh_available_ports(app)
         assert len(app.available_ports) == 20
         assert app.available_ports_idx == 0
@@ -186,11 +197,14 @@ class TestRefreshPortsEdge:
         fake_serial_tools = SimpleNamespace(list_ports=fake_list_ports)
         fake_serial = MagicMock()
         fake_serial.tools = fake_serial_tools
-        with patch.dict("sys.modules", {
-            "serial": fake_serial,
-            "serial.tools": fake_serial_tools,
-            "serial.tools.list_ports": fake_list_ports,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "serial": fake_serial,
+                "serial.tools": fake_serial_tools,
+                "serial.tools.list_ports": fake_list_ports,
+            },
+        ):
             refresh_available_ports(app)
         assert len(app.available_ports) == 1
 
@@ -217,7 +231,7 @@ class TestSendLivePreviewEdge:
     def test_large_json_file(self, tmp_path):
         """Large JSON payload is transmitted intact."""
         app = _app(tmp_path, port="COM1", baud=115200)
-        payload = '{"big": "' + 'x' * 10000 + '"}'
+        payload = '{"big": "' + "x" * 10000 + '"}'
         app.json_path.write_text(payload, encoding="utf-8")
         mock_ser = MagicMock()
         mock_serial_cls = MagicMock()

@@ -397,15 +397,17 @@ class TestTextOverflowRules:
 
 class TestMinimumWidgetSizes:
     def test_gauge_too_small(self):
-        w = _base_widget(type="gauge", width=5, height=5, x=0, y=0,
-                         min_value=0, max_value=100, value=50)
+        w = _base_widget(
+            type="gauge", width=5, height=5, x=0, y=0, min_value=0, max_value=100, value=50
+        )
         data = {"scenes": {"main": _base_scene(widgets=[w])}}
         issues = _validate(data)
         assert any("gauge" in i.message and "too small" in i.message for i in issues)
 
     def test_slider_too_narrow(self):
-        w = _base_widget(type="slider", width=10, height=20, x=0, y=0,
-                         min_value=0, max_value=100, value=50)
+        w = _base_widget(
+            type="slider", width=10, height=20, x=0, y=0, min_value=0, max_value=100, value=50
+        )
         data = {"scenes": {"main": _base_scene(widgets=[w])}}
         issues = _validate(data)
         assert any("slider" in i.message and "too narrow" in i.message for i in issues)

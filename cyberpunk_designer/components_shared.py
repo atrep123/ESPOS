@@ -10,9 +10,9 @@ PANEL2_BG = "#080808"
 TEXT_FG = "#f0f0f0"
 
 # Common layout dimensions used across widget blueprints.
-LABEL_H = 16       # Standard label / single-line text height
-PAD = 12           # Default component internal padding
-PAD_SM = 4         # Small padding / gap between elements
+LABEL_H = 16  # Standard label / single-line text height
+PAD = 12  # Default component internal padding
+PAD_SM = 4  # Small padding / gap between elements
 
 
 def scene_size(sc: object, dw: int = 256, dh: int = 128) -> tuple[int, int]:

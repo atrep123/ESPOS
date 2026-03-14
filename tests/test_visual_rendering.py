@@ -1012,6 +1012,7 @@ def _pixel_coords(surf, region):
 def _gauge_cy(rect, padding, has_label, border=True):
     """Compute the gauge semicircle baseline cy for a given widget rect."""
     from cyberpunk_designer.font6x8 import CHAR_H
+
     b_inset = 1 if border else 0
     label_h = (CHAR_H + 1) if has_label else 0
     gauge_area_y = rect.y + b_inset + padding + label_h
@@ -1030,10 +1031,19 @@ class TestGaugeBoundary:
     def _render_gauge(self, app, value=72, width=60, height=42, text="SPEED"):
         surf = _surf()
         w = WidgetConfig(
-            type="gauge", x=0, y=0, width=width, height=height,
-            color_fg="#dddddd", color_bg="#000000",
-            border=True, border_style="single",
-            value=value, min_value=0, max_value=100, text=text,
+            type="gauge",
+            x=0,
+            y=0,
+            width=width,
+            height=height,
+            color_fg="#dddddd",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            value=value,
+            min_value=0,
+            max_value=100,
+            text=text,
         )
         rect = pygame.Rect(4, 4, width, height)
         drawing.draw_widget_preview(app, surf, w, rect, BG, 2, False)
@@ -1047,12 +1057,16 @@ class TestGaugeBoundary:
         # Scan below cy, inside the border (2px inset skips border + bg edge)
         inset = 2
         below = pygame.Rect(
-            rect.x + inset, cy + 1,
-            rect.width - inset * 2, rect.bottom - inset - cy - 1,
+            rect.x + inset,
+            cy + 1,
+            rect.width - inset * 2,
+            rect.bottom - inset - cy - 1,
         )
         if below.width > 0 and below.height > 0:
             stray = _pixel_coords(surf, below)
-            assert len(stray) == 0, f"found {len(stray)} stray pixels below cy={cy}: {sorted(stray)[:10]}"
+            assert len(stray) == 0, (
+                f"found {len(stray)} stray pixels below cy={cy}: {sorted(stray)[:10]}"
+            )
 
     def test_no_pixels_below_cy_at_zero(self, tmp_path, monkeypatch):
         """Value=0: needle at far left near baseline — still no leaks."""
@@ -1061,8 +1075,10 @@ class TestGaugeBoundary:
         cy = _gauge_cy(rect, 2, True)
         inset = 2
         below = pygame.Rect(
-            rect.x + inset, cy + 1,
-            rect.width - inset * 2, rect.bottom - inset - cy - 1,
+            rect.x + inset,
+            cy + 1,
+            rect.width - inset * 2,
+            rect.bottom - inset - cy - 1,
         )
         if below.width > 0 and below.height > 0:
             stray = _pixel_coords(surf, below)
@@ -1075,8 +1091,10 @@ class TestGaugeBoundary:
         cy = _gauge_cy(rect, 2, True)
         inset = 2
         below = pygame.Rect(
-            rect.x + inset, cy + 1,
-            rect.width - inset * 2, rect.bottom - inset - cy - 1,
+            rect.x + inset,
+            cy + 1,
+            rect.width - inset * 2,
+            rect.bottom - inset - cy - 1,
         )
         if below.width > 0 and below.height > 0:
             stray = _pixel_coords(surf, below)
@@ -1089,8 +1107,10 @@ class TestGaugeBoundary:
         cy = _gauge_cy(rect, 2, True)
         inset = 2
         below = pygame.Rect(
-            rect.x + inset, cy + 1,
-            rect.width - inset * 2, rect.bottom - inset - cy - 1,
+            rect.x + inset,
+            cy + 1,
+            rect.width - inset * 2,
+            rect.bottom - inset - cy - 1,
         )
         if below.width > 0 and below.height > 0:
             stray = _pixel_coords(surf, below)
@@ -1103,8 +1123,10 @@ class TestGaugeBoundary:
         cy = _gauge_cy(rect, 2, False)
         inset = 2
         below = pygame.Rect(
-            rect.x + inset, cy + 1,
-            rect.width - inset * 2, rect.bottom - inset - cy - 1,
+            rect.x + inset,
+            cy + 1,
+            rect.width - inset * 2,
+            rect.bottom - inset - cy - 1,
         )
         if below.width > 0 and below.height > 0:
             stray = _pixel_coords(surf, below)
@@ -1116,18 +1138,29 @@ class TestGaugeBoundary:
         surf = pygame.Surface((200, 120))
         surf.fill(BG)
         w = WidgetConfig(
-            type="gauge", x=0, y=0, width=80, height=60,
-            color_fg="#dddddd", color_bg="#000000",
-            border=True, border_style="single",
-            value=33, min_value=0, max_value=100, text="BIG",
+            type="gauge",
+            x=0,
+            y=0,
+            width=80,
+            height=60,
+            color_fg="#dddddd",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            value=33,
+            min_value=0,
+            max_value=100,
+            text="BIG",
         )
         rect = pygame.Rect(4, 4, 80, 60)
         drawing.draw_widget_preview(app, surf, w, rect, BG, 2, False)
         cy = _gauge_cy(rect, 2, True)
         inset = 2
         below = pygame.Rect(
-            rect.x + inset, cy + 1,
-            rect.width - inset * 2, rect.bottom - inset - cy - 1,
+            rect.x + inset,
+            cy + 1,
+            rect.width - inset * 2,
+            rect.bottom - inset - cy - 1,
         )
         if below.width > 0 and below.height > 0:
             stray = _pixel_coords(surf, below)
@@ -1145,10 +1178,17 @@ class TestCheckboxXInset:
     def _render_checkbox(self, app, box_height=14, width=60):
         surf = _surf()
         w = WidgetConfig(
-            type="checkbox", x=0, y=0, width=width, height=box_height,
-            color_fg="#f0f0f0", color_bg="#000000",
-            border=True, border_style="single",
-            checked=True, text="",
+            type="checkbox",
+            x=0,
+            y=0,
+            width=width,
+            height=box_height,
+            color_fg="#f0f0f0",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            checked=True,
+            text="",
         )
         rect = pygame.Rect(4, 4, width, box_height)
         drawing.draw_widget_preview(app, surf, w, rect, BG, 2, False)
@@ -1167,10 +1207,17 @@ class TestCheckboxXInset:
         # Render unchecked for reference
         surf_off = _surf()
         w_off = WidgetConfig(
-            type="checkbox", x=0, y=0, width=60, height=14,
-            color_fg="#f0f0f0", color_bg="#000000",
-            border=True, border_style="single",
-            checked=False, text="",
+            type="checkbox",
+            x=0,
+            y=0,
+            width=60,
+            height=14,
+            color_fg="#f0f0f0",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            checked=False,
+            text="",
         )
         drawing.draw_widget_preview(app, surf_off, w_off, rect, BG, 2, False)
         # The checked version should have the same pixels on the right border column
@@ -1178,8 +1225,7 @@ class TestCheckboxXInset:
             px_on = surf.get_at((box.right - 1, y))[:3]
             px_off = surf_off.get_at((box.right - 1, y))[:3]
             assert px_on == px_off, (
-                f"X mark touched box right border at y={y}: "
-                f"checked={px_on}, unchecked={px_off}"
+                f"X mark touched box right border at y={y}: checked={px_on}, unchecked={px_off}"
             )
 
     def test_x_not_on_box_left_border(self, tmp_path, monkeypatch):
@@ -1188,18 +1234,23 @@ class TestCheckboxXInset:
         surf, rect, box = self._render_checkbox(app)
         surf_off = _surf()
         w_off = WidgetConfig(
-            type="checkbox", x=0, y=0, width=60, height=14,
-            color_fg="#f0f0f0", color_bg="#000000",
-            border=True, border_style="single",
-            checked=False, text="",
+            type="checkbox",
+            x=0,
+            y=0,
+            width=60,
+            height=14,
+            color_fg="#f0f0f0",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            checked=False,
+            text="",
         )
         drawing.draw_widget_preview(app, surf_off, w_off, rect, BG, 2, False)
         for y in range(box.top, box.bottom):
             px_on = surf.get_at((box.left, y))[:3]
             px_off = surf_off.get_at((box.left, y))[:3]
-            assert px_on == px_off, (
-                f"X mark touched box left border at y={y}"
-            )
+            assert px_on == px_off, f"X mark touched box left border at y={y}"
 
     def test_x_not_on_box_top_border(self, tmp_path, monkeypatch):
         """X mark pixels must not appear on the box's topmost row."""
@@ -1207,10 +1258,17 @@ class TestCheckboxXInset:
         surf, rect, box = self._render_checkbox(app)
         surf_off = _surf()
         w_off = WidgetConfig(
-            type="checkbox", x=0, y=0, width=60, height=14,
-            color_fg="#f0f0f0", color_bg="#000000",
-            border=True, border_style="single",
-            checked=False, text="",
+            type="checkbox",
+            x=0,
+            y=0,
+            width=60,
+            height=14,
+            color_fg="#f0f0f0",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            checked=False,
+            text="",
         )
         drawing.draw_widget_preview(app, surf_off, w_off, rect, BG, 2, False)
         for x in range(box.left, box.right):
@@ -1224,10 +1282,17 @@ class TestCheckboxXInset:
         surf, rect, box = self._render_checkbox(app)
         surf_off = _surf()
         w_off = WidgetConfig(
-            type="checkbox", x=0, y=0, width=60, height=14,
-            color_fg="#f0f0f0", color_bg="#000000",
-            border=True, border_style="single",
-            checked=False, text="",
+            type="checkbox",
+            x=0,
+            y=0,
+            width=60,
+            height=14,
+            color_fg="#f0f0f0",
+            color_bg="#000000",
+            border=True,
+            border_style="single",
+            checked=False,
+            text="",
         )
         drawing.draw_widget_preview(app, surf_off, w_off, rect, BG, 2, False)
         for x in range(box.left, box.right):
@@ -1249,13 +1314,8 @@ class TestCheckboxXInset:
                 if not inner.collidepoint(x, y):
                     border_zone_px.add((x, y))
         # Count fg-colored pixels in border zone
-        fg_in_border = sum(
-            1 for x, y in border_zone_px
-            if surf.get_at((x, y))[:3] == fg
-        )
-        assert fg_in_border == 0, (
-            f"X mark has {fg_in_border} fg pixels within 2px border zone"
-        )
+        fg_in_border = sum(1 for x, y in border_zone_px if surf.get_at((x, y))[:3] == fg)
+        assert fg_in_border == 0, f"X mark has {fg_in_border} fg pixels within 2px border zone"
 
 
 # ---------------------------------------------------------------------------
@@ -1270,10 +1330,17 @@ class TestChartLineThickness:
         surf = pygame.Surface((width + 20, height + 20))
         surf.fill(BG)
         w = WidgetConfig(
-            type="chart", x=0, y=0, width=width, height=height,
-            color_fg="#cccccc", color_bg="#0a0a0a",
-            border=False, border_style="none",
-            text="LINE", style="line",
+            type="chart",
+            x=0,
+            y=0,
+            width=width,
+            height=height,
+            color_fg="#cccccc",
+            color_bg="#0a0a0a",
+            border=False,
+            border_style="none",
+            text="LINE",
+            style="line",
             data_points=points,
         )
         rect = pygame.Rect(4, 4, width, height)
@@ -1307,8 +1374,7 @@ class TestChartLineThickness:
             # Majority of columns should have runs of 2 (not 1)
             thick_enough = sum(1 for r in runs if r >= 2)
             assert thick_enough > len(runs) * 0.5, (
-                f"too many 1px-thin columns: {len(runs) - thick_enough}/{len(runs)} "
-                f"runs={runs}"
+                f"too many 1px-thin columns: {len(runs) - thick_enough}/{len(runs)} runs={runs}"
             )
 
 
@@ -1323,10 +1389,19 @@ class TestGaugeValueTextPosition:
     def _render_gauge_with_value(self, app, value, width=60, height=42):
         surf = _surf()
         w = WidgetConfig(
-            type="gauge", x=0, y=0, width=width, height=height,
-            color_fg="#dddddd", color_bg="#0a0a0a",
-            border=True, border_style="single",
-            value=value, min_value=0, max_value=100, text="V",
+            type="gauge",
+            x=0,
+            y=0,
+            width=width,
+            height=height,
+            color_fg="#dddddd",
+            color_bg="#0a0a0a",
+            border=True,
+            border_style="single",
+            value=value,
+            min_value=0,
+            max_value=100,
+            text="V",
         )
         rect = pygame.Rect(4, 4, width, height)
         drawing.draw_widget_preview(app, surf, w, rect, BG, 2, False)
@@ -1339,6 +1414,7 @@ class TestGaugeValueTextPosition:
         cy = _gauge_cy(rect, 2, True)
         padding = 2
         from cyberpunk_designer.font6x8 import CHAR_H, CHAR_W
+
         label_h = CHAR_H + 2
         _gauge_area_y = rect.y + padding + label_h
         gauge_area_h = max(8, rect.height - padding * 2 - label_h)
@@ -1355,9 +1431,7 @@ class TestGaugeValueTextPosition:
         _tw = 2 * CHAR_W  # "72" = 2 chars
         vy = cy - needle_r * 2 // 5 - th // 2
         # Value text must be at or above cy
-        assert vy + th <= cy + 1, (
-            f"value text bottom ({vy + th}) exceeds cy ({cy})"
-        )
+        assert vy + th <= cy + 1, f"value text bottom ({vy + th}) exceeds cy ({cy})"
 
     def test_value_text_inside_arc_radius(self, tmp_path, monkeypatch):
         """Value text must be positioned within the arc radius."""
@@ -1366,6 +1440,7 @@ class TestGaugeValueTextPosition:
         cy = _gauge_cy(rect, 2, True)
         padding = 2
         from cyberpunk_designer.font6x8 import CHAR_H, CHAR_W
+
         label_h = CHAR_H + 2
         gauge_area_w = rect.width - padding * 2 - 4
         gauge_area_h = max(8, rect.height - padding * 2 - label_h)

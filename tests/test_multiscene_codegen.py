@@ -23,6 +23,7 @@ MAIN_SCENE_JSON = REPO_ROOT / "main_scene.json"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _write_json(tmp_path: Path, scenes: dict) -> Path:
     p = tmp_path / "design.json"
     p.write_text(json.dumps({"scenes": scenes}), encoding="utf-8")
@@ -83,7 +84,7 @@ class TestMultiSceneHeaderReal:
 
     def test_cpp_guard(self, pair):
         _, hdr = pair
-        assert '#ifdef __cplusplus' in hdr
+        assert "#ifdef __cplusplus" in hdr
         assert 'extern "C"' in hdr
 
     def test_constraints_and_animations_enabled(self, pair):
@@ -177,8 +178,16 @@ class TestMultiSceneSourceReal:
 
     def test_main_has_diverse_widget_types(self, pair):
         src, _ = pair
-        for wtype in ["UIW_LABEL", "UIW_BUTTON", "UIW_GAUGE", "UIW_PROGRESSBAR",
-                       "UIW_SLIDER", "UIW_CHECKBOX", "UIW_CHART", "UIW_PANEL"]:
+        for wtype in [
+            "UIW_LABEL",
+            "UIW_BUTTON",
+            "UIW_GAUGE",
+            "UIW_PROGRESSBAR",
+            "UIW_SLIDER",
+            "UIW_CHECKBOX",
+            "UIW_CHART",
+            "UIW_PANEL",
+        ]:
             assert wtype in src, f"{wtype} missing from generated source"
 
     def test_settings_has_slider_and_checkbox(self, pair):
@@ -223,10 +232,13 @@ class TestMultiSceneSyntheticStructure:
     """Synthetic tests for structural properties of multi-scene codegen."""
 
     def test_scene_count_matches_input(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "a": {"width": 64, "height": 32, "widgets": [_w()]},
-            "b": {"width": 64, "height": 32, "widgets": [_w()]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "a": {"width": 64, "height": 32, "widgets": [_w()]},
+                "b": {"width": 64, "height": 32, "widgets": [_w()]},
+            },
+        )
         _, hdr = generate_ui_design_multi_pair(p, source_label="t")
         assert "#define UI_SCENE_COUNT 2" in hdr
 
@@ -239,44 +251,59 @@ class TestMultiSceneSyntheticStructure:
             assert f"#define UI_SCENE_IDX_S{i} {i}" in hdr
 
     def test_single_scene_still_works(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "only": {"width": 128, "height": 64, "widgets": [_w(text="Solo")]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "only": {"width": 128, "height": 64, "widgets": [_w(text="Solo")]},
+            },
+        )
         src, hdr = generate_ui_design_multi_pair(p, source_label="t")
         assert "#define UI_SCENE_COUNT 1" in hdr
         assert "Solo" in src
         assert "#define UI_SCENE_DEMO ui_scenes[0]" in hdr
 
     def test_empty_widgets_produces_null(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "empty": {"width": 64, "height": 32, "widgets": []},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "empty": {"width": 64, "height": 32, "widgets": []},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert ".widgets = NULL" in src
         assert ".widget_count = 0" in src
 
     def test_mixed_empty_and_populated(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "full": {"width": 64, "height": 32, "widgets": [_w(text="Hello")]},
-            "empty": {"width": 64, "height": 32, "widgets": []},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "full": {"width": 64, "height": 32, "widgets": [_w(text="Hello")]},
+                "empty": {"width": 64, "height": 32, "widgets": []},
+            },
+        )
         src, hdr = generate_ui_design_multi_pair(p, source_label="t")
         assert "#define UI_SCENE_COUNT 2" in hdr
         assert "Hello" in src
         assert ".widgets = NULL" in src
 
     def test_widget_sizeof_calculation(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "sc": {"width": 64, "height": 32, "widgets": [_w(), _w(), _w()]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "sc": {"width": 64, "height": 32, "widgets": [_w(), _w(), _w()]},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert "sizeof(sc_widgets) / sizeof(sc_widgets[0])" in src
 
     def test_different_dimensions_per_scene(self, tmp_path):
-        p = _write_json(tmp_path, {
-            "small": {"width": 64, "height": 32, "widgets": [_w()]},
-            "big": {"width": 320, "height": 240, "widgets": [_w()]},
-        })
+        p = _write_json(
+            tmp_path,
+            {
+                "small": {"width": 64, "height": 32, "widgets": [_w()]},
+                "big": {"width": 320, "height": 240, "widgets": [_w()]},
+            },
+        )
         src, _ = generate_ui_design_multi_pair(p, source_label="t")
         assert ".width = 64" in src
         assert ".height = 32" in src
@@ -297,12 +324,17 @@ class TestLoadScenesFormat:
 
     def test_list_format_uses_name_field(self, tmp_path):
         p = tmp_path / "list.json"
-        p.write_text(json.dumps({
-            "scenes": [
-                {"name": "alpha", "widgets": []},
-                {"name": "beta", "widgets": []},
-            ]
-        }), encoding="utf-8")
+        p.write_text(
+            json.dumps(
+                {
+                    "scenes": [
+                        {"name": "alpha", "widgets": []},
+                        {"name": "beta", "widgets": []},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
         scenes = load_scenes(p)
         assert len(scenes) == 2
         assert "alpha" in scenes
@@ -310,24 +342,34 @@ class TestLoadScenesFormat:
 
     def test_list_format_uses_id_field(self, tmp_path):
         p = tmp_path / "list.json"
-        p.write_text(json.dumps({
-            "scenes": [
-                {"id": "first", "widgets": []},
-                {"id": "second", "widgets": []},
-            ]
-        }), encoding="utf-8")
+        p.write_text(
+            json.dumps(
+                {
+                    "scenes": [
+                        {"id": "first", "widgets": []},
+                        {"id": "second", "widgets": []},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
         scenes = load_scenes(p)
         assert "first" in scenes
         assert "second" in scenes
 
     def test_list_format_fallback_index(self, tmp_path):
         p = tmp_path / "list.json"
-        p.write_text(json.dumps({
-            "scenes": [
-                {"widgets": []},
-                {"widgets": []},
-            ]
-        }), encoding="utf-8")
+        p.write_text(
+            json.dumps(
+                {
+                    "scenes": [
+                        {"widgets": []},
+                        {"widgets": []},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
         scenes = load_scenes(p)
         assert "scene_0" in scenes
         assert "scene_1" in scenes

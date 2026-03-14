@@ -423,17 +423,31 @@ class TestRecomputeScaleEdge:
 
     def test_very_small_canvas(self):
         """Tiny canvas can scale up more."""
-        app = _recompute_app(canvas_w=1, canvas_h=1, toolbar_h=0,
-                             scene_tabs_h=0, status_h=0,
-                             palette_w=0, inspector_w=0, max_auto_scale=10)
+        app = _recompute_app(
+            canvas_w=1,
+            canvas_h=1,
+            toolbar_h=0,
+            scene_tabs_h=0,
+            status_h=0,
+            palette_w=0,
+            inspector_w=0,
+            max_auto_scale=10,
+        )
         recompute_scale_for_window(app, 10, 10)
         assert app.scale == 10
 
     def test_asymmetric_window(self):
         """Window much wider than tall limits scale."""
-        app = _recompute_app(canvas_w=100, canvas_h=100, toolbar_h=0,
-                             scene_tabs_h=0, status_h=0,
-                             palette_w=0, inspector_w=0, max_auto_scale=10)
+        app = _recompute_app(
+            canvas_w=100,
+            canvas_h=100,
+            toolbar_h=0,
+            scene_tabs_h=0,
+            status_h=0,
+            palette_w=0,
+            inspector_w=0,
+            max_auto_scale=10,
+        )
         recompute_scale_for_window(app, 1000, 200)
         # Height limits: 200 // 100 = 2
         assert app.scale == 2

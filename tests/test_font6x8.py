@@ -188,7 +188,7 @@ def test_last_row_zero():
 
     Some glyphs with descenders (comma, semicolon, etc.) may use row 7.
     """
-    descenders = {',', ';', 'g', 'j', 'p', 'q', 'y'}
+    descenders = {",", ";", "g", "j", "p", "q", "y"}
     for ch, glyph in _GLYPHS.items():
         if ch in descenders:
             continue

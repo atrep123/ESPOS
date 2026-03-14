@@ -40,14 +40,16 @@ class RenderCache:
         widget_count: int,
     ) -> int:
         """Compute a deterministic cache key for the current frame state."""
-        return hash((
-            scale,
-            selected_idx,
-            tuple(sorted(selected)),
-            int(bool(show_help)),
-            current_scene,
-            widget_count,
-        ))
+        return hash(
+            (
+                scale,
+                selected_idx,
+                tuple(sorted(selected)),
+                int(bool(show_help)),
+                current_scene,
+                widget_count,
+            )
+        )
 
 
 def compute_dirty_rects(

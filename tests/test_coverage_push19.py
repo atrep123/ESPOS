@@ -1182,7 +1182,9 @@ class TestLoadPixelFontNonHeadless:
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.setattr(pygame.font, "match_font", lambda name: None)
-        monkeypatch.setattr(pygame.font, "SysFont", MagicMock(side_effect=pygame.error("no sysfont")))
+        monkeypatch.setattr(
+            pygame.font, "SysFont", MagicMock(side_effect=pygame.error("no sysfont"))
+        )
         font = app._load_pixel_font(8)
         assert font is not None
 
@@ -1192,7 +1194,9 @@ class TestLoadPixelFontNonHeadless:
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.setattr(pygame.font, "match_font", lambda name: None)
-        monkeypatch.setattr(pygame.font, "SysFont", MagicMock(side_effect=pygame.error("no sysfont")))
+        monkeypatch.setattr(
+            pygame.font, "SysFont", MagicMock(side_effect=pygame.error("no sysfont"))
+        )
         orig_Font = pygame.font.Font
         call_count = [0]
 

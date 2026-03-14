@@ -166,9 +166,7 @@ class TestAllBlueprintsHaveRequiredKeys:
             bps = component_blueprints(name, SC)
             for i, bp in enumerate(bps):
                 missing = REQUIRED_KEYS - set(bp.keys())
-                assert not missing, (
-                    f"component '{name}' widget {i} missing keys: {missing}"
-                )
+                assert not missing, f"component '{name}' widget {i} missing keys: {missing}"
 
 
 class TestBlueprintGeometry:
@@ -240,9 +238,7 @@ class TestBlueprintRoles:
             bps = component_blueprints(name, SC)
             roles = [bp.get("role") for bp in bps if bp.get("role")]
             # Some may share role prefix (like item0, item1), but exact duplicates are bad
-            assert len(roles) == len(set(roles)), (
-                f"component '{name}' has duplicate roles: {roles}"
-            )
+            assert len(roles) == len(set(roles)), f"component '{name}' has duplicate roles: {roles}"
 
     def test_all_widgets_have_role(self):
         """Every widget in a component should have a role for identification."""

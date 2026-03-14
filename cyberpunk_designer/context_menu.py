@@ -173,9 +173,7 @@ def open_tab_context_menu(app: CyberpunkEditorApp, pos: Tuple[int, int]) -> None
         items.append(("Close Scene", "MidClick", "tab_close"))
         items.append(("Close Others", "", "tab_close_others"))
         cur_idx = (
-            names.index(app.designer.current_scene)
-            if app.designer.current_scene in names
-            else 0
+            names.index(app.designer.current_scene) if app.designer.current_scene in names else 0
         )
         if cur_idx < len(names) - 1:
             items.append(("Close Right", "", "tab_close_right"))

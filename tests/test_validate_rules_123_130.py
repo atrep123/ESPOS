@@ -245,59 +245,75 @@ class TestRule128:
 
 class TestRule129:
     def test_consistent_kinds(self):
-        d = _make_multi({
-            "scene_a": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=brightness;kind=int;min=0;max=100")],
-            },
-            "scene_b": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=brightness;kind=int;min=0;max=255")],
-            },
-        })
+        d = _make_multi(
+            {
+                "scene_a": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=brightness;kind=int;min=0;max=100")],
+                },
+                "scene_b": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=brightness;kind=int;min=0;max=255")],
+                },
+            }
+        )
         errs = [e for e in _errs(d) if "kind" in e.message and "bind" in e.message]
         assert not errs
 
     def test_conflicting_kinds(self):
-        d = _make_multi({
-            "scene_a": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=brightness;kind=int")],
-            },
-            "scene_b": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=brightness;kind=float")],
-            },
-        })
+        d = _make_multi(
+            {
+                "scene_a": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=brightness;kind=int")],
+                },
+                "scene_b": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=brightness;kind=float")],
+                },
+            }
+        )
         errs = [e for e in _errs(d) if "kind" in e.message and "bind" in e.message]
         assert len(errs) == 1
         assert "brightness" in errs[0].message
 
     def test_different_bind_keys_ok(self):
-        d = _make_multi({
-            "scene_a": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=temp;kind=float")],
-            },
-            "scene_b": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=count;kind=int")],
-            },
-        })
+        d = _make_multi(
+            {
+                "scene_a": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=temp;kind=float")],
+                },
+                "scene_b": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=count;kind=int")],
+                },
+            }
+        )
         errs = [e for e in _errs(d) if "kind" in e.message and "bind" in e.message]
         assert not errs
 
     def test_no_kind_no_conflict(self):
         """bind without kind in one scene should not conflict."""
-        d = _make_multi({
-            "scene_a": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=brightness;kind=int")],
-            },
-            "scene_b": {
-                "width": 256, "height": 128,
-                "widgets": [_w("bind=brightness")],
-            },
-        })
+        d = _make_multi(
+            {
+                "scene_a": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=brightness;kind=int")],
+                },
+                "scene_b": {
+                    "width": 256,
+                    "height": 128,
+                    "widgets": [_w("bind=brightness")],
+                },
+            }
+        )
         errs = [e for e in _errs(d) if "kind" in e.message and "bind" in e.message]
         assert not errs

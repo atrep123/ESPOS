@@ -128,9 +128,7 @@ class TestFieldKindValues:
             elif kind in ("tabs_active", "menu_active", "list_count"):
                 pass  # special inspector kinds
             else:
-                assert kind in _ALL_KINDS, (
-                    f"{comp}.{key}: unknown kind {kind!r}"
-                )
+                assert kind in _ALL_KINDS, f"{comp}.{key}: unknown kind {kind!r}"
 
 
 class TestFieldRolesAreNonEmpty:

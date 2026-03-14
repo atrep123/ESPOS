@@ -735,8 +735,7 @@ class TestApplyPresetRobust:
         """add_new=True creates a new widget at position (10, 10)."""
         app = _make_app(tmp_path, widgets=[])
         app.widget_presets = [
-            {"type": "button", "text": "new_btn", "width": 60, "height": 20,
-             "x": 50, "y": 50}
+            {"type": "button", "text": "new_btn", "width": 60, "height": 20, "x": 50, "y": 50}
         ]
         apply_preset_slot(app, 1, add_new=True)
         sc = app.state.current_scene()
@@ -748,9 +747,7 @@ class TestApplyPresetRobust:
     def test_add_new_without_xy_in_preset(self, tmp_path):
         """add_new=True works even when preset has no x/y (defaults applied)."""
         app = _make_app(tmp_path, widgets=[])
-        app.widget_presets = [
-            {"type": "label", "text": "hello", "width": 30, "height": 10}
-        ]
+        app.widget_presets = [{"type": "label", "text": "hello", "width": 30, "height": 10}]
         apply_preset_slot(app, 1, add_new=True)
         sc = app.state.current_scene()
         assert len(sc.widgets) == 1

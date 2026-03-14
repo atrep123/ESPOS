@@ -1,4 +1,4 @@
-﻿"""Mouse and keyboard event processing handlers.
+"""Mouse and keyboard event processing handlers.
 
 This module re-exports from key_handlers and mouse_handlers for
 backward-compatible imports.

@@ -1,4 +1,5 @@
 """Tests for cyberpunk_designer.scene_ops — extracted scene management functions."""
+
 import os
 import sys
 

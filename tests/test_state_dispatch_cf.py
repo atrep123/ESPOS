@@ -42,6 +42,7 @@ def _designer_and_layout():
     designer.create_scene("main")
     designer.current_scene = "main"
     from cyberpunk_designer.layout import Layout
+
     layout = Layout(256, 128)
     return designer, layout
 
@@ -252,7 +253,13 @@ class TestDispatchMouseDown:
 class TestHandleLeftClick:
     def test_dismiss_context_menu(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        app._context_menu = {"visible": True, "items": [("Test", lambda: None)], "x": 0, "y": 0, "hover_idx": -1}
+        app._context_menu = {
+            "visible": True,
+            "items": [("Test", lambda: None)],
+            "x": 0,
+            "y": 0,
+            "hover_idx": -1,
+        }
         event = pygame.event.Event(
             pygame.MOUSEBUTTONDOWN,
             button=1,

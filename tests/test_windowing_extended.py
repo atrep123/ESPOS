@@ -43,9 +43,7 @@ def _full_app(
     designer = SimpleNamespace(width=canvas_w, height=canvas_h)
     state = SimpleNamespace(
         layout=None,
-        current_scene=MagicMock(
-            return_value=SimpleNamespace(width=canvas_w, height=canvas_h)
-        ),
+        current_scene=MagicMock(return_value=SimpleNamespace(width=canvas_w, height=canvas_h)),
     )
     window = pygame.display.set_mode((640, 480))
     logical_surface = pygame.Surface((640, 480))

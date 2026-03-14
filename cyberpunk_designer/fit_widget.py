@@ -98,9 +98,7 @@ def fit_selection_to_widget(app) -> None:
                 needed_w = int(max_item_w + (border_inset + 1) * 2)
                 needed_h = int(n * DEVICE_CHAR_H + (border_inset + 1) * 2)
             else:
-                max_item_w = max(
-                    (app._text_width_px(it) for it in items), default=line_h
-                )
+                max_item_w = max((app._text_width_px(it) for it in items), default=line_h)
                 needed_w = int(max_item_w + pad * 2)
                 needed_h = int(n * line_h + pad * 2)
         elif kind == "toggle":

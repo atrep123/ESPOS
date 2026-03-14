@@ -28,6 +28,7 @@ from ui_designer import WidgetConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app(tmp_path, monkeypatch, *, widgets=None, profile=None):
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
@@ -50,6 +51,7 @@ def _w(**kw):
 # ---------------------------------------------------------------------------
 # Full frame render cycle
 # ---------------------------------------------------------------------------
+
 
 class TestFullFrameRender:
     """Render canvas + panels + toolbar + status in a single frame cycle."""
@@ -98,14 +100,27 @@ class TestFullFrameRender:
 # Widget type coverage
 # ---------------------------------------------------------------------------
 
+
 class TestAllWidgetTypes:
     """Ensure every widget type renders without error."""
 
-    @pytest.mark.parametrize("wtype", [
-        "label", "button", "panel", "progressbar", "gauge",
-        "slider", "checkbox", "textbox", "chart", "list",
-        "toggle", "icon",
-    ])
+    @pytest.mark.parametrize(
+        "wtype",
+        [
+            "label",
+            "button",
+            "panel",
+            "progressbar",
+            "gauge",
+            "slider",
+            "checkbox",
+            "textbox",
+            "chart",
+            "list",
+            "toggle",
+            "icon",
+        ],
+    )
     def test_widget_type_renders(self, tmp_path, monkeypatch, wtype):
         kw = dict(type=wtype, x=5, y=5, width=50, height=20)
         if wtype in ("progressbar", "gauge", "slider"):
@@ -126,6 +141,7 @@ class TestAllWidgetTypes:
 # Drawing helper functions
 # ---------------------------------------------------------------------------
 
+
 class TestDrawingHelpers:
     def test_rulers_render(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
@@ -137,6 +153,7 @@ class TestDrawingHelpers:
         app.state.selected = [0]
         app.state.dragging = True
         from types import SimpleNamespace
+
         bounds = SimpleNamespace(x=10, y=10, width=40, height=16)
         sel_rect = pygame.Rect(10, 10, 40, 16)
         sr = pygame.Rect(0, 0, 256, 128)
@@ -147,6 +164,7 @@ class TestDrawingHelpers:
         app.state.selected = [0]
         app.state.resizing = True
         from types import SimpleNamespace
+
         bounds = SimpleNamespace(x=10, y=10, width=40, height=16)
         sel_rect = pygame.Rect(10, 10, 40, 16)
         sr = pygame.Rect(0, 0, 256, 128)
@@ -179,6 +197,7 @@ class TestDrawingHelpers:
 # Profile-specific rendering
 # ---------------------------------------------------------------------------
 
+
 class TestProfileRendering:
     def test_esp32os_profile(self, tmp_path, monkeypatch):
         widgets = [
@@ -186,7 +205,9 @@ class TestProfileRendering:
             _w(type="button", x=0, y=20, width=60, height=14, text="Go"),
         ]
         app = _make_app(
-            tmp_path, monkeypatch, widgets=widgets,
+            tmp_path,
+            monkeypatch,
+            widgets=widgets,
             profile="esp32os_256x128_gray4",
         )
         draw_canvas(app)
@@ -197,6 +218,7 @@ class TestProfileRendering:
 # ---------------------------------------------------------------------------
 # Multiple scene tabs
 # ---------------------------------------------------------------------------
+
 
 class TestMultiScene:
     def test_render_with_multiple_scenes(self, tmp_path, monkeypatch):

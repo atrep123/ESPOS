@@ -415,6 +415,7 @@ def test_load_corrupt_json_raises(tmp_path):
         f.write("{not valid json")
     mgr = UndoRedoManager()
     import pytest
+
     with pytest.raises(json.JSONDecodeError):
         mgr.load_state(path)
 
@@ -422,6 +423,7 @@ def test_load_corrupt_json_raises(tmp_path):
 def test_load_nonexistent_file_raises(tmp_path):
     mgr = UndoRedoManager()
     import pytest
+
     with pytest.raises(FileNotFoundError):
         mgr.load_state(str(tmp_path / "nope.json"))
 

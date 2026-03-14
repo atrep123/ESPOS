@@ -286,10 +286,7 @@ class WidgetConfig:
         # Validate against known widget types
         _valid = {wt.value for wt in WidgetType}
         if self.type not in _valid:
-            raise ValueError(
-                f"Unknown widget type {self.type!r}; "
-                f"valid types: {sorted(_valid)}"
-            )
+            raise ValueError(f"Unknown widget type {self.type!r}; valid types: {sorted(_valid)}")
 
     def _to_color_str(self, value: Any) -> Optional[str]:
         if value is None:

@@ -978,9 +978,7 @@ class UIDesigner:
     def _responsive_baseline(
         self, w: WidgetConfig, c: Constraints, bw: int, bh: int
     ) -> ConstraintBaseline:
-        return (
-            c.get("b") or make_baseline(w.x, w.y, w.width, w.height, bw, bh)
-        )
+        return c.get("b") or make_baseline(w.x, w.y, w.width, w.height, bw, bh)
 
     def _responsive_position(
         self,
@@ -1140,9 +1138,7 @@ class UIDesigner:
                 "single",
             ),
             align=coerce_choice(kw.get("align", "left"), ("left", "center", "right"), "left"),
-            valign=coerce_choice(
-                kw.get("valign", "middle"), ("top", "middle", "bottom"), "middle"
-            ),
+            valign=coerce_choice(kw.get("valign", "middle"), ("top", "middle", "bottom"), "middle"),
             value=int(kw.get("value", 0)) if kw.get("value") is not None else 0,
             min_value=int(kw.get("min_value", 0)),
             max_value=int(kw.get("max_value", 100)),

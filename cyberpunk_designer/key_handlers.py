@@ -90,17 +90,23 @@ _CTRL_FKEY_TABLE = {
 
 # Ctrl+1..9: jump to scene by index
 _CTRL_SCENE_JUMP = {
-    pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2,
-    pygame.K_4: 3, pygame.K_5: 4, pygame.K_6: 5,
-    pygame.K_7: 6, pygame.K_8: 7, pygame.K_9: 8,
+    pygame.K_1: 0,
+    pygame.K_2: 1,
+    pygame.K_3: 2,
+    pygame.K_4: 3,
+    pygame.K_5: 4,
+    pygame.K_6: 5,
+    pygame.K_7: 6,
+    pygame.K_8: 7,
+    pygame.K_9: 8,
 }
 
 # ---------------------------------------------------------------------------
 # Dispatch flags & tables for Ctrl+key and plain-key shortcuts
 # ---------------------------------------------------------------------------
 _F_SHIFT_NOSIM = 1  # shift variant requires not sim_input_mode
-_F_NOSIM = 2        # entire entry requires not sim_input_mode
-_F_NOALT = 4        # requires not KMOD_ALT
+_F_NOSIM = 2  # entire entry requires not sim_input_mode
+_F_NOALT = 4  # requires not KMOD_ALT
 
 # Ctrl+key: (plain_method, shift_method | None, flags)
 _CTRL_DISPATCH: dict = {

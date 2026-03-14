@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Headless render of demo_scene.json -> demo_screenshot.png"""
+
 import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"

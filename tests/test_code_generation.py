@@ -74,7 +74,11 @@ def test_generate_python_code_combines_sections():
 
 def test_items_populates_text_for_list_widget():
     w = WidgetConfig(
-        type="list", x=0, y=0, width=80, height=40,
+        type="list",
+        x=0,
+        y=0,
+        width=80,
+        height=40,
         items=["Alpha", "Beta", "Gamma"],
     )
     assert w.text == "Alpha\nBeta\nGamma"
@@ -82,7 +86,11 @@ def test_items_populates_text_for_list_widget():
 
 def test_text_populates_items_for_list_widget():
     w = WidgetConfig(
-        type="list", x=0, y=0, width=80, height=40,
+        type="list",
+        x=0,
+        y=0,
+        width=80,
+        height=40,
         text="One\nTwo\nThree",
     )
     assert w.items == ["One", "Two", "Three"]
@@ -90,8 +98,13 @@ def test_text_populates_items_for_list_widget():
 
 def test_items_takes_precedence_over_text():
     w = WidgetConfig(
-        type="list", x=0, y=0, width=80, height=40,
-        items=["A", "B"], text="X\nY\nZ",
+        type="list",
+        x=0,
+        y=0,
+        width=80,
+        height=40,
+        items=["A", "B"],
+        text="X\nY\nZ",
     )
     assert w.text == "A\nB"
     assert w.items == ["A", "B"]
@@ -99,8 +112,13 @@ def test_items_takes_precedence_over_text():
 
 def test_items_ignored_for_non_list_widget():
     w = WidgetConfig(
-        type="label", x=0, y=0, width=80, height=16,
-        items=["A", "B"], text="hello",
+        type="label",
+        x=0,
+        y=0,
+        width=80,
+        height=16,
+        items=["A", "B"],
+        text="hello",
     )
     assert w.text == "hello"
 
@@ -124,28 +142,46 @@ def _codegen_for_widgets(widgets):
 
 
 def test_codegen_list_items_to_text():
-    src = _codegen_for_widgets([
-        {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40,
-         "items": ["Foo", "Bar", "Baz"]},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {
+                "type": "list",
+                "x": 0,
+                "y": 0,
+                "width": 80,
+                "height": 40,
+                "items": ["Foo", "Bar", "Baz"],
+            },
+        ]
+    )
     assert "UIW_LIST" in src
     assert "Foo\\nBar\\nBaz" in src
 
 
 def test_codegen_list_text_passthrough():
-    src = _codegen_for_widgets([
-        {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40,
-         "text": "X\nY"},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40, "text": "X\nY"},
+        ]
+    )
     assert "UIW_LIST" in src
     assert "X\\nY" in src
 
 
 def test_codegen_toggle_checked():
-    src = _codegen_for_widgets([
-        {"type": "toggle", "x": 0, "y": 0, "width": 60, "height": 14,
-         "text": "WiFi", "checked": True},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {
+                "type": "toggle",
+                "x": 0,
+                "y": 0,
+                "width": 60,
+                "height": 14,
+                "text": "WiFi",
+                "checked": True,
+            },
+        ]
+    )
     assert "UIW_TOGGLE" in src
     assert ".checked = 1" in src
 
@@ -154,57 +190,78 @@ def test_codegen_toggle_checked():
 
 
 def test_codegen_toggle_checked_false():
-    src = _codegen_for_widgets([
-        {"type": "toggle", "x": 0, "y": 0, "width": 60, "height": 14,
-         "text": "Off", "checked": False},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {
+                "type": "toggle",
+                "x": 0,
+                "y": 0,
+                "width": 60,
+                "height": 14,
+                "text": "Off",
+                "checked": False,
+            },
+        ]
+    )
     assert "UIW_TOGGLE" in src
     assert ".checked = 0" in src or ".checked" not in src
 
 
 def test_codegen_list_empty_items():
-    src = _codegen_for_widgets([
-        {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40,
-         "items": []},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40, "items": []},
+        ]
+    )
     assert "UIW_LIST" in src
 
 
 def test_codegen_list_items_special_chars():
     """Items with quotes and backslash must be escaped in C output."""
-    src = _codegen_for_widgets([
-        {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40,
-         "items": ['Say "hello"', "path\\dir"]},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {
+                "type": "list",
+                "x": 0,
+                "y": 0,
+                "width": 80,
+                "height": 40,
+                "items": ['Say "hello"', "path\\dir"],
+            },
+        ]
+    )
     assert "UIW_LIST" in src
     # The C string must contain escaped quotes/backslashes
     assert '\\"' in src or "hello" in src
 
 
 def test_codegen_list_single_item():
-    src = _codegen_for_widgets([
-        {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40,
-         "items": ["Only"]},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40, "items": ["Only"]},
+        ]
+    )
     assert "UIW_LIST" in src
     assert "Only" in src
 
 
 def test_codegen_list_many_items():
     items = [f"Item{i}" for i in range(20)]
-    src = _codegen_for_widgets([
-        {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40,
-         "items": items},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {"type": "list", "x": 0, "y": 0, "width": 80, "height": 40, "items": items},
+        ]
+    )
     assert "UIW_LIST" in src
     assert "Item0" in src
     assert "Item19" in src
 
 
 def test_codegen_toggle_no_text():
-    src = _codegen_for_widgets([
-        {"type": "toggle", "x": 0, "y": 0, "width": 60, "height": 14,
-         "checked": True},
-    ])
+    src = _codegen_for_widgets(
+        [
+            {"type": "toggle", "x": 0, "y": 0, "width": 60, "height": 14, "checked": True},
+        ]
+    )
     assert "UIW_TOGGLE" in src
     assert ".checked = 1" in src

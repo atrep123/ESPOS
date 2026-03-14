@@ -34,8 +34,15 @@ def is_widget_focusable(w) -> bool:
         return False
     wtype = str(getattr(w, "type", "") or "").lower()
     return wtype in {
-        "button", "checkbox", "radiobutton", "slider", "textbox",
-        "list", "toggle", "gauge", "progressbar",
+        "button",
+        "checkbox",
+        "radiobutton",
+        "slider",
+        "textbox",
+        "list",
+        "toggle",
+        "gauge",
+        "progressbar",
     }
 
 

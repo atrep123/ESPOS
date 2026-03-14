@@ -1,4 +1,5 @@
 """Tests for cyberpunk_designer.context_menu — context menu building and dispatch."""
+
 import os
 import sys
 
