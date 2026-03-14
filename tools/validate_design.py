@@ -49,6 +49,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+SCHEMA_PATH = REPO_ROOT / "schemas" / "ui_design.schema.json"
+
 from tools.ui_codegen import WIDGET_TYPE_MAP
 
 # ── Enum sets ──────────────────────────────────────────────────────────────
@@ -65,7 +67,10 @@ TEXT_TYPES = {"label", "button", "checkbox", "textbox", "radiobutton"}
 VALUE_TYPES = {"gauge", "progressbar", "slider"}
 
 # Focusable types in firmware (ui_nav.c)
-FOCUSABLE_TYPES = {"button", "checkbox", "radiobutton", "slider"}
+FOCUSABLE_TYPES = {
+    "button", "checkbox", "radiobutton", "slider",
+    "list", "toggle", "gauge", "progressbar",
+}
 
 # Valid constraint dict keys (ui_models.py Constraints TypedDict)
 ALLOWED_CONSTRAINT_KEYS = {"b", "ax", "ay", "sx", "sy", "mx", "my", "mr", "mb"}
@@ -75,6 +80,12 @@ ALLOWED_RUNTIME_META_KEYS = {
     "bind", "key", "kind", "type", "min", "max", "step", "values",
     "suffix", "unit", "prefix", "precision", "decimals", "scale", "divisor",
 }
+
+# Valid runtime kind values (must match parse_kind() in ui_meta.c)
+ALLOWED_RUNTIME_KINDS = {"bool", "int", "enum", "str", "float"}
+
+# Runtime keys whose values must be numeric (int or float)
+NUMERIC_RUNTIME_KEYS = {"min", "max", "step", "precision", "decimals", "scale", "divisor"}
 
 # ── Rendering constants (must match drawing.py / firmware) ──────────────
 CHAR_W = 6  # font6x8 char width
@@ -88,6 +99,7 @@ INT16_MAX = 32767
 UINT16_MAX = 65535
 MAX_WIDGETS_PER_SCENE = 64  # soft limit; ESP32 memory pressure
 HARD_WIDGET_LIMIT = 256  # hard cap; skip O(n²) checks above this
+MIN_WIDGET_GAP_PX = 1  # minimum pixel gap between non-grouped widgets
 MAX_JSON_FILE_SIZE = 10 * 1024 * 1024  # 10 MB guard for resource exhaustion
 MAX_TEXT_LEN = 127  # practical limit for OLED readability
 
@@ -166,6 +178,18 @@ def _is_bool(v: object) -> bool:
     return isinstance(v, bool)
 
 
+def _parse_runtime_meta(runtime: str) -> dict[str, str]:
+    """Parse 'key=val;key2=val2' into a dict of lowercased keys to raw values."""
+    meta: dict[str, str] = {}
+    for part in runtime.split(";"):
+        part = part.strip()
+        if not part or "=" not in part:
+            continue
+        k, v = part.split("=", 1)
+        meta[k.strip().lower()] = v.strip()
+    return meta
+
+
 def _scenes_from_data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     scenes_raw = data.get("scenes", {})
     if isinstance(scenes_raw, dict):
@@ -188,6 +212,15 @@ def _scenes_from_data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _wref(scene_name: str, w: dict[str, Any], idx: int) -> str:
     wid = w.get("_widget_id") or w.get("id") or f"#{idx}"
     return f"scene '{scene_name}': widget[{idx}] ({wid})"
+
+
+def _widget_group(w: dict[str, Any]) -> str:
+    """Return the group prefix from ``_widget_id`` (part before first '.')."""
+    wid = w.get("_widget_id") or w.get("id") or ""
+    if not isinstance(wid, str):
+        return ""
+    dot = wid.find(".")
+    return wid[:dot] if dot > 0 else wid
 
 
 # ── Main validator ─────────────────────────────────────────────────────────
@@ -362,19 +395,21 @@ def validate_data(
 
             # ── Rule 7: Text overflow check (H+V) ──
             if wt in TEXT_TYPES and text:
-                margin = RENDER_PAD * 2
+                border_inset = 1 if has_border else 0
+                margin_each = RENDER_PAD + border_inset
+                margin = margin_each * 2
                 inner_w = ww - margin
                 inner_h = hh - margin
                 max_lines = inner_h // CHAR_H if inner_h > 0 else 0
                 max_chars = inner_w // CHAR_W if inner_w > 0 else 0
                 if max_lines < 1:
                     issues.append(
-                        Issue("WARN", f"{wl}: h={hh} → 0 text lines (need inner_h >= {CHAR_H})")
+                        Issue("WARN", f"{wl}: text cannot fit: h={hh} (inner_h={inner_h}) < font_h={CHAR_H}")
                     )
                 if max_chars > 0 and len(text) > max_chars:
                     issues.append(
                         Issue(
-                            "WARN", f"{wl}: text '{text}' ({len(text)} ch) > max {max_chars} chars"
+                            "WARN", f"{wl}: text '{text}' ({len(text)} ch) overflows max {max_chars} chars"
                         )
                     )
 
@@ -445,32 +480,51 @@ def validate_data(
                         break
 
             # ── Rule 24: Edge margin (non-full-span widgets shouldn't touch edges) ──
+            # Flush edge (x+w==sw) allowed for non-bordered widgets (e.g. topbar halves)
+            flush_right = (x + ww == sw)
+            flush_bottom = (y + hh == sh)
+            # Right edge
             if (
                 ww < sw
                 and x > 0
-                and x < sw
-                and x + ww > 0
-                and x + ww <= sw
                 and x + ww > sw - MIN_EDGE_MARGIN
+                and x + ww <= sw
+                and (has_border or not flush_right)
             ):
                 issues.append(
                     Issue(
-                        "WARN",
+                        "ERROR",
                         f"{wl}: right edge too close to boundary ({x + ww} > {sw - MIN_EDGE_MARGIN})",
                     )
                 )
+            # Bottom edge
             if (
                 hh < sh
                 and y > 0
-                and y < sh
-                and y + hh > 0
-                and y + hh <= sh
                 and y + hh > sh - MIN_EDGE_MARGIN
+                and y + hh <= sh
+                and (has_border or not flush_bottom)
             ):
                 issues.append(
                     Issue(
-                        "WARN",
+                        "ERROR",
                         f"{wl}: bottom edge too close to boundary ({y + hh} > {sh - MIN_EDGE_MARGIN})",
+                    )
+                )
+            # Left edge (non-origin widgets too close to left)
+            if ww < sw and x > 0 and x < MIN_EDGE_MARGIN:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{wl}: left edge too close to boundary (x={x} < {MIN_EDGE_MARGIN})",
+                    )
+                )
+            # Top edge (non-origin widgets too close to top)
+            if hh < sh and y > 0 and y < MIN_EDGE_MARGIN:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{wl}: top edge too close to boundary (y={y} < {MIN_EDGE_MARGIN})",
                     )
                 )
 
@@ -890,8 +944,8 @@ def validate_data(
                         )
                         break
 
-            # ── Rule 83: checked on non-checkbox/radiobutton ──
-            if wt not in {"checkbox", "radiobutton"} and w.get("checked") is True:
+            # ── Rule 83: checked on non-checkbox/radiobutton/toggle ──
+            if wt not in {"checkbox", "radiobutton", "toggle"} and w.get("checked") is True:
                 issues.append(
                     Issue("WARN", f"{wl}: checked=true on non-checkbox/radiobutton '{wt}'")
                 )
@@ -1105,7 +1159,7 @@ def validate_data(
                 )
 
             # ── Rule 109: disabled+checked toggle without runtime ──
-            if wt in ("checkbox", "radiobutton"):
+            if wt in ("checkbox", "radiobutton", "toggle"):
                 r109_en = w.get("enabled")
                 r109_chk = w.get("checked")
                 _rv109 = w.get("runtime", "")
@@ -1231,6 +1285,110 @@ def validate_data(
                                 f"{wl}: runtime key '{r122_key}' is not a recognized meta key",
                             )
                         )
+
+            # ── Rule 124: runtime 'kind' value must be valid ──
+            if runtime:
+                r124_meta = _parse_runtime_meta(runtime)
+                r124_kind = r124_meta.get("kind") or r124_meta.get("type")
+                if r124_kind and r124_kind.lower() not in ALLOWED_RUNTIME_KINDS:
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{wl}: runtime kind '{r124_kind}' is not valid"
+                            f" (expected {', '.join(sorted(ALLOWED_RUNTIME_KINDS))})",
+                        )
+                    )
+
+            # ── Rule 125: runtime with meta keys but no bind/key ──
+            if runtime:
+                r125_meta = _parse_runtime_meta(runtime)
+                r125_has_bind = "bind" in r125_meta or "key" in r125_meta
+                r125_other = {k for k in r125_meta if k not in ("bind", "key")}
+                if r125_other and not r125_has_bind:
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{wl}: runtime has meta keys ({', '.join(sorted(r125_other))})"
+                            " but no 'bind' or 'key'",
+                        )
+                    )
+
+            # ── Rule 126: duplicate keys in runtime string ──
+            if runtime:
+                r126_seen: dict[str, int] = {}
+                for r126_part in runtime.split(";"):
+                    r126_part = r126_part.strip()
+                    if not r126_part or "=" not in r126_part:
+                        continue
+                    r126_k = r126_part.split("=", 1)[0].strip().lower()
+                    if r126_k in r126_seen:
+                        issues.append(
+                            Issue(
+                                "ERROR",
+                                f"{wl}: runtime has duplicate key '{r126_k}'",
+                            )
+                        )
+                    else:
+                        r126_seen[r126_k] = 1
+
+            # ── Rule 127: numeric runtime values must parse as numbers ──
+            if runtime:
+                r127_meta = _parse_runtime_meta(runtime)
+                for r127_k in NUMERIC_RUNTIME_KEYS:
+                    r127_v = r127_meta.get(r127_k)
+                    if r127_v is not None:
+                        try:
+                            float(r127_v)
+                        except ValueError:
+                            issues.append(
+                                Issue(
+                                    "ERROR",
+                                    f"{wl}: runtime '{r127_k}={r127_v}' is not a valid number",
+                                )
+                            )
+
+            # ── Rule 128: bind value must be a valid identifier ──
+            if runtime:
+                r128_meta = _parse_runtime_meta(runtime)
+                r128_bind = r128_meta.get("bind") or r128_meta.get("key")
+                if r128_bind and not _RUNTIME_KEY_RE.match(r128_bind):
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{wl}: runtime bind value '{r128_bind}' is not a valid identifier",
+                        )
+                    )
+
+            # ── Rule 130: LIST items must be a list of strings ──
+            r130_items = w.get("items")
+            if wt == "list" and r130_items is not None:
+                if not isinstance(r130_items, list):
+                    issues.append(
+                        Issue("ERROR", f"{wl}: items field must be a list, got {type(r130_items).__name__}")
+                    )
+                else:
+                    for r130_i, r130_v in enumerate(r130_items):
+                        if not isinstance(r130_v, str):
+                            issues.append(
+                                Issue(
+                                    "ERROR",
+                                    f"{wl}: items[{r130_i}] must be a string,"
+                                    f" got {type(r130_v).__name__}",
+                                )
+                            )
+                            break
+
+            # ── Rule 131: LIST with no text and no items ──
+            if wt == "list" and not text and not r130_items:
+                issues.append(Issue("WARN", f"{wl}: list widget has no text and no items"))
+
+            # ── Rule 132: items on non-list widget ──
+            if wt != "list" and w.get("items") is not None:
+                r132_items = w.get("items")
+                if isinstance(r132_items, list) and len(r132_items) > 0:
+                    issues.append(
+                        Issue("WARN", f"{wl}: items field on non-list widget '{wt}' (ignored)")
+                    )
 
             # ── Rule 106: scene dimensions too small ──
             # (checked once per scene, outside per-widget loop — see below)
@@ -1378,6 +1536,49 @@ def validate_data(
                         ref_b = _wref(scene_name, b, j)
                         issues.append(Issue("WARN", f"{pfx}: OVERLAP {ref_a} <> {ref_b}"))
 
+        # ── Rule 123: Min gap between non-grouped widgets ──
+        if len(widgets) <= HARD_WIDGET_LIMIT:
+            for i in range(len(widgets)):
+                a = widgets[i]
+                if not isinstance(a, dict):
+                    continue
+                ax, ay = a.get("x", 0), a.get("y", 0)
+                aw, ah = a.get("width", 0), a.get("height", 0)
+                if not (_is_int(ax) and _is_int(ay) and _is_int(aw) and _is_int(ah)):
+                    continue
+                ax2, ay2 = ax + aw, ay + ah
+                ga = _widget_group(a)
+                for j in range(i + 1, len(widgets)):
+                    b = widgets[j]
+                    if not isinstance(b, dict):
+                        continue
+                    # Skip widgets in the same group (shared ID prefix)
+                    if ga and ga == _widget_group(b):
+                        continue
+                    bx, by = b.get("x", 0), b.get("y", 0)
+                    bw, bh = b.get("width", 0), b.get("height", 0)
+                    if not (_is_int(bx) and _is_int(by) and _is_int(bw) and _is_int(bh)):
+                        continue
+                    bx2, by2 = bx + bw, by + bh
+                    # Compute axis-aligned gap between bounding boxes
+                    x_gap = max(0, max(ax, bx) - min(ax2, bx2))
+                    y_gap = max(0, max(ay, by) - min(ay2, by2))
+                    # Only flag when rects share a band on the perpendicular axis
+                    too_close = False
+                    if (x_gap == 0 and 0 < y_gap < MIN_WIDGET_GAP_PX) or (y_gap == 0 and 0 < x_gap < MIN_WIDGET_GAP_PX):
+                        too_close = True
+                    if too_close:
+                        ref_a = _wref(scene_name, a, i)
+                        ref_b = _wref(scene_name, b, j)
+                        gap = min(g for g in (x_gap, y_gap) if g > 0)
+                        issues.append(
+                            Issue(
+                                "WARN",
+                                f"{pfx}: widgets too close ({gap}px < {MIN_WIDGET_GAP_PX}px min gap) "
+                                f"{ref_a} <> {ref_b}",
+                            )
+                        )
+
     # ── Rule 97: Cross-scene duplicate widget IDs ──
     global_ids: dict[str, str] = {}  # id → first scene name
     for scene_name, scene in scenes.items():
@@ -1398,6 +1599,35 @@ def validate_data(
             else:
                 global_ids[wid] = scene_name
 
+    # ── Rule 129: Cross-scene bind key kind consistency ──
+    bind_kinds: dict[str, tuple[str, str]] = {}  # bind_key → (kind, first_scene)
+    for scene_name, scene in scenes.items():
+        widgets = scene.get("widgets") or []
+        for w in widgets:
+            if not isinstance(w, dict):
+                continue
+            rt = w.get("runtime")
+            if not isinstance(rt, str) or not rt:
+                continue
+            meta = _parse_runtime_meta(rt)
+            bk = meta.get("bind") or meta.get("key")
+            kd = meta.get("kind") or meta.get("type")
+            if not bk or not kd:
+                continue
+            kd_lower = kd.lower()
+            if bk in bind_kinds:
+                prev_kind, prev_scene = bind_kinds[bk]
+                if prev_kind != kd_lower:
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{file_label}: bind '{bk}' has kind '{kd_lower}' in '{scene_name}'"
+                            f" but '{prev_kind}' in '{prev_scene}'",
+                        )
+                    )
+            else:
+                bind_kinds[bk] = (kd_lower, scene_name)
+
     if warnings_as_errors:
         return [Issue("ERROR", i.message) if i.level == "WARN" else i for i in issues]
     if strict_critical:
@@ -1415,22 +1645,41 @@ def validate_file(
 ) -> list[Issue]:
     try:
         raw = path.read_text(encoding="utf-8")
-    except Exception as exc:
+    except OSError as exc:
         return [Issue("ERROR", f"{path}: failed to read file ({exc})")]
     if len(raw) > MAX_JSON_FILE_SIZE:
         return [Issue("ERROR", f"{path}: file exceeds {MAX_JSON_FILE_SIZE // (1024 * 1024)}MB size limit")]
     try:
         data = json.loads(raw)
-    except Exception as exc:
+    except (json.JSONDecodeError, ValueError) as exc:
         return [Issue("ERROR", f"{path}: failed to parse JSON ({exc})")]
     if not isinstance(data, dict):
         return [Issue("ERROR", f"{path}: root must be a JSON object")]
-    return validate_data(
+
+    issues: list[Issue] = []
+
+    # ── JSON Schema structural validation ──
+    try:
+        import jsonschema
+
+        if SCHEMA_PATH.exists():
+            schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+            validator = jsonschema.Draft202012Validator(schema)
+            for error in validator.iter_errors(data):
+                loc = ".".join(str(p) for p in error.absolute_path) or "(root)"
+                issues.append(Issue("ERROR", f"{path}: schema: {loc}: {error.message}"))
+    except ImportError:
+        pass  # jsonschema not installed — skip structural validation
+    except Exception as exc:
+        issues.append(Issue("WARN", f"{path}: schema validation skipped ({exc})"))
+
+    issues.extend(validate_data(
         data,
         file_label=str(path),
         warnings_as_errors=warnings_as_errors,
         strict_critical=strict_critical,
-    )
+    ))
+    return issues
 
 
 def main() -> int:

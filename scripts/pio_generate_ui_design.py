@@ -11,6 +11,7 @@ Env overrides:
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -42,13 +43,14 @@ def _strip_optional_quotes(value: str) -> str:
 
 
 def _main() -> None:
-    export_flag = os.environ.get("ESP32OS_PIO_UI_EXPORT", "1").strip()
-    if export_flag not in {"0", "1"}:
-        raise RuntimeError("[UI] ESP32OS_PIO_UI_EXPORT must be '0' or '1'")
-
-    if export_flag == "0":
-        print("[UI] Export disabled (ESP32OS_PIO_UI_EXPORT=0)")
+    export_flag = os.environ.get("ESP32OS_PIO_UI_EXPORT", "1").strip().lower()
+    if export_flag in {"0", "false", "off", "no"}:
+        print(f"[UI] Export disabled (ESP32OS_PIO_UI_EXPORT={export_flag})")
         return
+    if export_flag not in {"1", "true", "on", "yes"}:
+        raise RuntimeError(
+            f"[UI] ESP32OS_PIO_UI_EXPORT must be 0/1/true/false/on/off/yes/no, got: {export_flag!r}"
+        )
 
     project_dir = Path(env["PROJECT_DIR"])  # type: ignore[name-defined]  # noqa: F821
     json_override = os.environ.get("ESP32OS_UI_JSON")
@@ -82,11 +84,28 @@ def _main() -> None:
 
     try:
         source_label = json_path.relative_to(project_dir).as_posix()
-    except Exception:
+    except ValueError:
         source_label = json_path.name
+    try:
+        scenes = load_scenes(json_path)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise RuntimeError(f"[UI] Failed to parse {json_path.name}: {exc}") from exc
 
-    # Use multi-scene export when JSON contains more than one scene.
-    scenes = load_scenes(json_path)
+    # Optional pre-flight validation (ESP32OS_UI_VALIDATE=1)
+    validate_flag = os.environ.get("ESP32OS_UI_VALIDATE", "0").strip().lower()
+    if validate_flag in {"1", "true", "on", "yes"}:
+        from tools.validate_design import validate_file
+
+        issues = validate_file(json_path, warnings_as_errors=False)
+        errors = [i for i in issues if i.level == "ERROR"]
+        if errors:
+            for e in errors:
+                print(f"[UI][VALIDATE] {e.level}: {e.message}")
+            raise RuntimeError(f"[UI] Validation found {len(errors)} error(s) in {json_path.name}")
+        warnings = [i for i in issues if i.level == "WARNING"]
+        for w in warnings:
+            print(f"[UI][VALIDATE] {w.level}: {w.message}")
+
     if len(scenes) > 1:
         c_text, h_text = generate_ui_design_multi_pair(json_path, source_label=source_label)
         mode = f"multi-scene, {len(scenes)} scenes"

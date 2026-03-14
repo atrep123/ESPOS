@@ -57,7 +57,7 @@ def remove_path(p: Path, apply: bool) -> None:
         else:
             try:
                 p.unlink()
-            except Exception:
+            except OSError:
                 pass
     print(f"{'Removed' if apply else 'Would remove'}: {p}")
 

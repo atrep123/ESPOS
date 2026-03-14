@@ -64,7 +64,7 @@ def audit_file(path: Path, max_w: int, max_h: int) -> Tuple[bool, str]:
         if details:
             summary += " | " + "; ".join(details)
         return ok, summary
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         return False, f"{path.name}: FAILED to parse ({exc})"
 
 

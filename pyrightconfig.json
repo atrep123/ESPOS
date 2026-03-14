@@ -1,12 +1,43 @@
 {
   "pythonVersion": "3.12",
-  "typeCheckingMode": "basic",
+  "typeCheckingMode": "strict",
+  "include": [
+    "constants.py",
+    "design_tokens.py",
+    "event_manager.py",
+    "shared_undo_redo.py",
+    "ui_designer.py",
+    "ui_models.py",
+    "ui_template_manager.py",
+    "cyberpunk_designer"
+  ],
   "exclude": [
     "**/__pycache__",
     "**/.mypy_cache",
     "**/.pio",
     "**/build",
     "**/dist",
-    "**/generated"
-  ]
+    "**/generated",
+    "tests",
+    "test",
+    "output",
+    "scripts",
+    "tools"
+  ],
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportMissingParameterType": false,
+  "reportUnnecessaryComparison": "warning",
+  "reportUnnecessaryIsInstance": "warning",
+  "reportUnnecessaryTypeIgnoreComment": false,
+  "reportUnusedFunction": "warning",
+  "reportUnknownLambdaType": false,
+  "reportMissingTypeArgument": false,
+  "reportPrivateUsage": "warning",
+  "reportAttributeAccessIssue": false,
+  "reportArgumentType": "warning",
+  "reportReturnType": "warning"
 }

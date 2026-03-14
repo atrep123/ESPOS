@@ -5,7 +5,7 @@ from typing import List
 
 try:
     from serial.tools import list_ports
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
     list_ports = None
 
 ESPRESSIF_VID = 0x303A
@@ -39,7 +39,7 @@ def has_esp32s3() -> bool:
                 or "nora" in desc
             ):
                 return True
-        except Exception:
+        except (AttributeError, TypeError, ValueError):
             continue
     return False
 

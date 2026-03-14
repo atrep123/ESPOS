@@ -26,6 +26,8 @@ WIDGET_TYPE_MAP: dict[str, str] = {
     "panel": "UIW_PANEL",
     "icon": "UIW_ICON",
     "chart": "UIW_CHART",
+    "list": "UIW_LIST",
+    "toggle": "UIW_TOGGLE",
 }
 
 _BORDER_STYLE_MAP: dict[str, str] = {
@@ -110,7 +112,7 @@ def escape_c_comment(text: object) -> str:
 def as_int(v: object, default: int = 0) -> int:
     try:
         return int(v)  # type: ignore[call-overload]
-    except Exception:
+    except (TypeError, ValueError):
         return int(default)
 
 
@@ -158,7 +160,7 @@ def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
         g = int(s[2:4], 16)
         b = int(s[4:6], 16)
         return (r, g, b)
-    except Exception:
+    except ValueError:
         return (255, 255, 255)
 
 
@@ -172,7 +174,7 @@ def _get_rgb(name_or_hex: object) -> tuple[int, int, int]:
 def _rgb_to_gray4(r: int, g: int, b: int) -> int:
     try:
         y = 0.2126 * float(r) + 0.7152 * float(g) + 0.0722 * float(b)
-    except Exception:
+    except (TypeError, ValueError):
         y = 255.0
     v = round((y / 255.0) * 15.0)
     return max(0, min(15, v))
@@ -185,7 +187,7 @@ def parse_gray4(name_or_hex: object, *, default: int) -> int:
     try:
         r, g, b = _get_rgb(s)
         return _rgb_to_gray4(r, g, b)
-    except Exception:
+    except (TypeError, ValueError):
         return int(default)
 
 
@@ -249,6 +251,10 @@ def sanitize_ident(name: str) -> str:
 def collect_widget_strings(widget: dict[str, Any]) -> list[str]:
     widget_id = str(widget.get("_widget_id") or widget.get("id") or "")
     text = str(widget.get("text", "") or "")
+    # For list widgets: join items into newline-separated text
+    raw_items = widget.get("items") or widget.get("list_items")
+    if isinstance(raw_items, list) and raw_items and not text:
+        text = "\n".join(str(s) for s in raw_items)
     constraints = str(widget.get("constraints_json", "") or widget.get("runtime", "") or "")
     anim_csv = str(widget.get("animations_csv", "") or "")
     if not anim_csv:
@@ -298,7 +304,7 @@ def overflow_for(widget: dict[str, Any]) -> str:
 def write_if_changed(path: Path, content: str) -> bool:
     try:
         existing = path.read_text(encoding="utf-8")
-    except Exception:
+    except (FileNotFoundError, OSError):
         existing = None
     if existing == content:
         return False
@@ -316,8 +322,8 @@ def generate_ui_design_pair(
     if not isinstance(widgets, list):
         widgets = []
 
-    width = as_int(scene.get("width", data.get("width", 128)), 128)
-    height = as_int(scene.get("height", data.get("height", 64)), 64)
+    width = as_uint16(scene.get("width", data.get("width", 128)), 128)
+    height = as_uint16(scene.get("height", data.get("height", 64)), 64)
 
     pool_values: list[str] = []
     for w in widgets:
@@ -405,6 +411,10 @@ def generate_ui_design_pair(
 
         widget_id = str(w.get("_widget_id") or w.get("id") or "")
         text = str(w.get("text", "") or "")
+        # For list widgets: join items into newline-separated text
+        raw_items = w.get("items") or w.get("list_items")
+        if isinstance(raw_items, list) and raw_items and not text:
+            text = "\n".join(str(s) for s in raw_items)
         constraints = str(w.get("constraints_json", "") or w.get("runtime", "") or "")
         anim_csv = str(w.get("animations_csv", "") or "")
         if not anim_csv:
@@ -512,12 +522,12 @@ def generate_scenes_header(
 
     for scene_name, scene_data in scenes.items():
         safe = sanitize_ident(scene_name)
-        width = as_int(scene_data.get("width", 128), 128)
-        height = as_int(scene_data.get("height", 64), 64)
+        width = as_uint16(scene_data.get("width", 128), 128)
+        height = as_uint16(scene_data.get("height", 64), 64)
         widgets = list(scene_data.get("widgets", []) or [])
         try:
             widgets.sort(key=lambda ww: (as_int(ww.get("z_index", 0), 0),))
-        except Exception:
+        except (TypeError, ValueError, AttributeError):
             pass
 
         lines.append(f"/* Scene: {scene_name} ({width}x{height}) */")
@@ -736,8 +746,8 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
         widgets = scene_data.get("widgets", [])
         if not isinstance(widgets, list):
             widgets = []
-        width = as_int(scene_data.get("width", 128), 128)
-        height = as_int(scene_data.get("height", 64), 64)
+        width = as_uint16(scene_data.get("width", 128), 128)
+        height = as_uint16(scene_data.get("height", 64), 64)
 
         c.append(f"/* Scene: {escape_c_comment(scene_name)} ({len(widgets)} widgets) */")
         c.append(f"static const UiWidget {safe}_widgets[] = {{")
@@ -758,8 +768,8 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
         widgets = scene_data.get("widgets", [])
         if not isinstance(widgets, list):
             widgets = []
-        width = as_int(scene_data.get("width", 128), 128)
-        height = as_int(scene_data.get("height", 64), 64)
+        width = as_uint16(scene_data.get("width", 128), 128)
+        height = as_uint16(scene_data.get("height", 64), 64)
         has_widgets = any(isinstance(w, dict) for w in widgets) if widgets else False
         c.append(f"    {{ /* {escape_c_comment(key)} */")
         c.append(f'        .name = "{escape_c_string(key)}",')

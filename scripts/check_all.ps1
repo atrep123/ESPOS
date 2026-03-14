@@ -290,12 +290,26 @@ function Run-Step-WithWin4551Retry(
 
 if (-not $SkipPython) {
   Run-Step "ruff" "python -m ruff check ."
+  Run-Step "ruff format" "python -m ruff format --check ."
   Run-Step "pytest" "python -m pytest -q --ignore=output/buildprobe/tests"
+
+  # mypy (advisory — does not block the build yet)
+  Write-Host "[INFO] Running mypy (advisory)..."
+  & python -m mypy cyberpunk_designer/ ui_designer.py ui_models.py 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "mypy reported errors (advisory, not blocking)"
+  } else {
+    Write-Host "[OK] mypy clean"
+  }
 }
 
 if (Test-Path "tools\\validate_design.py") {
   $quotedDesign = '"' + $Design.Replace('"', '""') + '"'
   Run-Step "validate_design" "python tools\validate_design.py $quotedDesign"
+}
+
+if (Test-Path "scripts\\check_codegen_freshness.py") {
+  Run-Step "codegen freshness" "python scripts\check_codegen_freshness.py"
 }
 
 if (Test-Path "tools\\check_demo_scene_strict.py") {

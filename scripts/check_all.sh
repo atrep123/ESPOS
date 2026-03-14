@@ -164,10 +164,23 @@ else
 fi
 
 "$PYTHON_CMD" -m ruff check .
+"$PYTHON_CMD" -m ruff format --check .
 "$PYTHON_CMD" -m pytest -q --ignore=output/buildprobe/tests
+
+# mypy (advisory — does not block the build yet)
+echo "[INFO] Running mypy (advisory)..."
+if "$PYTHON_CMD" -m mypy cyberpunk_designer/ ui_designer.py ui_models.py >/dev/null 2>&1; then
+  echo "[OK] mypy clean"
+else
+  echo "[WARN] mypy reported errors (advisory, not blocking)"
+fi
 
 if [[ -f "tools/validate_design.py" ]]; then
   "$PYTHON_CMD" tools/validate_design.py "${DESIGN}"
+fi
+
+if [[ -f "scripts/check_codegen_freshness.py" ]]; then
+  "$PYTHON_CMD" scripts/check_codegen_freshness.py
 fi
 
 if [[ -f "tools/check_demo_scene_strict.py" ]]; then

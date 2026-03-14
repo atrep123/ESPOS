@@ -93,7 +93,9 @@
             "textbox",
             "panel",
             "icon",
-            "chart"
+            "chart",
+            "list",
+            "toggle"
           ]
         },
         "x": {
@@ -119,7 +121,7 @@
           "type": "string"
         },
         "_widget_id": {
-          "type": "string"
+          "type": ["string", "null"]
         },
         "id": {
           "type": "string"
@@ -173,7 +175,7 @@
           ]
         },
         "max_lines": {
-          "type": "integer",
+          "type": ["integer", "null"],
           "minimum": 0
         },
         "checked": {
@@ -198,7 +200,9 @@
           "type": "string"
         },
         "runtime": {
-          "type": "string"
+          "type": "string",
+          "description": "Semicolon-separated key=value pairs for firmware runtime bindings (e.g. 'bind=contrast;kind=int;min=0;max=255'). Empty string means no binding.",
+          "pattern": "^$|^[A-Za-z_][A-Za-z0-9_.]*=.*(;[A-Za-z_][A-Za-z0-9_.]*=.*)*$"
         },
         "animations_csv": {
           "type": "string"
@@ -214,9 +218,121 @@
           "items": {
             "type": "number"
           }
+        },
+        "list_items": {
+          "type": "array",
+          "description": "List widget entries (alternative to newline-separated text). Maps to WidgetConfig.items.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "icon_char": {
+          "type": "string",
+          "description": "Icon character for icon widgets."
+        },
+        "padding_x": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Horizontal padding inside widget (default 1)."
+        },
+        "padding_y": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Vertical padding inside widget (default 0)."
+        },
+        "margin_x": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Horizontal margin outside widget (default 0)."
+        },
+        "margin_y": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Vertical margin outside widget (default 0)."
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "Prevent editing this widget in the designer."
+        },
+        "theme_fg_role": {
+          "type": "string",
+          "description": "Theme role binding for foreground color."
+        },
+        "theme_bg_role": {
+          "type": "string",
+          "description": "Theme role binding for background color."
+        },
+        "state": {
+          "type": "string",
+          "description": "Current state variant (default, pressed, disabled, etc.)."
+        },
+        "state_overrides": {
+          "type": "object",
+          "description": "Per-state property overrides. Keys are state names, values are property dicts.",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "font_size": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Font size override (null = use default)."
+        },
+        "bold": {
+          "type": "boolean",
+          "description": "Use bold font rendering."
+        },
+        "corner_radius": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Corner radius for rounded widgets (null = sharp corners)."
+        },
+        "border_width": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Border width override (null = default)."
+        },
+        "border_color": {
+          "description": "Border color override.",
+          "oneOf": [
+            {"$ref": "#/$defs/color"},
+            {"type": "null"}
+          ]
+        },
+        "bg_color": {
+          "description": "Background color (legacy alias for color_bg).",
+          "oneOf": [
+            {"$ref": "#/$defs/color"},
+            {"type": "null"}
+          ]
+        },
+        "color": {
+          "description": "Foreground color (legacy alias for color_fg).",
+          "oneOf": [
+            {"$ref": "#/$defs/color"},
+            {"type": "null"}
+          ]
+        },
+        "text_color": {
+          "description": "Text color (legacy alias for color_fg).",
+          "oneOf": [
+            {"$ref": "#/$defs/color"},
+            {"type": "null"}
+          ]
+        },
+        "constraints": {
+          "type": "object",
+          "description": "Layout constraints metadata."
+        },
+        "responsive_rules": {
+          "type": "array",
+          "description": "Responsive layout rules.",
+          "items": {
+            "type": "object"
+          }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "color": {
       "type": "string",
