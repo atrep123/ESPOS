@@ -34,11 +34,22 @@ jobs:
         run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py design_tokens.py || true
       - name: Validate design JSON
         run: python tools/validate_design.py main_scene.json
+      - name: Codegen freshness check
+        run: python scripts/check_codegen_freshness.py
+      - name: Guardrail tests (designer refactors)
+        run: |
+          python -m pytest -q --tb=short \
+            tests/test_input_handlers.py \
+            tests/test_input_handlers_mouse.py \
+            tests/test_focus_nav.py \
+            tests/test_focus_nav_listmodel.py \
+            tests/test_inspector_commit.py \
+            tests/test_scene_ops.py
       - name: Run tests
         env:
           PYTHONIOENCODING: "utf-8"
         run: |
-          python -m pytest -q --tb=short --cov=. --cov-report=term-missing:skip-covered
+          python -m pytest -q --tb=short --ignore=output --cov=. --cov-report=term-missing:skip-covered
 
   firmware:
     name: Firmware (PlatformIO)

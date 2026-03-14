@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DESIGN="main_scene.json"
 DESIGN_ARG_SET=0
+GUARDRAILS_ONLY=0
 STRICT_ARTIFACTS=0
 STRICT_TRIAGE_CSV=0
 STRICT_TRIAGE_DELTA_CSV=0
@@ -26,6 +27,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --strict-artifacts)
       STRICT_ARTIFACTS=1
+      shift
+      ;;
+    --guardrails)
+      GUARDRAILS_ONLY=1
       shift
       ;;
     --strict-triage-csv)
@@ -91,6 +96,7 @@ while [[ $# -gt 0 ]]; do
 Usage: ./scripts/check_all_local.sh [design.json] [options]
 
 Options:
+  --guardrails                         Run fast guardrail pytest subset and exit
   --strict-artifacts                    Run strict artifact checker after tolerant run
   --strict-triage-csv                   Require triage combined CSV in strict checker
   --strict-triage-delta-csv             Require triage delta CSV in strict checker
@@ -118,6 +124,37 @@ EOF
       ;;
   esac
 done
+
+if [[ "$GUARDRAILS_ONLY" -eq 1 ]]; then
+  if [[ "$STRICT_ARTIFACTS" -eq 1 || "$STRICT_TRIAGE_CSV" -eq 1 || "$STRICT_TRIAGE_DELTA_CSV" -eq 1 ]]; then
+    echo "[FAIL] --guardrails cannot be combined with strict artifact options" >&2
+    exit 2
+  fi
+
+  PYTHON_CMD=""
+  if command -v python >/dev/null 2>&1; then
+    PYTHON_CMD="python"
+  elif command -v python.exe >/dev/null 2>&1; then
+    PYTHON_CMD="python.exe"
+  elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD="python3"
+  else
+    echo "[FAIL] No python interpreter found in PATH (python/python3/python.exe)." >&2
+    exit 127
+  fi
+
+  echo "[INFO] Running guardrail tests (designer refactors)..."
+  "$PYTHON_CMD" -m pytest -q --ignore=output \
+    tests/test_input_handlers.py \
+    tests/test_input_handlers_mouse.py \
+    tests/test_focus_nav.py \
+    tests/test_focus_nav_listmodel.py \
+    tests/test_inspector_commit.py \
+    tests/test_scene_ops.py
+
+  echo "[OK] Guardrail tests passed."
+  exit 0
+fi
 
 if is_blank "$DESIGN"; then
   echo "[FAIL] Design path cannot be empty" >&2

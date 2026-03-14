@@ -2,6 +2,7 @@
 param(
   [switch]$SkipPython,
   [switch]$SkipPio,
+  [switch]$Guardrails,
   [switch]$Fast,
   [switch]$StrictArtifacts,
   [switch]$StrictTriageCsv,
@@ -21,6 +22,7 @@ Set-StrictMode -Version Latest
 
 if ($Help) {
   Write-Host "Usage: .\scripts\check_all_local.ps1 [-Help]"
+  Write-Host "  -Guardrails                         Run fast guardrail pytest subset and exit"
   Write-Host "  -SkipPython                         Skip Python lint/test"
   Write-Host "  -SkipPio                            Skip PlatformIO checks"
   Write-Host "  -Fast                               Fast mode"
@@ -34,6 +36,39 @@ if ($Help) {
   Write-Host "  -NativePolicyHistoryCsv <path>      History CSV path"
   Write-Host "  -NativePolicyTriageCsv <path>       Triage CSV path"
   Write-Host "  -NativePolicyTriageDeltaCsv <path>  Triage delta CSV path"
+  exit 0
+}
+
+if ($Guardrails) {
+  Write-Host "[INFO] Running guardrail tests (designer refactors)..."
+
+  $pythonCmd = $null
+  foreach ($candidate in @("python", "python.exe", "py")) {
+    if (Get-Command $candidate -ErrorAction SilentlyContinue) {
+      $pythonCmd = $candidate
+      break
+    }
+  }
+
+  if ($null -eq $pythonCmd) {
+    throw "No Python interpreter found in PATH (python/python.exe/py)."
+  }
+
+  $guardrailTests = @(
+    "tests/test_input_handlers.py",
+    "tests/test_input_handlers_mouse.py",
+    "tests/test_focus_nav.py",
+    "tests/test_focus_nav_listmodel.py",
+    "tests/test_inspector_commit.py",
+    "tests/test_scene_ops.py"
+  )
+
+  & $pythonCmd -m pytest -q --ignore=output @guardrailTests
+  if ($LASTEXITCODE -ne 0) {
+    throw "Guardrail tests failed with exit code $LASTEXITCODE"
+  }
+
+  Write-Host "[OK] Guardrail tests passed."
   exit 0
 }
 
