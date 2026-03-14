@@ -88,15 +88,15 @@ cmds = [
     "quit",
 ]
 
-_templates_before = TEMPLATES_PATH.read_text(encoding="utf-8") if TEMPLATES_PATH.exists() else None
+_templates_before = TEMPLATES_PATH.read_bytes() if TEMPLATES_PATH.exists() else None
 try:
     create_cli_interface(cmds)
 finally:
     if _templates_before is None:
         if TEMPLATES_PATH.exists():
             TEMPLATES_PATH.unlink()
-    elif TEMPLATES_PATH.read_text(encoding="utf-8") != _templates_before:
-        TEMPLATES_PATH.write_text(_templates_before, encoding="utf-8")
+    elif TEMPLATES_PATH.read_bytes() != _templates_before:
+        TEMPLATES_PATH.write_bytes(_templates_before)
 
 SCHEMA_PATH = ROOT / "schemas" / "ui_design.schema.json"
 VALUE_WIDGET_TYPES = {"gauge", "progressbar", "slider", "chart"}

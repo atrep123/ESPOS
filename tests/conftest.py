@@ -39,3 +39,8 @@ def designer_with_scene(tmp_path):
 @pytest.fixture
 def temp_json(tmp_path):
     return tmp_path / "scene.json"
+
+
+@pytest.fixture(autouse=True)
+def isolate_templates_storage(tmp_path, monkeypatch):
+    monkeypatch.setenv("ESP32OS_TEMPLATES_PATH", str(tmp_path / "templates.json"))

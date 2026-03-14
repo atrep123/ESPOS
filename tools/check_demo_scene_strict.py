@@ -21,9 +21,7 @@ def _run(step: str, args: list[str]) -> int:
 
 
 def main() -> int:
-    templates_before = (
-        TEMPLATES_PATH.read_text(encoding="utf-8") if TEMPLATES_PATH.exists() else None
-    )
+    templates_before = TEMPLATES_PATH.read_bytes() if TEMPLATES_PATH.exists() else None
 
     DEMO_CHECK_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -45,8 +43,8 @@ def main() -> int:
         if templates_before is None:
             if TEMPLATES_PATH.exists():
                 TEMPLATES_PATH.unlink()
-        elif TEMPLATES_PATH.read_text(encoding="utf-8") != templates_before:
-            TEMPLATES_PATH.write_text(templates_before, encoding="utf-8")
+        elif TEMPLATES_PATH.read_bytes() != templates_before:
+            TEMPLATES_PATH.write_bytes(templates_before)
 
     print("[OK] demo_scene.json strict gate passed")
     return 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol
@@ -62,7 +63,8 @@ class TemplateLibrary:
     ]
 
     def __init__(self, storage_path: Optional[str] = None):
-        self.storage_path = storage_path or str(Path("templates.json"))
+        env_storage = os.environ.get("ESP32OS_TEMPLATES_PATH", "").strip()
+        self.storage_path = storage_path or env_storage or str(Path("templates.json"))
         self.templates: List[Template] = []
         self._load_or_initialize()
 
