@@ -361,11 +361,13 @@ class TestBuildPalette:
 class TestBuildToolbar:
     def test_toolbar_actions(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        assert len(app.toolbar_actions) == 8
+        assert len(app.toolbar_actions) == 10
         names = [name for name, _action in app.toolbar_actions]
         assert "New" in names
         assert "Save" in names
         assert "Live" in names
+        assert "Undo" in names
+        assert "Redo" in names
 
     def test_overflow_warnings_env(self, tmp_path, monkeypatch):
         monkeypatch.setenv("ESP32OS_OVERFLOW_WARN", "1")

@@ -13,6 +13,10 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 - Designer: `python run_designer.py main_scene.json --profile esp32os_256x128_gray4`
 - Export: `python tools/ui_export_c_header.py main_scene.json -o ui_scene_generated.h`
 - Python testy: `python -m pytest -q`
+- Python testy (paralelně): `python -m pytest -q -n auto` (vyžaduje pytest-xdist)
+- Pokrytí kódu: `python -m pytest -q --cov=. --cov-report=term-missing:skip-covered --cov-fail-under=90`
+- Mypy (strict — codegen): `python -m mypy --ignore-missing-imports tools/ui_codegen.py scripts/pio_generate_ui_design.py design_tokens.py shared_undo_redo.py event_manager.py constants.py`
+- Mypy (advisory — designer): `python -m mypy --ignore-missing-imports ui_designer.py ui_models.py`
 - Firmware testy (host): `pio test -e native`
 - Firmware build (bez HW): `pio run -e arduino_nano_esp32-nohw`
 - Native preflight (Windows): `scripts/check_native_toolchain.ps1`
@@ -28,6 +32,17 @@ Repo je záměrně osekaný na “embedded OS UI” cestu (Pygame designer + exp
 	(stejny rychly designer-refactor subset jako v CI)
 - Lokalni strict artefakty + triage gate (shell): `./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-csv`
 - Lokalni strict artefakty + delta triage gate (shell): `./scripts/check_all_local.sh main_scene.json --strict-artifacts --strict-triage-delta-csv`
+
+## Environment proměnné
+
+- `ESP32OS_TEMPLATES_PATH`: přesměruje cestu k `templates.json` (automaticky nastaveno v testech na tmp_path, aby nedošlo k mutaci trackovaného souboru).
+- `ESP32OS_OVERFLOW_WARN`: `1`/`0` — zapne/vypne overflow warnings v designeru.
+
+## CI pipeline
+
+CI sestává ze dvou jobů:
+- **Python (pytest)**: ruff lint + format, mypy (strict codegen + advisory designer), JSON validace, codegen freshness, guardrail testy, plný pytest s coverage (fail-under=90%).
+- **Firmware (PlatformIO)**: native testy, ESP32-S3 build, Arduino Nano ESP32 build. PlatformIO je cachováno.
 
 ## Poznamky k native testum (Windows)
 

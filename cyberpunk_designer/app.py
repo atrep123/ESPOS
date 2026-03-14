@@ -394,12 +394,35 @@ class CyberpunkEditorApp:
             ("New", self._new_scene),
             ("Load", self.load_json),
             ("Save", self.save_json),
+            ("Undo", self._do_undo),
+            ("Redo", self._do_redo),
             ("Live", self._open_live_dialog),
             ("Arrange", self._auto_arrange_grid),
             ("Fit Text", self._fit_selection_to_text),
             ("Fit Widget", self._fit_selection_to_widget),
             ("Warn", self._toggle_overflow_warnings),
         ]
+
+    # ------------------------------------------------------------------ #
+    # Undo/redo toolbar actions
+    # ------------------------------------------------------------------ #
+    def _do_undo(self) -> None:
+        if self.designer.undo():
+            self.state.selected_idx = None
+            self.state.selected = []
+            self._mark_dirty()
+            self._set_status("Undo.", ttl_sec=1.5)
+        else:
+            self._set_status("Nothing to undo.", ttl_sec=1.5)
+
+    def _do_redo(self) -> None:
+        if self.designer.redo():
+            self.state.selected_idx = None
+            self.state.selected = []
+            self._mark_dirty()
+            self._set_status("Redo.", ttl_sec=1.5)
+        else:
+            self._set_status("Nothing to redo.", ttl_sec=1.5)
 
     # ------------------------------------------------------------------ #
     # Status, inspector, and input helpers

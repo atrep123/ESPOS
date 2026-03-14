@@ -22,8 +22,13 @@ def draw_toolbar(app) -> None:
     app.toolbar_hitboxes = []
     x = snap(r.x + GRID)
     y = snap(r.y + GRID)
+    # Compute disabled state for undo/redo buttons
+    _undo_disabled = not bool(getattr(getattr(app, "designer", None), "undo_stack", None))
+    _redo_disabled = not bool(getattr(getattr(app, "designer", None), "redo_stack", None))
+    _btn_disabled = {"undo": _undo_disabled, "redo": _redo_disabled}
     for lab, _action in app.toolbar_actions:
-        rect = button(app, lab, (x, y))
+        dis = _btn_disabled.get(lab.lower(), False)
+        rect = button(app, lab, (x, y), disabled=dis)
         app.toolbar_hitboxes.append((rect, lab.lower()))
         x += rect.width + GRID
     ref_rect = button(app, "Refresh Ports", (x, y))

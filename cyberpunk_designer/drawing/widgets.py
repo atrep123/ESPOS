@@ -61,25 +61,33 @@ def panel(app, rect: pygame.Rect, title: str = "") -> None:
         )
 
 
-def button(app, label: str, pos: Tuple[int, int]) -> pygame.Rect:
+def button(app, label: str, pos: Tuple[int, int], *, disabled: bool = False) -> pygame.Rect:
     """Render a small pixel-style button and return its rect."""
-    txt = render_pixel_text(app, label, PALETTE["text"])
+    fg = PALETTE["muted"] if disabled else PALETTE["text"]
+    txt = render_pixel_text(app, label, fg)
     padding = max(4, app.pixel_padding // 2)
     width = max(48, txt.get_width() + padding * 2)
     height = max(app.toolbar_h - 4, txt.get_height() + padding)
     rect = pygame.Rect(snap(pos[0]), snap(pos[1]), width, height)
-    is_hover = app._is_pointer_over(rect)
-    is_pressed = is_hover and app.pointer_down
-    fill = app._shade(PALETTE["panel"], 12 if is_hover else 4)
-    if is_pressed:
-        fill = app._shade(PALETTE["panel"], -4)
+    if disabled:
+        fill = app._shade(PALETTE["panel"], -2)
+    else:
+        is_hover = app._is_pointer_over(rect)
+        is_pressed = is_hover and app.pointer_down
+        fill = app._shade(PALETTE["panel"], 12 if is_hover else 4)
+        if is_pressed:
+            fill = app._shade(PALETTE["panel"], -4)
     pygame.draw.rect(app.logical_surface, fill, rect)
-    pygame.draw.rect(app.logical_surface, PALETTE["panel_border"], rect, 1)
+    border = app._shade(PALETTE["panel_border"], -16) if disabled else PALETTE["panel_border"]
+    pygame.draw.rect(app.logical_surface, border, rect, 1)
+    pressed_offset = (
+        0 if disabled else (1 if app._is_pointer_over(rect) and app.pointer_down else 0)
+    )
     app.logical_surface.blit(
         txt,
         (
             rect.x + padding // 2,
-            rect.centery - txt.get_height() // 2 + (1 if is_pressed else 0),
+            rect.centery - txt.get_height() // 2 + pressed_offset,
         ),
     )
     return rect
