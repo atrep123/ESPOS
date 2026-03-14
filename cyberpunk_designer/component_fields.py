@@ -1,3 +1,5 @@
+"""Component property field type definitions for the inspector."""
+
 from __future__ import annotations
 
 from typing import Dict, Tuple

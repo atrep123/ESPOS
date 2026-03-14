@@ -1,6 +1,9 @@
+"""Clipboard: copy, paste, cut, quick-clone."""
+
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict
 from typing import List
 
@@ -8,8 +11,10 @@ import pygame
 
 from ui_designer import SceneConfig, WidgetConfig
 
-from ..constants import GRID, snap
-from .core import delete_selected
+from ..constants import GRID, safe_save_state, snap
+from .core import delete_selected, save_undo
+
+logger = logging.getLogger(__name__)
 
 
 def copy_selection(app) -> None:
@@ -22,7 +27,8 @@ def copy_selection(app) -> None:
         if 0 <= idx < len(sc.widgets):
             try:
                 copied.append(WidgetConfig(**asdict(sc.widgets[idx])))
-            except Exception:
+            except (TypeError, ValueError) as exc:
+                logger.warning("Failed to copy widget %d: %s", idx, exc)
                 continue
     app.clipboard = copied
     app._set_status(f"Copied {len(copied)} widget(s).", ttl_sec=2.0)
@@ -34,10 +40,7 @@ def paste_clipboard(app) -> None:
         return
 
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
 
     if not app.clipboard:
         return
@@ -53,14 +56,15 @@ def paste_clipboard(app) -> None:
         try:
             dx = int(app.pointer_pos[0] - sr.x) - min_x
             dy = int(app.pointer_pos[1] - sr.y) - min_y
-        except Exception:
+        except (TypeError, ValueError, AttributeError, OverflowError):
             dx, dy = GRID * 2, GRID * 2
 
     new_indices: List[int] = []
     for w in app.clipboard:
         try:
             nw = WidgetConfig(**asdict(w))
-        except Exception:
+        except (TypeError, ValueError) as exc:
+            logger.warning("Failed to paste widget: %s", exc)
             continue
         nw.x = int(nw.x + dx)
         nw.y = int(nw.y + dy)
@@ -94,10 +98,7 @@ def duplicate_selection(app) -> None:
         app._set_status("Duplicate: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
 
     new_indices: List[int] = []
     for idx in app.state.selected:
@@ -105,7 +106,8 @@ def duplicate_selection(app) -> None:
             continue
         try:
             nw = WidgetConfig(**asdict(sc.widgets[idx]))
-        except Exception:
+        except (TypeError, ValueError) as exc:
+            logger.warning("Failed to duplicate widget %d: %s", idx, exc)
             continue
         # Offset: one GRID step right + down
         nw.x = max(0, min(int(sc.width) - int(nw.width), int(nw.x) + GRID))
@@ -140,10 +142,7 @@ def copy_to_next_scene(app) -> None:
     if target_sc is None:
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     copied = 0
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
@@ -161,15 +160,13 @@ def paste_in_place(app) -> None:
         app._set_status("Paste in place: clipboard empty.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     new_indices: List[int] = []
     for w in app.clipboard:
         try:
             nw = WidgetConfig(**asdict(w))
-        except Exception:
+        except (TypeError, ValueError) as exc:
+            logger.warning("Failed to paste widget in place: %s", exc)
             continue
         max_x = max(0, int(sc.width) - max(1, int(nw.width)))
         max_y = max(0, int(sc.height) - max(1, int(nw.height)))
@@ -194,10 +191,7 @@ def broadcast_to_all_scenes(app) -> None:
         return
     current = app.designer.current_scene
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     total_copied = 0
     scenes_touched = 0
     for name in names:
@@ -225,10 +219,7 @@ def quick_clone(app) -> None:
         app._set_status("Quick clone: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    safe_save_state(app.designer)
     new_indices: List[int] = []
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
@@ -250,10 +241,7 @@ def extract_to_new_scene(app) -> None:
         app._set_status("Extract: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     # Collect widgets
     widgets_to_move = []
     for idx in sorted(app.state.selected):
@@ -300,10 +288,7 @@ def duplicate_below(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     max_y = max(int(sc.widgets[i].y) + int(sc.widgets[i].height or 0) for i in valid)
     min_y = min(int(sc.widgets[i].y) for i in valid)
     offset_y = max_y - min_y + GRID
@@ -331,10 +316,7 @@ def duplicate_right(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     max_x = max(int(sc.widgets[i].x) + int(sc.widgets[i].width or 0) for i in valid)
     min_x = min(int(sc.widgets[i].x) for i in valid)
     offset_x = max_x - min_x + GRID
@@ -369,5 +351,5 @@ def export_selection_json(app) -> None:
     try:
         pygame.scrap.init()
         pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
-    except Exception:
-        pass
+    except (pygame.error, AttributeError, OSError) as exc:
+        logger.warning("Failed to copy to system clipboard: %s", exc)

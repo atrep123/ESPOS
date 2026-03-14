@@ -1,10 +1,12 @@
+"""Auto-fit text content to widget bounds."""
+
 from __future__ import annotations
 
 from typing import Optional
 
 from ui_designer import WidgetConfig
 
-from .constants import GRID, snap
+from .constants import GRID, safe_save_state, snap
 from .text_metrics import DEVICE_CHAR_H, DEVICE_CHAR_W, is_device_profile, wrap_text_chars
 
 
@@ -33,7 +35,7 @@ def fit_selection_to_text(app) -> None:
                 return None
             v = int(raw)
             return v if v > 0 else None
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     saved = False
@@ -78,6 +80,7 @@ def fit_selection_to_text(app) -> None:
                 needed_h = max(cur_h, int(max(line_h, GRID + pad * 2)))
         else:
             wrap_mode = overflow in {"wrap", "auto"}
+            max_chars = 1
             if wrap_mode:
                 if use_device:
                     avail_w = max(
@@ -152,10 +155,7 @@ def fit_selection_to_text(app) -> None:
             continue
 
         if not saved:
-            try:
-                app.designer._save_state()
-            except Exception:
-                pass
+            safe_save_state(app.designer)
             saved = True
 
         w.x = x

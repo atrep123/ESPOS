@@ -1,3 +1,5 @@
+"""Window management: zoom, pan, resize, hit-testing."""
+
 from __future__ import annotations
 
 from typing import Optional, Tuple
@@ -9,6 +11,7 @@ from .layout import Layout
 
 
 def screen_to_logical(app, x: int, y: int) -> Tuple[int, int]:
+    """Convert physical window coordinates to logical (1:1 editor) coordinates."""
     sx = app._render_scale_x if app._render_scale_x > 0 else 1.0
     sy = app._render_scale_y if app._render_scale_y > 0 else 1.0
     ox = app._render_offset_x
@@ -63,7 +66,7 @@ def hardware_accelerated_scale(app) -> None:
     try:
         # Use SDL2 hardware acceleration if available
         scaled = pygame.transform.scale(app.logical_surface, (scaled_w, scaled_h))
-    except Exception:
+    except pygame.error:
         # Fallback to software scaling
         scaled = pygame.transform.scale(app.logical_surface, (scaled_w, scaled_h))
 
@@ -78,11 +81,12 @@ def hardware_accelerated_scale(app) -> None:
 
 
 def handle_video_resize(app, win_w: int, win_h: int) -> None:
+    """Respond to a window resize event by recalculating layout and scale."""
     lock = None
     try:
         if bool(getattr(app, "_scale_locked", False)):
             lock = int(getattr(app, "scale", 1) or 1)
-    except Exception:
+    except (TypeError, ValueError):
         lock = None
     rebuild_layout(app, window_size=(win_w, win_h), force_scene_size=False, lock_scale=lock)
 
@@ -114,7 +118,7 @@ def toggle_fullscreen(app) -> None:
     try:
         if bool(getattr(app, "_scale_locked", False)):
             lock = int(getattr(app, "scale", 1) or 1)
-    except Exception:
+    except (TypeError, ValueError):
         lock = None
     rebuild_layout(
         app, window_size=(int(win_w), int(win_h)), force_scene_size=False, lock_scale=lock
@@ -122,7 +126,7 @@ def toggle_fullscreen(app) -> None:
 
 
 def compute_scale(app, force_window: Optional[Tuple[int, int]] = None) -> int:
-    """Compute scale."""
+    """Compute the best integer scale factor to fit the editor in the window."""
     palette_w = (
         0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_palette_w", 0)
     )
@@ -141,11 +145,11 @@ def compute_scale(app, force_window: Optional[Tuple[int, int]] = None) -> int:
 
 
 def set_scale(app, new_scale: int) -> None:
-    """Set scale."""
+    """Set the editor zoom level and rebuild layout to match."""
     app.scale = max(1, min(new_scale, app.max_auto_scale))
     try:
         win_size = app.window.get_size() if app.window is not None else None
-    except Exception:
+    except (AttributeError, pygame.error):
         win_size = None
     if win_size:
         rebuild_layout(app, window_size=win_size, force_scene_size=False, lock_scale=app.scale)
@@ -154,7 +158,7 @@ def set_scale(app, new_scale: int) -> None:
 
 
 def recompute_scale_for_window(app, win_w: int, win_h: int) -> None:
-    """Recompute scale for window."""
+    """Recalculate `app.scale` to fit the current base layout in a *win_w* x *win_h* window."""
     palette_w = (
         0 if getattr(app, "panels_collapsed", False) else getattr(app, "_default_palette_w", 0)
     )
@@ -227,7 +231,7 @@ def rebuild_layout(
                 sc = app.state.current_scene()
                 scene_w = int(getattr(sc, "width", scene_w) or scene_w)
                 scene_h = int(getattr(sc, "height", scene_h) or scene_h)
-        except Exception:
+        except (AttributeError, TypeError, ValueError):
             pass
         scene_w = max(1, int(scene_w))
         scene_h = max(1, int(scene_h))
@@ -248,18 +252,18 @@ def rebuild_layout(
         x = max(int(cr.x), min(int(cr.right) - w, int(x)))
         y = max(int(cr.y), min(int(cr.bottom) - h, int(y)))
         app.scene_rect = pygame.Rect(int(x), int(y), int(w), int(h))
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         app.scene_rect = app.layout.canvas_rect
 
     try:
         if getattr(app, "state", None) is not None:
             app.state.layout = app.layout
-    except Exception:
+    except AttributeError:
         pass
 
     try:
         app._mark_dirty()
-    except Exception:
+    except AttributeError:
         pass
 
     del force_scene_size, lock_scale

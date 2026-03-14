@@ -1,3 +1,5 @@
+"""Alignment, distribution, and snapping tools."""
+
 from __future__ import annotations
 
 from typing import Iterable, List, Optional, Tuple
@@ -6,16 +8,16 @@ import pygame
 
 from ui_designer import WidgetConfig
 
-from .constants import GRID, GUIDE_TOL, snap
+from .constants import GRID, GUIDE_TOL, safe_save_state, snap
 
 
 def _selected_widgets(app) -> List[Tuple[int, WidgetConfig]]:
     sc = app.state.current_scene()
     out: List[Tuple[int, WidgetConfig]] = []
-    for idx in list(getattr(app.state, "selected", []) or []):
+    for idx in app.state.selection_list():
         try:
             i = int(idx)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         if 0 <= i < len(sc.widgets):
             out.append((i, sc.widgets[i]))
@@ -30,7 +32,7 @@ def _scene_size(app) -> Tuple[int, int]:
     try:
         sc = app.state.current_scene()
         return int(getattr(sc, "width", 0) or 0), int(getattr(sc, "height", 0) or 0)
-    except Exception:
+    except (AttributeError, ValueError, TypeError):
         return 0, 0
 
 
@@ -79,7 +81,7 @@ def align_selection(app, mode: str) -> None:
     skipped_locked = 0
 
     if len(items) == 1:
-        idx, w = items[0]
+        _idx, w = items[0]
         if bool(getattr(w, "locked", False)):
             app._set_status("Align: selection is locked.", ttl_sec=2.0)
             return
@@ -101,10 +103,7 @@ def align_selection(app, mode: str) -> None:
             nx, ny = int(getattr(w, "x", 0) or 0), max(0, sc_h - wh)
         nx, ny = _clamp_xy_in_scene(app, nx, ny, w)
         if (int(getattr(w, "x", 0) or 0), int(getattr(w, "y", 0) or 0)) != (nx, ny):
-            try:
-                app.designer._save_state()
-            except Exception:
-                pass
+            safe_save_state(app.designer)
             w.x = nx
             w.y = ny
             app._mark_dirty()
@@ -138,10 +137,7 @@ def align_selection(app, mode: str) -> None:
         if (cur_x, cur_y) == (nx, ny):
             continue
         if not saved:
-            try:
-                app.designer._save_state()
-            except Exception:
-                pass
+            safe_save_state(app.designer)
             saved = True
         w.x = nx
         w.y = ny
@@ -194,10 +190,7 @@ def distribute_selection(app, axis: str) -> None:
         gap = float(right - left - total) / float(max(1, len(ordered) - 1))
         cursor = float(left)
 
-        try:
-            app.designer._save_state()
-        except Exception:
-            pass
+        safe_save_state(app.designer)
 
         for pos, (_idx, w) in enumerate(ordered):
             ww = max(GRID, int(getattr(w, "width", GRID) or GRID))
@@ -225,10 +218,7 @@ def distribute_selection(app, axis: str) -> None:
         gap = float(bottom - top - total) / float(max(1, len(ordered) - 1))
         cursor = float(top)
 
-        try:
-            app.designer._save_state()
-        except Exception:
-            pass
+        safe_save_state(app.designer)
 
         for pos, (_idx, w) in enumerate(ordered):
             wh = max(GRID, int(getattr(w, "height", GRID) or GRID))
@@ -266,7 +256,7 @@ def match_size_selection(app, mode: str) -> None:
         anchor = items[0][0]
     try:
         anchor_i = int(anchor)
-    except Exception:
+    except (ValueError, TypeError):
         anchor_i = items[0][0]
     if not (0 <= anchor_i < len(sc.widgets)):
         anchor_i = items[0][0]
@@ -304,10 +294,7 @@ def match_size_selection(app, mode: str) -> None:
         if (cur_w, cur_h) == (new_w, new_h):
             continue
         if not saved:
-            try:
-                app.designer._save_state()
-            except Exception:
-                pass
+            safe_save_state(app.designer)
             saved = True
         w.width = int(new_w)
         w.height = int(new_h)
@@ -358,7 +345,7 @@ def center_selection_in_scene(app, axis: str = "both") -> None:
 def clear_active_guides(app) -> None:
     try:
         app.state.active_guides = []
-    except Exception:
+    except AttributeError:
         pass
 
 
@@ -390,7 +377,7 @@ def snap_drag_to_guides(
             wy = int(getattr(w, "y", 0) or 0)
             ww = max(GRID, int(getattr(w, "width", GRID) or GRID))
             wh = max(GRID, int(getattr(w, "height", GRID) or GRID))
-        except Exception:
+        except (ValueError, TypeError):
             continue
         x_edges.extend([wx, wx + ww])
         x_centers.append(wx + ww // 2)
@@ -443,7 +430,7 @@ def snap_drag_to_guides(
     if best_dx is None and best_dy is None:
         try:
             app.state.active_guides = []
-        except Exception:
+        except AttributeError:
             pass
         return desired_x, desired_y
 
@@ -452,6 +439,6 @@ def snap_drag_to_guides(
 
     try:
         app.state.active_guides = guides
-    except Exception:
+    except AttributeError:
         pass
     return nx, ny

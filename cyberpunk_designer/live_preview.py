@@ -1,3 +1,5 @@
+"""Serial live preview to ESP32 hardware."""
+
 from __future__ import annotations
 
 from typing import List
@@ -16,7 +18,7 @@ def refresh_available_ports(app) -> None:
         from serial.tools import list_ports  # type: ignore
 
         ports = [str(p.device) for p in list_ports.comports()]
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         ports = []
     app.available_ports = ports
     app.available_ports_idx = 0 if ports else -1
@@ -36,12 +38,12 @@ def send_live_preview(app) -> None:
         return
     try:
         import serial  # type: ignore
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         app._set_status("Live preview: pyserial missing.", ttl_sec=6.0)
         return
     try:
         payload = app.json_path.read_text(encoding="utf-8")
-    except Exception as exc:
+    except OSError as exc:
         app._set_status(f"Live preview: cannot read JSON ({exc})", ttl_sec=6.0)
         return
     frame = f"<<UIJSON>>{payload}<<END>>".encode()
@@ -55,5 +57,5 @@ def send_live_preview(app) -> None:
             f"Live preview sent to {app.live_preview_port}@{app.live_preview_baud}",
             ttl_sec=5.0,
         )
-    except Exception as exc:
+    except OSError as exc:
         app._set_status(f"Live preview failed: {exc}", ttl_sec=6.0)

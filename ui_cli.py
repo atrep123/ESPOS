@@ -280,7 +280,7 @@ def create_cli_interface(
                     continue
                 try:
                     _idx = int(parts[1])
-                except Exception:
+                except ValueError:
                     print("Usage: select <idx>")
                     continue
                 if designer.current_scene and designer.current_scene in designer.scenes:
@@ -385,7 +385,7 @@ def create_cli_interface(
                     try:
                         designer.snap_tolerance = max(0, int(parts[1]))
                         print(f"[OK] Snap tolerance set to {designer.snap_tolerance} px")
-                    except Exception:
+                    except ValueError:
                         print("Usage: snaptol <pixels>")
 
             elif action == "snapmode":
@@ -473,7 +473,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     _which = parts[3].lower()
@@ -509,7 +509,7 @@ def create_cli_interface(
                     if len(parts) > 1:
                         try:
                             designer.theme_contrast_min = float(parts[1])
-                        except Exception:
+                        except ValueError:
                             pass
                     _min_ratio = designer.theme_contrast_min
                     _issues = 0
@@ -518,7 +518,7 @@ def create_cli_interface(
                             _w.text
                             or _w.type in ["label", "button", "textbox", "checkbox", "radiobutton"]
                         ):
-                            _r = _contrast_ratio(_w.color_fg, _w.color_bg)
+                            _r = contrast_ratio(_w.color_fg, _w.color_bg)
                             if _r < _min_ratio:
                                 _issues += 1
                                 print(
@@ -530,7 +530,7 @@ def create_cli_interface(
                                         _sc.theme, designer.themes["default"]
                                     )
                                     _candidate = _roles.get("text", _w.color_fg)
-                                    if _contrast_ratio(_candidate, _w.color_bg) >= _min_ratio:
+                                    if contrast_ratio(_candidate, _w.color_bg) >= _min_ratio:
                                         _w.color_fg = _candidate
                                         print(f"       -> adjusted fg to {_candidate}")
                     if _issues == 0:
@@ -600,7 +600,7 @@ def create_cli_interface(
                 else:
                     try:
                         _idx = int(parts[1])
-                    except Exception:
+                    except ValueError:
                         print("Usage: restore [latest|list|<index>]")
                         continue
                 if 0 <= _idx < len(snaps):
@@ -626,11 +626,11 @@ def create_cli_interface(
                                 print(
                                     f"[OK] Restored snapshot {snaps[_idx].name} (widgets: {_pw} -> {_cw})"
                                 )
-                            except Exception:
+                            except (json.JSONDecodeError, ValueError):
                                 print(f"[OK] Restored snapshot {snaps[_idx].name}")
                         else:
                             print(f"[OK] Restored snapshot {snaps[_idx].name}")
-                    except Exception as e:
+                    except (OSError, json.JSONDecodeError, TypeError, KeyError) as e:
                         print(f"[FAIL] Failed to restore: {e}")
                 else:
                     print("Invalid index")
@@ -666,7 +666,7 @@ def create_cli_interface(
                     _name = parts[2]
                     try:
                         _idxs = [int(_x) for _x in parts[3:]]
-                    except Exception:
+                    except ValueError:
                         print("Indices must be integers")
                         continue
                     _ok = False
@@ -721,7 +721,7 @@ def create_cli_interface(
                     _name = parts[2]
                     try:
                         _idxs = [int(_x) for _x in parts[3:]]
-                    except Exception:
+                    except ValueError:
                         print("Indices must be integers")
                         continue
                     _ok = designer.save_symbol(_name, _idxs)
@@ -734,7 +734,7 @@ def create_cli_interface(
                     try:
                         _x = int(parts[3])
                         _y = int(parts[4])
-                    except Exception:
+                    except ValueError:
                         print("x/y must be integers")
                         continue
                     _ok = designer.place_symbol(_name, _x, _y)
@@ -848,7 +848,7 @@ def create_cli_interface(
                         print(
                             f"[OK] Grid columns set to {designer.grid_columns} (grid size {designer.grid_size})"
                         )
-                    except Exception:
+                    except ValueError:
                         print("Usage: gridcols <4|8|12>")
 
             elif action == "bp":
@@ -864,7 +864,7 @@ def create_cli_interface(
                         _sc.width = _w
                         _sc.height = _h
                         print(f"[OK] Breakpoint applied: {_w}x{_h}")
-                except Exception:
+                except (ValueError, IndexError):
                     print("Usage: bp <WxH>")
 
             elif action == "resp":
@@ -896,7 +896,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3]
@@ -918,7 +918,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3]
@@ -933,7 +933,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     if not (0 <= _idx < len(_scene.widgets)):
@@ -952,7 +952,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3]
@@ -990,7 +990,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3].lower()
@@ -1010,7 +1010,7 @@ def create_cli_interface(
                         continue
                     try:
                         _idx = int(parts[2])
-                    except Exception:
+                    except ValueError:
                         print(MSG_INDEX_INTEGER)
                         continue
                     _name = parts[3].lower()
@@ -1031,7 +1031,7 @@ def create_cli_interface(
                         _idx = int(parts[2])
                         _steps = int(parts[4])
                         _t = int(parts[5])
-                    except Exception:
+                    except ValueError:
                         print("Usage: anim preview <idx> <name> <steps> <t>")
                         continue
                     _name = parts[3].lower()
@@ -1054,7 +1054,7 @@ def create_cli_interface(
                         _idx = int(parts[2])
                         _steps = int(parts[4])
                         _delay_ms = int(parts[5]) if len(parts) > 5 else 120
-                    except Exception:
+                    except ValueError:
                         print("Usage: anim play <idx> <name> <steps> [delay_ms]")
                         continue
                     _name = parts[3].lower()
@@ -1090,7 +1090,7 @@ def create_cli_interface(
                 if len(parts) > 1:
                     try:
                         _target_idx = int(parts[1])
-                    except Exception:
+                    except ValueError:
                         print("Usage: context [idx]")
                         continue
                 else:
@@ -1276,7 +1276,7 @@ def get_widget_help(widget: WidgetConfig) -> Dict[str, Any]:
 
 # --- Theme & WCAG helpers ---
 
-_NAMED_COLORS = {
+NAMED_COLORS = {
     "black": (0, 0, 0),
     "white": (255, 255, 255),
     "red": (255, 0, 0),
@@ -1292,21 +1292,21 @@ _NAMED_COLORS = {
 }
 
 
-def _parse_color(c: str) -> Tuple[int, int, int]:
+def parse_color(c: str) -> Tuple[int, int, int]:
     c = (c or "").strip().lower()
-    if c in _NAMED_COLORS:
-        return _NAMED_COLORS[c]
+    if c in NAMED_COLORS:
+        return NAMED_COLORS[c]
     if c.startswith("#"):
         h = c[1:]
         if len(h) == 6:
             try:
                 return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
-            except Exception:
+            except ValueError:
                 return (0, 0, 0)
     return (0, 0, 0)
 
 
-def _rel_lum(rgb: Tuple[int, int, int]) -> float:
+def rel_lum(rgb: Tuple[int, int, int]) -> float:
     def f(u: float) -> float:
         u = u / 255.0
         return (u / 12.92) if (u <= 0.03928) else pow((u + 0.055) / 1.055, 2.4)
@@ -1315,8 +1315,8 @@ def _rel_lum(rgb: Tuple[int, int, int]) -> float:
     return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
 
 
-def _contrast_ratio(fg: str, bg: str) -> float:
-    L1 = _rel_lum(_parse_color(fg))
-    L2 = _rel_lum(_parse_color(bg))
+def contrast_ratio(fg: str, bg: str) -> float:
+    L1 = rel_lum(parse_color(fg))
+    L2 = rel_lum(parse_color(bg))
     lmax, lmin = (max(L1, L2), min(L1, L2))
     return (lmax + 0.05) / (lmin + 0.05)

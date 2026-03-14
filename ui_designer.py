@@ -11,7 +11,6 @@ import os
 import sys
 from dataclasses import asdict
 from datetime import datetime
-from functools import lru_cache
 from html import escape
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, TypedDict, Union, cast
@@ -27,11 +26,12 @@ from ui_models import (
     SceneConfigDict,
     WidgetConfig,
     WidgetType,
-    _coerce_bool_flag,
-    _coerce_choice,
-    _empty_constraints,
-    _make_baseline,
-    _normalize_int_list,
+    coerce_bool_flag,
+    coerce_choice,
+    empty_constraints,
+    make_baseline,
+    normalize_int_list,
+    normalize_str_list,
 )
 
 
@@ -193,24 +193,11 @@ def _clamp_int(value: Optional[int], minimum: int = 0, maximum: Optional[int] = 
     """Clamp potentially-optional ints to a bounded range."""
     try:
         v = int(value) if value is not None else minimum
-    except Exception:
+    except (ValueError, TypeError):
         v = minimum
     if maximum is not None:
         v = min(v, maximum)
     return max(minimum, v)
-
-
-@lru_cache(maxsize=8)
-def _border_chars(style: str) -> Dict[str, str]:
-    """Cached lookup for border characters per style."""
-    styles = {
-        "single": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
-        "double": {"h": "=", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
-        "rounded": {"h": "-", "v": "|", "tl": "(", "tr": ")", "bl": "(", "br": ")"},
-        "bold": {"h": "#", "v": "#", "tl": "#", "tr": "#", "bl": "#", "br": "#"},
-        "dashed": {"h": "-", "v": "|", "tl": "+", "tr": "+", "bl": "+", "br": "+"},
-    }
-    return styles.get(style, styles["single"])
 
 
 def _widget_dims(widget: WidgetConfig) -> Tuple[int, int]:
@@ -454,7 +441,7 @@ class UIDesigner:
             self._history_meta.append(diff_summary)
             if len(self._history_meta) > self.max_undo:
                 self._history_meta.pop(0)
-        except Exception:
+        except (AttributeError, TypeError):
             pass
 
     def _write_backup_snapshot(self, state: str) -> None:
@@ -466,7 +453,7 @@ class UIDesigner:
             snap_path = backup_dir / f"{scene_name}_{ts}.json"
             with open(snap_path, "w", encoding="utf-8") as f:
                 f.write(state)
-        except Exception:
+        except OSError:
             pass
 
     def undo(self) -> bool:
@@ -549,7 +536,7 @@ class UIDesigner:
         try:
             data = json.loads(self.undo_stack[index])
             return data
-        except Exception:
+        except (json.JSONDecodeError, KeyError, TypeError):
             return None
 
     def snap_position(self, x: int, y: int) -> Tuple[int, int]:
@@ -767,7 +754,7 @@ class UIDesigner:
             return
         try:
             self._snap_to_grid = bool(int(value))
-        except Exception:
+        except (ValueError, TypeError):
             self._snap_to_grid = bool(value)
 
     def create_scene(self, name: str) -> SceneConfig:
@@ -909,11 +896,11 @@ class UIDesigner:
             return None
         try:
             max_fb = float(prof.get("max_fb_kb", 0) or 0)
-        except Exception:
+        except (ValueError, TypeError):
             max_fb = 0.0
         try:
             max_flash = float(prof.get("max_flash_kb", 0) or 0)
-        except Exception:
+        except (ValueError, TypeError):
             max_flash = 0.0
         return cast(
             HardwareProfile,
@@ -938,12 +925,12 @@ class UIDesigner:
         # Store baseline into widget.constraints.b for later use
         for w in sc.widgets:
             b = self._baseline_for_widget(w, sc)
-            w.constraints = w.constraints or _empty_constraints()
+            w.constraints = w.constraints or empty_constraints()
             w.constraints["b"] = b
             self._set_default_constraints(w)
 
     def _baseline_for_widget(self, widget: WidgetConfig, scene: SceneConfig) -> ConstraintBaseline:
-        return _make_baseline(
+        return make_baseline(
             widget.x,
             widget.y,
             widget.width,
@@ -973,7 +960,7 @@ class UIDesigner:
         sx_ratio = sc.width / bw
         sy_ratio = sc.height / bh
         for w in sc.widgets:
-            c = cast(Constraints, w.constraints or _empty_constraints())
+            c = w.constraints or empty_constraints()
             baseline = self._responsive_baseline(w, c, bw, bh)
             nx, ny, scale_x, scale_y = self._responsive_position(c, baseline, dw, dh)
             nw, nh = self._responsive_size(baseline, scale_x, scale_y, sx_ratio, sy_ratio)
@@ -991,9 +978,8 @@ class UIDesigner:
     def _responsive_baseline(
         self, w: WidgetConfig, c: Constraints, bw: int, bh: int
     ) -> ConstraintBaseline:
-        return cast(
-            ConstraintBaseline,
-            c.get("b") or _make_baseline(w.x, w.y, w.width, w.height, bw, bh),
+        return (
+            c.get("b") or make_baseline(w.x, w.y, w.width, w.height, bw, bh)
         )
 
     def _responsive_position(
@@ -1125,7 +1111,7 @@ class UIDesigner:
             raise TypeError("add_widget requires x, y, width, height when providing a type")
         try:
             return int(raw_x), int(raw_y), int(raw_w), int(raw_h)
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             raise TypeError("add_widget requires x, y, width, height as integers") from e
 
     def _build_widget_config(
@@ -1147,24 +1133,25 @@ class UIDesigner:
             style=str(kw.get("style", "default")),
             color_fg=str(kw.get("color_fg", "white")),
             color_bg=str(kw.get("color_bg", "black")),
-            border=_coerce_bool_flag(kw.get("border", True), True),
-            border_style=_coerce_choice(
+            border=coerce_bool_flag(kw.get("border", True), True),
+            border_style=coerce_choice(
                 kw.get("border_style", "single"),
                 ("none", "single", "double", "rounded", "bold", "dashed"),
                 "single",
             ),
-            align=_coerce_choice(kw.get("align", "left"), ("left", "center", "right"), "left"),
-            valign=_coerce_choice(
+            align=coerce_choice(kw.get("align", "left"), ("left", "center", "right"), "left"),
+            valign=coerce_choice(
                 kw.get("valign", "middle"), ("top", "middle", "bottom"), "middle"
             ),
             value=int(kw.get("value", 0)) if kw.get("value") is not None else 0,
             min_value=int(kw.get("min_value", 0)),
             max_value=int(kw.get("max_value", 100)),
-            checked=_coerce_bool_flag(kw.get("checked", False), False),
-            enabled=_coerce_bool_flag(kw.get("enabled", True), True),
-            visible=_coerce_bool_flag(kw.get("visible", True), True),
+            checked=coerce_bool_flag(kw.get("checked", False), False),
+            enabled=coerce_bool_flag(kw.get("enabled", True), True),
+            visible=coerce_bool_flag(kw.get("visible", True), True),
             icon_char=str(kw.get("icon_char", "")),
-            data_points=_normalize_int_list(kw.get("data_points", []) or []),
+            data_points=normalize_int_list(kw.get("data_points", []) or []),
+            items=normalize_str_list(kw.get("items") or kw.get("list_items") or []),
             z_index=int(kw.get("z_index", 0)),
             padding_x=int(kw.get("padding_x", 1)),
             padding_y=int(kw.get("padding_y", 0)),
@@ -1414,7 +1401,7 @@ class UIDesigner:
             base_dir.mkdir(parents=True, exist_ok=True)
             with open(base_dir / f"{ts}_{name}.json", "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
-        except Exception:
+        except OSError:
             pass
         return True
 
@@ -1440,7 +1427,7 @@ class UIDesigner:
             )
             self.current_scene = snap["name"]
             return True
-        except Exception:
+        except (TypeError, KeyError, ValueError):
             return False
 
     def _diff_states(self, a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
@@ -1530,7 +1517,7 @@ class UIDesigner:
         for name, members in raw.items():
             try:
                 gname = str(name)
-            except Exception:
+            except (TypeError, ValueError):
                 continue
             if not isinstance(members, list):
                 continue
@@ -1538,7 +1525,7 @@ class UIDesigner:
             for m in members:
                 try:
                     idx = int(m)
-                except Exception:
+                except (TypeError, ValueError):
                     continue
                 if 0 <= idx <= max_idx:
                     cleaned.append(idx)
@@ -1578,7 +1565,7 @@ class UIDesigner:
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
             logger.info("[OK] Design saved: %s", filename)
-        except Exception as exc:
+        except OSError as exc:
             logger.error("Failed to save design %s: %s", filename, exc)
             return
 
@@ -1633,7 +1620,7 @@ class UIDesigner:
             raise SceneLoadError(f"Permission denied reading: {filename}") from exc
         except json.JSONDecodeError as exc:
             raise SceneLoadError(f"Invalid JSON in: {filename}") from exc
-        except Exception as exc:
+        except OSError as exc:
             raise SceneLoadError(f"Failed to read JSON: {filename}") from exc
 
     def _build_scenes_from_data(self, data: Dict[str, Any]) -> Dict[str, SceneConfig]:
@@ -1698,7 +1685,7 @@ class UIDesigner:
     def _validate_scene_dict(
         self, scene_data: Dict[str, Any], root_data: Dict[str, Any], idx: int = 0
     ) -> SceneConfigDict:
-        if not isinstance(scene_data, dict):
+        if not isinstance(scene_data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise WidgetValidationError("scene data must be a dict")
         defaults = self._scene_defaults(root_data)
         name = self._coerce_scene_name(scene_data, idx)
@@ -1739,7 +1726,7 @@ class UIDesigner:
             raise WidgetValidationError("boolean not allowed for size fields")
         try:
             return int(val)
-        except Exception as exc:
+        except (ValueError, TypeError) as exc:
             raise WidgetValidationError("size fields must be numeric") from exc
 
     def _record_json_watch(self, filename: str) -> None:
@@ -1750,7 +1737,7 @@ class UIDesigner:
             self._json_watch_mtime = mtime
             UIDesigner._last_loaded_json = filename
             UIDesigner._json_watch_mtime = mtime
-        except Exception:
+        except OSError:
             self._last_loaded_json = None
             self._json_watch_mtime = None
             UIDesigner._last_loaded_json = None
@@ -1855,7 +1842,7 @@ class UIDesigner:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(code)
             logger.info("[OK] Code exported: %s", filename)
-        except Exception as exc:
+        except OSError as exc:
             logger.error("Failed to export code to %s: %s", filename, exc)
             return
 
@@ -2395,9 +2382,9 @@ class UIDesigner:
                     if hasattr(widget, k):
                         try:
                             setattr(widget, k, type(getattr(widget, k))(v))
-                        except Exception:
+                        except (ValueError, TypeError):
                             setattr(widget, k, v)
-        except Exception:
+        except (AttributeError, TypeError):
             pass
 
     def _apply_animation_preview_inplace(
@@ -2413,7 +2400,7 @@ class UIDesigner:
         steps = max(1, int(ctx.get("steps", 10)))
         try:
             self._apply_animation_step(name, widget, scene, t, steps)
-        except Exception:
+        except (ValueError, TypeError, KeyError, AttributeError):
             pass
 
     def _apply_animation_step(
@@ -2502,7 +2489,7 @@ class UIDesigner:
                     ml_i = int(ml)
                     if ml_i > 0:
                         max_lines = min(max_lines, ml_i)
-            except Exception:
+            except (ValueError, TypeError):
                 pass
             max_lines = max(1, int(max_lines))
 
@@ -2811,7 +2798,7 @@ def _check_text_overflow(idx: int, w: WidgetConfig, warnings: List[str]) -> None
     try:
         w_span = int(getattr(w, "width", 0) or 0)
         h_span = int(getattr(w, "height", 0) or 0)
-    except Exception:
+    except (ValueError, TypeError):
         return
 
     pad_x = int(getattr(w, "padding_x", 0) or 0)
@@ -2846,7 +2833,7 @@ def _check_text_overflow(idx: int, w: WidgetConfig, warnings: List[str]) -> None
                 ml_i = int(ml)
                 if ml_i > 0:
                     max_lines = min(max_lines, ml_i)
-        except Exception:
+        except (ValueError, TypeError):
             pass
         max_lines = max(1, int(max_lines))
 
@@ -2964,12 +2951,12 @@ def _log_preflight(result: Dict[str, Any]) -> None:
 
 # --- CLI interface, helpers, and WCAG utilities (extracted to ui_cli.py) ---
 from ui_cli import (
-    _NAMED_COLORS,
-    _contrast_ratio,
-    _parse_color,
-    _rel_lum,
+    NAMED_COLORS,
+    contrast_ratio,
     create_cli_interface,
     get_widget_help,
+    parse_color,
+    rel_lum,
     show_command_help,
 )
 
@@ -3022,7 +3009,7 @@ if __name__ == "__main__":
             subprocess.run(
                 [sys.executable, str(export_script), str(json_path), "-o", header_file], check=True
             )
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             print(f"[FAIL] C export failed: {e}")
             sys.exit(1)
         sys.exit(0)
@@ -3040,7 +3027,7 @@ if __name__ == "__main__":
         try:
             w = int(input("Width (128): ") or "128")
             h = int(input("Height (64): ") or "64")
-        except Exception:
+        except (ValueError, TypeError):
             w, h = 128, 64
         d.width, d.height = w, h
         d.create_scene(scene_name)
@@ -3084,7 +3071,7 @@ if __name__ == "__main__":
                 y += 14
         elif preset == "pixelhud":
             d.enable_pixel_art_mode()
-            sc = d.scenes[d.current_scene]
+            sc = d.scenes[d.current_scene or ""]
             w, h = sc.width, sc.height
             d.add_widget(
                 WidgetType.LABEL,
@@ -3145,7 +3132,7 @@ if __name__ == "__main__":
         # Optional: write an ASCII-based HTML preview for quick inspection.
         try:
             d.export_to_html(out_html)
-        except Exception:
+        except OSError:
             pass
         print(f"\n[OK] Guided scene created:\n  JSON: {out_json}\n  HTML: {out_html}")
         sys.exit(0)
@@ -3173,7 +3160,7 @@ if __name__ == "__main__":
         # Gauge and progress bar
         d.add_widget(WidgetType.GAUGE, x=8, y=14, width=32, height=24, value=70)
         d.add_widget(WidgetType.PROGRESSBAR, x=8, y=h - 12, width=w - 16, height=8, value=40)
-        sc = d.scenes[d.current_scene]
+        sc = d.scenes[d.current_scene or ""]
         # Define button states
         btn = sc.widgets[1]
         btn.state_overrides = {
@@ -3201,7 +3188,7 @@ if __name__ == "__main__":
         # Optional: write an ASCII-based HTML preview for quick inspection.
         try:
             d.export_to_html(out_html)
-        except Exception:
+        except OSError:
             pass
         print(f"\n[OK] Demo scene created:\n  JSON: {out_json}\n  HTML: {out_html}")
         sys.exit(0)
@@ -3215,7 +3202,7 @@ if __name__ == "__main__":
             lines = [ln for ln in lines if ln and not ln.lstrip().startswith("#")]
             create_cli_interface(commands=lines)
             sys.exit(0)
-        except Exception as e:
+        except OSError as e:
             print(f"[FAIL] Failed to run script file: {e}")
             sys.exit(1)
 
@@ -3224,17 +3211,17 @@ if __name__ == "__main__":
 
 # Re-export for backward compatibility
 __all__ = [
-    "_NAMED_COLORS",
+    "NAMED_COLORS",
     "BorderStyle",
     "Scene",
     "SceneConfig",
     "UIDesigner",
     "WidgetConfig",
     "WidgetType",
-    "_contrast_ratio",
-    "_parse_color",
-    "_rel_lum",
+    "contrast_ratio",
     "create_cli_interface",
     "get_widget_help",
+    "parse_color",
+    "rel_lum",
     "show_command_help",
 ]

@@ -1,6 +1,10 @@
+"""Layout engine: panel, canvas, and region rectangle calculation."""
+
 from __future__ import annotations
 
 import pygame
+
+from .constants import DEFAULT_INSPECTOR_W, DEFAULT_PALETTE_W, STATUS_H, TOOLBAR_H
 
 
 class Layout:
@@ -10,10 +14,10 @@ class Layout:
         self,
         width: int,
         height: int,
-        palette_w: int = 112,
-        inspector_w: int = 200,
-        toolbar_h: int = 24,
-        status_h: int = 18,
+        palette_w: int = DEFAULT_PALETTE_W - 8,
+        inspector_w: int = DEFAULT_INSPECTOR_W,
+        toolbar_h: int = TOOLBAR_H,
+        status_h: int = STATUS_H,
         scene_tabs_h: int = 0,
     ):
         self.toolbar_h = toolbar_h

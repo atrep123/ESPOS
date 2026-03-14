@@ -1,3 +1,5 @@
+"""Widget arrangement: rows, columns, grids, flow layout."""
+
 from __future__ import annotations
 
 import math
@@ -5,7 +7,7 @@ import math
 import pygame
 
 from ..constants import GRID, snap
-from .core import selection_bounds
+from .core import save_undo, selection_bounds
 
 
 def arrange_in_row(app) -> None:
@@ -14,10 +16,7 @@ def arrange_in_row(app) -> None:
         app._set_status("Arrange row: select 2+ widgets.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     indices = sorted(app.state.selected)
     widgets = [(i, sc.widgets[i]) for i in indices if 0 <= i < len(sc.widgets)]
     if not widgets:
@@ -40,10 +39,7 @@ def arrange_in_column(app) -> None:
         app._set_status("Arrange column: select 2+ widgets.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     indices = sorted(app.state.selected)
     widgets = [(i, sc.widgets[i]) for i in indices if 0 <= i < len(sc.widgets)]
     if not widgets:
@@ -65,10 +61,7 @@ def compact_widgets(app) -> None:
     if not sc.widgets:
         app._set_status("No widgets to compact.", ttl_sec=2.0)
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     min_x = min(int(w.x) for w in sc.widgets)
     min_y = min(int(w.y) for w in sc.widgets)
     if min_x == 0 and min_y == 0:
@@ -90,10 +83,7 @@ def stack_vertical(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if len(valid) < 2:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     # Sort by current y position
     valid.sort(key=lambda i: (int(sc.widgets[i].y), int(sc.widgets[i].x)))
     first = sc.widgets[valid[0]]
@@ -117,10 +107,7 @@ def stack_horizontal(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if len(valid) < 2:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     # Sort by current x position
     valid.sort(key=lambda i: (int(sc.widgets[i].x), int(sc.widgets[i].y)))
     first = sc.widgets[valid[0]]
@@ -144,10 +131,7 @@ def equalize_widths(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if len(valid) < 2:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     max_w = max(int(sc.widgets[i].width) for i in valid)
     changed = 0
     for i in valid:
@@ -168,10 +152,7 @@ def equalize_heights(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if len(valid) < 2:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     max_h = max(int(sc.widgets[i].height) for i in valid)
     changed = 0
     for i in valid:
@@ -204,10 +185,7 @@ def equalize_gaps(app, axis: str = "auto") -> None:
         spread_x = max(xs) - min(xs)
         spread_y = max(ys) - min(ys)
         axis = "h" if spread_x >= spread_y else "v"
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     if axis == "h":
         ordered = sorted(valid, key=lambda i: int(sc.widgets[i].x))
         cursor = int(sc.widgets[ordered[0]].x)
@@ -236,10 +214,7 @@ def grid_arrange(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if len(valid) < 2:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     n = len(valid)
     cols = max(1, math.ceil(math.sqrt(n)))
     # Use first widget position as origin; uniform cell = max sizes + GRID gap
@@ -276,10 +251,7 @@ def auto_flow_layout(app) -> None:
             widgets.append((idx, sc.widgets[idx]))
     if len(widgets) < 2:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     gap = GRID
     cx, cy = 0, 0
     row_h = 0
@@ -314,10 +286,7 @@ def space_evenly_h(app) -> None:
     if len(items) < 3:
         return
     items.sort(key=lambda t: t[0])
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_cx = items[0][0]
     last_cx = items[-1][0]
     step = (last_cx - first_cx) / (len(items) - 1)
@@ -344,10 +313,7 @@ def space_evenly_v(app) -> None:
     if len(items) < 3:
         return
     items.sort(key=lambda t: t[0])
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_cy = items[0][0]
     last_cy = items[-1][0]
     step = (last_cy - first_cy) / (len(items) - 1)

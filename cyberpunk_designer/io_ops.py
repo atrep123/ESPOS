@@ -1,6 +1,9 @@
+"""File I/O: save, load, autosave, and export operations."""
+
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from dataclasses import asdict
@@ -12,6 +15,8 @@ from ui_designer import WidgetConfig
 
 from .constants import PREFS_PATH
 from .state import EditorState
+
+logger = logging.getLogger(__name__)
 
 
 def load_or_default(app) -> None:
@@ -25,8 +30,8 @@ def load_or_default(app) -> None:
             autosave_mtime = app.autosave_path.stat().st_mtime
             if autosave_mtime > base_mtime:
                 use_autosave = True
-        except Exception:
-            pass
+        except OSError:
+            logger.debug("Could not compare mtime for autosave detection")
 
     if use_autosave:
         try:
@@ -36,8 +41,8 @@ def load_or_default(app) -> None:
                 sc.width, sc.height = app.default_size
             app._restored_from_autosave = True
             return
-        except Exception:
-            pass
+        except (OSError, json.JSONDecodeError, KeyError, ValueError):
+            logger.warning("Autosave recovery failed for %s", app.autosave_path, exc_info=True)
 
     if base_exists:
         app.designer.load_from_json(str(app.json_path))
@@ -55,15 +60,16 @@ def load_widget_presets(app) -> List[dict]:
         return []
     try:
         return json.loads(app.preset_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError):
+        logger.warning("Failed to load widget presets from %s", app.preset_path, exc_info=True)
         return []
 
 
 def save_widget_presets(app) -> None:
     try:
         app.preset_path.write_text(json.dumps(app.widget_presets, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+    except (OSError, TypeError, ValueError):
+        logger.warning("Failed to save widget presets to %s", app.preset_path, exc_info=True)
 
 
 def save_preset_slot(app, slot: int) -> None:
@@ -95,13 +101,14 @@ def apply_preset_slot(app, slot: int, add_new: bool = False) -> None:
     sc = app.state.current_scene()
     if add_new:
         try:
-            new_w = WidgetConfig(**{k: v for k, v in preset.items() if k not in ("x", "y")})
-            new_w.x = 10
-            new_w.y = 10
+            config = dict(preset)
+            config["x"] = 10
+            config["y"] = 10
+            new_w = WidgetConfig(**config)
             sc.widgets.append(new_w)
             app.state.selected = [len(sc.widgets) - 1]
             app.state.selected_idx = app.state.selected[0]
-        except Exception:
+        except (TypeError, ValueError):
             return
     else:
         if not app.state.selected:
@@ -126,7 +133,7 @@ def load_prefs(app) -> None:
             fav = app.prefs.get("favorite_ports")
             if isinstance(fav, list):
                 app.favorite_ports = [str(p) for p in fav]
-        except Exception:
+        except (OSError, json.JSONDecodeError, ValueError):
             app.prefs = {}
     else:
         app.prefs = {}
@@ -137,8 +144,8 @@ def save_prefs(app) -> None:
     try:
         app.prefs["favorite_ports"] = app.favorite_ports
         PREFS_PATH.write_text(json.dumps(app.prefs, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+    except OSError:
+        logger.warning("Failed to save preferences to %s", PREFS_PATH, exc_info=True)
 
 
 def save_json(app) -> None:
@@ -153,7 +160,8 @@ def save_json(app) -> None:
         app.designer.save_to_json(tmp_path)
         os.replace(tmp_path, target)
         tmp_path = None  # replaced successfully, no cleanup needed
-    except Exception:
+    except OSError:
+        logger.warning("Atomic save failed, falling back to direct write", exc_info=True)
         # Fallback: direct save
         if tmp_path is not None:
             try:
@@ -181,7 +189,7 @@ def load_json(app) -> None:
         import pygame
 
         pygame.event.clear()
-    except Exception:
+    except (ImportError, RuntimeError):
         pass
 
 
@@ -194,8 +202,8 @@ def write_audit_report(app) -> None:
         report_path = report_dir / "last_audit.txt"
         lines = [f"file: {app.json_path}", f"scene: {sc.name}", f"widgets: {len(sc.widgets)}"]
         report_path.write_text("\n".join(lines), encoding="utf-8")
-    except Exception:
-        pass
+    except (OSError, RuntimeError, KeyError, AttributeError):
+        logger.debug("Could not write audit report")
 
 
 def maybe_autosave(app) -> None:
@@ -210,5 +218,5 @@ def maybe_autosave(app) -> None:
         app._last_autosave_ts = now
         app._dirty = False
         app._dirty_scenes = set()
-    except Exception:
-        pass
+    except OSError:
+        logger.warning("Autosave failed for %s", app.autosave_path, exc_info=True)

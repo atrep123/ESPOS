@@ -1,10 +1,24 @@
+"""Core selection management and common helpers."""
+
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
 
 import pygame
 
-from ..constants import GRID
+from ..constants import GRID, safe_save_state
+
+logger = logging.getLogger(__name__)
+
+
+def save_undo(app, *, log: bool = False) -> None:
+    """Save an undo checkpoint.  Call immediately before mutating state."""
+    try:
+        safe_save_state(app.designer)
+    except AttributeError as exc:
+        if log:
+            logger.warning("Failed to save undo state: %s", exc)
 
 
 def set_selection(app, indices: List[int], anchor_idx: Optional[int] = None) -> None:
@@ -77,10 +91,7 @@ def delete_selected(app) -> None:
     """Delete selected widgets."""
     if not app.state.selected:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app, log=True)
     sc = app.state.current_scene()
     skipped = 0
     for idx in sorted(app.state.selected, reverse=True):
@@ -92,8 +103,8 @@ def delete_selected(app) -> None:
         del sc.widgets[idx]
         try:
             app.designer._reindex_after_delete(idx)
-        except Exception:
-            pass
+        except (AttributeError, IndexError) as exc:
+            logger.warning("Reindex after delete failed at %d: %s", idx, exc)
     app.state.selected = []
     app.state.selected_idx = None
     if skipped:

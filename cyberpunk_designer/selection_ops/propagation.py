@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from .core import save_undo
 
+"""Style and property propagation across selected widgets."""
 def copy_style(app) -> None:
     """Copy visual style from selected widget to style clipboard."""
     w = app.state.selected_widget()
@@ -29,10 +31,7 @@ def paste_style(app) -> None:
         app._set_status("Paste style: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for idx in app.state.selected:
         if 0 <= idx < len(sc.widgets):
             w = sc.widgets[idx]
@@ -55,10 +54,7 @@ def propagate_border(app) -> None:
     b = getattr(ref, "border", True)
     bs = str(getattr(ref, "border_style", "single") or "single")
     bw = getattr(ref, "border_width", None)
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -82,10 +78,7 @@ def propagate_style(app) -> None:
     if not (0 <= first_idx < len(sc.widgets)):
         return
     ref_style = str(getattr(sc.widgets[first_idx], "style", "default") or "default")
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -105,10 +98,7 @@ def clone_text(app) -> None:
     if not (0 <= first_idx < len(sc.widgets)):
         return
     ref_text = str(getattr(sc.widgets[first_idx], "text", "") or "")
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -130,10 +120,7 @@ def propagate_align(app) -> None:
     ref = sc.widgets[first_idx]
     al = str(getattr(ref, "align", "left") or "left")
     va = str(getattr(ref, "valign", "middle") or "middle")
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -156,10 +143,7 @@ def propagate_colors(app) -> None:
     ref = sc.widgets[first_idx]
     fg = str(getattr(ref, "color_fg", "white") or "white")
     bg = str(getattr(ref, "color_bg", "black") or "black")
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -183,10 +167,7 @@ def propagate_value(app) -> None:
     val = int(getattr(ref, "value", 0) or 0)
     mn = int(getattr(ref, "min_value", 0) or 0)
     mx = int(getattr(ref, "max_value", 100) or 100)
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -210,10 +191,7 @@ def propagate_padding(app) -> None:
     ref = sc.widgets[first_idx]
     px = int(getattr(ref, "padding_x", 1) or 0)
     py = int(getattr(ref, "padding_y", 0) or 0)
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -236,10 +214,7 @@ def propagate_margin(app) -> None:
     ref = sc.widgets[first_idx]
     mx = int(getattr(ref, "margin_x", 0) or 0)
     my = int(getattr(ref, "margin_y", 0) or 0)
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):
@@ -278,10 +253,7 @@ def propagate_appearance(app) -> None:
         "margin_x": int(getattr(ref, "margin_x", 0) or 0),
         "margin_y": int(getattr(ref, "margin_y", 0) or 0),
     }
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     changed = 0
     for idx in app.state.selected[1:]:
         if 0 <= idx < len(sc.widgets):

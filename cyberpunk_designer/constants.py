@@ -1,7 +1,11 @@
+"""Designer UI constants: palette, colors, grid, and scale settings."""
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, Tuple
+
+from constants import GRID_SIZE_MEDIUM
 
 # --------------------------------------------------------------------------- #
 # Configuration
@@ -11,8 +15,56 @@ from typing import Dict, Tuple
 DEFAULT_JSON = Path("main_scene.json")
 SCALE = 2  # preferred scale; UI starts larger and stays integer-scaled
 FPS = 60
-GRID = 8
+GRID: int = GRID_SIZE_MEDIUM  # single source of truth: root constants.py
 GUIDE_TOL = 4
+
+# Panel dimensions (pixels)
+TOOLBAR_H = 24
+SCENE_TABS_H = 14
+STATUS_H = 18
+DEFAULT_PALETTE_W = 120
+DEFAULT_INSPECTOR_W = 200
+
+# Window margins for non-maximized startup
+WIN_MARGIN_W = 24
+WIN_MARGIN_H = 64
+
+# Timing & serial
+BAUD_DEFAULT = 115200
+AUTOSAVE_SEC = 10.0
+MAX_AUTO_SCALE_DEFAULT = 4
+MIN_FPS = 30
+
+# Double-click detection
+DBLCLICK_SEC = 0.4
+DBLCLICK_PX = 6
+
+# --------------------------------------------------------------------------- #
+# Shade offsets — used by drawing.py/_shade() to lighten (+) or darken (-)
+# --------------------------------------------------------------------------- #
+SHADE_SCANLINE = 8          # subtle scanline / bg highlight
+SHADE_GRID_H = -6           # horizontal grid lines inside panels
+SHADE_GRID_V = 4            # vertical grid lines inside panels
+SHADE_TRACK = -18           # scrollbar track background
+SHADE_THUMB = 24            # scrollbar thumb fill
+SHADE_THUMB_BORDER = -28    # scrollbar thumb outline
+SHADE_HOVER = 32            # pixel-frame highlight on hover
+SHADE_NORMAL = 20           # pixel-frame highlight at rest
+SHADE_PRESSED = -42         # pixel-frame shadow when pressed
+SHADE_SHADOW = -28          # pixel-frame shadow at rest
+SHADE_TOOLBAR_LIGHT = 24    # toolbar border light edge
+SHADE_TOOLBAR_DARK = -32    # toolbar border dark edge
+SHADE_TOOLBAR_SEP = 12      # toolbar bottom separator
+SHADE_TITLE_SHADOW = -24    # palette / section title shadow
+SHADE_PALETTE_HOVER = 10    # palette item hover fill
+SHADE_BTN_FILL_PRESS = -4   # button fill when pressed
+SHADE_BTN_FILL = -2         # button fill at rest
+SHADE_BTN_HOVER = 8         # button hover brighten
+SHADE_SEL_FILL = -80        # selection color fill
+SHADE_WIDGET_BG_OFF = -6    # widget default bg offset
+SHADE_WIDGET_HOVER = 10     # widget bg hover brighten
+SHADE_WIDGET_PRESS = -22    # widget bg pressed darken
+SHADE_GRID_CANVAS = 14      # canvas grid fallback
 PROFILE_ORDER = [
     "esp32os_256x128_gray4",
     "esp32os_240x128_mono",
@@ -53,18 +105,23 @@ def snap(v: int, g: int = GRID) -> int:
     return g * round(v / g)
 
 
+def clamp(v: int, lo: int, hi: int) -> int:
+    """Clamp integer v to [lo, hi]."""
+    return max(lo, min(hi, v))
+
+
 def hex_to_rgb(value: str) -> Tuple[int, int, int]:
     """Parse hex like #RRGGBB or fallback to white."""
     try:
         value = str(value).strip()
         if value.startswith("#") and len(value) == 7:
             return int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16)
-    except Exception:
+    except ValueError:
         pass
     return 255, 255, 255
 
 
-_NAMED_COLORS: Dict[str, Tuple[int, int, int]] = {
+NAMED_COLORS: Dict[str, Tuple[int, int, int]] = {
     "black": (0, 0, 0),
     "white": (255, 255, 255),
     "red": (255, 0, 0),
@@ -80,6 +137,14 @@ _NAMED_COLORS: Dict[str, Tuple[int, int, int]] = {
 }
 
 
+def safe_save_state(designer: object) -> None:
+    """Call designer._save_state() silently catching expected errors."""
+    try:
+        designer._save_state()  # type: ignore[attr-defined]
+    except (TypeError, ValueError, OSError):
+        pass
+
+
 def color_to_rgb(
     value: object, default: Tuple[int, int, int] = (255, 255, 255)
 ) -> Tuple[int, int, int]:
@@ -87,13 +152,13 @@ def color_to_rgb(
     if not s:
         return default
     low = s.lower()
-    if low in _NAMED_COLORS:
-        return _NAMED_COLORS[low]
+    if low in NAMED_COLORS:
+        return NAMED_COLORS[low]
     if low.startswith("0x") and len(low) == 8:
         try:
             v = int(low, 16) & 0xFFFFFF
             return (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF
-        except Exception:
+        except ValueError:
             return default
     if low.startswith("#"):
         return hex_to_rgb(low)

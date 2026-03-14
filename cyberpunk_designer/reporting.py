@@ -1,3 +1,5 @@
+"""Design report generation and analysis."""
+
 from __future__ import annotations
 
 import time
@@ -40,5 +42,5 @@ def screenshot_canvas(app) -> None:
 
         pygame.image.save(canvas, str(out_path))
         app._set_status(f"Saved screenshot: {out_path}", ttl_sec=5.0)
-    except Exception as exc:
+    except (OSError, pygame.error) as exc:
         app._set_status(f"Screenshot failed: {exc}", ttl_sec=5.0)

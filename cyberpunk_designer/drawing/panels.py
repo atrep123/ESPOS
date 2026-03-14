@@ -1,3 +1,5 @@
+"""Palette, inspector, and status bar panel rendering."""
+
 from __future__ import annotations
 
 import time
@@ -11,6 +13,7 @@ from .widgets import draw_scrollbar
 
 
 def draw_palette(app) -> None:
+    """Render the left-side widget palette with collapsible type sections."""
     r = app.layout.palette_rect
     draw_pixel_panel_bg(app, r)
     title = render_pixel_text(
@@ -23,7 +26,7 @@ def draw_palette(app) -> None:
 
     try:
         content_h = int(app._palette_content_height())
-    except Exception:
+    except (ValueError, TypeError):
         content_h = 0
     view_h = max(0, int(content_rect.height))
     max_scroll = max(0, content_h - view_h)
@@ -31,7 +34,7 @@ def draw_palette(app) -> None:
         app.state.palette_scroll = max(
             0, min(max_scroll, int(getattr(app.state, "palette_scroll", 0) or 0))
         )
-    except Exception:
+    except (ValueError, TypeError):
         app.state.palette_scroll = 0
 
     y = content_rect.y - int(getattr(app.state, "palette_scroll", 0) or 0)
@@ -154,7 +157,7 @@ def draw_inspector(app) -> None:
 
     try:
         content_h = int(app._inspector_content_height())
-    except Exception:
+    except (ValueError, TypeError):
         content_h = 0
     view_h = max(0, int(content_rect.height))
     max_scroll = max(0, content_h - view_h)
@@ -162,7 +165,7 @@ def draw_inspector(app) -> None:
         app.state.inspector_scroll = max(
             0, min(max_scroll, int(getattr(app.state, "inspector_scroll", 0) or 0))
         )
-    except Exception:
+    except (ValueError, TypeError):
         app.state.inspector_scroll = 0
 
     y = content_rect.y - int(getattr(app.state, "inspector_scroll", 0) or 0)
@@ -236,7 +239,7 @@ def draw_inspector(app) -> None:
             if layer_drag is not None and key.startswith("layer:") and is_hover:
                 try:
                     target = int(key.split(":", 1)[1])
-                except Exception:  # pragma: no cover — key always "layer:N"
+                except (ValueError, IndexError):  # pragma: no cover — key always "layer:N"
                     target = -1
                 if target != layer_drag and target >= 0:
                     fill = app._shade(PALETTE["accent_cyan"], -180)
@@ -282,7 +285,7 @@ def draw_status(app) -> None:
     draw_pixel_frame(app, r)
     try:
         sc = app.state.current_scene()
-    except Exception:
+    except AttributeError:
         sc = None
 
     dirty_mark = "*" if app._dirty else ""
@@ -300,7 +303,7 @@ def draw_status(app) -> None:
             cur = getattr(app.designer, "current_scene", "")
             idx = scene_names.index(cur) + 1 if cur in scene_names else 0
             scene_label = f"[{idx}/{len(scene_names)}:{cur}]"
-    except Exception:  # pragma: no cover — defensive
+    except (AttributeError, ValueError):  # pragma: no cover — defensive
         pass
     left = f"{dirty_mark}{file_label}  {dim} {wcount} {scene_label}".strip()
 
@@ -356,7 +359,7 @@ def draw_status(app) -> None:
         redo_n = len(getattr(app.designer, "redo_stack", []) or [])
         if undo_n or redo_n:
             right += f" u:{undo_n}/r:{redo_n}"
-    except Exception:
+    except (AttributeError, TypeError):
         pass
 
     msg = ""

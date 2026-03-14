@@ -1,3 +1,5 @@
+"""Pixel font 6x8 renderer for device-accurate text preview."""
+
 from __future__ import annotations
 
 from typing import Dict, Optional, Tuple
@@ -544,7 +546,9 @@ def render_text(
     Only a limited ASCII subset is supported (same as firmware); unsupported glyphs become '?'.
     """
     s = str(text or "")
-    key = (s, tuple(color), tuple(shadow) if shadow else None)
+    fg = (color[0], color[1], color[2])
+    bg = (shadow[0], shadow[1], shadow[2]) if shadow else None
+    key = (s, fg, bg)
     cached = _CACHE.get(key)
     if cached is not None:
         return cached

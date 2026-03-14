@@ -7,12 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, TypedDict
 from constants import DEFAULT_WIDGET_SIZE
 
 
-def _empty_int_list() -> List[int]:
-    """Typed default factory for chart data."""
-    return []
-
-
-def _normalize_int_list(values: Iterable[Any]) -> List[int]:
+def normalize_int_list(values: Iterable[Any]) -> List[int]:
     """Coerce an arbitrary iterable into a list of ints for chart data; ignores bad entries."""
     normalized: List[int] = []
     for v in values or []:
@@ -23,7 +18,17 @@ def _normalize_int_list(values: Iterable[Any]) -> List[int]:
     return normalized
 
 
-def _coerce_bool_flag(value: Any, default: bool) -> bool:
+def normalize_str_list(values: Iterable[Any]) -> List[str]:
+    """Coerce an arbitrary iterable into a list of strings for list items."""
+    normalized: List[str] = []
+    for v in values or []:
+        s = str(v).strip() if v is not None else ""
+        if s:
+            normalized.append(s)
+    return normalized
+
+
+def coerce_bool_flag(value: Any, default: bool) -> bool:
     """Convert loose truthy/falsey inputs into a bool with sane string handling."""
     if value is None:
         return default
@@ -35,11 +40,11 @@ def _coerce_bool_flag(value: Any, default: bool) -> bool:
             return False
     try:
         return bool(value)
-    except Exception:
+    except (ValueError, TypeError):
         return default
 
 
-def _coerce_choice(value: Any, allowed: Iterable[str], default: str) -> str:
+def coerce_choice(value: Any, allowed: Iterable[str], default: str) -> str:
     """Return value if in allowed choices, else default."""
     if value is None:
         return default
@@ -78,7 +83,7 @@ class Constraints(TypedDict, total=False):
     mb: int
 
 
-def _empty_constraints() -> Constraints:
+def empty_constraints() -> Constraints:
     """Typed default factory for constraints metadata."""
     return {}
 
@@ -97,11 +102,11 @@ def _coerce_int(value: Optional[int]) -> int:
     """Coerce Optional[int] to int with 0 fallback."""
     try:
         return int(value) if value is not None else 0
-    except Exception:
+    except (ValueError, TypeError):
         return 0
 
 
-def _make_baseline(
+def make_baseline(
     x: int,
     y: int,
     width: Optional[int],
@@ -151,6 +156,8 @@ class WidgetType(Enum):
     PANEL = "panel"
     ICON = "icon"
     CHART = "chart"
+    LIST = "list"
+    TOGGLE = "toggle"
 
 
 class BorderStyle(Enum):
@@ -171,8 +178,8 @@ class WidgetConfig:
     type: str  # label, box, button, gauge, progressbar, checkbox, etc.
     x: int
     y: int
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: Optional[int] = None  # type: ignore[reportRedeclaration]
+    height: Optional[int] = None  # type: ignore[reportRedeclaration]
     text: str = ""
     style: str = "default"  # default, bold, inverse, highlight
     color_fg: str = "white"
@@ -194,7 +201,8 @@ class WidgetConfig:
     enabled: bool = True
     visible: bool = True
     icon_char: str = ""  # For icon widget
-    data_points: List[int] = field(default_factory=_empty_int_list)  # For chart
+    data_points: List[int] = field(default_factory=list)  # For chart
+    items: List[str] = field(default_factory=_empty_str_list)  # For list widget
     z_index: int = 0  # Layer order
 
     # Layout hints
@@ -203,7 +211,7 @@ class WidgetConfig:
     margin_x: int = 0
     margin_y: int = 0
     # Responsive/constraints metadata (stored as simple dicts for export)
-    constraints: Constraints = field(default_factory=_empty_constraints)
+    constraints: Constraints = field(default_factory=empty_constraints)
     responsive_rules: List[ResponsiveRule] = field(default_factory=_empty_responsive_rules)
     animations: List[str] = field(default_factory=_empty_str_list)
     # Firmware/runtime metadata (exported as `constraints_json` in C headers).
@@ -236,6 +244,7 @@ class WidgetConfig:
         self._apply_text_defaults()
         self._apply_dimension_defaults()
         self._apply_integer_bounds()
+        self._sync_items_text()
 
     def _apply_text_defaults(self) -> None:
         try:
@@ -245,7 +254,7 @@ class WidgetConfig:
             if ov not in {"ellipsis", "wrap", "clip", "auto"}:
                 ov = "ellipsis"
             self.text_overflow = ov
-        except Exception:
+        except (AttributeError, TypeError):
             self.text_overflow = "ellipsis"
 
         try:
@@ -255,7 +264,7 @@ class WidgetConfig:
                 return
             ml_i = int(ml)
             self.max_lines = ml_i if ml_i > 0 else None
-        except Exception:
+        except (ValueError, TypeError):
             self.max_lines = None
 
     def _normalize_type(self) -> None:
@@ -266,14 +275,21 @@ class WidgetConfig:
             if isinstance(t, _Enum):
                 self.type = str(getattr(t, "value", t))
                 return
-        except Exception:
+        except (ImportError, AttributeError, TypeError):
             pass
         try:
             t = getattr(self, "type", None)
             if t is not None and hasattr(t, "value"):
                 self.type = str(t.value)
-        except Exception:
+        except (AttributeError, TypeError):
             pass
+        # Validate against known widget types
+        _valid = {wt.value for wt in WidgetType}
+        if self.type not in _valid:
+            raise ValueError(
+                f"Unknown widget type {self.type!r}; "
+                f"valid types: {sorted(_valid)}"
+            )
 
     def _to_color_str(self, value: Any) -> Optional[str]:
         if value is None:
@@ -282,7 +298,7 @@ class WidgetConfig:
             if isinstance(value, int):
                 return f"#{value & 0xFFFFFF:06x}"
             return str(value)
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     def _apply_color_aliases(self) -> None:
@@ -300,19 +316,19 @@ class WidgetConfig:
                 resolved = self._to_color_str(value)
                 if resolved:
                     setattr(self, target, resolved)
-            except Exception:
+            except (AttributeError, TypeError):
                 continue
 
     def _apply_style_aliases(self) -> None:
         try:
             if self.border_width is not None:
                 self.border = bool(self.border_width and int(self.border_width) > 0)
-        except Exception:
+        except (ValueError, TypeError):
             pass
         try:
             if bool(self.bold):
                 self.style = "bold"
-        except Exception:
+        except (ValueError, TypeError):
             pass
 
     def _apply_dimension_defaults(self) -> None:
@@ -331,6 +347,19 @@ class WidgetConfig:
         self.max_value = self._clamp_int16(self.max_value)
         if self.max_lines is not None:
             self.max_lines = self._clamp_uint8(self.max_lines)
+
+    def _sync_items_text(self) -> None:
+        """For list widgets: sync items list ↔ text (newline-separated).
+
+        If items is non-empty, it takes precedence and overwrites text.
+        If items is empty but text has newlines, populate items from text.
+        """
+        if self.type != "list":
+            return
+        if self.items:
+            self.text = "\n".join(str(s) for s in self.items)
+        elif self.text and "\n" in self.text:
+            self.items = [s for s in self.text.split("\n") if s]
 
     def _default_width(self, widget_type: str) -> int:
         if widget_type == "label":
@@ -382,7 +411,7 @@ class WidgetConfig:
                 return default
             coerced = int(value)
             return max(1, min(65535, coerced))
-        except Exception:
+        except (ValueError, TypeError):
             return default
 
     @property  # type: ignore[no-redef]

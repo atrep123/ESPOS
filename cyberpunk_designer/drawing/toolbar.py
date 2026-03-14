@@ -1,3 +1,5 @@
+"""Toolbar buttons and scene tab strip rendering."""
+
 from __future__ import annotations
 
 import pygame
@@ -8,6 +10,7 @@ from .widgets import button
 
 
 def draw_toolbar(app) -> None:
+    """Render the top toolbar row with file, view, and action buttons."""
     r = app.layout.toolbar_rect
     pygame.draw.rect(app.logical_surface, PALETTE["panel"], r)
     pygame.draw.line(
@@ -48,7 +51,7 @@ def draw_scene_tabs(app) -> None:
     app.tab_scroll_hitboxes = []
     try:
         names = list(app.designer.scenes.keys())
-    except Exception:
+    except AttributeError:
         return
     if not names:
         return

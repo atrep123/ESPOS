@@ -1,3 +1,5 @@
+"""Text measurement and overflow detection for widgets."""
+
 from __future__ import annotations
 
 from typing import List, Optional, Tuple
@@ -145,7 +147,7 @@ def text_truncates_in_widget(w: WidgetConfig, text: str) -> bool:
             ml_i = int(ml)
             if ml_i > 0:
                 max_lines = min(max_lines, ml_i)
-    except Exception:
+    except (TypeError, ValueError):
         pass
     max_lines = max(1, int(max_lines))
 

@@ -1,7 +1,9 @@
+"""Widget transforms: move, resize, mirror, swap."""
+
 from __future__ import annotations
 
 from ..constants import GRID, snap
-from .core import selection_bounds
+from .core import save_undo, selection_bounds
 
 
 def move_selection(app, dx: int, dy: int) -> None:
@@ -36,10 +38,7 @@ def move_selection(app, dx: int, dy: int) -> None:
     ddy = int(new_y - int(bounds.y))
     if ddx == 0 and ddy == 0:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
             continue
@@ -86,10 +85,7 @@ def resize_selection_to(app, new_w: int, new_h: int) -> bool:
     sx = float(new_w) / float(int(bounds.width))
     sy = float(new_h) / float(int(bounds.height))
 
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
 
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
@@ -143,10 +139,7 @@ def mirror_selection(app, axis: str) -> None:
     bounds = selection_bounds(app, app.state.selected)
     if bounds is None:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
             continue
@@ -170,10 +163,7 @@ def swap_fg_bg(app) -> None:
         app._set_status("Swap colors: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for idx in app.state.selected:
         if 0 <= idx < len(sc.widgets):
             w = sc.widgets[idx]
@@ -194,10 +184,7 @@ def make_full_width(app) -> None:
     if any(getattr(w, "locked", False) for _, w in items):
         app._set_status("Some widgets are locked.", ttl_sec=2.0)
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     sw = int(getattr(sc, "width", 256) or 256)
     for _idx, w in items:
         w.x = 0
@@ -218,10 +205,7 @@ def make_full_height(app) -> None:
     if any(getattr(w, "locked", False) for _, w in items):
         app._set_status("Some widgets are locked.", ttl_sec=2.0)
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     sh = int(getattr(sc, "height", 128) or 128)
     for _idx, w in items:
         w.y = 0
@@ -242,10 +226,7 @@ def swap_dimensions(app) -> None:
     if any(getattr(w, "locked", False) for _, w in items):
         app._set_status("Some widgets are locked.", ttl_sec=2.0)
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for _idx, w in items:
         w.width, w.height = w.height, w.width
     app._set_status(f"Swapped W/H on {len(items)} widget(s).", ttl_sec=2.0)
@@ -258,10 +239,7 @@ def move_selection_to_origin(app) -> None:
         app._set_status("Move to origin: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
@@ -286,10 +264,7 @@ def swap_positions(app) -> None:
     a, b = app.state.selected
     if not (0 <= a < len(sc.widgets) and 0 <= b < len(sc.widgets)):
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     wa, wb = sc.widgets[a], sc.widgets[b]
     wa.x, wb.x = int(wb.x), int(wa.x)
     wa.y, wb.y = int(wb.y), int(wa.y)
@@ -306,10 +281,7 @@ def flip_vertical(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     min_y = min(int(sc.widgets[i].y) for i in valid)
     max_y = max(int(sc.widgets[i].y) + int(sc.widgets[i].height or 0) for i in valid)
     center_y = min_y + max_y
@@ -329,10 +301,7 @@ def swap_content(app) -> None:
     a, b = app.state.selected
     if not (0 <= a < len(sc.widgets) and 0 <= b < len(sc.widgets)):
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     wa, wb = sc.widgets[a], sc.widgets[b]
     wa.text, wb.text = str(getattr(wb, "text", "") or ""), str(getattr(wa, "text", "") or "")
     wa.value, wb.value = int(getattr(wb, "value", 0) or 0), int(getattr(wa, "value", 0) or 0)
@@ -357,10 +326,7 @@ def flip_horizontal(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     min_x = min(int(sc.widgets[i].x) for i in valid)
     max_x = max(int(sc.widgets[i].x) + int(sc.widgets[i].width or 0) for i in valid)
     center_x = min_x + max_x

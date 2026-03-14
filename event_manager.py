@@ -1,3 +1,4 @@
+"""Event bus for decoupled inter-component communication."""
 import heapq
 import time
 from typing import Callable, Dict, List, Optional, Tuple

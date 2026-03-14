@@ -24,7 +24,7 @@ def _require_pygame() -> None:
     """Fail fast with a helpful hint when pygame is absent."""
     try:
         import pygame  # type: ignore  # noqa: F401
-    except Exception:
+    except ImportError:
         print("[FAIL] Missing dependency: pygame")
         print("       Install with: pip install pygame")
         raise SystemExit(1) from None
@@ -127,7 +127,7 @@ def send_live_preview(json_path: Path, port: str, baud: int = 115200) -> None:
         return
     try:
         import serial  # type: ignore
-    except Exception:
+    except ImportError:
         print("[WARN] PySerial neni nainstalovany; preskakuji live preview.")
         return
     payload = json_path.read_text(encoding="utf-8")
@@ -137,7 +137,7 @@ def send_live_preview(json_path: Path, port: str, baud: int = 115200) -> None:
             ser.write(frame)
             ser.flush()
         print(f"[OK] Live preview odeslan na {port} @ {baud}")
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         print(f"[WARN] Live preview selhal ({exc})")
 
 
@@ -171,7 +171,7 @@ def main() -> None:
     _require_pygame()
     try:
         from cyberpunk_editor import CyberpunkEditorApp
-    except Exception as exc:
+    except ImportError as exc:
         print(f"[FAIL] Unable to start Pygame designer: {exc}")
         raise SystemExit(1) from None
 

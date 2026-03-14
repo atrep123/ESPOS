@@ -1,3 +1,5 @@
+"""Text measurement, ellipsizing, wrapping, and clipped rendering."""
+
 from __future__ import annotations
 
 from typing import List, Optional, Tuple
@@ -11,13 +13,15 @@ from .primitives import render_pixel_text
 
 
 def text_width_px(app, text: str) -> int:
+    """Return pixel width of *text* using the app's current pixel font."""
     try:
         return int(app.pixel_font.size(str(text or ""))[0])
-    except Exception:
+    except (AttributeError, TypeError, pygame.error):
         return 0
 
 
 def ellipsize_text_px(app, text: str, max_width_px: int, ellipsis: str = "...") -> str:
+    """Truncate *text* to fit within *max_width_px*, appending *ellipsis* if needed."""
     s = str(text or "")
     max_width_px = int(max_width_px)
     if max_width_px <= 0 or not s:
@@ -49,6 +53,7 @@ def ellipsize_text_px(app, text: str, max_width_px: int, ellipsis: str = "...") 
 def wrap_text_px(
     app, text: str, max_width_px: int, max_lines: int, ellipsis: str = "..."
 ) -> List[str]:
+    """Word-wrap *text* into at most *max_lines* lines fitting *max_width_px*."""
     s = str(text or "").replace("\t", " ").strip()
     max_width_px = int(max_width_px)
     max_lines = max(1, int(max_lines))
@@ -126,6 +131,7 @@ def draw_text_clipped(
     ellipsis: str = "...",
     use_device_font: Optional[bool] = None,
 ) -> None:
+    """Render *text* clipped inside *rect* with alignment, wrapping and ellipsis."""
     s = str(text or "")
     if not s:
         return
@@ -143,8 +149,10 @@ def draw_text_clipped(
         max_chars = int(clip_rect.width) // max(1, int(font6x8.CHAR_W))
         if max_chars <= 0:
             return
+        if clip_rect.height < line_h:
+            return  # not enough vertical space for even one line
         max_lines = max(1, int(max_lines))
-        max_lines = min(max_lines, max(1, clip_rect.height // line_h))
+        max_lines = min(max_lines, clip_rect.height // line_h)
         if max_lines > 1:
             lines, _trunc = text_metrics.wrap_text_chars(
                 s, max_chars=max_chars, max_lines=max_lines, ellipsis=ellipsis
@@ -154,8 +162,10 @@ def draw_text_clipped(
             lines = [text_metrics.ellipsize_chars(flat, max_chars=max_chars, ellipsis=ellipsis)]
     else:
         line_h = max(1, int(app.pixel_font.get_height()))
+        if clip_rect.height < line_h:
+            return  # not enough vertical space for even one line
         max_lines = max(1, int(max_lines))
-        max_lines = min(max_lines, max(1, clip_rect.height // line_h))
+        max_lines = min(max_lines, clip_rect.height // line_h)
         if max_lines > 1:
             lines = wrap_text_px(app, s, clip_rect.width, max_lines=max_lines, ellipsis=ellipsis)
         else:
@@ -176,8 +186,8 @@ def draw_text_clipped(
     old_clip = surface.get_clip()
     # Intersect with any existing clip (palette/inspector/canvas) to avoid drawing outside panels.
     try:
-        new_clip = clip_rect.clip(old_clip) if old_clip is not None else clip_rect
-    except Exception:
+        new_clip = clip_rect.clip(old_clip) if old_clip is not None else clip_rect  # pyright: ignore[reportUnnecessaryComparison]
+    except (AttributeError, TypeError):
         new_clip = clip_rect
     surface.set_clip(new_clip)
     try:
@@ -209,6 +219,7 @@ def draw_text_in_rect(
     padding: int,
     w: WidgetConfig,
 ) -> None:
+    """Render widget text respecting its align, valign, overflow and max_lines."""
     align = str(getattr(w, "align", "left") or "left").lower()
     valign = str(getattr(w, "valign", "middle") or "middle").lower()
     line_h = max(1, int(app.pixel_font.get_height()))
@@ -244,7 +255,7 @@ def draw_text_in_rect(
                 ml_i = int(ml)
                 if ml_i > 0:
                     max_lines = min(max_lines, ml_i)
-        except Exception:
+        except (TypeError, ValueError):
             pass
     else:
         max_lines = 1

@@ -1,4 +1,8 @@
+"""Cycle through widget styles, types, borders, colors."""
+
 from __future__ import annotations
+
+from .core import save_undo
 
 _GRAY4 = [f"#{v:02x}{v:02x}{v:02x}" for v in range(0, 256, 17)]
 
@@ -10,10 +14,7 @@ def cycle_style(app) -> None:
         return
     sc = app.state.current_scene()
     styles = ["default", "bold", "inverse", "highlight"]
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     # Use the first selected widget's current style to determine next
     first_idx = app.state.selected[0]
     if 0 <= first_idx < len(sc.widgets):
@@ -37,10 +38,7 @@ def toggle_visibility(app) -> None:
         app._set_status("Visibility: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     values = []
     for idx in app.state.selected:
         if 0 <= idx < len(sc.widgets):
@@ -65,16 +63,15 @@ def cycle_widget_type(app) -> None:
         "slider",
         "checkbox",
         "chart",
+        "list",
+        "toggle",
         "icon",
     ]
     if not app.state.selected:
         app._set_status("Type: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_idx = app.state.selected[0]
     if 0 <= first_idx < len(sc.widgets):
         cur = str(getattr(sc.widgets[first_idx], "type", "label") or "label")
@@ -98,10 +95,7 @@ def cycle_border_style(app) -> None:
         app._set_status("Border: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_idx = app.state.selected[0]
     if 0 <= first_idx < len(sc.widgets):
         cur = str(getattr(sc.widgets[first_idx], "border_style", "single") or "single")
@@ -145,10 +139,7 @@ def cycle_color_preset(app) -> None:
             preset_idx = (i + 1) % len(presets)
             break
     fg, bg = presets[preset_idx]
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for idx in app.state.selected:
         if 0 <= idx < len(sc.widgets):
             sc.widgets[idx].color_fg = fg
@@ -163,10 +154,7 @@ def toggle_border(app) -> None:
         app._set_status("Border: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     values = []
     for idx in app.state.selected:
         if 0 <= idx < len(sc.widgets):
@@ -187,10 +175,7 @@ def cycle_text_overflow(app) -> None:
         app._set_status("Overflow: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_idx = app.state.selected[0]
     if 0 <= first_idx < len(sc.widgets):
         cur = str(getattr(sc.widgets[first_idx], "text_overflow", "ellipsis") or "ellipsis")
@@ -214,10 +199,7 @@ def cycle_align(app) -> None:
         app._set_status("Align: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_idx = app.state.selected[0]
     if 0 <= first_idx < len(sc.widgets):
         cur = str(getattr(sc.widgets[first_idx], "align", "left") or "left")
@@ -241,10 +223,7 @@ def cycle_valign(app) -> None:
         app._set_status("VAlign: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_idx = app.state.selected[0]
     if 0 <= first_idx < len(sc.widgets):
         cur = str(getattr(sc.widgets[first_idx], "valign", "middle") or "middle")
@@ -284,10 +263,7 @@ def smart_edit(app) -> None:
         app._inspector_start_edit("icon_char")
     elif wtype in ("checkbox", "radiobutton"):
         # Toggle checked directly instead of opening editor
-        try:
-            app.designer._save_state()
-        except Exception:
-            pass
+        save_undo(app)
         for i in app.state.selected:
             if 0 <= i < len(sc.widgets):
                 sc.widgets[i].checked = not sc.widgets[i].checked
@@ -307,10 +283,7 @@ def adjust_value(app, delta: int) -> None:
     sc = app.state.current_scene()
     value_types = {"gauge", "slider", "progressbar"}
     applied = 0
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
             continue
@@ -337,10 +310,7 @@ def toggle_enabled(app) -> None:
         app._set_status("Toggle enabled: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     first_idx = app.state.selected[0]
     if not (0 <= first_idx < len(sc.widgets)):
         return
@@ -373,10 +343,7 @@ def toggle_checked(app) -> None:
     if any(getattr(w, "locked", False) for _, w in applicable):
         app._set_status("Some widgets are locked.", ttl_sec=2.0)
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     count = 0
     for _idx, w in applicable:
         w.checked = not w.checked
@@ -401,10 +368,7 @@ def cycle_gray_fg(app) -> None:
             idx = (i + 1) % len(_GRAY4)
             break
     new_c = _GRAY4[idx]
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for i in app.state.selected:
         if 0 <= i < len(sc.widgets):
             sc.widgets[i].color_fg = new_c
@@ -428,10 +392,7 @@ def cycle_gray_bg(app) -> None:
             idx = (i + 1) % len(_GRAY4)
             break
     new_c = _GRAY4[idx]
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for i in app.state.selected:
         if 0 <= i < len(sc.widgets):
             sc.widgets[i].color_bg = new_c
@@ -448,10 +409,7 @@ def outline_mode(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     for i in valid:
         w = sc.widgets[i]
         w.border = True

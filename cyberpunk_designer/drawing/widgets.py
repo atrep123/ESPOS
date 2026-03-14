@@ -1,3 +1,5 @@
+"""Widget-specific drawing: buttons, scrollbars, checkboxes."""
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -17,6 +19,7 @@ def draw_scrollbar(
     max_scroll: int,
     content_h: int,
 ) -> None:
+    """Draw a vertical scrollbar thumb inside *rect* proportional to scroll position."""
     if max_scroll <= 0 or rect.width <= 0 or rect.height <= 0:
         return
     scroll = max(0, min(int(scroll), int(max_scroll)))
@@ -36,6 +39,7 @@ def draw_scrollbar(
 
 
 def panel(app, rect: pygame.Rect, title: str = "") -> None:
+    """Draw a panel background with an optional *title* in the top-left."""
     draw_pixel_panel_bg(app, rect)
     if title:
         title_rect = pygame.Rect(

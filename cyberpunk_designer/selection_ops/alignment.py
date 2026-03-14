@@ -1,6 +1,9 @@
+"""Grid snapping and center-in-scene alignment."""
+
 from __future__ import annotations
 
 from ..constants import GRID, snap
+from .core import save_undo
 
 
 def snap_selection_to_grid(app) -> None:
@@ -9,10 +12,7 @@ def snap_selection_to_grid(app) -> None:
         app._set_status("Snap to grid: nothing selected.", ttl_sec=2.0)
         return
     sc = app.state.current_scene()
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     snapped = 0
     for idx in app.state.selected:
         if not (0 <= idx < len(sc.widgets)):
@@ -37,10 +37,7 @@ def center_in_scene(app) -> None:
     valid = [i for i in app.state.selected if 0 <= i < len(sc.widgets)]
     if not valid:
         return
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    save_undo(app)
     sw = int(getattr(sc, "width", 256) or 256)
     sh = int(getattr(sc, "height", 128) or 128)
     min_x = min(int(sc.widgets[i].x) for i in valid)

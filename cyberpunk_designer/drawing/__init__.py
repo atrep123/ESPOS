@@ -1,11 +1,11 @@
 """drawing package — split from monolithic drawing.py."""
 
 from .canvas import (
-    _draw_distance_indicators,
-    _draw_rulers,
-    _draw_selection_info,
     draw_canvas,
+    draw_distance_indicators,
     draw_overflow_marker,
+    draw_rulers,
+    draw_selection_info,
     draw_widget_preview,
 )
 from .overlays import (
@@ -20,9 +20,9 @@ from .panels import (
     draw_status,
 )
 from .primitives import (
-    _draw_dashed_rect,
     draw_bevel_frame,
     draw_border_style,
+    draw_dashed_rect,
     draw_frame,
     draw_pixel_frame,
     draw_pixel_panel_bg,
@@ -47,15 +47,13 @@ from .widgets import (
 
 __all__ = [
     "TOOLBAR_TOOLTIPS",
-    "_draw_dashed_rect",
-    "_draw_distance_indicators",
-    "_draw_rulers",
-    "_draw_selection_info",
     "button",
     "draw_bevel_frame",
     "draw_border_style",
     "draw_canvas",
     "draw_context_menu",
+    "draw_dashed_rect",
+    "draw_distance_indicators",
     "draw_frame",
     "draw_help_overlay",
     "draw_inspector",
@@ -63,8 +61,10 @@ __all__ = [
     "draw_palette",
     "draw_pixel_frame",
     "draw_pixel_panel_bg",
+    "draw_rulers",
     "draw_scene_tabs",
     "draw_scrollbar",
+    "draw_selection_info",
     "draw_status",
     "draw_text_clipped",
     "draw_text_in_rect",

@@ -1,3 +1,5 @@
+"""Low-level drawing primitives: frames, fills, pixel text."""
+
 from __future__ import annotations
 
 from typing import Optional, Tuple
@@ -57,7 +59,7 @@ def draw_pixel_panel_bg(app, rect: pygame.Rect) -> None:
     pygame.draw.rect(app.logical_surface, PALETTE["panel_border"], rect, 1)
 
 
-def _draw_dashed_rect(
+def draw_dashed_rect(
     surface: pygame.Surface,
     color: Tuple[int, int, int],
     rect: pygame.Rect,
@@ -82,6 +84,7 @@ def draw_border_style(
     style: str,
     color: Tuple[int, int, int],
 ) -> None:
+    """Draw a rectangle border in *style* (single/bold/double/rounded/dashed)."""
     st = str(style or "single").lower()
     if st in {"none", ""}:
         return
@@ -124,6 +127,7 @@ def draw_bevel_frame(
     base_color: Tuple[int, int, int],
     pressed: bool = False,
 ) -> None:
+    """Draw a raised/sunken 3-D bevel frame using light/dark shading."""
     light = app._shade(base_color, 28)
     dark = app._shade(base_color, -28)
     tl = dark if pressed else light

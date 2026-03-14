@@ -1,3 +1,5 @@
+"""Selection queries: search, select-by-type, select-all."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -147,7 +149,7 @@ def select_overflow(app) -> None:
         return
     try:
         from .. import text_metrics
-    except Exception:  # pragma: no cover — module always available
+    except ImportError:  # pragma: no cover — module always available
         app._set_status("Overflow detection unavailable.", ttl_sec=2.0)
         return
     matches = []

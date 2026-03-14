@@ -1,3 +1,5 @@
+"""Context menu, tooltip, and help overlay rendering."""
+
 from __future__ import annotations
 
 import time
@@ -330,14 +332,14 @@ def draw_help_overlay(app) -> None:
     sc = None
     try:
         sc = app.state.current_scene()
-    except Exception:
+    except AttributeError:
         sc = None
 
     profile_label = str(getattr(app, "hardware_profile", "") or "")
     if profile_label and profile_label in HARDWARE_PROFILES:
         try:
             profile_label = str(HARDWARE_PROFILES[profile_label].get("label") or profile_label)
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
             pass
     if not profile_label:
         profile_label = "none"
@@ -347,34 +349,34 @@ def draw_help_overlay(app) -> None:
     if sc is not None:
         try:
             scene_dims = f"{int(getattr(sc, 'width', 0))}x{int(getattr(sc, 'height', 0))}"
-        except Exception:
+        except (ValueError, TypeError):
             scene_dims = "?"
         try:
             widgets_count = str(len(getattr(sc, "widgets", []) or []))
-        except Exception:
+        except (AttributeError, TypeError):
             widgets_count = "?"
 
     est = None
     try:
         est = app.designer.estimate_resources(profile=getattr(app, "hardware_profile", None))
-    except Exception:
+    except AttributeError:
         est = None
     res_line = "resources: n/a"
     overlaps = 0
     if est:
         try:
             res_line = f"resources: FB {float(est.get('framebuffer_kb', 0.0)):.1f}KB | Flash {float(est.get('flash_kb', 0.0)):.1f}KB"
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             res_line = "resources: (error)"
         try:
             overlaps = int(est.get("overlaps", 0) or 0)
-        except Exception:
+        except (ValueError, TypeError):
             overlaps = 0
 
     sel_count = 0
     try:
         sel_count = len(getattr(app.state, "selected", []) or [])
-    except Exception:
+    except (AttributeError, TypeError):
         sel_count = 0
 
     info = [

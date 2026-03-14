@@ -452,7 +452,7 @@ def apply_tokens(target: Any, mapping: Mapping[str, str]) -> Any:
         elif hasattr(target, target_field):
             try:
                 setattr(target, target_field, value)
-            except Exception:
+            except (AttributeError, TypeError):
                 continue
     return target
 

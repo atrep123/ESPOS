@@ -1,14 +1,16 @@
+"""Inspector helper functions for formatting and parsing."""
+
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from typing import Any, Iterable, List, Optional
 
 
-def format_int_list(values: object, *, max_items: int = 32) -> str:
+def format_int_list(values: Iterable[Any] | None, *, max_items: int = 32) -> str:
     """Format a list of ints as a compact comma-separated string for inspector display."""
     try:
         items = [int(v) for v in (values or [])]
-    except Exception:
+    except (ValueError, TypeError):
         return ""
     if not items:
         return ""
@@ -41,7 +43,7 @@ def parse_int_list(
     for tok in tokens:
         try:
             v = int(tok, 0)
-        except Exception:
+        except (ValueError, TypeError):
             return None
         v = max(int(min_value), min(int(max_value), int(v)))
         out.append(int(v))

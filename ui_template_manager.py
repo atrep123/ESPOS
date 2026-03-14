@@ -101,7 +101,7 @@ class TemplateLibrary:
                 return
             try:
                 backup_path.write_bytes(path.read_bytes())
-            except Exception:
+            except OSError:
                 pass
 
         if path.exists():
@@ -112,14 +112,14 @@ class TemplateLibrary:
                     for item in data:
                         try:
                             loaded.append(Template.from_dict(item))
-                        except Exception:
+                        except (KeyError, TypeError, ValueError, AttributeError):
                             # Skip malformed entries but keep the rest
                             continue
                     if loaded:
                         self.templates = loaded
                         return
                 # Fall through to defaults if empty or wrong shape
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 _backup_corrupted_file()
         # Initialize with defaults and persist, keeping a backup if we are overwriting
         if path.exists() and not backup_path.exists():
@@ -131,7 +131,7 @@ class TemplateLibrary:
         try:
             with open(self.storage_path, "w", encoding="utf-8") as f:
                 json.dump([t.to_dict() for t in self.templates], f, indent=2)
-        except Exception:
+        except OSError:
             # Persistence failures should not crash usage in tests
             pass
 
@@ -416,4 +416,9 @@ class TemplateManagerWindow:
 
 def _make_scene(scene_data: Dict[str, Any]) -> SceneLike:
     """Create a lightweight scene object that satisfies SceneLike."""
-    return type("Scene", (), {"_raw_data": scene_data})()
+
+    class _Scene:
+        def __init__(self, data: Dict[str, Any]) -> None:
+            self._raw_data = data
+
+    return _Scene(scene_data)  # type: ignore[return-value]

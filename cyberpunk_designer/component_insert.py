@@ -1,3 +1,5 @@
+"""Widget insertion logic for adding widgets to scenes."""
+
 from __future__ import annotations
 
 from typing import List, Set
@@ -5,7 +7,7 @@ from typing import List, Set
 from ui_designer import WidgetConfig
 
 from .components import component_blueprints
-from .constants import GRID, snap
+from .constants import GRID, safe_save_state, snap
 
 
 def _existing_roots(sc) -> Set[str]:
@@ -43,17 +45,16 @@ def add_component(app, name: str) -> None:
         return
     root = _unique_root(sc, comp_type)
 
-    try:
-        app.designer._save_state()
-    except Exception:
-        pass
+    safe_save_state(app.designer)
 
     base_z = 0
     try:
         base_z = max(int(getattr(w, "z_index", 0) or 0) for w in sc.widgets)
-    except Exception:
+    except (ValueError, TypeError):
         base_z = 0
 
+    if not blueprints:
+        return
     min_x = min(int(bp.get("x", 0)) for bp in blueprints)
     min_y = min(int(bp.get("y", 0)) for bp in blueprints)
     max_x = max(int(bp.get("x", 0)) + int(bp.get("width", GRID)) for bp in blueprints)
@@ -88,7 +89,7 @@ def add_component(app, name: str) -> None:
     for bp in blueprints:
         try:
             z = int(bp.get("z", 0))
-        except Exception:
+        except (ValueError, TypeError):
             z = 0
         cfg = dict(bp)
         cfg.pop("z", None)
@@ -124,11 +125,11 @@ def add_component(app, name: str) -> None:
                 z_index=int(base_z + z),
                 _widget_id=widget_id,
             )
-        except Exception:
+        except (ValueError, TypeError, KeyError):
             continue
         try:
             app._auto_complete_widget(w)
-        except Exception:
+        except AttributeError:
             pass
         sc.widgets.append(w)
         new_indices.append(len(sc.widgets) - 1)
@@ -144,7 +145,7 @@ def add_component(app, name: str) -> None:
         try:
             if not app.designer.create_group(group_name, group_members):
                 group_name = ""
-        except Exception:
+        except AttributeError:
             group_name = ""
 
     app._set_selection(group_members or new_indices, anchor_idx=(group_members or new_indices)[0])

@@ -1,9 +1,11 @@
+"""Composite widget creation: headers, nav rows, forms."""
+
 from __future__ import annotations
 
 from ui_designer import WidgetConfig
 
 from ..constants import GRID
-from .core import selection_bounds
+from .core import save_undo, selection_bounds
 
 
 def create_header_bar(app) -> None:
@@ -42,7 +44,7 @@ def create_header_bar(app) -> None:
     sc.widgets.append(label)
     app.state.selected = [base, base + 1]
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Header bar created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -81,7 +83,7 @@ def create_nav_row(app) -> None:
         sc.widgets.append(btn)
     app.state.selected = list(range(base, base + btn_count))
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status(f"Nav row: {btn_count} buttons created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -134,7 +136,7 @@ def create_form_pair(app) -> None:
     sc.widgets.append(txt)
     app.state.selected = [base, base + 1]
     app.state.selected_idx = base + 1
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Form pair created (label + textbox).", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -176,7 +178,7 @@ def create_status_bar(app) -> None:
     sc.widgets.append(label)
     app.state.selected = [base, base + 1]
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Status bar created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -220,7 +222,7 @@ def create_toggle_group(app) -> None:
         sc.widgets.append(cb)
     app.state.selected = list(range(base, base + cb_count))
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status(f"Toggle group: {cb_count} checkboxes created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -290,7 +292,7 @@ def create_slider_with_label(app) -> None:
     sc.widgets.append(val_lbl)
     app.state.selected = [base, base + 1, base + 2]
     app.state.selected_idx = base + 1
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Slider with label created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -356,7 +358,7 @@ def create_gauge_panel(app) -> None:
     sc.widgets.append(gauge)
     app.state.selected = [base, base + 1, base + 2]
     app.state.selected_idx = base + 2
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Gauge panel created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -410,7 +412,7 @@ def create_progress_section(app) -> None:
     sc.widgets.append(bar)
     app.state.selected = [base, base + 1]
     app.state.selected_idx = base + 1
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Progress section created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -453,7 +455,7 @@ def create_icon_button_row(app) -> None:
         sc.widgets.append(btn)
     app.state.selected = list(range(base, base + btn_count))
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status(f"Icon button row: {btn_count} buttons created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -533,7 +535,7 @@ def create_card_layout(app) -> None:
     sc.widgets.append(body)
     app.state.selected = list(range(base, base + 4))
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Card layout created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -613,7 +615,7 @@ def create_dashboard_grid(app) -> None:
     total = cols * rows * 3  # 3 widgets per cell
     app.state.selected = list(range(base, base + total))
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Dashboard grid (2×2) created.", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -688,7 +690,7 @@ def create_split_layout(app) -> None:
     sc.widgets.append(right_label)
     app.state.selected = list(range(base, base + 4))
     app.state.selected_idx = base
-    app._save_undo_state()
+    save_undo(app)
     app._set_status("Split layout created (2 panes).", ttl_sec=2.0)
     app._mark_dirty()
 
@@ -723,6 +725,6 @@ def wrap_in_panel(app) -> None:
     new_sel.insert(0, insert_at)
     app.state.selected = sorted(set(new_sel))
     app.state.selected_idx = insert_at
-    app._save_undo_state()
+    save_undo(app)
     app._set_status(f"Wrapped {len(new_sel) - 1} widget(s) in panel.", ttl_sec=2.0)
     app._mark_dirty()

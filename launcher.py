@@ -21,7 +21,10 @@ def print_menu() -> None:
 def run_designer() -> None:
     """Launch UI Designer (non-blocking)."""
     print("\n>> Launching UI Designer (Pygame)...")
-    subprocess.Popen([sys.executable, "run_designer.py"])
+    try:
+        subprocess.Popen([sys.executable, "run_designer.py"])
+    except OSError as exc:
+        print(f"\n[ERROR] Failed to launch designer: {exc}")
 
 
 def main() -> None:

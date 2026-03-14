@@ -1,3 +1,5 @@
+"""Editor state: selection, mode, scene, canvas tracking."""
+
 from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple
@@ -40,10 +42,17 @@ class EditorState:
         self.inspector_input_buffer: str = ""
         self.active_guides: List[Tuple[str, int]] = []
 
+    def selection_list(self) -> List[int]:
+        """Return a copy of the selected indices (always a list, never None)."""
+        return list(self.selected or [])
+
     def current_scene(self):
-        return self.designer.scenes[self.designer.current_scene]
+        """Return the active SceneConfig from the designer."""
+        key = self.designer.current_scene or ""
+        return self.designer.scenes[key]
 
     def selected_widget(self) -> Optional[WidgetConfig]:
+        """Return the currently selected widget, or None if nothing is selected."""
         sc = self.current_scene()
         if self.selected_idx is None:
             return None
@@ -52,6 +61,7 @@ class EditorState:
         return None
 
     def select_at(self, pos: Tuple[int, int], origin_rect: pygame.Rect) -> Optional[int]:
+        """Select the widget under *pos* (if any) and return its index."""
         hit = self.hit_test_at(pos, origin_rect)
         if hit is not None:
             self.selected_idx = hit
@@ -63,6 +73,7 @@ class EditorState:
         return hit
 
     def hit_test_at(self, pos: Tuple[int, int], origin_rect: pygame.Rect) -> Optional[int]:
+        """Return the index of the topmost visible widget at *pos*, or None."""
         lx, ly = pos
         sc = self.current_scene()
         for idx in reversed(range(len(sc.widgets))):

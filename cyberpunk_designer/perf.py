@@ -1,3 +1,5 @@
+"""Performance utilities: render cache, smart event queue."""
+
 from __future__ import annotations
 
 import concurrent.futures
@@ -28,6 +30,50 @@ class RenderCache:
             del self.cache[lru]
         self.cache[key] = surface
 
+    @staticmethod
+    def frame_cache_key(
+        scale: int,
+        selected_idx: Optional[int],
+        selected: List[int],
+        show_help: bool,
+        current_scene: Optional[str],
+        widget_count: int,
+    ) -> int:
+        """Compute a deterministic cache key for the current frame state."""
+        return hash((
+            scale,
+            selected_idx,
+            tuple(sorted(selected)),
+            int(bool(show_help)),
+            current_scene,
+            widget_count,
+        ))
+
+
+def compute_dirty_rects(
+    layout,
+    state,
+    force_full: bool,
+    show_help: bool,
+) -> List[pygame.Rect]:
+    """Determine which screen regions need redrawing.
+
+    Returns a list of dirty rectangles. If the whole screen needs
+    repainting, a single rect covering the full layout is returned.
+    """
+    if force_full or show_help:
+        return [pygame.Rect(0, 0, layout.width, layout.height)]
+
+    rects: List[pygame.Rect] = []
+    if getattr(state, "dragging", False) or getattr(state, "resizing", False):
+        rects.append(layout.canvas_rect)
+    elif getattr(state, "inspector_selected_field", None):
+        rects.append(layout.inspector_rect)
+
+    if not rects:
+        rects = [pygame.Rect(0, 0, layout.width, layout.height)]
+    return rects
+
 
 class SmartEventQueue:
     """Intelligent event queue with prediction and auto-handling."""
@@ -54,7 +100,7 @@ class SmartEventQueue:
             for fut in futures:
                 try:
                     self.queue.append(fut.result())
-                except Exception:
+                except (RuntimeError, OSError):
                     continue
 
         out = list(self.queue)

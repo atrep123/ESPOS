@@ -1,10 +1,12 @@
+"""Auto-fit widget size to its text content."""
+
 from __future__ import annotations
 
 from typing import Optional
 
 from ui_designer import WidgetConfig
 
-from .constants import GRID, snap
+from .constants import GRID, safe_save_state, snap
 from .text_metrics import DEVICE_CHAR_H, DEVICE_CHAR_W, is_device_profile, wrap_text_chars
 
 
@@ -36,7 +38,7 @@ def fit_selection_to_widget(app) -> None:
                 return None
             v = int(raw)
             return v if v > 0 else None
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     saved = False
@@ -84,8 +86,38 @@ def fit_selection_to_widget(app) -> None:
                 txt_w = app._text_width_px(flat)
                 needed_w = int(txt_w + GRID + pad * 2)
                 needed_h = int(max(line_h, GRID) + pad * 2)
+        elif kind == "list":
+            items = list(getattr(w, "items", None) or [])
+            if not items:
+                items = text.split("\n") if "\n" in text else [text]
+            items = [it for it in items if it.strip()]
+            n = max(1, len(items))
+            border_inset = 1 if bool(getattr(w, "border", True)) else 0
+            if use_device:
+                max_item_w = max((len(it) * DEVICE_CHAR_W for it in items), default=DEVICE_CHAR_W)
+                needed_w = int(max_item_w + (border_inset + 1) * 2)
+                needed_h = int(n * DEVICE_CHAR_H + (border_inset + 1) * 2)
+            else:
+                max_item_w = max(
+                    (app._text_width_px(it) for it in items), default=line_h
+                )
+                needed_w = int(max_item_w + pad * 2)
+                needed_h = int(n * line_h + pad * 2)
+        elif kind == "toggle":
+            flat = text.replace("\t", " ").replace("\n", " ").strip()
+            track_h = max(line_h, DEVICE_CHAR_H if use_device else GRID)
+            track_w = track_h * 2
+            if use_device:
+                txt_w = len(flat) * DEVICE_CHAR_W if flat else 0
+                needed_w = int(track_w + (txt_w + 4 if txt_w else 0) + 4)
+                needed_h = int(track_h + 4)
+            else:
+                txt_w = app._text_width_px(flat) if flat else 0
+                needed_w = int(track_w + (txt_w + pad if txt_w else 0) + pad * 2)
+                needed_h = int(track_h + pad * 2)
         else:
             wrap_mode = overflow in {"wrap", "auto"}
+            max_chars = 1
             if wrap_mode:
                 if use_device:
                     avail_w = max(
@@ -152,10 +184,7 @@ def fit_selection_to_widget(app) -> None:
             continue
 
         if not saved:
-            try:
-                app.designer._save_state()
-            except Exception:
-                pass
+            safe_save_state(app.designer)
             saved = True
 
         w.x = x
