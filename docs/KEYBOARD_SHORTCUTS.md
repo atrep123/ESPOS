@@ -258,6 +258,7 @@
 | Tab | Toggle panels |
 | Shift+G | Center guides |
 | Ctrl+W | Scene stats |
+| Ctrl+/ | Quick reference panel |
 | Ctrl+F1 | Type summary |
 | Ctrl+F2 | Focus order overlay |
 | Ctrl+F4 | Zoom to selection |

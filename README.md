@@ -76,7 +76,7 @@ python -m pip install -r requirements.txt
 python run_designer.py main_scene.json --profile esp32os_256x128_gray4
 ```
 
-Tip: `Ctrl+F` = Fit Text, `Ctrl+Shift+F` = Fit Widget, `F3` = overflow warnings, `F2` = input simulation mode (D-pad/encoder).
+Tip: `Ctrl+F` = Fit Text, `Ctrl+Shift+F` = Fit Widget, `F3` = overflow warnings, `F2` = input simulation mode (D-pad/encoder), `Ctrl+/` = quick-ref panel, `Tpl` toolbar button = template picker.
 
 ## Export do C (header)
 

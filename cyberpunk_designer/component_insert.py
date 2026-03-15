@@ -53,8 +53,6 @@ def add_component(app, name: str) -> None:
     except (ValueError, TypeError):
         base_z = 0
 
-    if not blueprints:
-        return
     min_x = min(int(bp.get("x", 0)) for bp in blueprints)
     min_y = min(int(bp.get("y", 0)) for bp in blueprints)
     max_x = max(int(bp.get("x", 0)) + int(bp.get("width", GRID)) for bp in blueprints)

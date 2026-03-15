@@ -44,6 +44,10 @@ CI sestává ze dvou jobů:
 - **Python (pytest)**: ruff lint + format, mypy (strict codegen + advisory designer), JSON validace, codegen freshness, guardrail testy, plný pytest s coverage (fail-under=90%).
 - **Firmware (PlatformIO)**: native testy, ESP32-S3 build, Arduino Nano ESP32 build. PlatformIO je cachováno.
 
+## Keyboard shortcuts
+
+Complete reference: [`docs/KEYBOARD_SHORTCUTS.md`](docs/KEYBOARD_SHORTCUTS.md). In-app: press **F1** (help overlay) or **Ctrl+/** (quick-ref panel).
+
 ## Poznamky k native testum (Windows)
 
 - `pio test -e native` potrebuje mit `gcc` v `PATH`.
