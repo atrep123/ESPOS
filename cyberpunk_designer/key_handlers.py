@@ -242,6 +242,10 @@ def on_key_down(app, event: pygame.event.Event) -> None:
     if event.key == pygame.K_F1:
         app._toggle_help_overlay()
         return
+    if event.key == pygame.K_SLASH and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+        app.show_shortcuts_panel = not app.show_shortcuts_panel
+        app._mark_dirty()
+        return
 
     if bool(getattr(app, "show_help_overlay", False)) and bool(getattr(app, "_help_pinned", False)):
         if event.key == pygame.K_ESCAPE:
@@ -323,6 +327,10 @@ def on_key_down(app, event: pygame.event.Event) -> None:
         return
 
     if event.key == pygame.K_ESCAPE:
+        if getattr(app, "show_shortcuts_panel", False):
+            app.show_shortcuts_panel = False
+            app._mark_dirty()
+            return
         if app.sim_input_mode:
             if app.focus_edit_value:
                 app.focus_edit_value = False

@@ -12,6 +12,7 @@ from .overlays import (
     TOOLBAR_TOOLTIPS,
     draw_context_menu,
     draw_help_overlay,
+    draw_shortcuts_panel,
     draw_tooltip,
 )
 from .panels import (
@@ -65,6 +66,7 @@ __all__ = [
     "draw_scene_tabs",
     "draw_scrollbar",
     "draw_selection_info",
+    "draw_shortcuts_panel",
     "draw_status",
     "draw_text_clipped",
     "draw_text_in_rect",

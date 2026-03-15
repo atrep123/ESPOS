@@ -169,6 +169,7 @@ class CyberpunkEditorApp:
         self.show_help_overlay: bool = True
         self._help_shown_once: bool = False
         self._help_pinned: bool = False
+        self.show_shortcuts_panel: bool = False
         self._default_palette_w = DEFAULT_PALETTE_W
         self._default_inspector_w = DEFAULT_INSPECTOR_W
         self.panels_collapsed = False
@@ -740,6 +741,7 @@ class CyberpunkEditorApp:
         if self.show_help_overlay:
             drawing.draw_help_overlay(self)
 
+        drawing.draw_shortcuts_panel(self)
         drawing.draw_context_menu(self)
         drawing.draw_tooltip(self)
 

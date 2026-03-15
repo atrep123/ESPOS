@@ -471,3 +471,167 @@ def draw_help_overlay(app) -> None:
             max_lines=999,
             use_device_font=False,
         )
+
+
+# ── Quick-reference shortcuts panel (Ctrl+/) ──────────────────────────
+
+
+_QUICKREF_SECTIONS = [
+    (
+        "Selection",
+        [
+            "LMB  select/drag",
+            "Shift+click  range",
+            "Ctrl+click  toggle",
+            "Ctrl+A  all",
+            "Ctrl+I  invert",
+            "N/P  next/prev",
+            "/  search",
+        ],
+    ),
+    (
+        "Edit",
+        [
+            "Ctrl+Z  undo",
+            "Ctrl+Y  redo",
+            "Ctrl+C/X/V  copy/cut/paste",
+            "Ctrl+D  dup",
+            "Del  delete",
+            "R  rename",
+            "E  smart edit",
+        ],
+    ),
+    (
+        "Layout",
+        [
+            "Arrows  nudge",
+            "Ctrl+Arrow  1px",
+            ";/' stack V/H",
+            ". center",
+            "F6/F7  row/col",
+            "Ctrl+Alt+G  grid",
+        ],
+    ),
+    (
+        "Widgets",
+        [
+            "1-9  quick add",
+            "T  cycle type",
+            "S  style",
+            "B  border",
+            "Q  color",
+            "L  lock",
+            "V  show/hide",
+        ],
+    ),
+    (
+        "Scenes",
+        [
+            "Ctrl+N  new",
+            "Ctrl+1-9  jump",
+            "Ctrl+Tab  next",
+            "Ctrl+S  save",
+            "Ctrl+L  load",
+            "Ctrl+E  export C",
+        ],
+    ),
+    (
+        "View",
+        [
+            "G  grid",
+            "X  snap",
+            "F1  help",
+            "F4  zoom-fit",
+            "Ctrl+0  reset zoom",
+            "F9  preview",
+            "F11  fullscreen",
+        ],
+    ),
+]
+
+
+def draw_shortcuts_panel(app) -> None:
+    """Draw a compact categorized quick-reference (toggle via Ctrl+/)."""
+    if not bool(getattr(app, "show_shortcuts_panel", False)):
+        return
+    surface = getattr(app, "logical_surface", None)
+    if surface is None:
+        return
+    layout = getattr(app, "layout", None)
+    if layout is None:
+        return
+    w = int(getattr(layout, "width", 0) or 0)
+    h = int(getattr(layout, "height", 0) or 0)
+    if w <= 0 or h <= 0:
+        return
+
+    dim = pygame.Surface((w, h), pygame.SRCALPHA)
+    dim.fill((0, 0, 0, 140))
+    surface.blit(dim, (0, 0))
+
+    pad = max(2, int(getattr(app, "pixel_padding", 0) or 0))
+    row_h = max(1, int(getattr(app, "pixel_row_height", 0) or 0))
+
+    n_cols = len(_QUICKREF_SECTIONS)
+    margin = GRID * 2
+    panel_w = max(GRID * 18, min(w - margin * 2, GRID * 56))
+    panel_w = max(GRID * 10, snap(panel_w))
+    max_rows = max(len(items) for _, items in _QUICKREF_SECTIONS)
+    panel_h = max(GRID * 8, min(h - margin * 2, row_h * (max_rows + 2) + pad * 2))
+    panel_h = max(GRID * 6, snap(panel_h))
+    x = snap((w - panel_w) // 2)
+    y = snap((h - panel_h) // 2)
+    panel_rect = pygame.Rect(x, y, panel_w, panel_h)
+
+    draw_pixel_panel_bg(app, panel_rect)
+
+    # Title
+    title_rect = pygame.Rect(x + pad, y, panel_w - 2 * pad, row_h)
+    draw_text_clipped(
+        app,
+        surface=surface,
+        text="Quick Reference (Ctrl+/ = close)",
+        rect=title_rect,
+        fg=PALETTE["accent_yellow"],
+        padding=0,
+        align="left",
+        valign="middle",
+        max_lines=1,
+        use_device_font=False,
+    )
+
+    col_w = max(1, (panel_w - pad * 2) // max(1, n_cols))
+    body_y = y + row_h + pad
+
+    for ci, (header, items) in enumerate(_QUICKREF_SECTIONS):
+        cx = x + pad + ci * col_w
+        header_rect = pygame.Rect(cx, body_y, col_w - pad, row_h)
+        draw_text_clipped(
+            app,
+            surface=surface,
+            text=header,
+            rect=header_rect,
+            fg=PALETTE["accent_cyan"],
+            padding=0,
+            align="left",
+            valign="middle",
+            max_lines=1,
+            use_device_font=False,
+        )
+        for ri, item in enumerate(items):
+            iy = body_y + row_h * (ri + 1)
+            if iy + row_h > y + panel_h - pad:
+                break
+            item_rect = pygame.Rect(cx, iy, col_w - pad, row_h)
+            draw_text_clipped(
+                app,
+                surface=surface,
+                text=item,
+                rect=item_rect,
+                fg=PALETTE["text"],
+                padding=0,
+                align="left",
+                valign="middle",
+                max_lines=1,
+                use_device_font=False,
+            )
