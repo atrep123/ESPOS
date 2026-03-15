@@ -44,3 +44,44 @@ def temp_json(tmp_path):
 @pytest.fixture(autouse=True)
 def isolate_templates_storage(tmp_path, monkeypatch):
     monkeypatch.setenv("ESP32OS_TEMPLATES_PATH", str(tmp_path / "templates.json"))
+
+
+@pytest.fixture
+def make_app(tmp_path, monkeypatch):
+    """Factory fixture to create a CyberpunkEditorApp with common defaults.
+
+    Usage::
+
+        def test_something(make_app):
+            app = make_app()
+            app = make_app(widgets=[WidgetConfig(...)])
+            app = make_app(profile="...", snap=True)
+    """
+    from cyberpunk_editor import CyberpunkEditorApp
+
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
+    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+
+    def _factory(
+        *,
+        widgets=None,
+        profile=None,
+        snap=False,
+        extra_scenes=False,
+        size=(256, 128),
+    ):
+        json_path = tmp_path / "scene.json"
+        app = CyberpunkEditorApp(json_path, size)
+        if profile:
+            app.hardware_profile = profile
+        app.snap_enabled = snap
+        if widgets:
+            sc = app.state.current_scene()
+            for w in widgets:
+                sc.widgets.append(w)
+        if extra_scenes:
+            app.designer.create_scene("scene2")
+        return app
+
+    return _factory

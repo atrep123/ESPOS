@@ -6,16 +6,7 @@ app.designer.undo() correctly restores previous widget state.
 
 from __future__ import annotations
 
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    return CyberpunkEditorApp(json_path, (256, 128))
 
 
 def _add(app, **kw):
@@ -42,8 +33,8 @@ def _commit(app, field, buf):
 
 
 class TestUndoPosition:
-    def test_position_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_position_undo(self, make_app):
+        app = make_app()
         w = _add(app, x=10, y=20)
         _sel(app, 0)
         _commit(app, "_position", "50,60")
@@ -53,8 +44,8 @@ class TestUndoPosition:
         assert sc.widgets[0].x == 10
         assert sc.widgets[0].y == 20
 
-    def test_position_redo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_position_redo(self, make_app):
+        app = make_app()
         _add(app, x=10, y=20)
         _sel(app, 0)
         _commit(app, "_position", "50,60")
@@ -69,8 +60,8 @@ class TestUndoPosition:
 
 
 class TestUndoZindex:
-    def test_single_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_single_widget(self, make_app):
+        app = make_app()
         _add(app, z_index=0)
         _sel(app, 0)
         _commit(app, "z_index", "5")
@@ -80,8 +71,8 @@ class TestUndoZindex:
         sc = app.state.current_scene()
         assert sc.widgets[0].z_index == 0
 
-    def test_multi_select(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multi_select(self, make_app):
+        app = make_app()
         _add(app, z_index=1)
         _add(app, z_index=2)
         _sel(app, 0, 1)
@@ -99,8 +90,8 @@ class TestUndoZindex:
 
 
 class TestUndoValue:
-    def test_value_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_value_undo(self, make_app):
+        app = make_app()
         _add(app, type="slider", value=30, width=80, height=16)
         _sel(app, 0)
         _commit(app, "value", "75")
@@ -110,8 +101,8 @@ class TestUndoValue:
         sc = app.state.current_scene()
         assert sc.widgets[0].value == 30
 
-    def test_multi_value_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multi_value_undo(self, make_app):
+        app = make_app()
         _add(app, type="slider", value=10, width=80, height=16)
         _add(app, type="gauge", value=20, width=80, height=16)
         _sel(app, 0, 1)
@@ -126,8 +117,8 @@ class TestUndoValue:
 
 
 class TestUndoChecked:
-    def test_checked_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_checked_undo(self, make_app):
+        app = make_app()
         _add(app, type="checkbox", checked=False, width=14, height=14)
         _sel(app, 0)
         _commit(app, "checked", "true")
@@ -137,8 +128,8 @@ class TestUndoChecked:
         sc = app.state.current_scene()
         assert sc.widgets[0].checked is False
 
-    def test_multi_checked_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multi_checked_undo(self, make_app):
+        app = make_app()
         _add(app, type="checkbox", checked=True, width=14, height=14, text="a")
         _add(app, type="toggle", checked=False, width=60, height=14, text="b")
         _sel(app, 0, 1)
@@ -156,8 +147,8 @@ class TestUndoChecked:
 
 
 class TestUndoText:
-    def test_text_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_text_undo(self, make_app):
+        app = make_app()
         _add(app, text="hello")
         _sel(app, 0)
         _commit(app, "text", "world")
@@ -172,8 +163,8 @@ class TestUndoText:
 
 
 class TestUndoColor:
-    def test_color_fg_undo(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_color_fg_undo(self, make_app):
+        app = make_app()
         _add(app, color_fg="white")
         _sel(app, 0)
         _commit(app, "color_fg", "#FF0000")
@@ -188,8 +179,8 @@ class TestUndoColor:
 
 
 class TestMultipleUndoSteps:
-    def test_two_edits_two_undos(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_two_edits_two_undos(self, make_app):
+        app = make_app()
         _add(app, x=0, y=0)
         _sel(app, 0)
         _commit(app, "_position", "10,10")
@@ -203,8 +194,8 @@ class TestMultipleUndoSteps:
         sc = app.state.current_scene()
         assert sc.widgets[0].x == 0
 
-    def test_undo_no_stack_returns_false(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_undo_no_stack_returns_false(self, make_app):
+        app = make_app()
         _add(app)
         assert app.designer.undo() is False
 
@@ -213,8 +204,8 @@ class TestMultipleUndoSteps:
 
 
 class TestUndoWidgetCount:
-    def test_undo_preserves_count(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_undo_preserves_count(self, make_app):
+        app = make_app()
         _add(app, text="A")
         _add(app, text="B")
         _sel(app, 0, 1)

@@ -490,7 +490,7 @@ def inspector_commit_edit(app) -> bool:
             # Rename the component group itself to keep type/root discoverable.
             try:
                 groups = getattr(app.designer, "groups", None)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError):  # pragma: no cover
                 groups = None
             if isinstance(groups, dict) and group_name in groups:
                 members_copy = list(groups.get(group_name) or [])
@@ -501,7 +501,7 @@ def inspector_commit_edit(app) -> bool:
             # Invalidate runtime listmodel cache (simulation mode) if present.
             try:
                 models = getattr(app, "_sim_listmodels", None)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError):  # pragma: no cover
                 models = None
             if isinstance(models, dict):
                 models.pop(str(root or ""), None)
@@ -621,7 +621,7 @@ def inspector_commit_edit(app) -> bool:
                 active = max(0, min(active, max(0, new_count - 1)))
             try:
                 models = getattr(app, "_sim_listmodels", None)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError):  # pragma: no cover
                 models = None
             if isinstance(models, dict):
                 models.pop(str(root or ""), None)

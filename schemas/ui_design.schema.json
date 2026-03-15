@@ -127,7 +127,13 @@
           "type": "string"
         },
         "style": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "default",
+            "bold",
+            "inverse",
+            "highlight"
+          ]
         },
         "color_fg": {
           "$ref": "#/$defs/color"

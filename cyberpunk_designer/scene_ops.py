@@ -667,7 +667,7 @@ def add_widget(app: CyberpunkEditorApp, kind: str) -> None:
         auto_complete_widget(app, w)
         bx, by = find_best_position(app, w, sc)
         w.x, w.y = int(bx), int(by)
-    except (ValueError, TypeError, AttributeError):
+    except (ValueError, TypeError, AttributeError):  # pragma: no cover
         pass
     sc.widgets.append(w)
     idx = len(sc.widgets) - 1

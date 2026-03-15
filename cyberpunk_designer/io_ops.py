@@ -18,6 +18,38 @@ from .state import EditorState
 
 logger = logging.getLogger(__name__)
 
+_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "ui_design.schema.json"
+_schema_cache: dict | None = None
+
+
+def _load_schema() -> dict | None:
+    """Load and cache the JSON schema (best-effort)."""
+    global _schema_cache
+    if _schema_cache is not None:
+        return _schema_cache
+    try:
+        _schema_cache = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        _schema_cache = None  # type: ignore[assignment]
+    return _schema_cache
+
+
+def validate_design(app) -> list[str]:
+    """Validate current design against JSON schema. Returns list of error messages."""
+    try:
+        import jsonschema
+    except ImportError:
+        return []
+    schema = _load_schema()
+    if schema is None:
+        return []
+    try:
+        data = json.loads(json.dumps(app.designer.to_dict(), default=str))
+        validator = jsonschema.Draft202012Validator(schema)
+        return [e.message for e in validator.iter_errors(data)]
+    except Exception:
+        return []
+
 
 def load_or_default(app) -> None:
     base_exists = app.json_path.exists()
@@ -149,6 +181,9 @@ def save_prefs(app) -> None:
 
 
 def save_json(app) -> None:
+    errors = validate_design(app)
+    if errors:
+        logger.warning("Design validation warnings: %s", errors[:5])
     import tempfile
 
     target = str(app.json_path)
@@ -160,7 +195,7 @@ def save_json(app) -> None:
         app.designer.save_to_json(tmp_path)
         os.replace(tmp_path, target)
         tmp_path = None  # replaced successfully, no cleanup needed
-    except OSError:
+    except OSError:  # pragma: no cover
         logger.warning("Atomic save failed, falling back to direct write", exc_info=True)
         # Fallback: direct save
         if tmp_path is not None:

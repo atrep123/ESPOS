@@ -32,7 +32,7 @@
   "reportMissingParameterType": false,
   "reportUnnecessaryComparison": "warning",
   "reportUnnecessaryIsInstance": "warning",
-  "reportUnnecessaryTypeIgnoreComment": false,
+  "reportUnnecessaryTypeIgnoreComment": "warning",
   "reportUnusedFunction": "warning",
   "reportUnknownLambdaType": false,
   "reportMissingTypeArgument": false,
