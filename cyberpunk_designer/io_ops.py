@@ -47,7 +47,7 @@ def validate_design(app) -> list[str]:
         data = json.loads(json.dumps(app.designer.to_dict(), default=str))
         validator = jsonschema.Draft202012Validator(schema)
         return [e.message for e in validator.iter_errors(data)]
-    except Exception:
+    except (json.JSONDecodeError, ValueError, TypeError, OSError, AttributeError):
         return []
 
 

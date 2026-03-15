@@ -56,13 +56,15 @@ jobs:
         env:
           PYTHONIOENCODING: "utf-8"
         run: |
-          python -m pytest -q --tb=short --ignore=output -n auto --cov=. --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=90
+          python -m pytest -q --tb=short --ignore=output -n auto --cov=. --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=97
       - name: Mutation testing (advisory)
         if: matrix.python-version == '3.12'
         continue-on-error: true
+        timeout-minutes: 20
         run: |
-          python -m mutmut run --no-progress 2>&1 | tail -20
-          python -m mutmut results 2>&1 | tail -30
+          python -m mutmut run --no-progress 2>&1 | tail -30
+          python -m mutmut results 2>&1 | tail -40
+          python -m mutmut html 2>/dev/null || true
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4

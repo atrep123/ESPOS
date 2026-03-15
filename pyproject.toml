@@ -63,7 +63,6 @@ ignore = [
     "RUF003", # ambiguous unicode character in comment
     "RUF059", # unused __all__ entry (noisy for re-export packages)
     "SIM102", # collapsible nested ifs (intentionally nested for readability)
-    "SIM115", # open() without context manager (acceptable patterns)
 ]
 
 [tool.ruff.lint.per-file-ignores]

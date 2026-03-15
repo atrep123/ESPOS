@@ -8,6 +8,7 @@ export_to_html, show_command_help, get_widget_help, enable_pixel_art_mode, previ
 """
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -504,7 +505,7 @@ class TestExportToHtml:
         out = str(tmp_path / "test.html")
         d.export_to_html(out)
         assert os.path.exists(out)
-        content = open(out, encoding="utf-8").read()
+        content = Path(out).read_text(encoding="utf-8")
         assert "<!DOCTYPE html>" in content
         assert "main" in content  # scene name
 
@@ -512,7 +513,7 @@ class TestExportToHtml:
         d, sc = _make_designer_with_scene(3)
         out = str(tmp_path / "test.html")
         d.export_to_html(out)
-        content = open(out, encoding="utf-8").read()
+        content = Path(out).read_text(encoding="utf-8")
         assert "Widgets: 3" in content
 
     def test_no_scene_no_file(self, tmp_path):
@@ -526,7 +527,7 @@ class TestExportToHtml:
         sc.widgets[0].text = "<script>alert(1)</script>"
         out = str(tmp_path / "test.html")
         d.export_to_html(out)
-        content = open(out, encoding="utf-8").read()
+        content = Path(out).read_text(encoding="utf-8")
         assert "<script>" not in content  # should be escaped
 
 
