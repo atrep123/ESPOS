@@ -4,6 +4,7 @@ windowing.py, and components.py — targeting uncovered lines."""
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pygame
@@ -386,7 +387,7 @@ class _BadScene:
     def height(self):
         raise AttributeError("no height")
 
-    widgets = []
+    widgets: ClassVar[list] = []
 
 
 class TestComponentBlueprintsExceptions:

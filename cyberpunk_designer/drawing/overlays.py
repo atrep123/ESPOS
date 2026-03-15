@@ -458,7 +458,7 @@ def draw_help_overlay(app) -> None:
             use_device_font=False,
         )
     else:
-        combined = "\n".join(["Shortcuts"] + shortcuts + ["", "Self-check"] + info)
+        combined = "\n".join(["Shortcuts", *shortcuts, "", "Self-check", *info])
         draw_text_clipped(
             app,
             surface=surface,

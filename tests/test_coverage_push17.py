@@ -73,16 +73,17 @@ class TestConstructorEnvBranches:
         """L165: no CLI profile + prefs has 'profile' key → applied."""
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-        # Patch _load_prefs to set a profile in prefs
+        # Patch io_ops.load_prefs to set a profile in prefs
+        from cyberpunk_designer import io_ops
         from cyberpunk_editor import CyberpunkEditorApp
 
-        orig_load = CyberpunkEditorApp._load_prefs
+        orig_load = io_ops.load_prefs
 
         def _fake_load(self_):
             orig_load(self_)
             self_.prefs["profile"] = "esp32os_256x128_gray4"
 
-        monkeypatch.setattr(CyberpunkEditorApp, "_load_prefs", _fake_load)
+        monkeypatch.setattr(io_ops, "load_prefs", _fake_load)
         app = CyberpunkEditorApp(tmp_path / "s.json", (256, 128))
         assert app.hardware_profile == "esp32os_256x128_gray4"
 
@@ -90,16 +91,17 @@ class TestConstructorEnvBranches:
         """L169-177: prefs has live_port and live_baud."""
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
+        from cyberpunk_designer import io_ops
         from cyberpunk_editor import CyberpunkEditorApp
 
-        orig_load = CyberpunkEditorApp._load_prefs
+        orig_load = io_ops.load_prefs
 
         def _fake_load(self_):
             orig_load(self_)
             self_.prefs["live_port"] = "COM99"
             self_.prefs["live_baud"] = "9600"
 
-        monkeypatch.setattr(CyberpunkEditorApp, "_load_prefs", _fake_load)
+        monkeypatch.setattr(io_ops, "load_prefs", _fake_load)
         app = CyberpunkEditorApp(tmp_path / "s.json", (256, 128))
         assert app.live_preview_port == "COM99"
         assert app.live_preview_baud == 9600
@@ -108,15 +110,16 @@ class TestConstructorEnvBranches:
         """L176-177: prefs live_baud=bad → except → 115200."""
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
+        from cyberpunk_designer import io_ops
         from cyberpunk_editor import CyberpunkEditorApp
 
-        orig_load = CyberpunkEditorApp._load_prefs
+        orig_load = io_ops.load_prefs
 
         def _fake_load(self_):
             orig_load(self_)
             self_.prefs["live_baud"] = "bad_value"
 
-        monkeypatch.setattr(CyberpunkEditorApp, "_load_prefs", _fake_load)
+        monkeypatch.setattr(io_ops, "load_prefs", _fake_load)
         app = CyberpunkEditorApp(tmp_path / "s.json", (256, 128))
         assert app.live_preview_baud == 115200
 

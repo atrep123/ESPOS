@@ -13,19 +13,23 @@ from ui_models import WidgetConfig
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
+
 def _make_save_raise(app):
     """Make _save_state raise so except-branches are covered."""
     app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
+
 
 def _make_asdict_raise(monkeypatch):
     """Monkeypatch asdict in a module so WidgetConfig(**asdict(w)) raises."""
     # We'll use a broken __iter__ on widget instead
     pass
+
 
 class _BrokenWidget:
     """Widget-like object whose asdict() will raise."""
@@ -38,9 +42,11 @@ class _BrokenWidget:
         self.height = 20
         self.text = "hello"
 
+
 # ===========================================================================
 # selection_ops/clipboard.py
 # ===========================================================================
+
 
 class TestClipboardExceptions:
     """Cover except-branches in clipboard.py."""
@@ -412,9 +418,11 @@ class TestClipboardExceptions:
         app.state.selected = [999]
         clipboard.export_selection_json(app)
 
+
 # ===========================================================================
 # selection_ops/transforms.py
 # ===========================================================================
+
 
 class TestTransformsExceptions:
     """Cover except-branches in transforms.py."""
@@ -491,9 +499,7 @@ class TestTransformsExceptions:
     def test_resize_with_snap(self, make_app):
         from cyberpunk_designer.selection_ops import transforms
 
-        app = make_app(
-            widgets=[_w(x=8, y=8, width=40, height=24)], snap=True
-        )
+        app = make_app(widgets=[_w(x=8, y=8, width=40, height=24)], snap=True)
         app.state.selected = [0]
         result = transforms.resize_selection_to(app, 80, 48)
         assert result is True
@@ -804,9 +810,11 @@ class TestTransformsExceptions:
         app.state.selected = [0]
         transforms.move_selection(app, 10, 10)
 
+
 # ===========================================================================
 # selection_ops/propagation.py
 # ===========================================================================
+
 
 class TestPropagationExceptions:
     """Cover except-branches in propagation.py."""
@@ -1108,9 +1116,11 @@ class TestPropagationExceptions:
         propagation.propagate_text(app)
         assert app.state.current_scene().widgets[1].text == "src"
 
+
 # ===========================================================================
 # Additional clipboard.py tests for remaining uncovered lines
 # ===========================================================================
+
 
 class TestClipboardExtraEdges:
     # ---- copy_to_next_scene: current not in names (lines 136-137) ----
@@ -1155,6 +1165,7 @@ class TestClipboardExtraEdges:
         app.state.selected = [0]
         clipboard.broadcast_to_all_scenes(app)
 
+
 # ===========================================================================
 # selection_ops/layout.py — exception branches and edge cases
 # ===========================================================================
@@ -1171,6 +1182,7 @@ _LAYOUT_2PLUS = [
     "space_evenly_v",
     "grid_arrange",
 ]
+
 
 class TestLayoutSelectOpsEdges:
     """Cover except/return branches in selection_ops/layout.py."""
@@ -1216,9 +1228,7 @@ class TestLayoutSelectOpsEdges:
     def test_equalize_gaps_auto(self, make_app):
         from cyberpunk_designer.selection_ops import layout as layout_mod
 
-        app = make_app(
-            widgets=[_w(x=0, y=0, width=20), _w(x=40, y=0, width=20)]
-        )
+        app = make_app(widgets=[_w(x=0, y=0, width=20), _w(x=40, y=0, width=20)])
         app.state.selected = [0, 1]
         layout_mod.equalize_gaps(app, axis="auto")
 
@@ -1339,6 +1349,7 @@ class TestLayoutSelectOpsEdges:
         app.state.selected = [0, 1, 2]
         layout_mod.distribute_columns_3(app)
 
+
 # ===========================================================================
 # selection_ops/batch_ops.py — exception branches and edge cases
 # ===========================================================================
@@ -1378,6 +1389,7 @@ _BATCH_EMPTY_RETURN = [
     "increment_text",
     "measure_selection",
 ]
+
 
 class TestBatchOpsEdges:
     """Cover except/return branches in selection_ops/batch_ops.py."""
@@ -1577,6 +1589,7 @@ class TestBatchOpsEdges:
         app = make_app()
         batch_ops.flatten_z_indices(app)
 
+
 # ---------------------------------------------------------------------------
 # property_cycles.py — _save_state except & OOB default branches
 # ---------------------------------------------------------------------------
@@ -1616,6 +1629,7 @@ _UNDO_OOB = [
     "set_default_style",
     "outline_only",
 ]
+
 
 class TestPropertyCyclesEdges:
     """Cover _save_state except and OOB first_idx branches in property_cycles."""
@@ -1838,6 +1852,7 @@ class TestPropertyCyclesEdges:
         app.state.selected = []
         batch_ops.zoom_to_selection(app)
 
+
 # ---------------------------------------------------------------------------
 # query_select.py — OOB returns, empty-scene, edge branches
 # ---------------------------------------------------------------------------
@@ -1853,6 +1868,7 @@ _QS_OOB = [
     "select_same_size",
     "select_same_type_as_current",
 ]
+
 
 class TestQuerySelectEdges:
     """Cover OOB returns and edge branches in query_select."""
@@ -1892,9 +1908,7 @@ class TestQuerySelectEdges:
     def test_overflow_icon_branch(self, make_app):
         from cyberpunk_designer.selection_ops import query_select as qs
 
-        app = make_app(
-            widgets=[_w(type="icon", icon_char="X", width=10, height=10)]
-        )
+        app = make_app(widgets=[_w(type="icon", icon_char="X", width=10, height=10)])
         qs.select_overflow(app)
 
     # select_overflow: no overflow found (large widget, small text)

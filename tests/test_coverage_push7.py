@@ -14,21 +14,26 @@ CTRL = pygame.KMOD_CTRL
 SHIFT = pygame.KMOD_SHIFT
 ALT = pygame.KMOD_ALT
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
+
 def _sel(app, *indices):
     app.state.selected = list(indices)
     app.state.selected_idx = indices[0] if indices else None
 
+
 def _key(key, mod=0, unicode=""):
     return pygame.event.Event(pygame.KEYDOWN, key=key, mod=mod, unicode=unicode)
+
 
 # ---------------------------------------------------------------------------
 # Menu component helper — creates a full "menu" component for testing
 # ---------------------------------------------------------------------------
+
 
 def _setup_menu_component(app):
     """Set up a menu component with root 'nav', 3 items + title + scroll + panel."""
@@ -66,6 +71,7 @@ def _setup_menu_component(app):
     _sel(app, *members)
     return members
 
+
 def _setup_tabs_component(app):
     """Set up a tabs component with root 'tb', 3 tabs + tabbar + content title."""
     sc = app.state.current_scene()
@@ -97,6 +103,7 @@ def _setup_tabs_component(app):
     _sel(app, *members)
     return members
 
+
 def _setup_chart_component(app):
     """Set up a chart_bar component with root 'ch'."""
     sc = app.state.current_scene()
@@ -114,6 +121,7 @@ def _setup_chart_component(app):
     app.designer.groups = {"comp:chart_bar:ch:1": members}
     _sel(app, *members)
     return members
+
 
 def _setup_list_component(app):
     """Set up a list component with root 'lst', 3 items + scroll + title + panel."""
@@ -153,9 +161,11 @@ def _setup_list_component(app):
     _sel(app, *members)
     return members
 
+
 # ===========================================================================
 # inspector_logic — component editing (comp.root rename)
 # ===========================================================================
+
 
 class TestCompRootRename:
     """Cover component root rename in inspector_commit_edit (L544-620)."""
@@ -233,9 +243,11 @@ class TestCompRootRename:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component menu_active editing
 # ===========================================================================
+
 
 class TestCompMenuActive:
     """Cover menu_active editing (L637-676)."""
@@ -308,9 +320,11 @@ class TestCompMenuActive:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component tabs_active editing
 # ===========================================================================
+
 
 class TestCompTabsActive:
     """Cover tabs_active editing (L679-710)."""
@@ -380,9 +394,11 @@ class TestCompTabsActive:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component list_count editing
 # ===========================================================================
+
 
 class TestCompListCount:
     """Cover list_count editing (L713-739)."""
@@ -444,9 +460,11 @@ class TestCompListCount:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component choice field editing
 # ===========================================================================
+
 
 class TestCompChoiceField:
     """Cover choice:... field editing (L742-747)."""
@@ -478,9 +496,11 @@ class TestCompChoiceField:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component int_list field editing
 # ===========================================================================
+
 
 class TestCompIntListField:
     """Cover int_list field editing (L749-753)."""
@@ -512,9 +532,11 @@ class TestCompIntListField:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component int field editing
 # ===========================================================================
+
 
 class TestCompIntField:
     """Cover int field editing (L755-775)."""
@@ -585,9 +607,11 @@ class TestCompIntField:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — component str field editing
 # ===========================================================================
+
 
 class TestCompStrField:
     """Cover str field editing (default case in comp editing)."""
@@ -665,9 +689,11 @@ class TestCompStrField:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — inspector_field_to_str (component paths)
 # ===========================================================================
+
 
 class TestInspectorFieldToStr:
     """Cover inspector_field_to_str branches for component fields."""
@@ -780,9 +806,11 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "comp.active_item", sc.widgets[1])
         assert result == ""
 
+
 # ===========================================================================
 # inspector_logic — compute_inspector_rows with component
 # ===========================================================================
+
 
 class TestComputeInspectorRowsComponent:
     """Cover compute_inspector_rows with component groups (L1245-1257)."""
@@ -863,9 +891,11 @@ class TestComputeInspectorRowsComponent:
         keys = [r[0] for r in rows]
         assert any(k.startswith("group:") for k in keys)
 
+
 # ===========================================================================
 # inspector_logic — exception branches (make _save_state throw)
 # ===========================================================================
+
 
 class TestInspectorExceptionBranches:
     """Cover except Exception: pass branches by making _save_state() throw."""
@@ -1315,9 +1345,11 @@ class TestInspectorExceptionBranches:
         result = inspector_commit_edit(app)
         assert result is True
 
+
 # ===========================================================================
 # inspector_logic — edge cases in multi-select (invalid values, error paths)
 # ===========================================================================
+
 
 class TestMultiSelectErrorPaths:
     """Cover error paths in multi-select editing."""
@@ -1496,9 +1528,11 @@ class TestMultiSelectErrorPaths:
         result = inspector_commit_edit(app)
         assert result is False
 
+
 # ===========================================================================
 # inspector_logic — edge cases: empty selection, widget None
 # ===========================================================================
+
 
 class TestInspectorEdgeCases:
     """Cover edge cases like empty selection for quick-set fields."""
@@ -1559,9 +1593,11 @@ class TestInspectorEdgeCases:
         result = inspector_commit_edit(app)
         assert result is True
 
+
 # ===========================================================================
 # input_handlers — on_mouse_down: sim mode click (L1015-1016)
 # ===========================================================================
+
 
 class TestMouseSimModeClick:
     """Cover on_mouse_down in sim_input_mode."""
@@ -1589,9 +1625,11 @@ class TestMouseSimModeClick:
         pos = (sr.x + 200, sr.y + 100)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # input_handlers — on_mouse_down: Alt+drag clone (L949-982)
 # ===========================================================================
+
 
 class TestMouseAltDragClone:
     """Cover Alt+drag cloning in on_mouse_down."""
@@ -1611,9 +1649,11 @@ class TestMouseAltDragClone:
         # Should have cloned: original + clone
         assert len(sc.widgets) >= 2
 
+
 # ===========================================================================
 # input_handlers — on_mouse_move: drag (L1130+)
 # ===========================================================================
+
 
 class TestMouseMoveDrag:
     """Cover on_mouse_move drag path."""
@@ -1636,9 +1676,11 @@ class TestMouseMoveDrag:
         new_pos = (sr.x + 40, sr.y + 30)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
+
 # ===========================================================================
 # input_handlers — on_mouse_move: resize (L1165+)
 # ===========================================================================
+
 
 class TestMouseMoveResize:
     """Cover on_mouse_move resize path."""
@@ -1662,9 +1704,11 @@ class TestMouseMoveResize:
         new_pos = (sr.x + 80, sr.y + 60)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
+
 # ===========================================================================
 # input_handlers — on_mouse_move: box select
 # ===========================================================================
+
 
 class TestMouseBoxSelect:
     """Cover rubber-band box selection."""
@@ -1686,9 +1730,11 @@ class TestMouseBoxSelect:
         # Finish box select
         on_mouse_up(app, (sr.x + 120, sr.y + 40))
 
+
 # ===========================================================================
 # input_handlers — on_mouse_up: cleanup
 # ===========================================================================
+
 
 class TestMouseUp:
     """Cover on_mouse_up cleanup (L1015-1016 for regular mode)."""
@@ -1707,9 +1753,11 @@ class TestMouseUp:
         assert not app.state.dragging
         assert not app.state.resizing
 
+
 # ===========================================================================
 # input_handlers — on_mouse_move: layer drag reorder
 # ===========================================================================
+
 
 class TestMouseLayerDrag:
     """Cover layer drag reorder in on_mouse_move."""
@@ -1737,9 +1785,11 @@ class TestMouseLayerDrag:
         # Widget at index 0 should have moved to index 1
         assert sc.widgets[1].text == "A"
 
+
 # ===========================================================================
 # _parse_pair and _parse_active_count helpers
 # ===========================================================================
+
 
 class TestHelperFunctions:
     """Cover helper function edge cases."""
@@ -1787,9 +1837,11 @@ class TestHelperFunctions:
         result = _sorted_role_indices({"item0": 1}, "tab")
         assert result == []
 
+
 # ===========================================================================
 # inspector_logic — single-widget _apply_int error paths
 # ===========================================================================
+
 
 class TestSingleWidgetApplyIntErrors:
     """Cover _apply_int returning False for invalid input in single-widget edits."""
@@ -1968,9 +2020,11 @@ class TestSingleWidgetApplyIntErrors:
         assert result is True
         assert sc.widgets[0].max_lines is None
 
+
 # ===========================================================================
 # inspector_logic — root rename with root-only widget_id and models
 # ===========================================================================
+
 
 class TestRootRenameEdgeCases:
     """Cover root rename branches for root-only widget_id and models."""
@@ -2053,9 +2107,11 @@ class TestRootRenameEdgeCases:
         result = inspector_commit_edit(app)
         assert result is True
 
+
 # ===========================================================================
 # inspector_logic — tabs-active "bold" style fallback (L118-123)
 # ===========================================================================
+
 
 class TestTabsActiveBoldStyle:
     """Cover the 'bold' style fallback in inspector_field_to_str for tabs."""
@@ -2106,9 +2162,11 @@ class TestTabsActiveBoldStyle:
         # Should return the first tab number since no tab is highlighted
         assert result == "1"
 
+
 # ===========================================================================
 # inspector_logic — list_count visible fallback (L133)
 # ===========================================================================
+
 
 class TestListCountVisible:
     """Cover list_count fallback to visible count."""
@@ -2141,9 +2199,11 @@ class TestListCountVisible:
         # Falls back to visible count
         assert isinstance(result, str)
 
+
 # ===========================================================================
 # inspector_logic — _parse_pair edge case (L22)
 # ===========================================================================
+
 
 class TestParsePairNone:
     """Cover _parse_pair returning None."""
@@ -2154,9 +2214,11 @@ class TestParsePairNone:
         result = _parse_pair("abc,def")
         assert result is None
 
+
 # ===========================================================================
 # inspector_logic — compute_inspector_rows misc (L1140, L1216)
 # ===========================================================================
+
 
 class TestComputeRowsMisc:
     """Cover remaining compute_inspector_rows edge cases."""
@@ -2208,9 +2270,11 @@ class TestComputeRowsMisc:
         assert any(r[0].startswith("_section") for r in rows)
         app.designer.groups = {}
 
+
 # ===========================================================================
 # inspector_logic — multi-select bounds None for x/y
 # ===========================================================================
+
 
 class TestMultiBoundsNone:
     """Cover bounds returning None in multi-select edits (L790, L802)."""

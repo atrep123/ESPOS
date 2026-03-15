@@ -78,6 +78,277 @@ from .state import EditorState
 PROFILE_ORDER = _constants.PROFILE_ORDER
 
 
+def _build_delegate_registry():
+    """Build {method_name: (module, target_fn_name)} for simple self->module delegates."""
+    reg: dict[str, tuple[object, str]] = {}
+
+    # selection_ops: _name(self) -> selection_ops.name(self)
+    _SEL_OPS = {
+        "delete_selected",
+        "copy_selection",
+        "paste_clipboard",
+        "cut_selection",
+        "duplicate_selection",
+        "select_all",
+        "cycle_style",
+        "toggle_visibility",
+        "cycle_widget_type",
+        "cycle_border_style",
+        "copy_style",
+        "paste_style",
+        "arrange_in_row",
+        "arrange_in_column",
+        "cycle_color_preset",
+        "toggle_border",
+        "cycle_text_overflow",
+        "cycle_align",
+        "cycle_valign",
+        "smart_edit",
+        "toggle_enabled",
+        "swap_fg_bg",
+        "select_same_type",
+        "toggle_checked",
+        "reset_to_defaults",
+        "select_locked",
+        "select_overflow",
+        "make_full_width",
+        "make_full_height",
+        "swap_dimensions",
+        "select_same_z",
+        "select_same_style",
+        "select_hidden",
+        "widget_info",
+        "invert_selection",
+        "auto_rename",
+        "select_same_color",
+        "scene_stats",
+        "select_parent_panel",
+        "select_children",
+        "copy_to_next_scene",
+        "snap_selection_to_grid",
+        "paste_in_place",
+        "broadcast_to_all_scenes",
+        "select_same_size",
+        "clear_margins",
+        "hide_unselected",
+        "select_bordered",
+        "move_selection_to_origin",
+        "fit_scene_to_content",
+        "show_all_widgets",
+        "unlock_all_widgets",
+        "select_overlapping",
+        "toggle_all_borders",
+        "remove_degenerate_widgets",
+        "enable_all_widgets",
+        "sort_widgets_by_position",
+        "compact_widgets",
+        "snap_sizes_to_grid",
+        "select_all_panels",
+        "quick_clone",
+        "list_templates",
+        "extract_to_new_scene",
+        "clear_padding",
+        "flatten_z_indices",
+        "stack_vertical",
+        "stack_horizontal",
+        "equalize_widths",
+        "equalize_heights",
+        "swap_positions",
+        "center_in_scene",
+        "duplicate_below",
+        "duplicate_right",
+        "cycle_gray_fg",
+        "cycle_gray_bg",
+        "grid_arrange",
+        "reverse_widget_order",
+        "flip_vertical",
+        "normalize_sizes",
+        "auto_name_scene",
+        "propagate_border",
+        "remove_duplicates",
+        "increment_text",
+        "propagate_style",
+        "swap_content",
+        "outline_mode",
+        "clone_text",
+        "propagate_align",
+        "propagate_colors",
+        "flip_horizontal",
+        "propagate_value",
+        "propagate_padding",
+        "propagate_margin",
+        "propagate_appearance",
+        "auto_flow_layout",
+        "measure_selection",
+        "space_evenly_h",
+        "space_evenly_v",
+        "replace_text_in_scene",
+        "select_same_type_as_current",
+        "zoom_to_selection",
+        "scene_overview",
+        "widget_type_summary",
+        "toggle_focus_order_overlay",
+        "export_selection_json",
+        "create_header_bar",
+        "create_nav_row",
+        "create_form_pair",
+        "create_status_bar",
+        "create_toggle_group",
+        "create_slider_with_label",
+        "create_gauge_panel",
+        "create_progress_section",
+        "create_icon_button_row",
+        "create_card_layout",
+        "create_dashboard_grid",
+        "create_split_layout",
+        "wrap_in_panel",
+        "fill_scene",
+        "shrink_to_content",
+        "auto_label_widgets",
+        "inset_widgets",
+        "outset_widgets",
+        "align_to_scene_top",
+        "align_to_scene_bottom",
+        "align_to_scene_left",
+        "align_to_scene_right",
+        "center_horizontal",
+        "center_vertical",
+        "delete_hidden_widgets",
+        "delete_offscreen_widgets",
+        "tile_fill_scene",
+        "match_first_height",
+        "scatter_random",
+        "toggle_all_checked",
+        "reset_all_values",
+        "propagate_text",
+        "flatten_z_index",
+        "number_widget_ids",
+        "z_by_position",
+        "clone_to_grid",
+        "distribute_rows",
+        "mirror_scene_horizontal",
+        "sort_widgets_by_z",
+        "clamp_to_scene",
+        "mirror_scene_vertical",
+        "select_unlocked",
+        "snap_all_to_grid",
+        "select_disabled",
+        "center_in_parent",
+        "size_to_text",
+        "pack_left",
+        "pack_top",
+        "fill_parent",
+        "clear_all_text",
+        "move_to_origin",
+        "make_square",
+        "scale_up",
+        "scale_down",
+        "number_text",
+        "spread_values",
+        "reset_padding",
+        "reset_colors",
+        "outline_only",
+        "select_largest",
+        "select_smallest",
+        "cascade_arrange",
+        "set_inverse_style",
+        "set_bold_style",
+        "set_default_style",
+        "align_h_centers",
+        "align_v_centers",
+        "align_left_edges",
+        "align_top_edges",
+        "align_right_edges",
+        "align_bottom_edges",
+        "distribute_columns_3",
+    }
+    for name in _SEL_OPS:
+        reg[f"_{name}"] = (selection_ops, name)
+
+    # scene_ops: _name(self) -> scene_ops.name(self)
+    _SCENE_OPS = {
+        "build_template_actions",
+        "apply_first_template",
+        "cycle_profile",
+        "new_scene",
+        "intelligent_auto_arrange",
+        "z_order_bring_to_front",
+        "z_order_send_to_back",
+        "toggle_lock_selection",
+        "zoom_to_fit",
+        "save_selection_as_template",
+        "delete_current_scene",
+        "close_other_scenes",
+        "close_scenes_to_right",
+        "add_new_scene",
+        "duplicate_current_scene",
+        "rename_current_scene",
+        "export_c_header",
+        "auto_arrange_grid",
+        "toggle_clean_preview",
+        "goto_widget_prompt",
+    }
+    for name in _SCENE_OPS:
+        reg[f"_{name}"] = (scene_ops, name)
+
+    # drawing: _name(self) -> drawing.name(self)
+    _DRAWING_OPS = {
+        "smart_dirty_tracking",
+        "auto_adjust_quality",
+        "draw_frame",
+        "optimized_draw_frame",
+        "draw_toolbar",
+        "draw_scene_tabs",
+        "draw_palette",
+        "draw_canvas",
+        "draw_inspector",
+        "draw_status",
+    }
+    for name in _DRAWING_OPS:
+        reg[f"_{name}"] = (drawing, name)
+
+    # io_ops: _name(self) -> io_ops.name(self)  (+ two public names)
+    _IO_OPS = {
+        "load_or_default",
+        "load_widget_presets",
+        "save_widget_presets",
+        "load_prefs",
+        "save_prefs",
+        "write_audit_report",
+        "maybe_autosave",
+    }
+    for name in _IO_OPS:
+        reg[f"_{name}"] = (io_ops, name)
+    reg["save_json"] = (io_ops, "save_json")
+    reg["load_json"] = (io_ops, "load_json")
+
+    # groups: _name(self) -> groups.name(self)
+    _GROUP_OPS = {
+        "selected_group_exact",
+        "selected_component_group",
+        "group_selection",
+        "ungroup_selection",
+    }
+    for name in _GROUP_OPS:
+        reg[f"_{name}"] = (groups, name)
+
+    # focus_nav: _name(self) -> focus_nav.name(self)
+    for name in ("ensure_focus", "activate_focused"):
+        reg[f"_{name}"] = (focus_nav, name)
+
+    # context_menu
+    reg["_ctx_view_items"] = (context_menu, "ctx_view_items")
+
+    # windowing
+    reg["_hardware_accelerated_scale"] = (windowing, "hardware_accelerated_scale")
+    reg["_toggle_fullscreen"] = (windowing, "toggle_fullscreen")
+
+    return reg
+
+
+_DELEGATE_REGISTRY: dict[str, tuple[object, str]] = _build_delegate_registry()
+
+
 class CyberpunkEditorApp:
     """Main app: integrates UIDesigner backend with pixel-art pygame front-end."""
 
@@ -287,6 +558,17 @@ class CyberpunkEditorApp:
         self.fps_history = deque(maxlen=60)
         self.auto_scale_adjust = False
         self.min_acceptable_fps = MIN_FPS
+
+    def __getattr__(self, name: str):
+        """Auto-dispatch simple delegates via _DELEGATE_REGISTRY."""
+        entry = _DELEGATE_REGISTRY.get(name)
+        if entry is not None:
+            mod, fn_name = entry
+            fn = getattr(mod, fn_name)
+            bound = lambda: fn(self)  # noqa: E731
+            object.__setattr__(self, name, bound)
+            return bound
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
 
     # ------------------------------------------------------------------ #
     # Palette and toolbar builders (called from __init__)
@@ -519,20 +801,11 @@ class CyberpunkEditorApp:
         if scene_name:
             self._dirty_scenes.add(scene_name)
 
-    def _load_or_default(self):
-        io_ops.load_or_default(self)
-
     # ------------------------------------------------------------------ #
     # Templates, presets, and profiles
     # ------------------------------------------------------------------ #
-    def _build_template_actions(self):
-        return scene_ops.build_template_actions(self)
-
     def _apply_template(self, template: Template):
         scene_ops.apply_template(self, template)
-
-    def _apply_first_template(self):
-        scene_ops.apply_first_template(self)
 
     def _apply_color_preset(self, fg: str, bg: str):
         """Apply fg/bg colors to selected widgets."""
@@ -550,9 +823,6 @@ class CyberpunkEditorApp:
     def _set_profile(self, key: str):
         scene_ops.set_profile(self, key)
 
-    def _cycle_profile(self):
-        scene_ops.cycle_profile(self)
-
     def _apply_color_preset_index(self, index: int):
         """Apply color preset by zero-based index (for keyboard shortcuts)."""
         presets = [
@@ -566,12 +836,6 @@ class CyberpunkEditorApp:
         if 0 <= index < len(presets):
             fg, bg = presets[index]
             self._apply_color_preset(fg, bg)
-
-    def _load_widget_presets(self) -> List[dict]:
-        return io_ops.load_widget_presets(self)
-
-    def _save_widget_presets(self):
-        io_ops.save_widget_presets(self)
 
     def _build_widget_presets_actions(self):
         actions = []
@@ -605,15 +869,6 @@ class CyberpunkEditorApp:
     # ------------------------------------------------------------------ #
     # File I/O and scene management
     # ------------------------------------------------------------------ #
-    def save_json(self):
-        io_ops.save_json(self)
-
-    def load_json(self):
-        io_ops.load_json(self)
-
-    def _new_scene(self):
-        scene_ops.new_scene(self)
-
     # ------------------------------------------------------------------ #
     # Event handling
     # ------------------------------------------------------------------ #
@@ -673,34 +928,11 @@ class CyberpunkEditorApp:
         """Convert screen coordinates to logical coordinates."""
         return windowing.screen_to_logical(self, pos[0], pos[1])
 
-    def _smart_dirty_tracking(self):
-        """Track only changed regions for optimized rendering."""
-        drawing.smart_dirty_tracking(self)
-
-    def _auto_adjust_quality(self):
-        """Automatically adjust quality settings based on performance."""
-        drawing.auto_adjust_quality(self)
-
-    def _draw_frame(self) -> None:
-        """Public draw entrypoint (simplified for headless tests)."""
-        drawing.draw_frame(self)
-
-    def _optimized_draw_frame(self):
-        """Highly optimized frame drawing with caching and dirty rect tracking."""
-        drawing.optimized_draw_frame(self)
-
-    def _hardware_accelerated_scale(self):
-        """Use hardware acceleration for scaling if available."""
-        windowing.hardware_accelerated_scale(self)
-
     # ------------------------------------------------------------------ #
     # Auto-complete and auto-arrange
     # ------------------------------------------------------------------ #
     def _auto_complete_widget(self, w: WidgetConfig):
         scene_ops.auto_complete_widget(self, w)
-
-    def _intelligent_auto_arrange(self):
-        scene_ops.intelligent_auto_arrange(self)
 
     def _find_best_position(self, widget: WidgetConfig, scene) -> Tuple[int, int]:
         return scene_ops.find_best_position(self, widget, scene)
@@ -790,19 +1022,6 @@ class CyberpunkEditorApp:
     def _button(self, label: str, pos: Tuple[int, int]) -> pygame.Rect:
         """Render a small pixel-style button and return its rect."""
         return drawing.button(self, label, pos)
-
-    def _draw_toolbar(self):
-        drawing.draw_toolbar(self)
-
-    def _draw_scene_tabs(self):
-        drawing.draw_scene_tabs(self)
-
-    def _draw_palette(self):
-        drawing.draw_palette(self)
-
-    def _draw_canvas(self) -> None:
-        """Draw canvas background + widgets."""
-        drawing.draw_canvas(self)
 
     def _value_ratio(self, w: WidgetConfig) -> float:
         try:
@@ -900,14 +1119,6 @@ class CyberpunkEditorApp:
     def _draw_overflow_marker(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         drawing.draw_overflow_marker(self, surface, rect)
 
-    def _draw_inspector(self) -> None:
-        """Inspector panel with cached hitboxes (click row to edit)."""
-        drawing.draw_inspector(self)
-
-    def _draw_status(self) -> None:
-        """Status bar with file/selection info."""
-        drawing.draw_status(self)
-
     def _compute_inspector_rows(self) -> Tuple[List[Tuple[str, str]], bool, Optional[WidgetConfig]]:
         return compute_inspector_rows(self)
 
@@ -941,12 +1152,6 @@ class CyberpunkEditorApp:
 
     def _group_members(self, name: str) -> List[int]:
         return groups.group_members(self, name)
-
-    def _selected_group_exact(self) -> Optional[str]:
-        return groups.selected_group_exact(self)
-
-    def _selected_component_group(self) -> Optional[Tuple[str, str, str, List[int]]]:
-        return groups.selected_component_group(self)
 
     def _component_info_from_group(self, group_name: str) -> Optional[Tuple[str, str]]:
         return groups.component_info_from_group(group_name)
@@ -986,12 +1191,6 @@ class CyberpunkEditorApp:
     def _next_group_name(self, prefix: str) -> str:
         return groups.next_group_name(self, prefix)
 
-    def _group_selection(self) -> None:
-        groups.group_selection(self)
-
-    def _ungroup_selection(self) -> None:
-        groups.ungroup_selection(self)
-
     def _is_widget_focusable(self, w: WidgetConfig) -> bool:
         return focus_nav.is_widget_focusable(w)
 
@@ -1000,9 +1199,6 @@ class CyberpunkEditorApp:
 
     def _set_focus(self, idx: Optional[int], *, sync_selection: bool = True) -> None:
         focus_nav.set_focus(self, idx, sync_selection=sync_selection)
-
-    def _ensure_focus(self) -> None:
-        focus_nav.ensure_focus(self)
 
     def _focus_cycle(self, delta: int) -> None:
         focus_nav.focus_cycle(self, delta)
@@ -1013,10 +1209,6 @@ class CyberpunkEditorApp:
 
     def _adjust_focused_value(self, delta: int) -> None:
         focus_nav.adjust_focused_value(self, delta)
-
-    def _activate_focused(self) -> None:
-        """Simulate device 'OK/press' on the focused widget."""
-        focus_nav.activate_focused(self)
 
     def _palette_content_height(self) -> int:
         """Return scrollable palette content height (excluding the fixed header row)."""
@@ -1059,14 +1251,6 @@ class CyberpunkEditorApp:
         size = _int_env("ESP32OS_FONT_SIZE", 10, 5, 24)
         scale = _int_env("ESP32OS_FONT_SCALE", 2, 1, 6)
         return size, scale
-
-    def _load_prefs(self):
-        """Load preferences from file."""
-        io_ops.load_prefs(self)
-
-    def _save_prefs(self):
-        """Save preferences to file."""
-        io_ops.save_prefs(self)
 
     # ------------------------------------------------------------------ #
     # Event dispatch and input handling
@@ -1201,9 +1385,6 @@ class CyberpunkEditorApp:
     def _ctx_multi_items(self, SEP: tuple) -> list:
         return context_menu.ctx_multi_items(self, SEP)
 
-    def _ctx_view_items(self) -> list:
-        return context_menu.ctx_view_items(self)
-
     def _ctx_add_items(self, SEP: tuple) -> list:
         return context_menu.ctx_add_items(self, SEP)
 
@@ -1233,18 +1414,6 @@ class CyberpunkEditorApp:
     def _z_order_step(self, delta: int) -> None:
         scene_ops.z_order_step(self, delta)
 
-    def _z_order_bring_to_front(self) -> None:
-        scene_ops.z_order_bring_to_front(self)
-
-    def _z_order_send_to_back(self) -> None:
-        scene_ops.z_order_send_to_back(self)
-
-    def _toggle_lock_selection(self) -> None:
-        scene_ops.toggle_lock_selection(self)
-
-    def _zoom_to_fit(self) -> None:
-        scene_ops.zoom_to_fit(self)
-
     def _switch_scene(self, direction: int) -> None:
         scene_ops.switch_scene(self, direction)
 
@@ -1266,81 +1435,14 @@ class CyberpunkEditorApp:
     # ------------------------------------------------------------------ #
     # Widget operations (delegates to selection_ops)
     # ------------------------------------------------------------------ #
-    def _delete_selected(self):
-        """Delete selected widgets."""
-        selection_ops.delete_selected(self)
-
-    def _copy_selection(self) -> None:
-        selection_ops.copy_selection(self)
-
-    def _paste_clipboard(self) -> None:
-        selection_ops.paste_clipboard(self)
-
-    def _cut_selection(self) -> None:
-        selection_ops.cut_selection(self)
-
-    def _duplicate_selection(self) -> None:
-        selection_ops.duplicate_selection(self)
-
-    def _select_all(self) -> None:
-        selection_ops.select_all(self)
-
     def _reorder_selection(self, direction: int) -> None:
         selection_ops.reorder_selection(self, direction)
-
-    def _cycle_style(self) -> None:
-        selection_ops.cycle_style(self)
-
-    def _toggle_visibility(self) -> None:
-        selection_ops.toggle_visibility(self)
-
-    def _cycle_widget_type(self) -> None:
-        selection_ops.cycle_widget_type(self)
-
-    def _cycle_border_style(self) -> None:
-        selection_ops.cycle_border_style(self)
-
-    def _copy_style(self) -> None:
-        selection_ops.copy_style(self)
-
-    def _paste_style(self) -> None:
-        selection_ops.paste_style(self)
-
-    def _arrange_in_row(self) -> None:
-        selection_ops.arrange_in_row(self)
-
-    def _arrange_in_column(self) -> None:
-        selection_ops.arrange_in_column(self)
-
-    def _cycle_color_preset(self) -> None:
-        selection_ops.cycle_color_preset(self)
-
-    def _toggle_border(self) -> None:
-        selection_ops.toggle_border(self)
-
-    def _cycle_text_overflow(self) -> None:
-        selection_ops.cycle_text_overflow(self)
-
-    def _cycle_align(self) -> None:
-        selection_ops.cycle_align(self)
-
-    def _cycle_valign(self) -> None:
-        selection_ops.cycle_valign(self)
 
     def _mirror_selection(self, axis: str) -> None:
         selection_ops.mirror_selection(self, axis)
 
-    def _smart_edit(self) -> None:
-        selection_ops.smart_edit(self)
-
     def _adjust_value(self, delta: int) -> None:
         selection_ops.adjust_value(self, delta)
-
-    def _toggle_enabled(self) -> None:
-        selection_ops.toggle_enabled(self)
-
-    def _swap_fg_bg(self) -> None:
-        selection_ops.swap_fg_bg(self)
 
     def _search_widgets_prompt(self) -> None:
         """Open inline input to search widgets by text/type."""
@@ -1351,15 +1453,6 @@ class CyberpunkEditorApp:
         except (pygame.error, AttributeError):
             pass
         self._set_status("Search widgets (Enter=find Esc=cancel)", ttl_sec=4.0)
-
-    def _select_same_type(self) -> None:
-        selection_ops.select_same_type(self)
-
-    def _toggle_checked(self) -> None:
-        selection_ops.toggle_checked(self)
-
-    def _reset_to_defaults(self) -> None:
-        selection_ops.reset_to_defaults(self)
 
     def _array_duplicate_prompt(self) -> None:
         """Open inline input for array duplicate (count,dx,dy)."""
@@ -1374,29 +1467,11 @@ class CyberpunkEditorApp:
             pass
         self._set_status("Array dup: count,dx,dy (e.g. 3,16,0) Enter=go", ttl_sec=5.0)
 
-    def _select_locked(self) -> None:
-        selection_ops.select_locked(self)
-
-    def _select_overflow(self) -> None:
-        selection_ops.select_overflow(self)
-
     def _toggle_center_guides(self) -> None:
         self.show_center_guides = not getattr(self, "show_center_guides", False)
         state_str = "ON" if self.show_center_guides else "OFF"
         self._set_status(f"Center guides: {state_str}", ttl_sec=2.0)
         self._mark_dirty()
-
-    def _make_full_width(self) -> None:
-        selection_ops.make_full_width(self)
-
-    def _make_full_height(self) -> None:
-        selection_ops.make_full_height(self)
-
-    def _swap_dimensions(self) -> None:
-        selection_ops.swap_dimensions(self)
-
-    def _select_same_z(self) -> None:
-        selection_ops.select_same_z(self)
 
     def _set_all_spacing_prompt(self) -> None:
         """Open inline input for all spacing (px,py,mx,my)."""
@@ -1411,105 +1486,6 @@ class CyberpunkEditorApp:
             pass
         self._set_status("Spacing: px,py,mx,my (e.g. 2,1,0,0) Enter=set", ttl_sec=5.0)
 
-    def _select_same_style(self) -> None:
-        selection_ops.select_same_style(self)
-
-    def _select_hidden(self) -> None:
-        selection_ops.select_hidden(self)
-
-    def _widget_info(self) -> None:
-        selection_ops.widget_info(self)
-
-    def _invert_selection(self) -> None:
-        selection_ops.invert_selection(self)
-
-    def _auto_rename(self) -> None:
-        selection_ops.auto_rename(self)
-
-    def _select_same_color(self) -> None:
-        selection_ops.select_same_color(self)
-
-    def _scene_stats(self) -> None:
-        selection_ops.scene_stats(self)
-
-    def _select_parent_panel(self) -> None:
-        selection_ops.select_parent_panel(self)
-
-    def _select_children(self) -> None:
-        selection_ops.select_children(self)
-
-    def _copy_to_next_scene(self) -> None:
-        selection_ops.copy_to_next_scene(self)
-
-    def _snap_selection_to_grid(self) -> None:
-        selection_ops.snap_selection_to_grid(self)
-
-    def _paste_in_place(self) -> None:
-        selection_ops.paste_in_place(self)
-
-    def _broadcast_to_all_scenes(self) -> None:
-        selection_ops.broadcast_to_all_scenes(self)
-
-    def _select_same_size(self) -> None:
-        selection_ops.select_same_size(self)
-
-    def _clear_margins(self) -> None:
-        selection_ops.clear_margins(self)
-
-    def _hide_unselected(self) -> None:
-        selection_ops.hide_unselected(self)
-
-    def _select_bordered(self) -> None:
-        selection_ops.select_bordered(self)
-
-    def _move_selection_to_origin(self) -> None:
-        selection_ops.move_selection_to_origin(self)
-
-    def _fit_scene_to_content(self) -> None:
-        selection_ops.fit_scene_to_content(self)
-
-    def _show_all_widgets(self) -> None:
-        selection_ops.show_all_widgets(self)
-
-    def _unlock_all_widgets(self) -> None:
-        selection_ops.unlock_all_widgets(self)
-
-    def _select_overlapping(self) -> None:
-        selection_ops.select_overlapping(self)
-
-    def _toggle_all_borders(self) -> None:
-        selection_ops.toggle_all_borders(self)
-
-    def _remove_degenerate_widgets(self) -> None:
-        selection_ops.remove_degenerate_widgets(self)
-
-    def _enable_all_widgets(self) -> None:
-        selection_ops.enable_all_widgets(self)
-
-    def _sort_widgets_by_position(self) -> None:
-        selection_ops.sort_widgets_by_position(self)
-
-    def _compact_widgets(self) -> None:
-        selection_ops.compact_widgets(self)
-
-    def _snap_sizes_to_grid(self) -> None:
-        selection_ops.snap_sizes_to_grid(self)
-
-    def _select_all_panels(self) -> None:
-        selection_ops.select_all_panels(self)
-
-    def _quick_clone(self) -> None:
-        selection_ops.quick_clone(self)
-
-    def _list_templates(self) -> None:
-        selection_ops.list_templates(self)
-
-    def _extract_to_new_scene(self) -> None:
-        selection_ops.extract_to_new_scene(self)
-
-    def _clear_padding(self) -> None:
-        selection_ops.clear_padding(self)
-
     def _toggle_widget_ids(self) -> None:
         self.show_widget_ids = not self.show_widget_ids
         label = "ON" if self.show_widget_ids else "OFF"
@@ -1522,397 +1498,34 @@ class CyberpunkEditorApp:
         self._set_status(f"Z-index labels: {label}", ttl_sec=2.0)
         self._mark_dirty()
 
-    def _flatten_z_indices(self) -> None:
-        selection_ops.flatten_z_indices(self)
-
-    def _stack_vertical(self) -> None:
-        selection_ops.stack_vertical(self)
-
-    def _stack_horizontal(self) -> None:
-        selection_ops.stack_horizontal(self)
-
-    def _equalize_widths(self) -> None:
-        selection_ops.equalize_widths(self)
-
-    def _equalize_heights(self) -> None:
-        selection_ops.equalize_heights(self)
-
-    def _swap_positions(self) -> None:
-        selection_ops.swap_positions(self)
-
-    def _center_in_scene(self) -> None:
-        selection_ops.center_in_scene(self)
-
-    def _duplicate_below(self) -> None:
-        selection_ops.duplicate_below(self)
-
-    def _duplicate_right(self) -> None:
-        selection_ops.duplicate_right(self)
-
-    def _cycle_gray_fg(self) -> None:
-        selection_ops.cycle_gray_fg(self)
-
-    def _cycle_gray_bg(self) -> None:
-        selection_ops.cycle_gray_bg(self)
-
     def _equalize_gaps(self, axis: str = "auto") -> None:
         selection_ops.equalize_gaps(self, axis)
 
-    def _grid_arrange(self) -> None:
-        selection_ops.grid_arrange(self)
-
-    def _reverse_widget_order(self) -> None:
-        selection_ops.reverse_widget_order(self)
-
-    def _flip_vertical(self) -> None:
-        selection_ops.flip_vertical(self)
-
-    def _normalize_sizes(self) -> None:
-        selection_ops.normalize_sizes(self)
-
-    def _auto_name_scene(self) -> None:
-        selection_ops.auto_name_scene(self)
-
-    def _propagate_border(self) -> None:
-        selection_ops.propagate_border(self)
-
-    def _remove_duplicates(self) -> None:
-        selection_ops.remove_duplicates(self)
-
-    def _increment_text(self) -> None:
-        selection_ops.increment_text(self)
-
-    def _propagate_style(self) -> None:
-        selection_ops.propagate_style(self)
-
-    def _swap_content(self) -> None:
-        selection_ops.swap_content(self)
-
-    def _outline_mode(self) -> None:
-        selection_ops.outline_mode(self)
-
-    def _clone_text(self) -> None:
-        selection_ops.clone_text(self)
-
-    def _propagate_align(self) -> None:
-        selection_ops.propagate_align(self)
-
-    def _propagate_colors(self) -> None:
-        selection_ops.propagate_colors(self)
-
-    def _flip_horizontal(self) -> None:
-        selection_ops.flip_horizontal(self)
-
-    def _propagate_value(self) -> None:
-        selection_ops.propagate_value(self)
-
-    def _propagate_padding(self) -> None:
-        selection_ops.propagate_padding(self)
-
-    def _propagate_margin(self) -> None:
-        selection_ops.propagate_margin(self)
-
-    def _propagate_appearance(self) -> None:
-        selection_ops.propagate_appearance(self)
-
-    def _auto_flow_layout(self) -> None:
-        selection_ops.auto_flow_layout(self)
-
-    def _measure_selection(self) -> None:
-        selection_ops.measure_selection(self)
-
-    def _space_evenly_h(self) -> None:
-        selection_ops.space_evenly_h(self)
-
-    def _space_evenly_v(self) -> None:
-        selection_ops.space_evenly_v(self)
-
-    def _replace_text_in_scene(self) -> None:
-        selection_ops.replace_text_in_scene(self)
-
-    def _select_same_type_as_current(self) -> None:
-        selection_ops.select_same_type_as_current(self)
-
-    def _zoom_to_selection(self) -> None:
-        selection_ops.zoom_to_selection(self)
-
-    def _scene_overview(self) -> None:
-        selection_ops.scene_overview(self)
-
-    def _widget_type_summary(self) -> None:
-        selection_ops.widget_type_summary(self)
-
-    def _toggle_focus_order_overlay(self) -> None:
-        selection_ops.toggle_focus_order_overlay(self)
-
-    def _export_selection_json(self) -> None:
-        selection_ops.export_selection_json(self)
-
     # R42 quick-create composites
-    def _create_header_bar(self) -> None:
-        selection_ops.create_header_bar(self)
-
-    def _create_nav_row(self) -> None:
-        selection_ops.create_nav_row(self)
-
-    def _create_form_pair(self) -> None:
-        selection_ops.create_form_pair(self)
-
     # R43 quick-create composites
-    def _create_status_bar(self) -> None:
-        selection_ops.create_status_bar(self)
-
-    def _create_toggle_group(self) -> None:
-        selection_ops.create_toggle_group(self)
-
-    def _create_slider_with_label(self) -> None:
-        selection_ops.create_slider_with_label(self)
-
     # R44 quick-create composites
-    def _create_gauge_panel(self) -> None:
-        selection_ops.create_gauge_panel(self)
-
-    def _create_progress_section(self) -> None:
-        selection_ops.create_progress_section(self)
-
-    def _create_icon_button_row(self) -> None:
-        selection_ops.create_icon_button_row(self)
-
     # R45 quick-create composites
-    def _create_card_layout(self) -> None:
-        selection_ops.create_card_layout(self)
-
-    def _create_dashboard_grid(self) -> None:
-        selection_ops.create_dashboard_grid(self)
-
-    def _create_split_layout(self) -> None:
-        selection_ops.create_split_layout(self)
-
     # R46 widget manipulation
-    def _wrap_in_panel(self) -> None:
-        selection_ops.wrap_in_panel(self)
-
-    def _fill_scene(self) -> None:
-        selection_ops.fill_scene(self)
-
-    def _shrink_to_content(self) -> None:
-        selection_ops.shrink_to_content(self)
-
     # R47
-    def _auto_label_widgets(self) -> None:
-        selection_ops.auto_label_widgets(self)
-
     # R48 batch layout
     def _distribute_columns(self) -> None:
         selection_ops.distribute_columns(self, col_count=2)
 
-    def _inset_widgets(self) -> None:
-        selection_ops.inset_widgets(self)
-
-    def _outset_widgets(self) -> None:
-        selection_ops.outset_widgets(self)
-
-    # R49 scene alignment
-    def _align_to_scene_top(self) -> None:
-        selection_ops.align_to_scene_top(self)
-
-    def _align_to_scene_bottom(self) -> None:
-        selection_ops.align_to_scene_bottom(self)
-
-    def _align_to_scene_left(self) -> None:
-        selection_ops.align_to_scene_left(self)
-
-    def _align_to_scene_right(self) -> None:
-        selection_ops.align_to_scene_right(self)
-
-    def _center_horizontal(self) -> None:
-        selection_ops.center_horizontal(self)
-
-    def _center_vertical(self) -> None:
-        selection_ops.center_vertical(self)
-
-    # R50 scene cleanup
-    def _delete_hidden_widgets(self) -> None:
-        selection_ops.delete_hidden_widgets(self)
-
-    def _delete_offscreen_widgets(self) -> None:
-        selection_ops.delete_offscreen_widgets(self)
-
-    def _tile_fill_scene(self) -> None:
-        selection_ops.tile_fill_scene(self)
-
-        # R51 transform helpers\n    def _match_first_width(self) -> None:
+    def _match_first_width(self) -> None:
         selection_ops.match_first_width(self)
 
-    def _match_first_height(self) -> None:
-        selection_ops.match_first_height(self)
-
-    def _scatter_random(self) -> None:
-        selection_ops.scatter_random(self)
-
+    # R49 scene alignment
+    # R50 scene cleanup
     # R52 batch property
-    def _toggle_all_checked(self) -> None:
-        selection_ops.toggle_all_checked(self)
-
-    def _reset_all_values(self) -> None:
-        selection_ops.reset_all_values(self)
-
-    def _propagate_text(self) -> None:
-        selection_ops.propagate_text(self)
-
-    def _flatten_z_index(self) -> None:
-        selection_ops.flatten_z_index(self)
-
-    def _number_widget_ids(self) -> None:
-        selection_ops.number_widget_ids(self)
-
-    def _z_by_position(self) -> None:
-        selection_ops.z_by_position(self)
-
-    def _clone_to_grid(self) -> None:
-        selection_ops.clone_to_grid(self)
-
-    def _distribute_rows(self) -> None:
-        selection_ops.distribute_rows(self)
-
-    def _mirror_scene_horizontal(self) -> None:
-        selection_ops.mirror_scene_horizontal(self)
-
-    def _sort_widgets_by_z(self) -> None:
-        selection_ops.sort_widgets_by_z(self)
-
-    def _clamp_to_scene(self) -> None:
-        selection_ops.clamp_to_scene(self)
-
-    def _mirror_scene_vertical(self) -> None:
-        selection_ops.mirror_scene_vertical(self)
-
-    def _select_unlocked(self) -> None:
-        selection_ops.select_unlocked(self)
-
-    def _snap_all_to_grid(self) -> None:
-        selection_ops.snap_all_to_grid(self)
-
-    def _select_disabled(self) -> None:
-        selection_ops.select_disabled(self)
-
-    def _center_in_parent(self) -> None:
-        selection_ops.center_in_parent(self)
-
-    def _size_to_text(self) -> None:
-        selection_ops.size_to_text(self)
-
-    def _pack_left(self) -> None:
-        selection_ops.pack_left(self)
-
-    def _pack_top(self) -> None:
-        selection_ops.pack_top(self)
-
-    def _fill_parent(self) -> None:
-        selection_ops.fill_parent(self)
-
-    def _clear_all_text(self) -> None:
-        selection_ops.clear_all_text(self)
-
-    def _move_to_origin(self) -> None:
-        selection_ops.move_to_origin(self)
-
-    def _make_square(self) -> None:
-        selection_ops.make_square(self)
-
-    def _scale_up(self) -> None:
-        selection_ops.scale_up(self)
-
-    def _scale_down(self) -> None:
-        selection_ops.scale_down(self)
-
-    def _number_text(self) -> None:
-        selection_ops.number_text(self)
-
-    def _spread_values(self) -> None:
-        selection_ops.spread_values(self)
-
-    def _reset_padding(self) -> None:
-        selection_ops.reset_padding(self)
-
-    def _reset_colors(self) -> None:
-        selection_ops.reset_colors(self)
-
-    def _outline_only(self) -> None:
-        selection_ops.outline_only(self)
-
-    def _select_largest(self) -> None:
-        selection_ops.select_largest(self)
-
-    def _select_smallest(self) -> None:
-        selection_ops.select_smallest(self)
-
-    def _cascade_arrange(self) -> None:
-        selection_ops.cascade_arrange(self)
-
-    def _set_inverse_style(self) -> None:
-        selection_ops.set_inverse_style(self)
-
-    def _set_bold_style(self) -> None:
-        selection_ops.set_bold_style(self)
-
-    def _set_default_style(self) -> None:
-        selection_ops.set_default_style(self)
-
-    def _align_h_centers(self) -> None:
-        selection_ops.align_h_centers(self)
-
-    def _align_v_centers(self) -> None:
-        selection_ops.align_v_centers(self)
-
-    def _align_left_edges(self) -> None:
-        selection_ops.align_left_edges(self)
-
-    def _align_top_edges(self) -> None:
-        selection_ops.align_top_edges(self)
-
-    def _align_right_edges(self) -> None:
-        selection_ops.align_right_edges(self)
-
-    def _align_bottom_edges(self) -> None:
-        selection_ops.align_bottom_edges(self)
-
-    def _distribute_columns_3(self) -> None:
-        selection_ops.distribute_columns_3(self)
-
     # ------------------------------------------------------------------ #
     # Scene navigation and management (delegates to scene_ops)
     # ------------------------------------------------------------------ #
     def _jump_to_scene(self, index: int) -> None:
         scene_ops.jump_to_scene(self, index)
 
-    def _save_selection_as_template(self) -> None:
-        scene_ops.save_selection_as_template(self)
-
-    def _delete_current_scene(self) -> None:
-        scene_ops.delete_current_scene(self)
-
-    def _close_other_scenes(self) -> None:
-        scene_ops.close_other_scenes(self)
-
-    def _close_scenes_to_right(self) -> None:
-        scene_ops.close_scenes_to_right(self)
-
-    def _add_new_scene(self) -> None:
-        scene_ops.add_new_scene(self)
-
-    def _duplicate_current_scene(self) -> None:
-        scene_ops.duplicate_current_scene(self)
-
-    def _rename_current_scene(self) -> None:
-        scene_ops.rename_current_scene(self)
-
     # ------------------------------------------------------------------ #
     # Export, add widget, and utilities (delegates to scene_ops)
     # ------------------------------------------------------------------ #
-    def _export_c_header(self) -> None:
-        scene_ops.export_c_header(self)
-
     def _add_widget(self, kind: str):
         scene_ops.add_widget(self, kind)
 
@@ -1922,15 +1535,6 @@ class CyberpunkEditorApp:
     def _component_blueprints(self, name: str, sc) -> List[Dict[str, object]]:
         """Backward compatible wrapper for older callers."""
         return component_blueprints(str(name or ""), sc)
-
-    def _auto_arrange_grid(self):
-        scene_ops.auto_arrange_grid(self)
-
-    def _toggle_clean_preview(self) -> None:
-        scene_ops.toggle_clean_preview(self)
-
-    def _goto_widget_prompt(self) -> None:
-        scene_ops.goto_widget_prompt(self)
 
     def _toggle_panels(self):
         """Toggle panels visibility."""
@@ -1954,10 +1558,6 @@ class CyberpunkEditorApp:
         except ValueError:
             return default
 
-    def _toggle_fullscreen(self):
-        """Toggle fullscreen."""
-        windowing.toggle_fullscreen(self)
-
     def _screenshot_canvas(self):
         """Screenshot canvas."""
         reporting.screenshot_canvas(self)
@@ -1965,14 +1565,6 @@ class CyberpunkEditorApp:
     def _send_live_preview(self):
         """Send live preview."""
         live_preview.send_live_preview(self)
-
-    def _write_audit_report(self):
-        """Write audit report."""
-        io_ops.write_audit_report(self)
-
-    def _maybe_autosave(self):
-        """Auto-save if dirty and enabled."""
-        io_ops.maybe_autosave(self)
 
     def _maybe_hide_help_overlay(self):
         """Auto-hide help after timeout."""

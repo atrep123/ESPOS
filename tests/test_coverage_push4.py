@@ -13,14 +13,17 @@ from ui_models import WidgetConfig
 # Shared helpers (same pattern as push3)
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
+
 # ---------------------------------------------------------------------------
 # drawing/text.py — wrap_text_px truncation, draw_text_clipped edges
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingTextEdges:
     """Cover uncovered branches in drawing/text.py."""
@@ -155,9 +158,11 @@ class TestDrawingTextEdges:
         w.max_lines = 2
         draw_text_in_rect(app, surf, "word " * 50, rect, (255, 255, 255), 2, w)
 
+
 # ---------------------------------------------------------------------------
 # drawing/panels.py — exception branches, hover/shade
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingPanelsEdges:
     """Cover uncovered branches in drawing/panels.py."""
@@ -243,9 +248,11 @@ class TestDrawingPanelsEdges:
         # The inspector rows may include scene: keys if widget has runtime bindings
         draw_inspector(app)
 
+
 # ---------------------------------------------------------------------------
 # drawing/overlays.py — tooltip edges, help overlay self-check
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingOverlaysEdges:
     """Cover uncovered branches in drawing/overlays.py."""
@@ -385,9 +392,11 @@ class TestDrawingOverlaysEdges:
         app.logical_surface = pygame.Surface((800, 600))
         draw_help_overlay(app)
 
+
 # ---------------------------------------------------------------------------
 # drawing/canvas.py — exception branches, overlays
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingCanvasEdges:
     """Cover uncovered branches in drawing/canvas.py."""
@@ -405,9 +414,7 @@ class TestDrawingCanvasEdges:
         """L121,138-139: widget ID labels + exception branch."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = make_app(
-            widgets=[_w(x=10, y=10), _w(x=50, y=50, visible=False)]
-        )
+        app = make_app(widgets=[_w(x=10, y=10), _w(x=50, y=50, visible=False)])
         app.show_widget_ids = True
         draw_canvas(app)
 
@@ -423,9 +430,7 @@ class TestDrawingCanvasEdges:
         """L156-157: focus order overlay."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = make_app(
-            widgets=[_w(type="button", x=10, y=10, enabled=True)]
-        )
+        app = make_app(widgets=[_w(type="button", x=10, y=10, enabled=True)])
         app.show_focus_order = True
         draw_canvas(app)
 
@@ -559,9 +564,7 @@ class TestDrawingCanvasEdges:
         """L156-157: focus order label render exception."""
         from cyberpunk_designer.drawing.canvas import draw_canvas
 
-        app = make_app(
-            widgets=[_w(type="button", x=10, y=10, enabled=True)]
-        )
+        app = make_app(widgets=[_w(type="button", x=10, y=10, enabled=True)])
         app.show_focus_order = True
         bad_font = MagicMock()
         bad_font.render = MagicMock(side_effect=pygame.error("fail"))
@@ -587,9 +590,11 @@ class TestDrawingCanvasEdges:
         scene_rect = pygame.Rect(0, 0, 256, 128)
         draw_selection_info(app, sel_rect, bounds, scene_rect)
 
+
 # ---------------------------------------------------------------------------
 # drawing/panels.py — draw_status exception branches
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingPanelsStatusEdges:
     """Cover uncovered branches in draw_status."""
@@ -669,9 +674,11 @@ class TestDrawingPanelsStatusEdges:
         app.pointer_pos = (r.centerx, bottom_y)
         draw_palette(app)
 
+
 # ---------------------------------------------------------------------------
 # drawing/overlays.py — additional help overlay branches
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingOverlaysExtraEdges:
     """Additional help overlay branches."""
@@ -733,9 +740,11 @@ class TestDrawingOverlaysExtraEdges:
         app.state.selected = BadSelected()
         draw_help_overlay(app)
 
+
 # ---------------------------------------------------------------------------
 # drawing/text.py — additional wrap_text_px truncation branches
 # ---------------------------------------------------------------------------
+
 
 class TestDrawingTextExtraEdges:
     """Additional branches in text.py wrap logic."""

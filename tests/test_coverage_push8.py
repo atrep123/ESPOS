@@ -14,18 +14,22 @@ CTRL = pygame.KMOD_CTRL
 SHIFT = pygame.KMOD_SHIFT
 ALT = pygame.KMOD_ALT
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
+
 def _sel(app, *indices):
     app.state.selected = list(indices)
     app.state.selected_idx = indices[0] if indices else None
 
+
 # ===========================================================================
 # on_mouse_down — inspector_commit_edit before toolbar (L683-684)
 # ===========================================================================
+
 
 class TestToolbarClick:
     """Cover toolbar hitbox click handlers."""
@@ -61,9 +65,11 @@ class TestToolbarClick:
         pos = (tr.x + 10, tr.y + 5)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_down — scene tab click (L731, L736, L742)
 # ===========================================================================
+
 
 class TestSceneTabClick:
     """Cover scene tab click handlers."""
@@ -118,9 +124,11 @@ class TestSceneTabClick:
         pos = (tabs_r.x + 10, tabs_r.y + 5)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_down — palette section collapse (L736, L742, L756, L763-765, L772)
 # ===========================================================================
+
 
 class TestPaletteClick:
     """Cover palette click handlers."""
@@ -178,9 +186,11 @@ class TestPaletteClick:
         pos = (pr.x + pr.width // 2, pr.y + pr.height // 2)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_down — inspector click (L787-921)
 # ===========================================================================
+
 
 class TestInspectorClick:
     """Cover inspector click handlers (section toggle, group, layer, toggle, editable)."""
@@ -390,9 +400,11 @@ class TestInspectorClick:
         pos = (ir.x + 5, ir.y + 5)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_down — canvas bad scene_rect (L889)
 # ===========================================================================
+
 
 class TestCanvasClick:
     """Cover canvas click edge cases."""
@@ -421,9 +433,11 @@ class TestCanvasClick:
         on_mouse_down(app, pos)
         assert app.state.box_select_start == pos
 
+
 # ===========================================================================
 # on_mouse_move — drag with bad scene_rect (L1105)
 # ===========================================================================
+
 
 class TestMouseMoveDragEdges:
     """Cover mouse move drag edge cases."""
@@ -478,9 +492,11 @@ class TestMouseMoveDragEdges:
         new_pos = (sr.x + 50, sr.y + 40)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
+
 # ===========================================================================
 # on_mouse_move — resize (L1152-1209)
 # ===========================================================================
+
 
 class TestMouseMoveResizeEdges:
     """Cover mouse move resize edge cases."""
@@ -576,9 +592,11 @@ class TestMouseMoveResizeEdges:
         new_pos = (sr.x + 140, sr.y + 56)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
+
 # ===========================================================================
 # on_mouse_move — tab drag (L1077-1078)
 # ===========================================================================
+
 
 class TestMouseMoveTabDrag:
     """Cover tab drag reorder."""
@@ -600,9 +618,11 @@ class TestMouseMoveTabDrag:
         pos = (tabs_r.x + 55, tabs_r.y + 5)
         on_mouse_move(app, pos, (1, 0, 0))
 
+
 # ===========================================================================
 # on_mouse_up — exception paths (L1015-1016)
 # ===========================================================================
+
 
 class TestMouseUpEdges:
     """Cover mouse up exception paths."""
@@ -621,9 +641,11 @@ class TestMouseUpEdges:
         on_mouse_up(app, (100, 100))
         assert not app.state.dragging
 
+
 # ===========================================================================
 # inspector_logic — remaining 50 miss targets
 # ===========================================================================
+
 
 class TestInspectorRemaining:
     """Cover remaining inspector_logic miss lines not in push7."""
@@ -838,9 +860,11 @@ class TestInspectorRemaining:
         keys = [r[0] for r in rows]
         assert any(k.startswith("group:mygroup") for k in keys)
 
+
 # ===========================================================================
 # on_mouse_down — toggle with OOB selection (L854, L865)
 # ===========================================================================
+
 
 class TestInspectorToggleEdges:
     """Cover toggle edge cases: OOB idx, checked with mixed selection."""
@@ -899,9 +923,11 @@ class TestInspectorToggleEdges:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_down — inspector with commit-before paths (L793, L804, L840, L878)
 # ===========================================================================
+
 
 class TestInspectorCommitBefore:
     """Cover inspector commit-edit-before paths with bad edits."""
@@ -999,9 +1025,11 @@ class TestInspectorCommitBefore:
         pos = (ir.x + ir.width // 2, ir.y + ir.height // 2)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_down — canvas click: Ctrl, locked, empty selection (L911-921)
 # ===========================================================================
+
 
 class TestCanvasClickEdges:
     """Cover canvas click edge cases (Ctrl, locked, empty return)."""
@@ -1060,9 +1088,11 @@ class TestCanvasClickEdges:
         pos = (sr.x + 20, sr.y + 20)
         on_mouse_down(app, pos)
 
+
 # ===========================================================================
 # on_mouse_move — edge cases (L1030, L1077-1078, L1152, L1154)
 # ===========================================================================
+
 
 class TestMouseMoveMore:
     """Cover remaining mouse move edge cases."""

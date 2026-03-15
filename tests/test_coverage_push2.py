@@ -10,14 +10,17 @@ from ui_models import WidgetConfig
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
+
 # ===========================================================================
 # selection_ops/creators.py — placement below selection (5 funcs × 3 lines each)
 # ===========================================================================
+
 
 class TestCreatorsPlaceBelowSelection:
     """When widgets are selected, new creators place items below them."""
@@ -76,9 +79,11 @@ class TestCreatorsPlaceBelowSelection:
         wrap_in_panel(app)
         assert len(app.state.current_scene().widgets) == 0
 
+
 # ===========================================================================
 # selection_ops/alignment.py — exception, early-return, locked-skip paths
 # ===========================================================================
+
 
 class TestAlignmentEdges:
     def test_snap_to_grid_save_state_exc(self, make_app):
@@ -221,9 +226,11 @@ class TestAlignmentEdges:
         app.state.selected = [0, 99]
         align_bottom_edges(app)
 
+
 # ===========================================================================
 # focus_nav.py — edge cases and exception paths
 # ===========================================================================
+
 
 class TestFocusNavEdges:
     def test_sim_runtime_restore_broken_widget(self, make_app, monkeypatch):
@@ -370,9 +377,11 @@ class TestFocusNavEdges:
         app.sim_input_mode = True
         focus_move_direction(app, "down")
 
+
 # ===========================================================================
 # drawing/canvas.py — exception and edge paths
 # ===========================================================================
+
 
 class TestCanvasEdges:
     def test_import(self):
@@ -380,9 +389,11 @@ class TestCanvasEdges:
 
         assert hasattr(c, "draw_canvas")
 
+
 # ===========================================================================
 # drawing/text.py — edge cases
 # ===========================================================================
+
 
 class TestDrawTextEdges:
     def test_import(self):
@@ -390,9 +401,11 @@ class TestDrawTextEdges:
 
         assert hasattr(t, "draw_text_in_rect")
 
+
 # ===========================================================================
 # drawing/panels.py — edge cases
 # ===========================================================================
+
 
 class TestDrawPanelsEdges:
     def test_import(self):

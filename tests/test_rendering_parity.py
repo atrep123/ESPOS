@@ -7,6 +7,8 @@ firmware export pipeline.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from cyberpunk_designer import text_metrics
 from cyberpunk_designer.constants import GRID, color_to_rgb
 from tools.ui_codegen import (
@@ -40,7 +42,7 @@ def _widget(**kw) -> WidgetConfig:
 class TestColorMappingParity:
     """Named colors and hex codes should resolve identically in both pipelines."""
 
-    NAMES = [
+    NAMES: ClassVar[list[str]] = [
         "black",
         "white",
         "red",

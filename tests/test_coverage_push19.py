@@ -361,18 +361,22 @@ class TestExportCHeaderExcept:
         app = make_app()
         app.json_path = tmp_path / "scene.json"
         app.json_path.write_text("{}", encoding="utf-8")
-        with patch.object(app, "save_json", side_effect=OSError("fail")):
-            with patch("tools.ui_codegen.generate_scenes_header", return_value="// ok"):
-                app._export_c_header()
+        with (
+            patch.object(app, "save_json", side_effect=OSError("fail")),
+            patch("tools.ui_codegen.generate_scenes_header", return_value="// ok"),
+        ):
+            app._export_c_header()
 
     def test_generate_header_raises(self, tmp_path, make_app):
         """L3000-3001: generate_scenes_header raises → status message."""
         app = make_app()
         app.json_path = tmp_path / "scene.json"
         app.json_path.write_text("{}", encoding="utf-8")
-        with patch.object(app, "save_json"):
-            with patch("tools.ui_codegen.generate_scenes_header", side_effect=ValueError("boom")):
-                app._export_c_header()
+        with (
+            patch.object(app, "save_json"),
+            patch("tools.ui_codegen.generate_scenes_header", side_effect=ValueError("boom")),
+        ):
+            app._export_c_header()
 
 
 # ===================================================================

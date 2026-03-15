@@ -61,12 +61,9 @@ ignore = [
     "RUF001", # ambiguous unicode character in string (legitimate non-ASCII)
     "RUF002", # ambiguous unicode character in docstring
     "RUF003", # ambiguous unicode character in comment
-    "RUF005", # use [*x, ...] instead of concatenation (readability preference)
-    "RUF012", # mutable class variable without ClassVar (dataclass pattern)
     "RUF059", # unused __all__ entry (noisy for re-export packages)
     "SIM102", # collapsible nested ifs (intentionally nested for readability)
     "SIM115", # open() without context manager (acceptable patterns)
-    "SIM117", # merge with statements (readability preference)
 ]
 
 [tool.ruff.lint.per-file-ignores]

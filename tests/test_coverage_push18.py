@@ -1113,15 +1113,17 @@ class TestMainModule:
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
         json_path = tmp_path / "scene.json"
-        with patch("sys.argv", ["prog", str(json_path)]):
-            with patch("cyberpunk_designer.app.CyberpunkEditorApp") as MockApp:
-                mock_instance = MagicMock()
-                MockApp.return_value = mock_instance
-                from cyberpunk_designer.app import main
+        with (
+            patch("sys.argv", ["prog", str(json_path)]),
+            patch("cyberpunk_designer.app.CyberpunkEditorApp") as MockApp,
+        ):
+            mock_instance = MagicMock()
+            MockApp.return_value = mock_instance
+            from cyberpunk_designer.app import main
 
-                main()
-                MockApp.assert_called_once()
-                mock_instance.run.assert_called_once()
+            main()
+            MockApp.assert_called_once()
+            mock_instance.run.assert_called_once()
 
 
 # ===========================================================================
@@ -1184,8 +1186,7 @@ class TestNonAppModules:
 
     def test_inspector_logic_miss(self, make_app):
         """inspector_logic L22, L572, L578, L593, L1309."""
-        app = make_app(widgets=[_w(type="slider", value=50, min_value=0, max_value=100)]
-        )
+        app = make_app(widgets=[_w(type="slider", value=50, min_value=0, max_value=100)])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.state.inspector_selected_field = "value"

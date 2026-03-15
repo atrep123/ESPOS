@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, ClassVar, Dict, List, Optional, Protocol
 
 
 class SceneLike(Protocol):
@@ -52,7 +52,7 @@ class Template:
 class TemplateLibrary:
     """In-memory template registry with simple JSON persistence."""
 
-    CATEGORIES = [
+    CATEGORIES: ClassVar[List[str]] = [
         "Layouts",
         "Forms",
         "Dashboards",

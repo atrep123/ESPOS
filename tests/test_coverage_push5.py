@@ -10,17 +10,21 @@ from ui_models import WidgetConfig
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
+
 def _make_save_raise(app):
     app.designer._save_state = MagicMock(side_effect=TypeError("boom"))
+
 
 # ---------------------------------------------------------------------------
 # focus_nav.py — L216, L264, L363, L412, L430, L474
 # ---------------------------------------------------------------------------
+
 
 class TestFocusNavEdges:
     """Cover uncovered branches in focus_nav.py."""
@@ -119,9 +123,11 @@ class TestFocusNavEdges:
         set_focus(app, 0)
         focus_move_direction(app, "right")
 
+
 # ---------------------------------------------------------------------------
 # transforms.py — L20, L67, L148, L220
 # ---------------------------------------------------------------------------
+
 
 class TestTransformsEdges:
     """Cover uncovered branches in selection_ops/transforms.py."""
@@ -165,10 +171,12 @@ class TestTransformsEdges:
         app.state.selected = [0]
         make_full_width(app)
 
+
 # ---------------------------------------------------------------------------
 # layout.py (selection_ops) — L280, L283-284, L317, L321-322, L347, L351-352,
 # L375, L418, L433, L452, L467
 # ---------------------------------------------------------------------------
+
 
 class TestLayoutEdges:
     """Cover uncovered branches in selection_ops/layout.py."""
@@ -270,9 +278,11 @@ class TestLayoutEdges:
         app.state.selected = [0, 1, 999]
         distribute_rows(app)
 
+
 # ---------------------------------------------------------------------------
 # batch_ops.py — empty scene, locked, OOB, and save_state guards
 # ---------------------------------------------------------------------------
+
 
 class TestBatchOpsEmptyAndLocked:
     """Cover empty/locked guards in batch_ops.py."""
@@ -315,6 +325,7 @@ class TestBatchOpsEmptyAndLocked:
         app = make_app()
         app.state.current_scene().widgets.clear()
         enable_all_widgets(app)
+
 
 class TestBatchOpsSaveRaise:
     """Cover _save_state exception branches in batch_ops."""
@@ -390,6 +401,7 @@ class TestBatchOpsSaveRaise:
         app = make_app(widgets=[_w(enabled=False)])
         _make_save_raise(app)
         enable_all_widgets(app)
+
 
 class TestBatchOpsOobGuards:
     """Cover OOB index continue/return guards in batch_ops."""

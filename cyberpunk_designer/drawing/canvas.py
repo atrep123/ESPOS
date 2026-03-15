@@ -847,10 +847,7 @@ def draw_widget_preview(
                 if len(coords) >= 2:
                     base_y = chart_area.bottom - 2
                     # Solid fill polygon as base
-                    fill_pts = list(coords) + [
-                        (coords[-1][0], base_y),
-                        (coords[0][0], base_y),
-                    ]
+                    fill_pts = [*coords, (coords[-1][0], base_y), (coords[0][0], base_y)]
                     fill_c = app._shade(bg, 45)
                     pygame.draw.polygon(surface, fill_c, fill_pts)
                     # Bayer-dithered gradient overlay: bright near line → dark at base
