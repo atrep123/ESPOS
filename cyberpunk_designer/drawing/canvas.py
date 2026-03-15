@@ -301,10 +301,7 @@ def draw_selection_info(app, sel_rect: pygame.Rect, bounds, scene_rect: pygame.R
     dragging = getattr(app.state, "dragging", False)
     if not resizing and not dragging:
         return
-    if resizing:
-        txt = f"{bounds.width}\u00d7{bounds.height}"
-    else:
-        txt = f"{bounds.x},{bounds.y}"
+    txt = f"{bounds.width}\u00d7{bounds.height}" if resizing else f"{bounds.x},{bounds.y}"
     try:
         tiny = app._load_pixel_font(max(8, int(GRID * 0.9)))
         lbl = tiny.render(txt, True, PALETTE.get("accent", (255, 220, 0)))
@@ -708,10 +705,7 @@ def draw_widget_preview(
                     else:
                         lbl_s = app.pixel_font.render(label, True, fg)
                     lx = rect.centerx - lbl_s.get_width() // 2
-                    if compact:
-                        ly = cy + 1
-                    else:
-                        ly = rect.y + b_inset + padding
+                    ly = cy + 1 if compact else rect.y + b_inset + padding
                     if ly + lbl_s.get_height() <= rect.bottom - b_inset:
                         surface.blit(lbl_s, (lx, ly))
             finally:

@@ -218,7 +218,7 @@ class TestSceneSizeAdaptation:
 
     def test_status_bar_stretches_to_scene_width(self):
         bps = component_blueprints("status_bar", SC)
-        bar_panel = [b for b in bps if b.get("role") == "bar"][0]
+        bar_panel = next(b for b in bps if b.get("role") == "bar")
         assert bar_panel["width"] >= 200  # at least most of 256 wide
 
     def test_none_scene_uses_defaults(self):

@@ -751,7 +751,7 @@ class TestProfile:
         from ui_designer import HARDWARE_PROFILES
 
         if HARDWARE_PROFILES:
-            key = list(HARDWARE_PROFILES.keys())[0]
+            key = next(iter(HARDWARE_PROFILES.keys()))
             app._set_profile(key)
             assert app.hardware_profile == key
 

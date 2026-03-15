@@ -799,7 +799,7 @@ class TestSceneManagementBodies:
         app.designer.create_scene("third")
         sc3 = app.designer.scenes["third"]
         sc3.width, sc3.height = 256, 128
-        cur = list(app.designer.scenes.keys())[0]
+        cur = next(iter(app.designer.scenes.keys()))
         app.designer.current_scene = cur
         app._close_other_scenes()
         assert len(app.designer.scenes) == 1

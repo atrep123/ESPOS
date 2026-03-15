@@ -2,11 +2,56 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Optional, Tuple
 
 import pygame
 
-from ..constants import GRID, PALETTE
+from ..constants import GRID, PALETTE, clamp
+
+
+def shade(color: Tuple[int, int, int], delta: int) -> Tuple[int, int, int]:
+    """Lighten/darken a color channel-wise by *delta*."""
+    r, g, b = color
+    return (clamp(r + delta, 0, 255), clamp(g + delta, 0, 255), clamp(b + delta, 0, 255))
+
+
+def load_pixel_font(size: int) -> pygame.font.Font:
+    """Load a readable pixel-ish font with deterministic fallback."""
+    env_font = os.getenv("ESP32OS_FONT")
+    is_headless = os.getenv("SDL_VIDEODRIVER", "").strip().lower() == "dummy" or bool(
+        os.getenv("PYTEST_CURRENT_TEST")
+    )
+
+    candidates = [env_font] if env_font else []
+    if not is_headless:
+        candidates += ["consolas", "cascadiamono", "courier new"]
+
+    for name in candidates:
+        try:
+            path = Path(name)
+            if path.exists():
+                return pygame.font.Font(str(path), size)
+            font_path = pygame.font.match_font(name)
+            if font_path:
+                return pygame.font.Font(font_path, size)
+        except (OSError, pygame.error):
+            continue
+
+    if is_headless:
+        try:
+            return pygame.font.Font(None, size)
+        except pygame.error:
+            pass
+
+    try:
+        return pygame.font.SysFont("monospace", size, bold=False)
+    except pygame.error:
+        try:
+            return pygame.font.Font(None, size)
+        except pygame.error:
+            return pygame.font.Font(pygame.font.get_default_font(), size)
 
 
 def draw_frame(app) -> None:

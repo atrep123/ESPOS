@@ -32,6 +32,7 @@ from . import (
     fit_text,
     fit_widget,
     focus_nav,
+    groups,
     input_handlers,
     io_ops,
     layout_tools,
@@ -58,21 +59,19 @@ from .constants import (
     MAX_AUTO_SCALE_DEFAULT,
     MIN_FPS,
     NAMED_COLORS,
-    PALETTE,
     SCALE,
     SCENE_TABS_H,
     STATUS_H,
     TOOLBAR_H,
     WIN_MARGIN_H,
     WIN_MARGIN_W,
-    clamp,
     hex_to_rgb,
     safe_save_state,
     snap,
 )
 from .inspector_logic import compute_inspector_rows, inspector_commit_edit, inspector_field_to_str
 from .layout import Layout
-from .perf import RenderCache, compute_dirty_rects
+from .perf import RenderCache
 from .state import EditorState
 
 # Backward-compatible module symbol used by tests and legacy monkeypatches.
@@ -676,32 +675,11 @@ class CyberpunkEditorApp:
 
     def _smart_dirty_tracking(self):
         """Track only changed regions for optimized rendering."""
-        self.dirty_rects = compute_dirty_rects(
-            self.layout,
-            self.state,
-            force_full=bool(getattr(self, "_force_full_redraw", False)),
-            show_help=bool(getattr(self, "show_help_overlay", False)),
-        )
+        drawing.smart_dirty_tracking(self)
 
     def _auto_adjust_quality(self):
         """Automatically adjust quality settings based on performance."""
-        if not self.auto_optimize or len(self.fps_history) < 30:
-            return
-
-        avg_fps = sum(self.fps_history) / len(self.fps_history)
-
-        if avg_fps < self.min_acceptable_fps:
-            # Reduce quality for better performance
-            if self.show_grid:
-                self.show_grid = False
-            elif self.scale > 1:
-                self.scale = max(1, self.scale - 1)
-            elif not self.panels_collapsed:
-                self._toggle_panels()
-        elif avg_fps > self.min_acceptable_fps * 2:
-            # Can afford higher quality
-            if not self.show_grid:
-                self.show_grid = True
+        drawing.auto_adjust_quality(self)
 
     def _draw_frame(self) -> None:
         """Public draw entrypoint (simplified for headless tests)."""
@@ -709,61 +687,7 @@ class CyberpunkEditorApp:
 
     def _optimized_draw_frame(self):
         """Highly optimized frame drawing with caching and dirty rect tracking."""
-        cache_key = RenderCache.frame_cache_key(
-            self.scale,
-            self.state.selected_idx,
-            self.state.selected,
-            self.show_help_overlay,
-            self.designer.current_scene,
-            len(self.state.current_scene().widgets),
-        )
-        cached = self.render_cache.get(cache_key)
-
-        if cached and not self._dirty:
-            self.window.blit(cached, (0, 0))
-            pygame.display.flip()
-            return
-
-        # Smart dirty tracking
-        self._smart_dirty_tracking()
-
-        # Only redraw dirty regions
-        if len(self.dirty_rects) == 1 and self.dirty_rects[0] == self.layout.canvas_rect:
-            # Only canvas changed - keep rest from cache
-            self._draw_canvas()
-        else:
-            # Full redraw needed
-            self.logical_surface.fill(PALETTE["bg"])
-            if self.clean_preview:
-                self._draw_canvas()
-            else:
-                self._draw_toolbar()
-                self._draw_scene_tabs()
-                self._draw_palette()
-                self._draw_canvas()
-                self._draw_inspector()
-                self._draw_status()
-
-        if self.show_help_overlay:
-            drawing.draw_help_overlay(self)
-
-        drawing.draw_shortcuts_panel(self)
-        drawing.draw_context_menu(self)
-        drawing.draw_tooltip(self)
-
-        # Apply scaling with hardware acceleration if available
-        self._hardware_accelerated_scale()
-
-        # Cache result
-        self.render_cache.set(cache_key, self.window.copy())
-
-        # Update display
-        if self.vsync_enabled:
-            pygame.display.flip()
-        else:
-            pygame.display.update(self.dirty_rects)
-        self._dirty = False
-        self._force_full_redraw = False
+        drawing.optimized_draw_frame(self)
 
     def _hardware_accelerated_scale(self):
         """Use hardware acceleration for scaling if available."""
@@ -820,53 +744,11 @@ class CyberpunkEditorApp:
     # ------------------------------------------------------------------ #
     def _shade(self, color: Tuple[int, int, int], delta: int) -> Tuple[int, int, int]:
         """Lighten/darken a color channel-wise by delta."""
-        r, g, b = color
-        return (clamp(r + delta, 0, 255), clamp(g + delta, 0, 255), clamp(b + delta, 0, 255))
+        return drawing.shade(color, delta)
 
     def _load_pixel_font(self, size: int) -> pygame.font.Font:
         """Load a readable pixel-ish font with deterministic fallback."""
-        env_font = os.getenv("ESP32OS_FONT")
-        is_headless = os.getenv("SDL_VIDEODRIVER", "").strip().lower() == "dummy" or bool(
-            os.getenv("PYTEST_CURRENT_TEST")
-        )
-
-        candidates = [env_font] if env_font else []
-        # For interactive runs, prefer a familiar monospace font if present.
-        # For tests/headless, avoid system fonts to keep metrics consistent across OSes.
-        if not is_headless:
-            candidates += [
-                "consolas",
-                "cascadiamono",
-                "courier new",
-            ]
-
-        for name in candidates:
-            try:
-                # Allow explicit path override via ESP32OS_FONT
-                path = Path(name)
-                if path.exists():
-                    font = pygame.font.Font(str(path), size)
-                    return font
-                font_path = pygame.font.match_font(name)
-                if font_path:
-                    return pygame.font.Font(font_path, size)
-            except (OSError, pygame.error):
-                continue
-
-        if is_headless:
-            try:
-                # Pygame bundled default font is available cross-platform and keeps tests stable.
-                return pygame.font.Font(None, size)
-            except pygame.error:
-                pass
-
-        try:
-            return pygame.font.SysFont("monospace", size, bold=False)
-        except pygame.error:
-            try:
-                return pygame.font.Font(None, size)
-            except pygame.error:
-                return pygame.font.Font(pygame.font.get_default_font(), size)
+        return drawing.load_pixel_font(size)
 
     def _render_pixel_text(
         self,
@@ -1052,121 +934,34 @@ class CyberpunkEditorApp:
         selection_ops.set_selection(self, indices, anchor_idx=anchor_idx)
 
     def _groups_for_index(self, idx: int) -> List[str]:
-        groups: List[str] = []
-        try:
-            gdict = getattr(self.designer, "groups", {}) or {}
-        except (TypeError, AttributeError):
-            gdict = {}
-        for gname, members in gdict.items():
-            try:
-                if idx in members:
-                    groups.append(str(gname))
-            except TypeError:
-                continue
-        groups.sort()
-        return groups
+        return groups.groups_for_index(self, idx)
 
     def _primary_group_for_index(self, idx: int) -> Optional[str]:
-        groups = self._groups_for_index(idx)
-        return groups[0] if groups else None
+        return groups.primary_group_for_index(self, idx)
 
     def _group_members(self, name: str) -> List[int]:
-        try:
-            members = list((getattr(self.designer, "groups", {}) or {}).get(name, []))
-        except (TypeError, AttributeError):
-            members = []
-        sc = self.state.current_scene()
-        valid: List[int] = []
-        for m in members:
-            try:
-                i = int(m)
-            except (ValueError, TypeError):
-                continue
-            if 0 <= i < len(sc.widgets):
-                valid.append(i)
-        return sorted(set(valid))
+        return groups.group_members(self, name)
 
     def _selected_group_exact(self) -> Optional[str]:
-        """Return group name when current selection matches it exactly."""
-        if not self.state.selected or self.state.selected_idx is None:
-            return None
-        gname = self._primary_group_for_index(int(self.state.selected_idx))
-        if not gname:
-            return None
-        members = self._group_members(gname)
-        return gname if set(members) == set(self.state.selected) else None
+        return groups.selected_group_exact(self)
 
     def _selected_component_group(self) -> Optional[Tuple[str, str, str, List[int]]]:
-        """Return (group_name, component_type, root_prefix, members) when selection is inside a component group."""
-        if not self.state.selected or self.state.selected_idx is None:
-            return None
-        try:
-            idx = int(self.state.selected_idx)
-        except (ValueError, TypeError):
-            return None
-        selection = [int(i) for i in (self.state.selected or [])]
-        for gname in self._groups_for_index(idx):
-            info = self._component_info_from_group(gname)
-            if not info:
-                continue
-            comp_type, root = info
-            members = self._group_members(gname)
-            if all(i in members for i in selection):
-                return str(gname), str(comp_type), str(root), members
-        return None
+        return groups.selected_component_group(self)
 
     def _component_info_from_group(self, group_name: str) -> Optional[Tuple[str, str]]:
-        g = str(group_name or "")
-        if not g.startswith("comp:"):
-            return None
-        parts = g.split(":")
-        # New scheme: comp:{type}:{root}:{n}
-        if len(parts) >= 4 and parts[1] and parts[2]:
-            return str(parts[1]), str(parts[2])
-        # Legacy: comp:{type}:{n} (root == type)
-        if len(parts) >= 3 and parts[1]:
-            return str(parts[1]), str(parts[1])
-        return None
+        return groups.component_info_from_group(group_name)
 
     def _component_role_index(self, indices: List[int], root_prefix: str) -> Dict[str, int]:
-        """Map component role -> widget index within selection."""
-        sc = self.state.current_scene()
-        roles: Dict[str, int] = {}
-        prefix = f"{root_prefix or ''!s}."
-        if prefix == ".":
-            return roles
-        for idx in indices:
-            if not (0 <= idx < len(sc.widgets)):
-                continue
-            wid = str(getattr(sc.widgets[idx], "_widget_id", "") or "")
-            if not wid.startswith(prefix):
-                continue
-            role = wid[len(prefix) :].strip()
-            if role and role not in roles:
-                roles[role] = idx
-        return roles
+        return groups.component_role_index(self, indices, root_prefix)
 
     def _component_field_specs(self, component_type: str) -> Dict[str, Tuple[str, str, str]]:
-        """Define editable component-level fields for the inspector."""
         return component_field_specs(component_type)
 
     def _format_group_label(self, group_name: str, members: List[int]) -> str:
-        info = self._component_info_from_group(group_name)
-        if info:
-            comp_type, root = info
-            if root and root != comp_type:
-                return f"component: {comp_type} ({root}) ({len(members)})"
-            return f"component: {comp_type} ({len(members)})"
-        return f"group: {group_name} ({len(members)})"
+        return groups.format_group_label(group_name, members)
 
     def _tri_state(self, values: List[bool]) -> str:
-        if not values:
-            return "off"
-        if all(values):
-            return "on"
-        if not any(values):
-            return "off"
-        return "mixed"
+        return groups.tri_state(values)
 
     def _selection_bounds(self, indices: List[int]) -> Optional[pygame.Rect]:
         return selection_ops.selection_bounds(self, indices)
@@ -1189,60 +984,13 @@ class CyberpunkEditorApp:
         fit_widget.fit_selection_to_widget(self)
 
     def _next_group_name(self, prefix: str) -> str:
-        try:
-            existing = set((getattr(self.designer, "groups", {}) or {}).keys())
-        except (AttributeError, TypeError):
-            existing = set()
-        n = 1
-        while f"{prefix}{n}" in existing:
-            n += 1
-        return f"{prefix}{n}"
+        return groups.next_group_name(self, prefix)
 
     def _group_selection(self) -> None:
-        if len(self.state.selected) < 2:
-            self._set_status("Group: select 2+ widgets (Ctrl+Click).", ttl_sec=3.0)
-            return
-        name = self._next_group_name("group")
-        try:
-            ok = bool(self.designer.create_group(name, list(self.state.selected)))
-        except (TypeError, ValueError, KeyError):
-            ok = False
-        if ok:
-            self._set_status(f"Grouped as {name}.", ttl_sec=3.0)
-        else:
-            self._set_status("Group failed.", ttl_sec=3.0)
+        groups.group_selection(self)
 
     def _ungroup_selection(self) -> None:
-        if not self.state.selected:
-            return
-        target: List[str] = []
-        if self.state.selected_idx is not None:
-            gname = self._primary_group_for_index(int(self.state.selected_idx))
-            if gname:
-                target = [gname]
-        if not target:
-            sel = set(self.state.selected)
-            try:
-                gdict = getattr(self.designer, "groups", {}) or {}
-            except (TypeError, AttributeError):
-                gdict = {}
-            for gname, members in gdict.items():
-                try:
-                    if sel.intersection(set(members)):
-                        target.append(str(gname))
-                except TypeError:
-                    continue
-        if not target:
-            self._set_status("Ungroup: no group.", ttl_sec=2.0)
-            return
-        removed = 0
-        for gname in sorted(set(target)):
-            try:
-                if self.designer.delete_group(gname):
-                    removed += 1
-            except (TypeError, ValueError, KeyError):
-                continue
-        self._set_status(f"Ungrouped {removed} group(s).", ttl_sec=3.0)
+        groups.ungroup_selection(self)
 
     def _is_widget_focusable(self, w: WidgetConfig) -> bool:
         return focus_nav.is_widget_focusable(w)

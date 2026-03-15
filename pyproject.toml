@@ -63,10 +63,8 @@ ignore = [
     "RUF003", # ambiguous unicode character in comment
     "RUF005", # use [*x, ...] instead of concatenation (readability preference)
     "RUF012", # mutable class variable without ClassVar (dataclass pattern)
-    "RUF015", # prefer next() over [0] (minor optimization, readability trade-off)
     "RUF059", # unused __all__ entry (noisy for re-export packages)
     "SIM102", # collapsible nested ifs (intentionally nested for readability)
-    "SIM108", # use ternary expression (if-else blocks are clearer)
     "SIM115", # open() without context manager (acceptable patterns)
     "SIM117", # merge with statements (readability preference)
 ]
@@ -103,3 +101,9 @@ python_functions = ["test_*"]
 testpaths = ["tests"]
 timeout = 300
 timeout_method = "thread"
+
+[tool.mutmut]
+paths_to_mutate = "cyberpunk_designer/"
+tests_dir = "tests/"
+runner = "python -m pytest -x -q --ignore=output --tb=no"
+dict_synonyms = "Struct,NamedStruct"

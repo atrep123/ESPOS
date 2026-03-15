@@ -13,8 +13,8 @@ from constants import GRID_SIZE_MEDIUM
 
 # Keep default aligned with the main designer entrypoint (`run_designer.py`).
 DEFAULT_JSON = Path("main_scene.json")
-SCALE = 2  # preferred scale; UI starts larger and stays integer-scaled
-FPS = 60
+SCALE = 3  # preferred scale; UI starts larger and stays integer-scaled
+FPS = 61
 GRID: int = GRID_SIZE_MEDIUM  # single source of truth: root constants.py
 GUIDE_TOL = 4
 

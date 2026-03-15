@@ -413,10 +413,7 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             if len(names) > 1:
                 cur = getattr(app.designer, "current_scene", "")
                 idx = names.index(cur) if cur in names else 0
-                if mods & pygame.KMOD_SHIFT:
-                    idx = (idx - 1) % len(names)
-                else:
-                    idx = (idx + 1) % len(names)
+                idx = (idx - 1) % len(names) if mods & pygame.KMOD_SHIFT else (idx + 1) % len(names)
                 app._jump_to_scene(idx)
         else:
             app._toggle_panels()

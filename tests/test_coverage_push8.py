@@ -592,7 +592,7 @@ class TestMouseMoveTabDrag:
         app._jump_to_scene(0)
         app.pointer_down = True
         app._tab_drag_idx = 0
-        app._tab_drag_name = list(app.designer.scenes.keys())[0]
+        app._tab_drag_name = next(iter(app.designer.scenes.keys()))
         app.layout.scene_tabs_h = 20
         tabs_r = app.layout.scene_tabs_rect
         hit_rect = pygame.Rect(tabs_r.x + 50, tabs_r.y + 2, 40, 16)

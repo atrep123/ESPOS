@@ -8,6 +8,11 @@ from .canvas import (
     draw_selection_info,
     draw_widget_preview,
 )
+from .frame import (
+    auto_adjust_quality,
+    optimized_draw_frame,
+    smart_dirty_tracking,
+)
 from .overlays import (
     TOOLBAR_TOOLTIPS,
     draw_context_menu,
@@ -27,7 +32,9 @@ from .primitives import (
     draw_frame,
     draw_pixel_frame,
     draw_pixel_panel_bg,
+    load_pixel_font,
     render_pixel_text,
+    shade,
 )
 from .text import (
     draw_text_clipped,
@@ -48,6 +55,7 @@ from .widgets import (
 
 __all__ = [
     "TOOLBAR_TOOLTIPS",
+    "auto_adjust_quality",
     "button",
     "draw_bevel_frame",
     "draw_border_style",
@@ -74,8 +82,12 @@ __all__ = [
     "draw_tooltip",
     "draw_widget_preview",
     "ellipsize_text_px",
+    "load_pixel_font",
+    "optimized_draw_frame",
     "panel",
     "render_pixel_text",
+    "shade",
+    "smart_dirty_tracking",
     "text_width_px",
     "wrap_text_px",
 ]

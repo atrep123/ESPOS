@@ -226,7 +226,7 @@ class TestCtxViewItems:
         app = make_app()
         app.show_grid = True
         items = ctx_view_items(app)
-        grid_label = [i[0] for i in items if i[2] == "view_grid"][0]
+        grid_label = next(i[0] for i in items if i[2] == "view_grid")
         assert "\u2713" in grid_label
 
 

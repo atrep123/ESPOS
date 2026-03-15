@@ -239,14 +239,8 @@ def rebuild_layout(
         view_h = max(1, int(getattr(cr, "height", 1) or 1))
         w = max(1, min(scene_w, view_w))
         h = max(1, min(scene_h, view_h))
-        if scene_w <= view_w:
-            x = int(cr.x) + int((view_w - scene_w) // 2)
-        else:
-            x = int(cr.x)
-        if scene_h <= view_h:
-            y = int(cr.y) + int((view_h - scene_h) // 2)
-        else:
-            y = int(cr.y)
+        x = int(cr.x) + int((view_w - scene_w) // 2) if scene_w <= view_w else int(cr.x)
+        y = int(cr.y) + int((view_h - scene_h) // 2) if scene_h <= view_h else int(cr.y)
         x = snap(int(x), GRID)
         y = snap(int(y), GRID)
         x = max(int(cr.x), min(int(cr.right) - w, int(x)))

@@ -360,12 +360,12 @@ class TestContextMenuBuilders:
         app = make_app()
         app.show_grid = True
         items = app._ctx_view_items()
-        grid_item = [i for i in items if "Grid" in i[0]][0]
+        grid_item = next(i for i in items if "Grid" in i[0])
         assert "\u2713" in grid_item[0]
 
         app.show_grid = False
         items = app._ctx_view_items()
-        grid_item = [i for i in items if "Grid" in i[0]][0]
+        grid_item = next(i for i in items if "Grid" in i[0])
         assert "\u2713" not in grid_item[0]
 
     def test_ctx_add_items(self, make_app):

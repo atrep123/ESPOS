@@ -1587,7 +1587,7 @@ class UIDesigner:
             self.height = data.get("height", 64)
             self.scenes = self._build_scenes_from_data(data)
             if self.scenes:
-                self.current_scene = list(self.scenes.keys())[0]
+                self.current_scene = next(iter(self.scenes.keys()))
             raw_groups = data.get("groups")
             if (
                 isinstance(raw_groups, dict)

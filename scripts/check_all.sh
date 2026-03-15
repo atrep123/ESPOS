@@ -175,6 +175,14 @@ else
   echo "[WARN] mypy reported errors (advisory, not blocking)"
 fi
 
+# pip-audit (advisory — checks for known vulnerabilities)
+echo "[INFO] Running pip-audit (advisory)..."
+if "$PYTHON_CMD" -m pip_audit 2>/dev/null; then
+  echo "[OK] pip-audit clean"
+else
+  echo "[WARN] pip-audit reported issues or not installed (advisory, not blocking)"
+fi
+
 if [[ -f "tools/validate_design.py" ]]; then
   "$PYTHON_CMD" tools/validate_design.py "${DESIGN}"
 fi

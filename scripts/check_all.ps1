@@ -301,6 +301,15 @@ if (-not $SkipPython) {
   } else {
     Write-Host "[OK] mypy clean"
   }
+
+  # pip-audit (advisory — checks for known vulnerabilities)
+  Write-Host "[INFO] Running pip-audit (advisory)..."
+  & python -m pip_audit 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "pip-audit reported vulnerabilities (advisory, not blocking)"
+  } else {
+    Write-Host "[OK] pip-audit clean"
+  }
 }
 
 if (Test-Path "tools\\validate_design.py") {
