@@ -1,437 +1,80 @@
-"""Inspector commit-edit logic: validate and apply inspector field changes."""
+"""Inspector commit-edit logic: validate and apply inspector field changes.
+
+Validation/parsing utilities live in :mod:`.inspector_values`.
+Special-field handlers live in :mod:`.inspector_handlers`.
+This module re-exports everything for backward compatibility.
+"""
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
-
-import pygame
+from typing import List, Optional
 
 from .constants import GRID, clamp, safe_save_state, snap
+from .inspector_handlers import (
+    _SPECIAL_HANDLERS as _SPECIAL_HANDLERS,
+)
+
+# Re-export handlers for backward compat
+from .inspector_handlers import (
+    _handle_array_dup as _handle_array_dup,
+)
+from .inspector_handlers import (
+    _handle_goto_widget as _handle_goto_widget,
+)
+from .inspector_handlers import (
+    _handle_margin as _handle_margin,
+)
+from .inspector_handlers import (
+    _handle_padding as _handle_padding,
+)
+from .inspector_handlers import (
+    _handle_position as _handle_position,
+)
+from .inspector_handlers import (
+    _handle_scene_name as _handle_scene_name,
+)
+from .inspector_handlers import (
+    _handle_search as _handle_search,
+)
+from .inspector_handlers import (
+    _handle_size as _handle_size,
+)
+from .inspector_handlers import (
+    _handle_spacing as _handle_spacing,
+)
+from .inspector_handlers import (
+    _handle_template_name as _handle_template_name,
+)
+from .inspector_handlers import (
+    _handle_value_range as _handle_value_range,
+)
 from .inspector_utils import parse_int_list
 
-# Choice-constrained fields: field → (allowed_values, widget_attr)
-_CHOICE_FIELDS: Dict[str, Tuple[Tuple[str, ...], str]] = {
-    "align": (("left", "center", "right"), "align"),
-    "valign": (("top", "middle", "bottom"), "valign"),
-    "border_style": (("none", "single", "double", "rounded", "bold", "dashed"), "border_style"),
-    "text_overflow": (("ellipsis", "wrap", "clip", "auto"), "text_overflow"),
-}
-
-
-def _commit_choice(app, f: str, buf: str, targets: List) -> Optional[bool]:
-    """Validate and set a choice field. Returns None if not a choice field."""
-    spec = _CHOICE_FIELDS.get(f)
-    if spec is None:
-        return None
-    allowed, attr = spec
-    val = buf.lower()
-    if val not in allowed:
-        app._set_status(f"{f} must be: {'|'.join(allowed)}", ttl_sec=4.0)
-        return False
-    safe_save_state(app.designer)
-    for w in targets:
-        setattr(w, attr, val)
-    return True
-
-
-def _commit_str_attr(app, f: str, raw: str, targets: List) -> Optional[bool]:
-    """Set text/runtime fields directly. Returns None if not applicable."""
-    if f not in {"text", "runtime"}:
-        return None
-    safe_save_state(app.designer)
-    for w in targets:
-        setattr(w, f, raw)
-    return True
-
-
-def _commit_color(app, f: str, buf: str, targets: List) -> Optional[bool]:
-    """Validate and set color fields. Returns None if not applicable."""
-    if f not in {"color_fg", "color_bg"}:
-        return None
-    if not app._is_valid_color_str(buf):
-        app._set_status(f"Invalid {f}: {buf!r}", ttl_sec=4.0)
-        return False
-    safe_save_state(app.designer)
-    for w in targets:
-        setattr(w, f, buf)
-    return True
-
-
-def _parse_pair(buf: str, separators: str = ", ") -> Optional[Tuple[int, int]]:
-    """Parse 'A,B' or 'A B' into (int, int). Returns None on failure."""
-    for sep in separators:
-        if sep in buf:
-            parts = buf.split(sep, 1)
-            break
-    else:
-        return None
-    if len(parts) != 2:  # pragma: no cover
-        return None
-    try:
-        return int(parts[0].strip()), int(parts[1].strip())
-    except (ValueError, TypeError):
-        return None
-
-
-def _commit_epilogue(app, message: str) -> bool:
-    """Common cleanup after a successful inspector commit."""
-    app.state.inspector_selected_field = None
-    app.state.inspector_input_buffer = ""
-    try:
-        pygame.key.stop_text_input()
-    except (pygame.error, AttributeError):
-        pass
-    app._set_status(str(message or "Updated."), ttl_sec=2.0)
-    app._mark_dirty()
-    return True
-
-
-def _sorted_role_indices(role_idx: Dict[str, int], prefix: str) -> List[Tuple[int, int]]:
-    out: List[Tuple[int, int]] = []
-    p = str(prefix or "")
-    if not p:
-        return out
-    for role, idx in (role_idx or {}).items():
-        r = str(role or "")
-        if not r.startswith(p):
-            continue
-        suffix = r[len(p) :]
-        if suffix.isdigit():
-            out.append((int(suffix), int(idx)))
-    out.sort(key=lambda t: t[0])
-    return out
-
-
-def _parse_active_count(text: str) -> Optional[Tuple[int, int]]:
-    """Parse 'active/count' as (active_0_based, count)."""
-    s = str(text or "").strip()
-    if not s or "/" not in s:
-        return None
-    left, right = s.split("/", 1)
-    try:
-        a = int(left.strip())
-        b = int(right.strip())
-    except (ValueError, TypeError):
-        return None
-    if b <= 0:
-        return 0, 0
-    a = max(1, min(a, b))
-    return a - 1, b
-
-
-# ---------------------------------------------------------------------------
-# Special-field handler functions (extracted from inspector_commit_edit)
-# ---------------------------------------------------------------------------
-
-
-def _handle_position(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    pair = _parse_pair(raw.strip())
-    if pair is None:
-        app._set_status("Format: X,Y (e.g. 10,20)", ttl_sec=3.0)
-        return False
-    nx, ny = pair
-    selection = app.state.selection_list()
-    if not selection:
-        app._inspector_cancel_edit()
-        return True
-    safe_save_state(app.designer)
-    sc = app.state.current_scene()
-    for idx in selection:
-        if 0 <= idx < len(sc.widgets):
-            sc.widgets[idx].x = nx
-            sc.widgets[idx].y = ny
-    return _commit_epilogue(app, f"Position: {nx},{ny}")
-
-
-def _handle_padding(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    pair = _parse_pair(raw.strip())
-    if pair is None:
-        app._set_status("Format: Px,Py (e.g. 2,1)", ttl_sec=3.0)
-        return False
-    px, py = pair
-    if px < 0 or py < 0:
-        app._set_status("Padding must be \u2265 0.", ttl_sec=3.0)
-        return False
-    selection = app.state.selection_list()
-    if not selection:
-        app._inspector_cancel_edit()
-        return True
-    safe_save_state(app.designer)
-    sc = app.state.current_scene()
-    for idx in selection:
-        if 0 <= idx < len(sc.widgets):
-            sc.widgets[idx].padding_x = px
-            sc.widgets[idx].padding_y = py
-    return _commit_epilogue(app, f"Padding: {px},{py}")
-
-
-def _handle_margin(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    pair = _parse_pair(raw.strip())
-    if pair is None:
-        app._set_status("Format: Mx,My (e.g. 2,1)", ttl_sec=3.0)
-        return False
-    mx, my = pair
-    if mx < 0 or my < 0:
-        app._set_status("Margin must be \u2265 0.", ttl_sec=3.0)
-        return False
-    selection = app.state.selection_list()
-    if not selection:
-        app._inspector_cancel_edit()
-        return True
-    safe_save_state(app.designer)
-    sc = app.state.current_scene()
-    for idx in selection:
-        if 0 <= idx < len(sc.widgets):
-            sc.widgets[idx].margin_x = mx
-            sc.widgets[idx].margin_y = my
-    return _commit_epilogue(app, f"Margin: {mx},{my}")
-
-
-def _handle_search(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    from cyberpunk_designer.selection_ops import search_widgets
-
-    _commit_epilogue(app, "")
-    search_widgets(app, raw.strip())
-    return True
-
-
-def _handle_spacing(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    buf = raw.strip()
-    parts = [p.strip() for p in buf.replace(" ", ",").split(",") if p.strip()]
-    if len(parts) != 4:
-        app._set_status("Format: px,py,mx,my (e.g. 2,1,0,0)", ttl_sec=3.0)
-        return False
-    try:
-        px = int(parts[0])
-        py = int(parts[1])
-        mx = int(parts[2])
-        my = int(parts[3])
-    except (ValueError, TypeError):
-        app._set_status("Invalid spacing \u2014 use integers.", ttl_sec=3.0)
-        return False
-    if px < 0 or py < 0 or mx < 0 or my < 0:
-        app._set_status("Spacing values must be \u2265 0.", ttl_sec=3.0)
-        return False
-    selection = app.state.selection_list()
-    if not selection:
-        app._inspector_cancel_edit()
-        return True
-    safe_save_state(app.designer)
-    sc = app.state.current_scene()
-    for idx in selection:
-        if 0 <= idx < len(sc.widgets):
-            sc.widgets[idx].padding_x = px
-            sc.widgets[idx].padding_y = py
-            sc.widgets[idx].margin_x = mx
-            sc.widgets[idx].margin_y = my
-    return _commit_epilogue(app, f"Spacing: pad={px},{py} margin={mx},{my}")
-
-
-def _handle_array_dup(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    _commit_epilogue(app, "")
-    buf = raw.strip()
-    parts = [p.strip() for p in buf.replace(" ", ",").split(",") if p.strip()]
-    if len(parts) != 3:
-        app._set_status("Format: count,dx,dy (e.g. 3,16,0)", ttl_sec=3.0)
-        return False
-    try:
-        count = int(parts[0])
-        dx = int(parts[1])
-        dy = int(parts[2])
-    except (ValueError, TypeError):
-        app._set_status("Invalid values \u2014 use integers.", ttl_sec=3.0)
-        return False
-    from cyberpunk_designer.selection_ops import array_duplicate
-
-    array_duplicate(app, count, dx, dy)
-    return True
-
-
-def _handle_template_name(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    name = raw.strip()
-    app.state.inspector_selected_field = None
-    app.state.inspector_input_buffer = ""
-    try:
-        pygame.key.stop_text_input()
-    except (pygame.error, AttributeError):
-        pass
-    if not name:
-        app._set_status("Template name cannot be empty.", ttl_sec=3.0)
-        return False
-    widgets = getattr(app, "_pending_template_widgets", None)
-    if not widgets:
-        app._set_status("No widgets to save.", ttl_sec=3.0)
-        return False
-    from ui_template_manager import Template, TemplateMetadata
-
-    scene_data = {
-        "name": name,
-        "widgets": widgets,
-    }
-
-    class _SceneProxy:
-        def __init__(self, data):
-            self._raw_data = data
-
-    tpl = Template(
-        metadata=TemplateMetadata(
-            name=name,
-            category="Custom",
-            description=f"{len(widgets)} widget(s)",
-        ),
-        scene=_SceneProxy(scene_data),
-    )
-    try:
-        app.template_library.add_template(tpl)
-        app.template_actions = app._build_template_actions()
-        # Append new template action to palette
-        label = f"Template: {name}"
-        app.palette_actions.append((label, lambda t=tpl: app._apply_template(t)))
-    except (AttributeError, ValueError) as exc:
-        app._set_status(f"Template save failed: {exc}", ttl_sec=3.0)
-        return False
-    app._pending_template_widgets = None
-    app._set_status(f"Saved template: {name}", ttl_sec=2.0)
-    app._mark_dirty()
-    return True
-
-
-def _handle_value_range(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    pair = _parse_pair(raw.strip())
-    if pair is None:
-        app._set_status("Format: min,max (e.g. 0,100)", ttl_sec=3.0)
-        return False
-    lo, hi = pair
-    if lo > hi:
-        app._set_status("min must be \u2264 max.", ttl_sec=3.0)
-        return False
-    selection = app.state.selection_list()
-    if not selection:
-        app._inspector_cancel_edit()
-        return True
-    safe_save_state(app.designer)
-    sc = app.state.current_scene()
-    for idx in selection:
-        if 0 <= idx < len(sc.widgets):
-            sc.widgets[idx].min_value = lo
-            sc.widgets[idx].max_value = hi
-            v = int(getattr(sc.widgets[idx], "value", 0) or 0)
-            sc.widgets[idx].value = max(lo, min(hi, v))
-    return _commit_epilogue(app, f"Value range: {lo}..{hi}")
-
-
-def _handle_size(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    buf = raw.strip()
-    parts = None
-    for sep in ("x", "X", ",", " "):
-        if sep in buf:
-            parts = buf.split(sep, 1)
-            break
-    if parts is None or len(parts) != 2:
-        app._set_status("Format: WxH or W,H (e.g. 64x16)", ttl_sec=3.0)
-        return False
-    try:
-        nw = int(parts[0].strip())
-        nh = int(parts[1].strip())
-    except (ValueError, TypeError):
-        app._set_status("Invalid size — use integers.", ttl_sec=3.0)
-        return False
-    if nw < 1 or nh < 1:
-        app._set_status("Size must be positive.", ttl_sec=3.0)
-        return False
-    selection = app.state.selection_list()
-    if not selection:
-        app._inspector_cancel_edit()
-        return True
-    safe_save_state(app.designer)
-    sc = app.state.current_scene()
-    for idx in selection:
-        if 0 <= idx < len(sc.widgets):
-            sc.widgets[idx].width = nw
-            sc.widgets[idx].height = nh
-    return _commit_epilogue(app, f"Size: {nw}x{nh}")
-
-
-def _handle_goto_widget(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    buf = raw.strip()
-    try:
-        idx = int(buf)
-    except (ValueError, TypeError):
-        app._set_status(f"Invalid index: {buf!r}", ttl_sec=3.0)
-        return False
-    sc = app.state.current_scene()
-    if not (0 <= idx < len(sc.widgets)):
-        app._set_status(f"Widget #{idx} not found (0..{len(sc.widgets) - 1}).", ttl_sec=3.0)
-        return False
-    app._set_selection([idx], anchor_idx=idx)
-    return _commit_epilogue(app, f"Selected widget #{idx}: {sc.widgets[idx].type}")
-
-
-def _handle_scene_name(app) -> bool:
-    raw = app.state.inspector_input_buffer
-    new_name = raw.strip()
-    if not new_name:
-        app._set_status("Scene name cannot be empty.", ttl_sec=3.0)
-        return False
-    if not all(ch.isalnum() or ch in "_- " for ch in new_name):
-        app._set_status("Invalid scene name.", ttl_sec=3.0)
-        return False
-    old_name = str(app.designer.current_scene or "")
-    if new_name == old_name:
-        app.state.inspector_selected_field = None
-        app.state.inspector_input_buffer = ""
-        try:
-            pygame.key.stop_text_input()
-        except (pygame.error, AttributeError):
-            pass
-        return True
-    if new_name in app.designer.scenes:
-        app._set_status(f"Scene '{new_name}' already exists.", ttl_sec=3.0)
-        return False
-    # Rename: move scene data to new key
-    scene_data = app.designer.scenes.pop(old_name, None)
-    if scene_data is not None:
-        app.designer.scenes[new_name] = scene_data
-    # Transfer dirty state to new name
-    dirty_scenes = getattr(app, "_dirty_scenes", set())
-    if old_name in dirty_scenes:
-        dirty_scenes.discard(old_name)
-        dirty_scenes.add(new_name)
-    app.designer.current_scene = new_name
-    app.state.inspector_selected_field = None
-    app.state.inspector_input_buffer = ""
-    try:
-        pygame.key.stop_text_input()
-    except (pygame.error, AttributeError):
-        pass
-    app._set_status(f"Renamed: {old_name} → {new_name}", ttl_sec=2.0)
-    app._mark_dirty()
-    return True
-
-
-_SPECIAL_HANDLERS = {
-    "_position": _handle_position,
-    "_padding": _handle_padding,
-    "_margin": _handle_margin,
-    "_search": _handle_search,
-    "_spacing": _handle_spacing,
-    "_array_dup": _handle_array_dup,
-    "_template_name": _handle_template_name,
-    "_value_range": _handle_value_range,
-    "_size": _handle_size,
-    "_goto_widget": _handle_goto_widget,
-    "_scene_name": _handle_scene_name,
-}
+# Re-export validation/parsing utilities for backward compat
+from .inspector_values import (
+    _CHOICE_FIELDS as _CHOICE_FIELDS,
+)
+from .inspector_values import (
+    _commit_choice as _commit_choice,
+)
+from .inspector_values import (
+    _commit_color as _commit_color,
+)
+from .inspector_values import (
+    _commit_epilogue as _commit_epilogue,
+)
+from .inspector_values import (
+    _commit_str_attr as _commit_str_attr,
+)
+from .inspector_values import (
+    _parse_active_count as _parse_active_count,
+)
+from .inspector_values import (
+    _parse_pair as _parse_pair,
+)
+from .inspector_values import (
+    _sorted_role_indices as _sorted_role_indices,
+)
 
 
 def inspector_commit_edit(app) -> bool:

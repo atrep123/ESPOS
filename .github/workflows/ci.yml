@@ -38,7 +38,7 @@ jobs:
         run: python -m mypy --ignore-missing-imports --no-error-summary tools/ui_codegen.py scripts/pio_generate_ui_design.py design_tokens.py shared_undo_redo.py event_manager.py constants.py
       - name: Mypy (designer — advisory)
         continue-on-error: true
-        run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py || true
+        run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py ui_template_manager.py || true
       - name: Validate design JSON
         run: python tools/validate_design.py main_scene.json
       - name: Codegen freshness check
@@ -57,6 +57,10 @@ jobs:
           PYTHONIOENCODING: "utf-8"
         run: |
           python -m pytest -q --tb=short --ignore=output -n auto --cov=. --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=97
+      - name: Performance benchmarks
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m pytest tests/test_benchmarks.py --benchmark-only --benchmark-json=.benchmarks.json -q
       - name: Mutation testing (advisory)
         if: matrix.python-version == '3.12'
         continue-on-error: true
@@ -72,6 +76,13 @@ jobs:
           name: coverage-report-${{ matrix.python-version }}
           path: htmlcov/
           retention-days: 14
+      - name: Upload benchmark results
+        if: matrix.python-version == '3.12' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: .benchmarks.json
+          retention-days: 30
 
   firmware:
     name: Firmware (PlatformIO)

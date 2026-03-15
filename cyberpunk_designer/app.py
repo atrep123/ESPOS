@@ -41,6 +41,7 @@ from . import (
     scene_ops,
     selection_ops,
     text_metrics,
+    widget_factory,
     windowing,
 )
 from . import constants as _constants
@@ -271,7 +272,6 @@ def _build_delegate_registry():
         "apply_first_template",
         "cycle_profile",
         "new_scene",
-        "intelligent_auto_arrange",
         "z_order_bring_to_front",
         "z_order_send_to_back",
         "toggle_lock_selection",
@@ -284,12 +284,19 @@ def _build_delegate_registry():
         "duplicate_current_scene",
         "rename_current_scene",
         "export_c_header",
-        "auto_arrange_grid",
         "toggle_clean_preview",
         "goto_widget_prompt",
     }
     for name in _SCENE_OPS:
         reg[f"_{name}"] = (scene_ops, name)
+
+    # widget_factory: _name(self) -> widget_factory.name(self)
+    _WIDGET_FACTORY_OPS = {
+        "intelligent_auto_arrange",
+        "auto_arrange_grid",
+    }
+    for name in _WIDGET_FACTORY_OPS:
+        reg[f"_{name}"] = (widget_factory, name)
 
     # drawing: _name(self) -> drawing.name(self)
     _DRAWING_OPS = {
@@ -932,10 +939,10 @@ class CyberpunkEditorApp:
     # Auto-complete and auto-arrange
     # ------------------------------------------------------------------ #
     def _auto_complete_widget(self, w: WidgetConfig):
-        scene_ops.auto_complete_widget(self, w)
+        widget_factory.auto_complete_widget(self, w)
 
     def _find_best_position(self, widget: WidgetConfig, scene) -> Tuple[int, int]:
-        return scene_ops.find_best_position(self, widget, scene)
+        return widget_factory.find_best_position(self, widget, scene)
 
     def run(self):
         """Main loop."""
@@ -1527,7 +1534,7 @@ class CyberpunkEditorApp:
     # Export, add widget, and utilities (delegates to scene_ops)
     # ------------------------------------------------------------------ #
     def _add_widget(self, kind: str):
-        scene_ops.add_widget(self, kind)
+        widget_factory.add_widget(self, kind)
 
     def _add_component(self, name: str):
         component_insert.add_component(self, name)
