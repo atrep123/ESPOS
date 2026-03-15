@@ -21,25 +21,7 @@ from cyberpunk_designer.drawing import (
     draw_status,
     draw_toolbar,
 )
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch, *, widgets=None, profile=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128), profile=profile)
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    return app
 
 
 def _w(**kw):
@@ -56,8 +38,8 @@ def _w(**kw):
 class TestFullFrameRender:
     """Render canvas + panels + toolbar + status in a single frame cycle."""
 
-    def test_empty_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_scene(self, make_app):
+        app = make_app()
         draw_canvas(app)
         draw_palette(app)
         draw_inspector(app)
@@ -65,7 +47,7 @@ class TestFullFrameRender:
         draw_status(app)
         draw_scene_tabs(app)
 
-    def test_scene_with_widgets(self, tmp_path, monkeypatch):
+    def test_scene_with_widgets(self, make_app):
         widgets = [
             _w(type="label", x=5, y=5, width=60, height=12, text="Title"),
             _w(type="button", x=5, y=25, width=50, height=14, text="OK"),
@@ -73,23 +55,23 @@ class TestFullFrameRender:
             _w(type="checkbox", x=5, y=60, width=60, height=12, checked=True),
             _w(type="gauge", x=100, y=5, width=30, height=30, value=75),
         ]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         draw_canvas(app)
         draw_palette(app)
         draw_inspector(app)
         draw_toolbar(app)
         draw_status(app)
 
-    def test_scene_with_selection(self, tmp_path, monkeypatch):
+    def test_scene_with_selection(self, make_app):
         widgets = [_w(), _w(x=60, y=10), _w(x=120, y=10)]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         app.state.selected = [0, 2]
         app.state.selected_idx = 0
         draw_canvas(app)
         draw_inspector(app)
 
-    def test_scene_with_grid_and_rulers(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_scene_with_grid_and_rulers(self, make_app):
+        app = make_app(widgets=[_w()])
         app.show_grid = True
         app.show_rulers = True
         app.show_center_guides = True
@@ -121,7 +103,7 @@ class TestAllWidgetTypes:
             "icon",
         ],
     )
-    def test_widget_type_renders(self, tmp_path, monkeypatch, wtype):
+    def test_widget_type_renders(self, make_app, wtype):
         kw = dict(type=wtype, x=5, y=5, width=50, height=20)
         if wtype in ("progressbar", "gauge", "slider"):
             kw["value"] = 42
@@ -133,7 +115,7 @@ class TestAllWidgetTypes:
             kw["icon_char"] = "A"
         if wtype == "list":
             kw["text"] = "one\ntwo\nthree"
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(**kw)])
+        app = make_app(widgets=[_w(**kw)])
         draw_canvas(app)
 
 
@@ -143,13 +125,13 @@ class TestAllWidgetTypes:
 
 
 class TestDrawingHelpers:
-    def test_rulers_render(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_rulers_render(self, make_app):
+        app = make_app()
         sr = pygame.Rect(0, 0, 256, 128)
         draw_rulers(app, sr, 256, 128)
 
-    def test_selection_info_dragging(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_selection_info_dragging(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.dragging = True
         from types import SimpleNamespace
@@ -159,8 +141,8 @@ class TestDrawingHelpers:
         sr = pygame.Rect(0, 0, 256, 128)
         draw_selection_info(app, sel_rect, bounds, sr)
 
-    def test_selection_info_resizing(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_selection_info_resizing(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.resizing = True
         from types import SimpleNamespace
@@ -170,8 +152,8 @@ class TestDrawingHelpers:
         sr = pygame.Rect(0, 0, 256, 128)
         draw_selection_info(app, sel_rect, bounds, sr)
 
-    def test_distance_indicators(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=40, y=32)])
+    def test_distance_indicators(self, make_app):
+        app = make_app(widgets=[_w(x=40, y=32)])
         idx = 0
         app.state.selected = [idx]
         app.state.selected_idx = idx
@@ -180,14 +162,14 @@ class TestDrawingHelpers:
         sr = app.layout.canvas_rect
         draw_distance_indicators(app, sc, sr.x, sr.y, sr)
 
-    def test_overflow_marker(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_overflow_marker(self, make_app):
+        app = make_app()
         surf = app.logical_surface
         rect = pygame.Rect(10, 10, 30, 20)
         draw_overflow_marker(app, surf, rect)
 
-    def test_overflow_marker_tiny_rect(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_overflow_marker_tiny_rect(self, make_app):
+        app = make_app()
         surf = app.logical_surface
         rect = pygame.Rect(0, 0, 0, 0)
         draw_overflow_marker(app, surf, rect)
@@ -199,14 +181,12 @@ class TestDrawingHelpers:
 
 
 class TestProfileRendering:
-    def test_esp32os_profile(self, tmp_path, monkeypatch):
+    def test_esp32os_profile(self, make_app):
         widgets = [
             _w(type="label", x=0, y=0, width=100, height=12, text="ESP32"),
             _w(type="button", x=0, y=20, width=60, height=14, text="Go"),
         ]
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=widgets,
             profile="esp32os_256x128_gray4",
         )
@@ -221,8 +201,8 @@ class TestProfileRendering:
 
 
 class TestMultiScene:
-    def test_render_with_multiple_scenes(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_render_with_multiple_scenes(self, make_app):
+        app = make_app(widgets=[_w()])
         app.designer.create_scene("second")
         sc2 = app.designer.scenes["second"]
         sc2.width, sc2.height = 256, 128

@@ -19,29 +19,6 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _make_app(tmp_path, monkeypatch, *, widgets=None, extra_scenes=False):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    app.show_help_overlay = False
-    app._help_shown_once = True
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    if extra_scenes:
-        app.designer.create_scene("second")
-        sc2 = app.designer.scenes["second"]
-        sc2.width, sc2.height = 256, 128
-    return app
-
-
 def _ensure_selection(app, n=1):
     """Ensure at least n widgets exist and are selected."""
     sc = app.state.current_scene()
@@ -134,10 +111,10 @@ _MULTI_DELEGATES = [
 
 
 class TestSingleDelegateMethods:
-    def test_all_single_delegates(self, tmp_path, monkeypatch):
+    def test_all_single_delegates(self, make_app):
         """Call each delegate method once with a widget selected."""
         widgets = [_w(x=8, y=8, width=40, height=20, text="A")]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets, extra_scenes=True)
+        app = make_app(widgets=widgets, extra_scenes=True)
         app.state.current_scene()
         for mname in _SINGLE_DELEGATES:
             # Ensure selection is valid
@@ -152,12 +129,12 @@ class TestSingleDelegateMethods:
 
 
 class TestMultiDelegateMethods:
-    def test_all_multi_delegates(self, tmp_path, monkeypatch):
+    def test_all_multi_delegates(self, make_app):
         widgets = [
             _w(x=8, y=8, width=40, height=20, text="A"),
             _w(x=56, y=8, width=40, height=20, text="B"),
         ]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         for mname in _MULTI_DELEGATES:
             _ensure_selection(app, 2)
             method = getattr(app, mname, None)
@@ -175,38 +152,38 @@ class TestMultiDelegateMethods:
 
 
 class TestContextActionTabOps:
-    def test_tab_close(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_tab_close(self, make_app):
+        app = make_app(extra_scenes=True)
         count = len(app.designer.scenes)
         app._execute_context_action("tab_close")
         assert len(app.designer.scenes) == count - 1
 
-    def test_tab_close_others(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_tab_close_others(self, make_app):
+        app = make_app(extra_scenes=True)
         app._execute_context_action("tab_close_others")
         assert len(app.designer.scenes) == 1
 
-    def test_tab_close_right(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_tab_close_right(self, make_app):
+        app = make_app(extra_scenes=True)
         # Ensure we're on the first scene
         names = list(app.designer.scenes.keys())
         app.designer.current_scene = names[0]
         app._execute_context_action("tab_close_right")
 
-    def test_delete_action(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_delete_action(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._execute_context_action("delete_selected")
 
-    def test_cut_action(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_cut_action(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._execute_context_action("cut")
 
-    def test_paste_action(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_paste_action(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._execute_context_action("copy")
@@ -219,9 +196,9 @@ class TestContextActionTabOps:
 
 
 class TestDispatchEventSubPaths:
-    def test_double_click_detection(self, tmp_path, monkeypatch):
+    def test_double_click_detection(self, make_app):
         """Left click twice rapidly = double click path."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10, width=40, height=20)])
+        app = make_app(widgets=[_w(x=10, y=10, width=40, height=20)])
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         pos = (sr.x + 15, sr.y + 15)
         # First click
@@ -231,9 +208,9 @@ class TestDispatchEventSubPaths:
         ev2 = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, button=1, pos=pos)
         app._dispatch_event(ev2)
 
-    def test_left_click_dismisses_context_menu(self, tmp_path, monkeypatch):
+    def test_left_click_dismisses_context_menu(self, make_app):
         """Left click with visible context menu → dismiss."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app._context_menu = {
             "visible": True,
             "pos": (10, 10),
@@ -244,18 +221,18 @@ class TestDispatchEventSubPaths:
         app._dispatch_event(ev)
         assert not app._context_menu["visible"]
 
-    def test_mousewheel_exception(self, tmp_path, monkeypatch):
+    def test_mousewheel_exception(self, make_app):
         """Mousewheel with bad attributes → exception path."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Create event where x/y raise on int()
         ev = SimpleNamespace(type=pygame.MOUSEWHEEL)
         ev.x = "bad"
         ev.y = "bad"
         app._dispatch_event(ev)
 
-    def test_textinput_exception(self, tmp_path, monkeypatch):
+    def test_textinput_exception(self, make_app):
         """TEXTINPUT with bad text attr → exception path."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.state.inspector_selected_field = "text"
         app.state.inspector_input_buffer = ""
 
@@ -274,8 +251,8 @@ class TestDispatchEventSubPaths:
 
 
 class TestOpenTabContextMenu:
-    def test_open_with_multiple_scenes(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_open_with_multiple_scenes(self, make_app):
+        app = make_app(extra_scenes=True)
         # Set up fake tab hitboxes for the test
         app.tab_hitboxes = [
             (pygame.Rect(0, 0, 50, 14), 0, "main"),
@@ -288,8 +265,8 @@ class TestOpenTabContextMenu:
         assert "tab_rename" in actions
         assert "tab_close" in actions
 
-    def test_open_single_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_open_single_scene(self, make_app):
+        app = make_app()
         app.tab_hitboxes = [(pygame.Rect(0, 0, 50, 14), 0, "main")]
         app._open_tab_context_menu((5, 5))
         menu = app._context_menu
@@ -305,62 +282,62 @@ class TestOpenTabContextMenu:
 
 
 class TestToggleMethods:
-    def test_toggle_panels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_panels(self, make_app):
+        app = make_app()
         was = app.panels_collapsed
         app._toggle_panels()
         assert app.panels_collapsed != was
 
-    def test_toggle_clean_preview(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_clean_preview(self, make_app):
+        app = make_app()
         assert not app.clean_preview
         app._toggle_clean_preview()
         assert app.clean_preview
         app._toggle_clean_preview()
         assert not app.clean_preview
 
-    def test_toggle_center_guides(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_center_guides(self, make_app):
+        app = make_app()
         was = app.show_center_guides
         app._toggle_center_guides()
         assert app.show_center_guides != was
 
-    def test_toggle_widget_ids(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_widget_ids(self, make_app):
+        app = make_app()
         was = app.show_widget_ids
         app._toggle_widget_ids()
         assert app.show_widget_ids != was
 
-    def test_toggle_z_labels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_z_labels(self, make_app):
+        app = make_app()
         was = app.show_z_labels
         app._toggle_z_labels()
         assert app.show_z_labels != was
 
-    def test_reset_zoom(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_reset_zoom(self, make_app):
+        app = make_app()
         app._reset_zoom()
 
-    def test_toggle_fullscreen(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_fullscreen(self, make_app):
+        app = make_app()
         try:
             app._toggle_fullscreen()
         except Exception:
             pass
 
-    def test_goto_widget_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_goto_widget_prompt(self, make_app):
+        app = make_app()
         app._goto_widget_prompt()
         assert app.state.inspector_selected_field == "_goto_widget"
 
-    def test_set_all_spacing_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_set_all_spacing_prompt(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app._set_all_spacing_prompt()
         assert app.state.inspector_selected_field == "_spacing"
 
-    def test_set_all_spacing_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_set_all_spacing_no_selection(self, make_app):
+        app = make_app()
         app.state.selected = []
         app._set_all_spacing_prompt()
 
@@ -371,106 +348,106 @@ class TestToggleMethods:
 
 
 class TestMiscMethods:
-    def test_auto_arrange_grid(self, tmp_path, monkeypatch):
+    def test_auto_arrange_grid(self, make_app):
         widgets = [_w(x=100, y=100), _w(x=200, y=200)]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         app._auto_arrange_grid()
         sc = app.state.current_scene()
         assert sc.widgets[0].x == GRID
         assert sc.widgets[0].y == GRID
 
-    def test_add_component(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_component(self, make_app):
+        app = make_app()
         try:
             app._add_component("header_bar")
         except Exception:
             pass
 
-    def test_component_blueprints(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_component_blueprints(self, make_app):
+        app = make_app()
         sc = app.state.current_scene()
         result = app._component_blueprints("header_bar", sc)
         assert isinstance(result, list)
 
-    def test_jump_to_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_jump_to_scene(self, make_app):
+        app = make_app(extra_scenes=True)
         app._jump_to_scene(1)
         names = list(app.designer.scenes.keys())
         assert app.designer.current_scene == names[1]
 
-    def test_jump_to_scene_oob(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_jump_to_scene_oob(self, make_app):
+        app = make_app()
         app._jump_to_scene(999)  # out of bounds
 
-    def test_screenshot_canvas(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_screenshot_canvas(self, make_app):
+        app = make_app()
         try:
             app._screenshot_canvas()
         except Exception:
             pass
 
-    def test_write_audit_report(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_write_audit_report(self, make_app):
+        app = make_app(widgets=[_w()])
         try:
             app._write_audit_report()
         except Exception:
             pass
 
-    def test_send_live_preview(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_send_live_preview(self, make_app):
+        app = make_app()
         try:
             app._send_live_preview()
         except Exception:
             pass
 
-    def test_mirror_selection_axis(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10)])
+    def test_mirror_selection_axis(self, make_app):
+        app = make_app(widgets=[_w(x=10, y=10)])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._mirror_selection("h")
 
-    def test_adjust_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(value=50)])
+    def test_adjust_value(self, make_app):
+        app = make_app(widgets=[_w(value=50)])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._adjust_value(5)
 
-    def test_equalize_gaps(self, tmp_path, monkeypatch):
+    def test_equalize_gaps(self, make_app):
         widgets = [_w(x=8, y=8), _w(x=56, y=8)]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         app._equalize_gaps("auto")
 
-    def test_smart_dirty_tracking(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_smart_dirty_tracking(self, make_app):
+        app = make_app()
         app._force_full_redraw = True
         app._smart_dirty_tracking()
         assert len(app.dirty_rects) > 0
 
-    def test_smart_dirty_tracking_dragging(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_smart_dirty_tracking_dragging(self, make_app):
+        app = make_app()
         app.state.dragging = True
         app._smart_dirty_tracking()
 
-    def test_auto_adjust_quality_low_fps(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_auto_adjust_quality_low_fps(self, make_app):
+        app = make_app()
         app.auto_optimize = True
         # Fill fps_history with low values
         for _ in range(60):
             app.fps_history.append(10)
         app._auto_adjust_quality()
 
-    def test_auto_adjust_quality_high_fps(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_auto_adjust_quality_high_fps(self, make_app):
+        app = make_app()
         app.auto_optimize = True
         app.show_grid = False
         for _ in range(60):
             app.fps_history.append(120)
         app._auto_adjust_quality()
 
-    def test_update_cursor(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_update_cursor(self, make_app):
+        app = make_app()
         app.pointer_pos = (app.layout.canvas_rect.x + 5, app.layout.canvas_rect.y + 5)
         app._update_cursor()
         app.pointer_pos = (0, 0)
@@ -483,18 +460,18 @@ class TestMiscMethods:
 
 
 class TestDrawFrame:
-    def test_draw_frame(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_draw_frame(self, make_app):
+        app = make_app(widgets=[_w()])
         app._draw_frame()
 
-    def test_optimized_draw_frame(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_optimized_draw_frame(self, make_app):
+        app = make_app(widgets=[_w()])
         app._dirty = True
         app._optimized_draw_frame()
 
-    def test_optimized_draw_cached(self, tmp_path, monkeypatch):
+    def test_optimized_draw_cached(self, make_app):
         """Second call with same state → cache hit."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app._dirty = True
         app._optimized_draw_frame()
         # Second call should hit cache
@@ -507,21 +484,21 @@ class TestDrawFrame:
 
 
 class TestTextAndKeyHandling:
-    def test_on_text_input_no_field(self, tmp_path, monkeypatch):
+    def test_on_text_input_no_field(self, make_app):
         """Text input with no active field → early return."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.state.inspector_selected_field = None
         app._on_text_input("a")
 
-    def test_on_text_input_empty(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_on_text_input_empty(self, make_app):
+        app = make_app()
         app.state.inspector_selected_field = "text"
         app.state.inspector_input_buffer = "abc"
         app._on_text_input("")
         assert app.state.inspector_input_buffer == "abc"
 
-    def test_on_key_down_no_menu(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_on_key_down_no_menu(self, make_app):
+        app = make_app()
         ev = SimpleNamespace(type=pygame.KEYDOWN, key=pygame.K_a, mod=0, unicode="a")
         app._on_key_down(ev)
 
@@ -532,13 +509,13 @@ class TestTextAndKeyHandling:
 
 
 class TestShade:
-    def test_shade_lighten(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_shade_lighten(self, make_app):
+        app = make_app()
         result = app._shade((100, 150, 200), 50)
         assert result == (150, 200, 250)
 
-    def test_shade_clamp(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_shade_clamp(self, make_app):
+        app = make_app()
         result = app._shade((200, 200, 200), 100)
         assert all(c <= 255 for c in result)
         result2 = app._shade((50, 50, 50), -100)
@@ -551,8 +528,8 @@ class TestShade:
 
 
 class TestApplyTemplate:
-    def test_apply_template(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_apply_template(self, make_app):
+        app = make_app()
         scene_data = {
             "name": "test",
             "widgets": [
@@ -565,8 +542,8 @@ class TestApplyTemplate:
         app._apply_template(template)
         assert len(app.state.current_scene().widgets) > count_before
 
-    def test_apply_first_template(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_apply_first_template(self, make_app):
+        app = make_app()
         app._apply_first_template()
 
 
@@ -576,13 +553,13 @@ class TestApplyTemplate:
 
 
 class TestExportCHeader:
-    def test_export_no_json(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_export_no_json(self, make_app):
+        app = make_app()
         app.json_path = None
         app._export_c_header()
 
-    def test_export_json_not_found(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_export_json_not_found(self, tmp_path, make_app):
+        app = make_app()
         app.json_path = tmp_path / "nonexistent.json"
         app._export_c_header()
 
@@ -593,8 +570,8 @@ class TestExportCHeader:
 
 
 class TestNewScene:
-    def test_new_scene_preserves_size(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_new_scene_preserves_size(self, make_app):
+        app = make_app()
         app.default_size = (256, 128)
         app._new_scene()
         sc = app.state.current_scene()
@@ -608,14 +585,14 @@ class TestNewScene:
 
 
 class TestMarkDirtySceneTracking:
-    def test_mark_dirty_tracks_current_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_mark_dirty_tracks_current_scene(self, make_app):
+        app = make_app(extra_scenes=True)
         app._dirty_scenes.clear()
         app._mark_dirty()
         assert app.designer.current_scene in app._dirty_scenes
 
-    def test_mark_dirty_no_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mark_dirty_no_scene(self, make_app):
+        app = make_app()
         app.designer.current_scene = None
         app._dirty_scenes.clear()
         app._mark_dirty()
@@ -628,21 +605,21 @@ class TestMarkDirtySceneTracking:
 
 
 class TestAutoCompleteWidget:
-    def test_auto_complete_button(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_auto_complete_button(self, make_app):
+        app = make_app()
         w = _w(type="button", text="")
         app._auto_complete_widget(w)
         assert w.text == "Button"
 
-    def test_auto_complete_label_with_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_auto_complete_label_with_text(self, make_app):
+        app = make_app()
         w = _w(type="label", text="Hello World", width=10, height=10)
         app._auto_complete_widget(w)
         # Width should be at least big enough for text
         assert w.width >= 10
 
-    def test_auto_complete_empty_colors(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_auto_complete_empty_colors(self, make_app):
+        app = make_app()
         w = _w(color_fg="", color_bg="")
         app._auto_complete_widget(w)
         assert w.color_fg == "#f5f5f5"
@@ -655,8 +632,8 @@ class TestAutoCompleteWidget:
 
 
 class TestFindBestPosition:
-    def test_near_cursor(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_near_cursor(self, make_app):
+        app = make_app()
         sc = app.state.current_scene()
         w = _w(width=24, height=16)
         app.pointer_pos = (50, 50)
@@ -667,9 +644,9 @@ class TestFindBestPosition:
         assert x >= 0
         assert y >= 0
 
-    def test_next_to_selection(self, tmp_path, monkeypatch):
+    def test_next_to_selection(self, make_app):
         existing = _w(x=8, y=8, width=40, height=20)
-        app = _make_app(tmp_path, monkeypatch, widgets=[existing])
+        app = make_app(widgets=[existing])
         app.state.selected = [0]
         app.state.selected_idx = 0
         sc = app.state.current_scene()
@@ -678,9 +655,9 @@ class TestFindBestPosition:
         assert x >= 0
         assert y >= 0
 
-    def test_scan_rows_fallback(self, tmp_path, monkeypatch):
+    def test_scan_rows_fallback(self, make_app):
         """Fill scene so strategy 1+2 fail → scan rows."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         # Fill scene with many overlapping widgets
         for i in range(20):
@@ -697,33 +674,33 @@ class TestFindBestPosition:
 
 
 class TestRenderHelpers:
-    def test_render_pixel_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_render_pixel_text(self, make_app):
+        app = make_app()
         surf = app._render_pixel_text("Test", (255, 255, 255))
         assert surf is not None
 
-    def test_draw_pixel_frame(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_draw_pixel_frame(self, make_app):
+        app = make_app()
         r = pygame.Rect(10, 10, 80, 30)
         app._draw_pixel_frame(r, pressed=True, hover=True)
 
-    def test_draw_pixel_panel_bg(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_draw_pixel_panel_bg(self, make_app):
+        app = make_app()
         r = pygame.Rect(10, 10, 80, 60)
         app._draw_pixel_panel_bg(r)
 
-    def test_panel(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_panel(self, make_app):
+        app = make_app()
         r = pygame.Rect(0, 0, 100, 50)
         app._panel(r, title="Test")
 
-    def test_button_render(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_button_render(self, make_app):
+        app = make_app()
         result = app._button("OK", (10, 10))
         assert isinstance(result, pygame.Rect)
 
-    def test_is_pointer_over(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_is_pointer_over(self, make_app):
+        app = make_app()
         app.pointer_pos = (50, 50)
         assert app._is_pointer_over(pygame.Rect(0, 0, 100, 100))
         assert not app._is_pointer_over(pygame.Rect(200, 200, 10, 10))
@@ -765,8 +742,8 @@ class TestStaticEventMethods:
         kd = [e for e in result if getattr(e, "type", None) == pygame.KEYDOWN]
         assert len(kd) == 2  # K_a + K_b (repeat dropped)
 
-    def test_event_priority(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_event_priority(self, make_app):
+        app = make_app()
         ev_quit = SimpleNamespace(type=pygame.QUIT)
         ev_motion = SimpleNamespace(type=pygame.MOUSEMOTION)
         ev_unknown = SimpleNamespace(type=99999)
@@ -781,16 +758,16 @@ class TestStaticEventMethods:
 
 
 class TestInspectorRows:
-    def test_with_collapsed_sections(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_with_collapsed_sections(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.inspector_collapsed = {"Layers"}
         result = app._compute_inspector_rows()
         assert result is not None
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         app.state.selected = []
         result = app._compute_inspector_rows()
         assert result is not None
@@ -802,13 +779,13 @@ class TestInspectorRows:
 
 
 class TestSaveTemplate:
-    def test_save_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_save_no_selection(self, make_app):
+        app = make_app()
         app.state.selected = []
         app._save_selection_as_template()
 
-    def test_save_with_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_save_with_selection(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._save_selection_as_template()
@@ -965,12 +942,12 @@ class TestRemainingContextActions:
     """Hit every _execute_context_action elif branch."""
 
     @pytest.mark.parametrize("action", _REMAINING_ACTIONS)
-    def test_action_branch(self, action, tmp_path, monkeypatch):
+    def test_action_branch(self, action, make_app):
         widgets = [
             _w(x=8, y=8, width=40, height=20, text="A"),
             _w(x=56, y=8, width=40, height=20, text="B"),
         ]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets, extra_scenes=True)
+        app = make_app(widgets=widgets, extra_scenes=True)
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         try:
@@ -1103,12 +1080,12 @@ class TestMoreDelegateMethods:
     """Call remaining delegate methods that weren't in _SINGLE_DELEGATES."""
 
     @pytest.mark.parametrize("mname", _MORE_DELEGATES)
-    def test_delegate(self, mname, tmp_path, monkeypatch):
+    def test_delegate(self, mname, make_app):
         widgets = [
             _w(x=8, y=8, width=40, height=20, text="A"),
             _w(x=56, y=8, width=40, height=20, text="B"),
         ]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets, extra_scenes=True)
+        app = make_app(widgets=widgets, extra_scenes=True)
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         method = getattr(app, mname, None)
@@ -1151,8 +1128,8 @@ class TestMoreDelegateMethods:
 
 
 class TestClickContextMenuHitbox:
-    def test_click_hits_action(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_click_hits_action(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         # Manually set up a visible context menu with hitboxes
@@ -1173,8 +1150,8 @@ class TestClickContextMenuHitbox:
 
 
 class TestMiddleClickTabClose:
-    def test_middle_click_closes_tab(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_middle_click_closes_tab(self, make_app):
+        app = make_app(extra_scenes=True)
         tab_rect = pygame.Rect(0, 0, 60, 14)
         app.tab_hitboxes = [
             (tab_rect, 0, "main"),
@@ -1200,8 +1177,8 @@ class TestMiddleClickTabClose:
 
 
 class TestRightClickTabContextMenu:
-    def test_right_click_opens_tab_menu(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_right_click_opens_tab_menu(self, make_app):
+        app = make_app(extra_scenes=True)
         tabs_r = app.layout.scene_tabs_rect
         pos = (tabs_r.x + 5, tabs_r.y + 5)
         app.tab_hitboxes = [
@@ -1219,59 +1196,59 @@ class TestRightClickTabContextMenu:
 
 
 class TestSceneOpsExtra:
-    def test_zoom_to_fit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_zoom_to_fit(self, make_app):
+        app = make_app()
         app._zoom_to_fit()
 
-    def test_duplicate_current_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_duplicate_current_scene(self, make_app):
+        app = make_app()
         count = len(app.designer.scenes)
         app._duplicate_current_scene()
         assert len(app.designer.scenes) == count + 1
 
-    def test_rename_current_scene_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_rename_current_scene_prompt(self, make_app):
+        app = make_app()
         app._rename_current_scene()
         assert app.state.inspector_selected_field == "_scene_name"
 
-    def test_close_other_scenes(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_close_other_scenes(self, make_app):
+        app = make_app(extra_scenes=True)
         app._close_other_scenes()
         assert len(app.designer.scenes) == 1
 
-    def test_close_scenes_to_right(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_close_scenes_to_right(self, make_app):
+        app = make_app(extra_scenes=True)
         names = list(app.designer.scenes.keys())
         app.designer.current_scene = names[0]
         app._close_scenes_to_right()
 
-    def test_add_new_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_new_scene(self, make_app):
+        app = make_app()
         count = len(app.designer.scenes)
         app._add_new_scene()
         assert len(app.designer.scenes) == count + 1
 
-    def test_export_c_header_with_json(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_export_c_header_with_json(self, tmp_path, make_app):
+        app = make_app()
         # Save the JSON file so it exists
         app.json_path = tmp_path / "test.json"
         app.save_json()
         app._export_c_header()
 
-    def test_add_widget_box(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_widget_box(self, make_app):
+        app = make_app()
         before = len(app.state.current_scene().widgets)
         app._add_widget("box")
         assert len(app.state.current_scene().widgets) == before + 1
 
-    def test_handle_double_click_on_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=8, y=8, width=40, height=20)])
+    def test_handle_double_click_on_widget(self, make_app):
+        app = make_app(widgets=[_w(x=8, y=8, width=40, height=20)])
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         pos = (sr.x + 12, sr.y + 12)
         app._handle_double_click(pos)
 
-    def test_handle_double_click_on_tab(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_handle_double_click_on_tab(self, make_app):
+        app = make_app(extra_scenes=True)
         tabs_r = app.layout.scene_tabs_rect
         app.tab_hitboxes = [
             (pygame.Rect(tabs_r.x, tabs_r.y, 60, tabs_r.height), 0, "main"),

@@ -10,20 +10,6 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 from ui_designer import WidgetConfig
 
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    app.show_help_overlay = False
-    app._help_shown_once = True
-    return app
-
-
 # ── CONTEXT_ACTION_MAP ──
 
 
@@ -47,10 +33,10 @@ class TestContextActionMap:
             assert isinstance(action, str)
             assert len(action) > 0
 
-    def test_map_methods_exist_on_app(self, tmp_path, monkeypatch):
+    def test_map_methods_exist_on_app(self, make_app):
         from cyberpunk_designer.context_menu import CONTEXT_ACTION_MAP
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         missing = []
         for action, method in CONTEXT_ACTION_MAP.items():
             if not hasattr(app, method):
@@ -63,41 +49,41 @@ class TestContextActionMap:
 
 
 class TestOpenTabContextMenu:
-    def test_creates_visible_menu(self, tmp_path, monkeypatch):
+    def test_creates_visible_menu(self, make_app):
         from cyberpunk_designer.context_menu import open_tab_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_tab_context_menu(app, (100, 10))
         assert app._context_menu["visible"] is True
 
-    def test_has_rename_item(self, tmp_path, monkeypatch):
+    def test_has_rename_item(self, make_app):
         from cyberpunk_designer.context_menu import open_tab_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_tab_context_menu(app, (100, 10))
         actions = [item[2] for item in app._context_menu["items"]]
         assert "tab_rename" in actions
 
-    def test_has_new_scene_item(self, tmp_path, monkeypatch):
+    def test_has_new_scene_item(self, make_app):
         from cyberpunk_designer.context_menu import open_tab_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_tab_context_menu(app, (100, 10))
         actions = [item[2] for item in app._context_menu["items"]]
         assert "tab_new" in actions
 
-    def test_single_scene_no_close(self, tmp_path, monkeypatch):
+    def test_single_scene_no_close(self, make_app):
         from cyberpunk_designer.context_menu import open_tab_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_tab_context_menu(app, (100, 10))
         actions = [item[2] for item in app._context_menu["items"]]
         assert "tab_close" not in actions
 
-    def test_multi_scene_has_close(self, tmp_path, monkeypatch):
+    def test_multi_scene_has_close(self, make_app):
         from cyberpunk_designer.context_menu import open_tab_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.create_scene("second")
         app.designer.scenes["second"].width = 256
         app.designer.scenes["second"].height = 128
@@ -111,19 +97,19 @@ class TestOpenTabContextMenu:
 
 
 class TestOpenContextMenu:
-    def test_empty_scene_has_add_items(self, tmp_path, monkeypatch):
+    def test_empty_scene_has_add_items(self, make_app):
         from cyberpunk_designer.context_menu import open_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_context_menu(app, (20, 20))
         actions = [item[2] for item in app._context_menu["items"] if item[2]]
         assert "add_label" in actions
         assert "add_button" in actions
 
-    def test_selected_widget_has_edit_items(self, tmp_path, monkeypatch):
+    def test_selected_widget_has_edit_items(self, make_app):
         from cyberpunk_designer.context_menu import open_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=10, y=10, width=50, height=20))
         app.state.selected = [0]
@@ -133,10 +119,10 @@ class TestOpenContextMenu:
         assert "delete" in actions
         assert "duplicate" in actions
 
-    def test_multi_selected_has_layout_items(self, tmp_path, monkeypatch):
+    def test_multi_selected_has_layout_items(self, make_app):
         from cyberpunk_designer.context_menu import open_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=10, y=10, width=50, height=20))
         sc.widgets.append(WidgetConfig(type="button", x=70, y=10, width=50, height=20))
@@ -146,30 +132,30 @@ class TestOpenContextMenu:
         assert "stack_vertical" in actions
         assert "swap_positions" in actions
 
-    def test_no_consecutive_separators(self, tmp_path, monkeypatch):
+    def test_no_consecutive_separators(self, make_app):
         from cyberpunk_designer.context_menu import open_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_context_menu(app, (20, 20))
         items = app._context_menu["items"]
         for i in range(len(items) - 1):
             if items[i][2] is None:
                 assert items[i + 1][2] is not None, f"Consecutive separators at {i}"
 
-    def test_no_leading_trailing_separator(self, tmp_path, monkeypatch):
+    def test_no_leading_trailing_separator(self, make_app):
         from cyberpunk_designer.context_menu import open_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         open_context_menu(app, (20, 20))
         items = app._context_menu["items"]
         if items:
             assert items[0][2] is not None
             assert items[-1][2] is not None
 
-    def test_clipboard_paste_shown(self, tmp_path, monkeypatch):
+    def test_clipboard_paste_shown(self, make_app):
         from cyberpunk_designer.context_menu import open_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app._clipboard = [{"type": "label"}]
         open_context_menu(app, (20, 20))
         actions = [item[2] for item in app._context_menu["items"] if item[2]]
@@ -180,19 +166,19 @@ class TestOpenContextMenu:
 
 
 class TestCtxSingleItems:
-    def test_returns_list(self, tmp_path, monkeypatch):
+    def test_returns_list(self, make_app):
         from cyberpunk_designer.context_menu import ctx_single_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         SEP = ("---", "", None)
         items = ctx_single_items(app, SEP)
         assert isinstance(items, list)
         assert len(items) > 20
 
-    def test_all_tuples_of_3(self, tmp_path, monkeypatch):
+    def test_all_tuples_of_3(self, make_app):
         from cyberpunk_designer.context_menu import ctx_single_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         SEP = ("---", "", None)
         for item in ctx_single_items(app, SEP):
             assert len(item) == 3
@@ -202,19 +188,19 @@ class TestCtxSingleItems:
 
 
 class TestCtxMultiItems:
-    def test_returns_list(self, tmp_path, monkeypatch):
+    def test_returns_list(self, make_app):
         from cyberpunk_designer.context_menu import ctx_multi_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         SEP = ("---", "", None)
         items = ctx_multi_items(app, SEP)
         assert isinstance(items, list)
         assert len(items) > 10
 
-    def test_has_measure(self, tmp_path, monkeypatch):
+    def test_has_measure(self, make_app):
         from cyberpunk_designer.context_menu import ctx_multi_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         SEP = ("---", "", None)
         actions = [i[2] for i in ctx_multi_items(app, SEP) if i[2]]
         assert "measure" in actions
@@ -224,20 +210,20 @@ class TestCtxMultiItems:
 
 
 class TestCtxViewItems:
-    def test_returns_expected_items(self, tmp_path, monkeypatch):
+    def test_returns_expected_items(self, make_app):
         from cyberpunk_designer.context_menu import ctx_view_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         items = ctx_view_items(app)
         actions = [i[2] for i in items]
         assert "view_grid" in actions
         assert "view_guides" in actions
         assert "view_snap" in actions
 
-    def test_check_marks_update(self, tmp_path, monkeypatch):
+    def test_check_marks_update(self, make_app):
         from cyberpunk_designer.context_menu import ctx_view_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.show_grid = True
         items = ctx_view_items(app)
         grid_label = [i[0] for i in items if i[2] == "view_grid"][0]
@@ -248,20 +234,20 @@ class TestCtxViewItems:
 
 
 class TestCtxAddItems:
-    def test_has_all_widget_types(self, tmp_path, monkeypatch):
+    def test_has_all_widget_types(self, make_app):
         from cyberpunk_designer.context_menu import ctx_add_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         SEP = ("---", "", None)
         items = ctx_add_items(app, SEP)
         actions = [i[2] for i in items if i[2]]
         for wtype in ["add_label", "add_button", "add_panel", "add_checkbox", "add_slider"]:
             assert wtype in actions, f"Missing: {wtype}"
 
-    def test_has_composites(self, tmp_path, monkeypatch):
+    def test_has_composites(self, make_app):
         from cyberpunk_designer.context_menu import ctx_add_items
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         SEP = ("---", "", None)
         items = ctx_add_items(app, SEP)
         actions = [i[2] for i in items if i[2]]
@@ -273,18 +259,18 @@ class TestCtxAddItems:
 
 
 class TestClickContextMenu:
-    def test_no_menu_does_nothing(self, tmp_path, monkeypatch):
+    def test_no_menu_does_nothing(self, make_app):
         from cyberpunk_designer.context_menu import click_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app._context_menu = {"visible": False}
         click_context_menu(app, (10, 10))
         assert not app._context_menu["visible"]
 
-    def test_miss_hides_menu(self, tmp_path, monkeypatch):
+    def test_miss_hides_menu(self, make_app):
         from cyberpunk_designer.context_menu import click_context_menu
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app._context_menu = {"visible": True, "hitboxes": [], "pos": (0, 0), "items": []}
         click_context_menu(app, (999, 999))
         assert not app._context_menu["visible"]
@@ -294,43 +280,43 @@ class TestClickContextMenu:
 
 
 class TestExecuteContextAction:
-    def test_add_action(self, tmp_path, monkeypatch):
+    def test_add_action(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         before = len(sc.widgets)
         execute_context_action(app, "add_label")
         assert len(sc.widgets) == before + 1
 
-    def test_view_grid_toggle(self, tmp_path, monkeypatch):
+    def test_view_grid_toggle(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         before = app.show_grid
         execute_context_action(app, "view_grid")
         assert app.show_grid != before
 
-    def test_view_rulers_toggle(self, tmp_path, monkeypatch):
+    def test_view_rulers_toggle(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         before = getattr(app, "show_rulers", True)
         execute_context_action(app, "view_rulers")
         assert getattr(app, "show_rulers", True) != before
 
-    def test_view_snap_toggle(self, tmp_path, monkeypatch):
+    def test_view_snap_toggle(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         before = app.snap_enabled
         execute_context_action(app, "view_snap")
         assert app.snap_enabled != before
 
-    def test_map_action_dispatches(self, tmp_path, monkeypatch):
+    def test_map_action_dispatches(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=10, y=10, width=50, height=20))
         app.state.selected = [0]
@@ -338,8 +324,8 @@ class TestExecuteContextAction:
         execute_context_action(app, "toggle_lock")
         assert sc.widgets[0].locked is True
 
-    def test_unknown_action_no_crash(self, tmp_path, monkeypatch):
+    def test_unknown_action_no_crash(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         execute_context_action(app, "nonexistent_action_xyz")

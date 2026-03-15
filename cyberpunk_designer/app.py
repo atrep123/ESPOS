@@ -71,6 +71,7 @@ from .constants import (
     snap,
 )
 from .inspector_logic import compute_inspector_rows, inspector_commit_edit, inspector_field_to_str
+from .layout import Layout
 from .perf import RenderCache, compute_dirty_rects
 from .state import EditorState
 
@@ -150,6 +151,9 @@ class CyberpunkEditorApp:
         self._quit_confirm_ts: float = 0.0
         self._force_full_redraw: bool = False
         self.clean_preview = False
+        self._pending_template_widgets: Optional[list] = None
+        self._saved_show_grid: bool = True
+        self._saved_panels_collapsed: bool = False
         self._restored_from_autosave = False
         self.snap_enabled = True
         self.show_grid = True
@@ -178,7 +182,7 @@ class CyberpunkEditorApp:
         self._help_timeout_sec: float = 5.0
         self._status_until_ts: float = 0.0
         self.clipboard: List[WidgetConfig] = []
-        self.window = None
+        self.window: Optional[pygame.Surface] = None
         try:
             self.fps_limit = max(0, int(os.getenv("ESP32OS_FPS", str(FPS))))
         except (ValueError, TypeError):
@@ -229,6 +233,8 @@ class CyberpunkEditorApp:
                     win_size = (max(1, scr_w - margin_w), max(1, scr_h - margin_h))
             except (pygame.error, AttributeError, ValueError, TypeError):
                 win_size = None
+        self.layout: Layout = Layout(1, 1)  # placeholder; overwritten by _rebuild_layout
+        self.logical_surface: pygame.Surface = pygame.Surface((1, 1))
         self._rebuild_layout(window_size=win_size, force_scene_size=False, lock_scale=None)
         pygame.display.set_caption("ESP32OS UI Designer (pygame)")
         pygame.event.set_blocked(None)

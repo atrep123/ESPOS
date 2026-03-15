@@ -10,25 +10,11 @@ import pytest
 
 from cyberpunk_designer.selection_ops.core import save_undo
 from cyberpunk_designer.state import EditorState
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import UIDesigner, WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch, widgets=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    return app
 
 
 def _w(**kw):
@@ -193,31 +179,31 @@ class TestSaveUndo:
 
 
 class TestHandleQuit:
-    def test_quit_dirty_first_press(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_quit_dirty_first_press(self, make_app):
+        app = make_app(widgets=[_w()])
         app._dirty_scenes = {"main"}
         app._quit_confirm_ts = 0.0
         app._handle_quit()
         assert app.running is True  # first press: just status
         assert app._quit_confirm_ts > 0.0
 
-    def test_quit_dirty_second_press(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_quit_dirty_second_press(self, make_app):
+        app = make_app(widgets=[_w()])
         app._dirty_scenes = {"main"}
         app._quit_confirm_ts = time.time()  # recent
         app._handle_quit()
         assert app.running is False
 
-    def test_quit_clean(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_quit_clean(self, make_app):
+        app = make_app()
         app._dirty_scenes = set()
         app._handle_quit()
         assert app.running is False
 
 
 class TestDispatchMouseDown:
-    def test_right_click_canvas(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_right_click_canvas(self, make_app):
+        app = make_app(widgets=[_w()])
         event = pygame.event.Event(
             pygame.MOUSEBUTTONDOWN,
             button=3,
@@ -228,8 +214,8 @@ class TestDispatchMouseDown:
         menu = getattr(app, "_context_menu", None)
         assert menu is not None
 
-    def test_left_click_no_menu(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_left_click_no_menu(self, make_app):
+        app = make_app()
         if hasattr(app, "_context_menu"):
             app._context_menu = {"visible": False}
         event = pygame.event.Event(
@@ -240,8 +226,8 @@ class TestDispatchMouseDown:
         app._dispatch_mouse_down(event)
         assert app.pointer_down is True
 
-    def test_middle_click_no_tab(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_middle_click_no_tab(self, make_app):
+        app = make_app()
         event = pygame.event.Event(
             pygame.MOUSEBUTTONDOWN,
             button=2,
@@ -251,8 +237,8 @@ class TestDispatchMouseDown:
 
 
 class TestHandleLeftClick:
-    def test_dismiss_context_menu(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_dismiss_context_menu(self, make_app):
+        app = make_app()
         app._context_menu = {
             "visible": True,
             "items": [("Test", lambda: None)],
@@ -268,8 +254,8 @@ class TestHandleLeftClick:
         app._handle_left_click(event)
         # Menu should be dismissed or click handled
 
-    def test_double_click_detection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=0, y=0, width=100, height=100)])
+    def test_double_click_detection(self, make_app):
+        app = make_app(widgets=[_w(x=0, y=0, width=100, height=100)])
         pos = (app.layout.canvas_rect.x + 10, app.layout.canvas_rect.y + 10)
         # First click
         app._last_click_time = time.time()
@@ -281,27 +267,27 @@ class TestHandleLeftClick:
 
 
 class TestDispatchEvent:
-    def test_videoresize(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_videoresize(self, make_app):
+        app = make_app()
         event = pygame.event.Event(pygame.VIDEORESIZE, w=800, h=600)
         app._dispatch_event(event)
         # No crash, window may have resized
 
-    def test_mousewheel(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mousewheel(self, make_app):
+        app = make_app()
         event = pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)
         app._dispatch_event(event)
 
-    def test_textinput(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_textinput(self, make_app):
+        app = make_app()
         app.state.inspector_selected_field = "text"
         app.state.inspector_input_buffer = ""
         event = pygame.event.Event(pygame.TEXTINPUT, text="A")
         app._dispatch_event(event)
         assert "A" in app.state.inspector_input_buffer
 
-    def test_mousemotion(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mousemotion(self, make_app):
+        app = make_app()
         event = pygame.event.Event(
             pygame.MOUSEMOTION,
             pos=(100, 100),
@@ -309,8 +295,8 @@ class TestDispatchEvent:
         )
         app._dispatch_event(event)
 
-    def test_mouseup(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mouseup(self, make_app):
+        app = make_app()
         app.pointer_down = True
         event = pygame.event.Event(
             pygame.MOUSEBUTTONUP,
@@ -327,8 +313,8 @@ class TestDispatchEvent:
 
 
 class TestBuildPalette:
-    def test_palette_sections_populated(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_palette_sections_populated(self, make_app):
+        app = make_app()
         assert len(app.palette_sections) >= 6
         names = [name for name, _items in app.palette_sections]
         assert "Add Widget" in names
@@ -338,29 +324,29 @@ class TestBuildPalette:
         assert "Layout" in names
         assert "Profiles" in names
 
-    def test_palette_collapsed_defaults(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_palette_collapsed_defaults(self, make_app):
+        app = make_app()
         assert "Add Widget" not in app.palette_collapsed
         assert "Templates" in app.palette_collapsed
 
-    def test_palette_actions_flat(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_palette_actions_flat(self, make_app):
+        app = make_app()
         assert len(app.palette_actions) > 0
         # Each action is a (name, callable_or_none) tuple
         for name, action in app.palette_actions:
             assert isinstance(name, str)
             assert action is None or callable(action)
 
-    def test_rebuild_palette(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_rebuild_palette(self, make_app):
+        app = make_app()
         old_count = len(app.palette_actions)
         app._build_palette()
         assert len(app.palette_actions) == old_count
 
 
 class TestBuildToolbar:
-    def test_toolbar_actions(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toolbar_actions(self, make_app):
+        app = make_app()
         assert len(app.toolbar_actions) == 11
         names = [name for name, _action in app.toolbar_actions]
         assert "New" in names
@@ -370,12 +356,12 @@ class TestBuildToolbar:
         assert "Redo" in names
         assert "Tpl" in names
 
-    def test_overflow_warnings_env(self, tmp_path, monkeypatch):
+    def test_overflow_warnings_env(self, make_app, monkeypatch):
         monkeypatch.setenv("ESP32OS_OVERFLOW_WARN", "1")
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         assert app.show_overflow_warnings is True
 
-    def test_overflow_warnings_env_off(self, tmp_path, monkeypatch):
+    def test_overflow_warnings_env_off(self, make_app, monkeypatch):
         monkeypatch.setenv("ESP32OS_OVERFLOW_WARN", "0")
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         assert app.show_overflow_warnings is False

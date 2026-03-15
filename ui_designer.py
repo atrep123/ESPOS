@@ -13,7 +13,7 @@ from dataclasses import asdict
 from datetime import datetime
 from html import escape
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, TypedDict, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union, cast
 
 from constants import BACKUP_DIR, GRID_SIZE_MEDIUM
 from design_tokens import color_hex
@@ -210,8 +210,8 @@ def _widget_dims(widget: WidgetConfig) -> Tuple[int, int]:
 class UIDesigner:
     """Visual UI designer with layout editor"""
 
-    _last_loaded_json: ClassVar[Optional[str]] = None
-    _json_watch_mtime: ClassVar[Optional[float]] = None
+    _last_loaded_json: Optional[str] = None
+    _json_watch_mtime: Optional[float] = None
 
     def __init__(self, width: int = 128, height: int = 64):
         self.width = width

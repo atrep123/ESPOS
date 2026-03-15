@@ -6,7 +6,6 @@ import pytest
 
 from cyberpunk_designer import drawing
 from cyberpunk_designer.constants import PROFILE_ORDER
-from cyberpunk_editor import CyberpunkEditorApp
 from tools.validate_design import validate_data
 from ui_designer import HARDWARE_PROFILES, UIDesigner, WidgetConfig
 
@@ -16,17 +15,6 @@ ALL_PROFILES = list(HARDWARE_PROFILES.keys())
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch, *, profile=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    kw = {}
-    if profile:
-        kw["profile"] = profile
-    return CyberpunkEditorApp(json_path, (256, 192), **kw)
 
 
 def _fb_bytes_expected(width, height, color_depth):
@@ -215,10 +203,10 @@ _RENDER_PROFILES = [
 
 
 @pytest.mark.parametrize("key", _RENDER_PROFILES)
-def test_widget_renders_at_profile_resolution(key, tmp_path, monkeypatch):
+def test_widget_renders_at_profile_resolution(key, make_app):
     """Render a label and button at each profile's resolution, verify pixels."""
     p = HARDWARE_PROFILES[key]
-    app = _make_app(tmp_path, monkeypatch)
+    app = make_app(size=(256, 192))
     surf_w = max(p["width"], 64)
     surf_h = max(p["height"], 32)
     surf = pygame.Surface((surf_w, surf_h))
@@ -405,10 +393,11 @@ def test_16bpp_framebuffer_is_double_area():
 
 
 @pytest.mark.parametrize("key", ["oled_128x64", "esp32os_256x128_gray4", "tft_320x240"])
-def test_app_init_with_profile(key, tmp_path, monkeypatch):
+def test_app_init_with_profile(key, make_app):
     """App initialized with profile should use that profile's dimensions."""
     p = HARDWARE_PROFILES[key]
-    app = _make_app(tmp_path, monkeypatch, profile=key)
+    app = make_app(profile=key, size=(256, 192))
+    app.designer.set_hardware_profile(key)
     assert app.designer.width == p["width"]
     assert app.designer.height == p["height"]
 

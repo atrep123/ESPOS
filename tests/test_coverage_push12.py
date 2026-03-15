@@ -571,9 +571,8 @@ class TestMultiSelectWH:
 class TestHomeKeySelectFirst:
     """HOME key selects first widget."""
 
-    def test_home_key(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(x=50)])
-        app.show_help_overlay = False
+    def test_home_key(self, monkeypatch, make_app):
+        app = make_app(widgets=[_w(), _w(x=50)])
         app._help_pinned = False
         app.sim_input_mode = False
         app.state.inspector_selected_field = None
@@ -586,9 +585,8 @@ class TestHomeKeySelectFirst:
         on_key_down(app, event)
         assert sel == [[0]]
 
-    def test_end_key(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(x=50)])
-        app.show_help_overlay = False
+    def test_end_key(self, monkeypatch, make_app):
+        app = make_app(widgets=[_w(), _w(x=50)])
         app._help_pinned = False
         app.sim_input_mode = False
         app.state.inspector_selected_field = None
@@ -605,9 +603,8 @@ class TestHomeKeySelectFirst:
 class TestCtrlPageDownJump:
     """Ctrl+PageUp/Down at L390-401 jumps to prev/next scene."""
 
-    def test_ctrl_pagedown(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
-        app.show_help_overlay = False
+    def test_ctrl_pagedown(self, monkeypatch, make_app):
+        app = make_app()
         app._help_pinned = False
         app.sim_input_mode = False
         app.state.inspector_selected_field = None
@@ -622,9 +619,8 @@ class TestCtrlPageDownJump:
         on_key_down(app, event)
         assert jumped
 
-    def test_ctrl_pageup(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
-        app.show_help_overlay = False
+    def test_ctrl_pageup(self, monkeypatch, make_app):
+        app = make_app()
         app._help_pinned = False
         app.sim_input_mode = False
         app.state.inspector_selected_field = None
@@ -647,8 +643,8 @@ class TestCtrlPageDownJump:
 class TestFitTextMaxLinesZero:
     """fit_text.py L28: max_lines=0 → _parse_max_lines returns None."""
 
-    def test_max_lines_zero(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_max_lines_zero(self, make_app):
+        app = make_app()
         w = _w(type="label", x=0, y=0, width=60, height=20, text="Hello world")
         w.max_lines = "0"
         sc = app.state.current_scene()
@@ -663,8 +659,8 @@ class TestFitTextMaxLinesZero:
 class TestFitWidgetMaxLinesNegative:
     """fit_widget.py L31: max_lines=-1 → _parse_max_lines returns None."""
 
-    def test_max_lines_negative(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_max_lines_negative(self, make_app):
+        app = make_app()
         w = _w(type="label", x=0, y=0, width=60, height=20, text="Hello world")
         w.max_lines = "-1"
         sc = app.state.current_scene()
@@ -684,8 +680,8 @@ class TestFitWidgetMaxLinesNegative:
 class TestMoveSelectionLocked:
     """transforms.py L20: locked widget blocks move_selection."""
 
-    def test_locked_blocks_move(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_locked_blocks_move(self, make_app):
+        app = make_app()
         w = _w(x=10, y=10, width=40, height=20)
         w.locked = True
         sc = app.state.current_scene()
@@ -704,8 +700,8 @@ class TestMoveSelectionLocked:
 class TestMakeFullWidthLocked:
     """transforms.py L220: locked widget blocks make_full_width."""
 
-    def test_locked_blocks_full_width(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_locked_blocks_full_width(self, make_app):
+        app = make_app()
         w = _w(x=10, y=10, width=40, height=20)
         w.locked = True
         sc = app.state.current_scene()
@@ -727,8 +723,8 @@ class TestMakeFullWidthLocked:
 class TestResizeLockedWidget:
     """transforms.py L67-69: locked widget blocks resize_selection_to."""
 
-    def test_locked_blocks_resize(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_locked_blocks_resize(self, make_app):
+        app = make_app()
         w = _w(x=10, y=10, width=40, height=20)
         w.locked = True
         sc = app.state.current_scene()
@@ -742,9 +738,9 @@ class TestResizeLockedWidget:
         assert result is False
         assert any("locked" in s.lower() for s in statuses)
 
-    def test_resize_success(self, tmp_path, monkeypatch):
+    def test_resize_success(self, make_app):
         """Normal resize success path for proportional scaling."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         w = _w(x=10, y=10, width=40, height=20)
         sc = app.state.current_scene()
         sc.widgets.append(w)
@@ -763,8 +759,8 @@ class TestResizeLockedWidget:
 class TestRemoveDegenerate:
     """batch_ops.py L369-370: remove widgets with width/height <= 0."""
 
-    def test_remove_zero_width(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_remove_zero_width(self, make_app):
+        app = make_app()
         sc = app.state.current_scene()
         bad_w = _w(x=0, y=0, width=8, height=20, text="bad")
         bad_w._width = 0  # Bypass setter to force zero dimension

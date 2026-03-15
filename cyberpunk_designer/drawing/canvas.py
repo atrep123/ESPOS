@@ -149,7 +149,7 @@ def draw_canvas(app) -> None:
 def _draw_canvas_overlays(
     app,
     sc,
-    items: List[Tuple[int, object]],
+    items: List[Tuple[int, WidgetConfig]],
     origin_x: int,
     origin_y: int,
     scene_rect: pygame.Rect,

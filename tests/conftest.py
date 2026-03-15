@@ -69,19 +69,31 @@ def make_app(tmp_path, monkeypatch):
         profile=None,
         snap=False,
         extra_scenes=False,
+        scenes_count=1,
+        scenes=None,
         size=(256, 128),
     ):
         json_path = tmp_path / "scene.json"
         app = CyberpunkEditorApp(json_path, size)
+        if not hasattr(app, "_save_undo_state"):
+            app._save_undo_state = lambda: None
         if profile:
             app.hardware_profile = profile
         app.snap_enabled = snap
+        app.show_help_overlay = False
+        app._help_shown_once = True
         if widgets:
             sc = app.state.current_scene()
             for w in widgets:
                 sc.widgets.append(w)
         if extra_scenes:
             app.designer.create_scene("scene2")
+        if scenes:
+            for name, sc in scenes.items():
+                app.designer.scenes[name] = sc
+        for i in range(2, scenes_count):
+            name = f"extra_{i}"
+            app.designer.create_scene(name)
         return app
 
     return _factory

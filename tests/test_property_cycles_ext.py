@@ -31,23 +31,11 @@ from cyberpunk_designer.selection_ops.property_cycles import (
     toggle_enabled,
     toggle_visibility,
 )
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    return app
 
 
 def _add(app, **kw):
@@ -72,8 +60,8 @@ def _sel(app, *indices):
 
 
 class TestOutlineMode:
-    def test_basic(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_basic(self, make_app):
+        app = make_app()
         _add(app, color_bg="white", border=False)
         _sel(app, 0)
         outline_mode(app)
@@ -81,8 +69,8 @@ class TestOutlineMode:
         assert w.border is True
         assert w.color_bg == "#000000"
 
-    def test_multiple(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multiple(self, make_app):
+        app = make_app()
         _add(app, color_bg="white")
         _add(app, color_bg="red")
         _sel(app, 0, 1)
@@ -91,8 +79,8 @@ class TestOutlineMode:
         assert sc.widgets[0].color_bg == "#000000"
         assert sc.widgets[1].color_bg == "#000000"
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         outline_mode(app)  # no crash
@@ -104,8 +92,8 @@ class TestOutlineMode:
 
 
 class TestOutlineOnly:
-    def test_basic(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_basic(self, make_app):
+        app = make_app()
         _add(app, color_bg="white", border=False)
         _sel(app, 0)
         outline_only(app)
@@ -113,14 +101,14 @@ class TestOutlineOnly:
         assert w.border is True
         assert w.color_bg == "black"
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         outline_only(app)  # no crash
 
-    def test_invalid_index(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_index(self, make_app):
+        app = make_app()
         _add(app)
         app.state.selected = [99]
         outline_only(app)  # skipped
@@ -132,22 +120,22 @@ class TestOutlineOnly:
 
 
 class TestSetInverseStyle:
-    def test_basic(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_basic(self, make_app):
+        app = make_app()
         _add(app, style="default")
         _sel(app, 0)
         set_inverse_style(app)
         assert app.state.current_scene().widgets[0].style == "inverse"
 
-    def test_already_inverse(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_inverse(self, make_app):
+        app = make_app()
         _add(app, style="inverse")
         _sel(app, 0)
         set_inverse_style(app)
         assert app.state.current_scene().widgets[0].style == "inverse"
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         set_inverse_style(app)  # no crash
@@ -159,22 +147,22 @@ class TestSetInverseStyle:
 
 
 class TestSetBoldStyle:
-    def test_basic(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_basic(self, make_app):
+        app = make_app()
         _add(app, style="default")
         _sel(app, 0)
         set_bold_style(app)
         assert app.state.current_scene().widgets[0].style == "bold"
 
-    def test_already_bold(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_bold(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _sel(app, 0)
         set_bold_style(app)
         assert app.state.current_scene().widgets[0].style == "bold"
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         set_bold_style(app)  # no crash
@@ -186,22 +174,22 @@ class TestSetBoldStyle:
 
 
 class TestSetDefaultStyle:
-    def test_basic(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_basic(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _sel(app, 0)
         set_default_style(app)
         assert app.state.current_scene().widgets[0].style == "default"
 
-    def test_already_default(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_default(self, make_app):
+        app = make_app()
         _add(app, style="default")
         _sel(app, 0)
         set_default_style(app)
         assert app.state.current_scene().widgets[0].style == "default"
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         set_default_style(app)  # no crash
@@ -213,19 +201,19 @@ class TestSetDefaultStyle:
 
 
 class TestCycleStyleGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_style(app)  # no crash
 
-    def test_cycle_default_to_bold(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_default_to_bold(self, make_app):
+        app = make_app()
         _add(app, style="default")
         _sel(app, 0)
         cycle_style(app)
         assert app.state.current_scene().widgets[0].style == "bold"
 
-    def test_cycle_unknown_style(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_unknown_style(self, make_app):
+        app = make_app()
         _add(app, style="unknown_style")
         _sel(app, 0)
         cycle_style(app)
@@ -233,12 +221,12 @@ class TestCycleStyleGuards:
 
 
 class TestToggleVisibilityGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         toggle_visibility(app)  # no crash
 
-    def test_toggle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle(self, make_app):
+        app = make_app()
         _add(app, visible=True)
         _sel(app, 0)
         toggle_visibility(app)
@@ -246,37 +234,37 @@ class TestToggleVisibilityGuards:
 
 
 class TestCycleWidgetTypeGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_widget_type(app)  # no crash
 
-    def test_cycle_label_to_button(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_label_to_button(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _sel(app, 0)
         cycle_widget_type(app)
         assert app.state.current_scene().widgets[0].type == "button"
 
-    def test_cycle_unknown_type(self, tmp_path, monkeypatch):
+    def test_cycle_unknown_type(self, make_app):
         # WidgetConfig now rejects unknown types at construction
         with pytest.raises(ValueError, match="Unknown widget type"):
             WidgetConfig(type="custom_unknown", x=0, y=0, width=20, height=10)
 
 
 class TestCycleBorderStyleGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_border_style(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, border_style="none")
         _sel(app, 0)
         cycle_border_style(app)
         assert app.state.current_scene().widgets[0].border_style == "single"
 
-    def test_cycle_unknown(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_unknown(self, make_app):
+        app = make_app()
         _add(app, border_style="weird")
         _sel(app, 0)
         cycle_border_style(app)
@@ -284,12 +272,12 @@ class TestCycleBorderStyleGuards:
 
 
 class TestCycleColorPresetGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_color_preset(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, color_fg="#f5f5f5", color_bg="#000000")
         _sel(app, 0)
         cycle_color_preset(app)
@@ -298,12 +286,12 @@ class TestCycleColorPresetGuards:
 
 
 class TestToggleBorderGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         toggle_border(app)  # no crash
 
-    def test_toggle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle(self, make_app):
+        app = make_app()
         _add(app, border=True)
         _sel(app, 0)
         toggle_border(app)
@@ -311,19 +299,19 @@ class TestToggleBorderGuards:
 
 
 class TestCycleTextOverflowGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_text_overflow(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, text_overflow="ellipsis")
         _sel(app, 0)
         cycle_text_overflow(app)
         assert app.state.current_scene().widgets[0].text_overflow == "wrap"
 
-    def test_cycle_unknown(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_unknown(self, make_app):
+        app = make_app()
         w = _add(app, text_overflow="ellipsis")
         w.text_overflow = "weird"  # force invalid value post-construction
         _sel(app, 0)
@@ -333,19 +321,19 @@ class TestCycleTextOverflowGuards:
 
 
 class TestCycleAlignGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_align(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, align="left")
         _sel(app, 0)
         cycle_align(app)
         assert app.state.current_scene().widgets[0].align == "center"
 
-    def test_cycle_unknown(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_unknown(self, make_app):
+        app = make_app()
         _add(app, align="justify")
         _sel(app, 0)
         cycle_align(app)
@@ -353,19 +341,19 @@ class TestCycleAlignGuards:
 
 
 class TestCycleValignGuards:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_valign(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, valign="top")
         _sel(app, 0)
         cycle_valign(app)
         assert app.state.current_scene().widgets[0].valign == "middle"
 
-    def test_cycle_unknown(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_unknown(self, make_app):
+        app = make_app()
         _add(app, valign="stretch")
         _sel(app, 0)
         cycle_valign(app)
@@ -378,47 +366,47 @@ class TestCycleValignGuards:
 
 
 class TestSmartEdit:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         smart_edit(app)  # no crash
 
-    def test_gauge_starts_value_edit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_gauge_starts_value_edit(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=50)
         _sel(app, 0)
         smart_edit(app)
         assert app.state.inspector_selected_field == "value"
 
-    def test_chart_starts_data_edit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_chart_starts_data_edit(self, make_app):
+        app = make_app()
         _add(app, type="chart")
         _sel(app, 0)
         smart_edit(app)
         assert app.state.inspector_selected_field == "data_points"
 
-    def test_icon_starts_icon_edit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_icon_starts_icon_edit(self, make_app):
+        app = make_app()
         _add(app, type="icon")
         _sel(app, 0)
         smart_edit(app)
         assert app.state.inspector_selected_field == "icon_char"
 
-    def test_checkbox_toggles_checked(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_checkbox_toggles_checked(self, make_app):
+        app = make_app()
         _add(app, type="checkbox", checked=False)
         _sel(app, 0)
         smart_edit(app)
         assert app.state.current_scene().widgets[0].checked is True
 
-    def test_label_starts_text_edit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_label_starts_text_edit(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _sel(app, 0)
         smart_edit(app)
         assert app.state.inspector_selected_field == "text"
 
-    def test_slider_starts_value_edit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_slider_starts_value_edit(self, make_app):
+        app = make_app()
         _add(app, type="slider", value=25)
         _sel(app, 0)
         smart_edit(app)
@@ -431,40 +419,40 @@ class TestSmartEdit:
 
 
 class TestAdjustValue:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         adjust_value(app, 1)  # no crash
 
-    def test_increment(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_increment(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=50, min_value=0, max_value=100)
         _sel(app, 0)
         adjust_value(app, 10)
         assert app.state.current_scene().widgets[0].value == 60
 
-    def test_decrement(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_decrement(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=50, min_value=0, max_value=100)
         _sel(app, 0)
         adjust_value(app, -10)
         assert app.state.current_scene().widgets[0].value == 40
 
-    def test_clamps_to_max(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamps_to_max(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=95, min_value=0, max_value=100)
         _sel(app, 0)
         adjust_value(app, 20)
         assert app.state.current_scene().widgets[0].value == 100
 
-    def test_clamps_to_min(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamps_to_min(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=5, min_value=0, max_value=100)
         _sel(app, 0)
         adjust_value(app, -20)
         assert app.state.current_scene().widgets[0].value == 0
 
-    def test_non_value_type(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_value_type(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _sel(app, 0)
         adjust_value(app, 1)  # label isn't a value type — noop
@@ -476,12 +464,12 @@ class TestAdjustValue:
 
 
 class TestToggleEnabled:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         toggle_enabled(app)  # no crash
 
-    def test_toggle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle(self, make_app):
+        app = make_app()
         _add(app, enabled=True)
         _sel(app, 0)
         toggle_enabled(app)
@@ -494,25 +482,25 @@ class TestToggleEnabled:
 
 
 class TestToggleChecked:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         toggle_checked(app)  # no crash
 
-    def test_checkbox(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_checkbox(self, make_app):
+        app = make_app()
         _add(app, type="checkbox", checked=False)
         _sel(app, 0)
         toggle_checked(app)
         assert app.state.current_scene().widgets[0].checked is True
 
-    def test_non_checkbox(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_checkbox(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _sel(app, 0)
         toggle_checked(app)  # not applicable
 
-    def test_locked(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_locked(self, make_app):
+        app = make_app()
         _add(app, type="checkbox", checked=False, locked=True)
         _sel(app, 0)
         toggle_checked(app)
@@ -525,20 +513,20 @@ class TestToggleChecked:
 
 
 class TestCycleGrayFg:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_gray_fg(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, color_fg="#000000")
         _sel(app, 0)
         cycle_gray_fg(app)
         w = app.state.current_scene().widgets[0]
         assert w.color_fg == "#111111"
 
-    def test_no_match_goes_to_first(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_match_goes_to_first(self, make_app):
+        app = make_app()
         _add(app, color_fg="white")
         _sel(app, 0)
         cycle_gray_fg(app)
@@ -547,20 +535,20 @@ class TestCycleGrayFg:
 
 
 class TestCycleGrayBg:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         cycle_gray_bg(app)  # no crash
 
-    def test_cycle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle(self, make_app):
+        app = make_app()
         _add(app, color_bg="#000000")
         _sel(app, 0)
         cycle_gray_bg(app)
         w = app.state.current_scene().widgets[0]
         assert w.color_bg == "#111111"
 
-    def test_no_match_goes_to_first(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_match_goes_to_first(self, make_app):
+        app = make_app()
         _add(app, color_bg="red")
         _sel(app, 0)
         cycle_gray_bg(app)

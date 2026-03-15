@@ -745,3 +745,36 @@ class TestFocusableIndicesExtended:
         assert 4 in result
         assert 0 not in result
         assert 2 not in result
+
+
+# ---------------------------------------------------------------------------
+# Zero-dimension widget tests (previously pragma: no cover)
+# ---------------------------------------------------------------------------
+
+
+class TestZeroDimensionFocusNav:
+    """Navigation with zero-dimension widgets (pygame.Rect normalizes to min=1)."""
+
+    def test_zero_width_widget_vertical_nav(self):
+        """Zero-width button navigated via beam (pygame clamps width to 1)."""
+        widgets = [
+            _w("button", x=10, y=10, width=50, height=20),  # idx=0
+            _w("button", x=30, y=50, width=0, height=20),   # idx=1, width→1
+        ]
+        app = _app(widgets)
+        app.focus_idx = 0
+        app.state._selected = [0]
+        focus_move_direction(app, "down")
+        assert app.focus_idx == 1
+
+    def test_zero_height_widget_horizontal_nav(self):
+        """Zero-height button navigated via beam (pygame clamps height to 1)."""
+        widgets = [
+            _w("button", x=10, y=10, width=20, height=50),  # idx=0
+            _w("button", x=50, y=30, width=20, height=0),   # idx=1, height→1
+        ]
+        app = _app(widgets)
+        app.focus_idx = 0
+        app.state._selected = [0]
+        focus_move_direction(app, "right")
+        assert app.focus_idx == 1

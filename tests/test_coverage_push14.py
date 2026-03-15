@@ -73,23 +73,6 @@ def _inspector_app(widgets=None, *, groups=None, comp_group=None):
     return app
 
 
-def _make_app(tmp_path, monkeypatch, *, widgets=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    return app
-
-
 # ===========================================================================
 # A) inspector_logic L22 — _parse_pair ValueError on non-numeric "a,b"
 # ===========================================================================
@@ -117,8 +100,8 @@ class TestParsePairValueError:
 class TestFitTextMaxLinesException:
     """L28: _parse_max_lines returns None when max_lines can't be parsed."""
 
-    def test_non_parseable_max_lines(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_parseable_max_lines(self, make_app):
+        app = make_app()
         w = _w(type="label", x=0, y=0, width=60, height=40, text="Hello world test")
         w.max_lines = object()  # int() on this will raise TypeError
         sc = app.state.current_scene()
@@ -138,8 +121,8 @@ class TestFitTextMaxLinesException:
 class TestFitWidgetMaxLinesException:
     """L31: _parse_max_lines returns None when max_lines can't be parsed."""
 
-    def test_non_parseable_max_lines(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_parseable_max_lines(self, make_app):
+        app = make_app()
         w = _w(type="label", x=0, y=0, width=60, height=40, text="Hello world test")
         w.max_lines = object()  # int() on this will raise TypeError
         sc = app.state.current_scene()
@@ -177,8 +160,8 @@ class TestTextMetricsPushTruncated:
 class TestWrapTextPxTruncation:
     """L68-69: _push_line sets truncated=True and returns when lines >= max_lines."""
 
-    def test_truncation(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_truncation(self, make_app):
+        app = make_app()
         from cyberpunk_designer.drawing.text import wrap_text_px
 
         # Very long text in narrow box with max_lines=2 → truncation
@@ -195,8 +178,8 @@ class TestWrapTextPxTruncation:
 class TestWrapTextPxEllipsis:
     """L110: when truncated, last line is ellipsized."""
 
-    def test_ellipsis_on_truncated(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_ellipsis_on_truncated(self, make_app):
+        app = make_app()
         from cyberpunk_designer.drawing.text import wrap_text_px
 
         # Many words, narrow, max_lines=2 with many words to trigger multi-line truncation.
@@ -214,7 +197,7 @@ class TestWrapTextPxEllipsis:
 class TestAutoSaveBadDimensions:
     """L35: autosave loads scene with width/height <= 0 → reset to default."""
 
-    def test_negative_dimensions(self, tmp_path, monkeypatch):
+    def test_negative_dimensions(self, tmp_path, monkeypatch, make_app):
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
@@ -268,7 +251,7 @@ class TestAutoSaveBadDimensions:
 class TestAutoSaveLoadException:
     """L38-39: autosave file is corrupt → except branch, falls through."""
 
-    def test_corrupt_autosave(self, tmp_path, monkeypatch):
+    def test_corrupt_autosave(self, tmp_path, monkeypatch, make_app):
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
@@ -306,7 +289,7 @@ class TestAutoSaveLoadException:
 class TestAutoSaveLoadRaises:
     """L38-39: autosave file causes load_from_json to raise."""
 
-    def test_load_raises(self, tmp_path, monkeypatch):
+    def test_load_raises(self, tmp_path, monkeypatch, make_app):
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
@@ -357,7 +340,7 @@ class TestAutoSaveLoadRaises:
 class TestLoadJsonPygameClearRaises:
     """L185-186: pygame.event.clear() raises → except silently."""
 
-    def test_event_clear_raises(self, tmp_path, monkeypatch):
+    def test_event_clear_raises(self, tmp_path, monkeypatch, make_app):
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
@@ -385,8 +368,8 @@ class TestLoadJsonPygameClearRaises:
 class TestSelectOverflowImportFailure:
     """L161-163: select_overflow falls back when text_metrics import fails."""
 
-    def test_import_fails(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hello")])
+    def test_import_fails(self, make_app):
+        app = make_app(widgets=[_w(text="hello")])
 
         # Patch the import inside select_overflow to raise
         # Instead of faking the import, test the normal overflow path.

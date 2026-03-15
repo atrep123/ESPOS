@@ -9,21 +9,12 @@ from __future__ import annotations
 import pygame
 
 from cyberpunk_designer import drawing, font6x8, text_metrics
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 BG = (0, 0, 0)
-
-
-def _make_app(tmp_path, monkeypatch, profile=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    return CyberpunkEditorApp(json_path, (256, 192), profile=profile)
 
 
 def _surf(w=160, h=80):
@@ -200,8 +191,8 @@ class TestTextTruncatesInWidget:
 class TestDrawTextClippedDevice:
     """Verify draw_text_clipped uses font6x8 when device profile is active."""
 
-    def test_device_font_renders_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4")
+    def test_device_font_renders_text(self, make_app):
+        app = make_app(profile="esp32os_256x128_gray4", size=(256, 192))
         surf = _surf(256, 128)
         rect = pygame.Rect(0, 0, 120, 16)
         drawing.draw_text_clipped(
@@ -209,9 +200,9 @@ class TestDrawTextClippedDevice:
         )
         assert _count_non_bg(surf, rect) > 0
 
-    def test_device_font_vs_pixel_font(self, tmp_path, monkeypatch):
+    def test_device_font_vs_pixel_font(self, make_app):
         """Device font should produce narrower text than pixel font."""
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4")
+        app = make_app(profile="esp32os_256x128_gray4", size=(256, 192))
         surf_d = _surf(256, 128)
         surf_p = _surf(256, 128)
         rect = pygame.Rect(0, 0, 200, 16)
@@ -227,9 +218,9 @@ class TestDrawTextClippedDevice:
         assert px_d > 0
         assert px_p > 0
 
-    def test_clipping_respected(self, tmp_path, monkeypatch):
+    def test_clipping_respected(self, make_app):
         """Text should not bleed outside the clip rect."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app(size=(256, 192))
         surf = _surf(256, 128)
         rect = pygame.Rect(10, 10, 40, 12)
         drawing.draw_text_clipped(
@@ -241,15 +232,15 @@ class TestDrawTextClippedDevice:
         assert outside_left == 0
         assert outside_right == 0
 
-    def test_empty_text_no_render(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_text_no_render(self, make_app):
+        app = make_app(size=(256, 192))
         surf = _surf()
         rect = pygame.Rect(0, 0, 80, 16)
         drawing.draw_text_clipped(app, surf, "", rect, (255, 255, 255), 1)
         assert _count_non_bg(surf, rect) == 0
 
-    def test_valign_top(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valign_top(self, make_app):
+        app = make_app(size=(256, 192))
         surf = _surf(120, 40)
         rect = pygame.Rect(0, 0, 120, 40)
         drawing.draw_text_clipped(
@@ -259,8 +250,8 @@ class TestDrawTextClippedDevice:
         top_half = pygame.Rect(0, 0, 120, 20)
         assert _count_non_bg(surf, top_half) > 0
 
-    def test_valign_bottom(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valign_bottom(self, make_app):
+        app = make_app(size=(256, 192))
         surf = _surf(120, 40)
         rect = pygame.Rect(0, 0, 120, 40)
         drawing.draw_text_clipped(
@@ -269,8 +260,8 @@ class TestDrawTextClippedDevice:
         bottom_half = pygame.Rect(0, 20, 120, 20)
         assert _count_non_bg(surf, bottom_half) > 0
 
-    def test_align_center(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_center(self, make_app):
+        app = make_app(size=(256, 192))
         surf = _surf(120, 16)
         rect = pygame.Rect(0, 0, 120, 16)
         drawing.draw_text_clipped(
@@ -280,8 +271,8 @@ class TestDrawTextClippedDevice:
         center = pygame.Rect(40, 0, 40, 16)
         assert _count_non_bg(surf, center) > 0
 
-    def test_align_right(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_right(self, make_app):
+        app = make_app(size=(256, 192))
         surf = _surf(120, 16)
         rect = pygame.Rect(0, 0, 120, 16)
         drawing.draw_text_clipped(
@@ -291,9 +282,9 @@ class TestDrawTextClippedDevice:
         right = pygame.Rect(80, 0, 40, 16)
         assert _count_non_bg(surf, right) > 0
 
-    def test_multiline_device_text(self, tmp_path, monkeypatch):
+    def test_multiline_device_text(self, make_app):
         """max_lines > 1 should wrap text."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app(size=(256, 192))
         surf = _surf(60, 32)
         rect = pygame.Rect(0, 0, 60, 32)
         drawing.draw_text_clipped(
@@ -304,9 +295,9 @@ class TestDrawTextClippedDevice:
         bot = _count_non_bg(surf, pygame.Rect(0, 16, 60, 16))
         assert top > 0 and bot > 0
 
-    def test_padding_shrinks_area(self, tmp_path, monkeypatch):
+    def test_padding_shrinks_area(self, make_app):
         """Large padding should reduce rendered text area."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app(size=(256, 192))
         surf_no_pad = _surf(120, 32)
         surf_pad = _surf(120, 32)
         rect = pygame.Rect(0, 0, 120, 32)

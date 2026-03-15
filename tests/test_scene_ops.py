@@ -10,28 +10,14 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 from ui_designer import WidgetConfig
 
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    app.show_help_overlay = False
-    app._help_shown_once = True
-    return app
-
-
 # ── z-order ──
 
 
 class TestZOrder:
-    def test_z_order_step_up(self, tmp_path, monkeypatch):
+    def test_z_order_step_up(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=10, height=10))
         sc.widgets.append(WidgetConfig(type="button", x=20, y=0, width=10, height=10))
@@ -40,10 +26,10 @@ class TestZOrder:
         scene_ops.z_order_step(app, 1)
         assert sc.widgets[0].z_index == 1
 
-    def test_z_order_step_already_at_end(self, tmp_path, monkeypatch):
+    def test_z_order_step_already_at_end(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=10, height=10))
         app.state.selected = [0]
@@ -51,10 +37,10 @@ class TestZOrder:
         scene_ops.z_order_step(app, 1)
         assert len(sc.widgets) == 1
 
-    def test_bring_to_front(self, tmp_path, monkeypatch):
+    def test_bring_to_front(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=10, height=10))
         sc.widgets.append(WidgetConfig(type="button", x=0, y=0, width=10, height=10))
@@ -64,10 +50,10 @@ class TestZOrder:
         scene_ops.z_order_bring_to_front(app)
         assert sc.widgets[0].z_index > sc.widgets[1].z_index
 
-    def test_send_to_back(self, tmp_path, monkeypatch):
+    def test_send_to_back(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=10, height=10))
         sc.widgets.append(WidgetConfig(type="button", x=0, y=0, width=10, height=10))
@@ -83,10 +69,10 @@ class TestZOrder:
 
 
 class TestToggleLock:
-    def test_lock_and_unlock(self, tmp_path, monkeypatch):
+    def test_lock_and_unlock(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=10, height=10))
         app.state.selected = [0]
@@ -100,10 +86,10 @@ class TestToggleLock:
 
 
 class TestSwitchScene:
-    def test_switch_forward(self, tmp_path, monkeypatch):
+    def test_switch_forward(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.create_scene("second")
         sc2 = app.designer.scenes["second"]
         sc2.width, sc2.height = 256, 128
@@ -111,10 +97,10 @@ class TestSwitchScene:
         scene_ops.switch_scene(app, 1)
         assert app.designer.current_scene != first
 
-    def test_switch_with_single_scene(self, tmp_path, monkeypatch):
+    def test_switch_with_single_scene(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         cur = app.designer.current_scene
         scene_ops.switch_scene(app, 1)
         assert app.designer.current_scene == cur
@@ -124,20 +110,20 @@ class TestSwitchScene:
 
 
 class TestJumpToScene:
-    def test_jump_valid_index(self, tmp_path, monkeypatch):
+    def test_jump_valid_index(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.create_scene("second")
         app.designer.scenes["second"].width = 256
         app.designer.scenes["second"].height = 128
         scene_ops.jump_to_scene(app, 1)
         assert app.designer.current_scene == "second"
 
-    def test_jump_invalid_index(self, tmp_path, monkeypatch):
+    def test_jump_invalid_index(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         cur = app.designer.current_scene
         scene_ops.jump_to_scene(app, 99)
         assert app.designer.current_scene == cur
@@ -147,18 +133,18 @@ class TestJumpToScene:
 
 
 class TestSceneCrud:
-    def test_add_new_scene(self, tmp_path, monkeypatch):
+    def test_add_new_scene(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         before = len(app.designer.scenes)
         scene_ops.add_new_scene(app)
         assert len(app.designer.scenes) == before + 1
 
-    def test_delete_current_scene(self, tmp_path, monkeypatch):
+    def test_delete_current_scene(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.create_scene("second")
         app.designer.scenes["second"].width = 256
         app.designer.scenes["second"].height = 128
@@ -166,18 +152,18 @@ class TestSceneCrud:
         scene_ops.delete_current_scene(app)
         assert len(app.designer.scenes) == before - 1
 
-    def test_delete_only_scene(self, tmp_path, monkeypatch):
+    def test_delete_only_scene(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         before = len(app.designer.scenes)
         scene_ops.delete_current_scene(app)
         assert len(app.designer.scenes) == before  # no change
 
-    def test_duplicate_current_scene(self, tmp_path, monkeypatch):
+    def test_duplicate_current_scene(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=10, height=10))
         before = len(app.designer.scenes)
@@ -187,10 +173,10 @@ class TestSceneCrud:
         new_sc = app.state.current_scene()
         assert len(new_sc.widgets) >= 1
 
-    def test_close_other_scenes(self, tmp_path, monkeypatch):
+    def test_close_other_scenes(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.create_scene("second")
         app.designer.scenes["second"].width = 256
         app.designer.scenes["second"].height = 128
@@ -200,10 +186,10 @@ class TestSceneCrud:
         scene_ops.close_other_scenes(app)
         assert len(app.designer.scenes) == 1
 
-    def test_close_scenes_to_right(self, tmp_path, monkeypatch):
+    def test_close_scenes_to_right(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.create_scene("second")
         app.designer.scenes["second"].width = 256
         app.designer.scenes["second"].height = 128
@@ -222,10 +208,10 @@ class TestSceneCrud:
 
 
 class TestNewScene:
-    def test_new_scene_resets(self, tmp_path, monkeypatch):
+    def test_new_scene_resets(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         old_designer = app.designer
         scene_ops.new_scene(app)
         assert app.designer is not old_designer
@@ -236,36 +222,36 @@ class TestNewScene:
 
 
 class TestAddWidget:
-    def test_add_label(self, tmp_path, monkeypatch):
+    def test_add_label(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         before = len(sc.widgets)
         scene_ops.add_widget(app, "label")
         assert len(sc.widgets) == before + 1
         assert sc.widgets[-1].type == "label"
 
-    def test_add_button(self, tmp_path, monkeypatch):
+    def test_add_button(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         scene_ops.add_widget(app, "button")
         assert sc.widgets[-1].type == "button"
 
-    def test_add_panel(self, tmp_path, monkeypatch):
+    def test_add_panel(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         scene_ops.add_widget(app, "panel")
         assert sc.widgets[-1].type == "panel"
 
-    def test_add_checkbox(self, tmp_path, monkeypatch):
+    def test_add_checkbox(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         scene_ops.add_widget(app, "checkbox")
         assert sc.widgets[-1].type == "checkbox"
@@ -275,10 +261,10 @@ class TestAddWidget:
 
 
 class TestAutoArrangeGrid:
-    def test_arranges_widgets(self, tmp_path, monkeypatch):
+    def test_arranges_widgets(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         for _i in range(5):
             sc.widgets.append(WidgetConfig(type="label", x=0, y=0, width=40, height=16))
@@ -292,10 +278,10 @@ class TestAutoArrangeGrid:
 
 
 class TestToggleCleanPreview:
-    def test_toggle_on_off(self, tmp_path, monkeypatch):
+    def test_toggle_on_off(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         assert not app.clean_preview
         scene_ops.toggle_clean_preview(app)
         assert app.clean_preview
@@ -307,20 +293,20 @@ class TestToggleCleanPreview:
 
 
 class TestFindBestPosition:
-    def test_returns_ints(self, tmp_path, monkeypatch):
+    def test_returns_ints(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         w = WidgetConfig(type="label", x=0, y=0, width=40, height=16)
         bx, by = scene_ops.find_best_position(app, w, sc)
         assert isinstance(bx, int)
         assert isinstance(by, int)
 
-    def test_avoids_overlap(self, tmp_path, monkeypatch):
+    def test_avoids_overlap(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         # Place a widget at default position
         from cyberpunk_designer.constants import GRID
@@ -336,10 +322,10 @@ class TestFindBestPosition:
 
 
 class TestZoomToFit:
-    def test_no_crash(self, tmp_path, monkeypatch):
+    def test_no_crash(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         scene_ops.zoom_to_fit(app)
         # Just verify it doesn't crash
 
@@ -348,18 +334,18 @@ class TestZoomToFit:
 
 
 class TestExportCHeader:
-    def test_no_json_path(self, tmp_path, monkeypatch):
+    def test_no_json_path(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = None
         scene_ops.export_c_header(app)
         # Should just show status, not crash
 
-    def test_with_valid_json(self, tmp_path, monkeypatch):
+    def test_with_valid_json(self, tmp_path, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         json_path = tmp_path / "test_scene.json"
         json_path.write_text('{"scenes": []}', encoding="utf-8")
         app.json_path = str(json_path)
@@ -371,10 +357,10 @@ class TestExportCHeader:
 
 
 class TestRenameCurrentScene:
-    def test_sets_inspector_field(self, tmp_path, monkeypatch):
+    def test_sets_inspector_field(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         scene_ops.rename_current_scene(app)
         assert app.state.inspector_selected_field == "_scene_name"
 
@@ -383,9 +369,9 @@ class TestRenameCurrentScene:
 
 
 class TestGotoWidgetPrompt:
-    def test_sets_inspector_field(self, tmp_path, monkeypatch):
+    def test_sets_inspector_field(self, make_app):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         scene_ops.goto_widget_prompt(app)
         assert app.state.inspector_selected_field == "_goto_widget"

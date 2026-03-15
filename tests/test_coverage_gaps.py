@@ -18,40 +18,21 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _make_app(tmp_path, monkeypatch, *, widgets=None, extra_scenes=False):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    app.show_help_overlay = False
-    app._help_shown_once = True
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    if extra_scenes:
-        app.designer.create_scene("second")
-        sc2 = app.designer.scenes["second"]
-        sc2.width, sc2.height = 256, 128
-    return app
 
 
 # ===========================================================================
 # app.py: _open_template_menu (lines 412-443)
 # ===========================================================================
 class TestOpenTemplateMenu:
-    def test_no_templates(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_templates(self, make_app):
+        app = make_app()
         app.template_library = MagicMock()
         app.template_library.templates = []
         app._open_template_menu()
         assert "No templates" in app.dialog_message
 
-    def test_with_templates(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_with_templates(self, make_app):
+        app = make_app()
         tpl = MagicMock()
         tpl.metadata.name = "TestTpl"
         tpl.metadata.category = "cat1"
@@ -63,8 +44,8 @@ class TestOpenTemplateMenu:
         items = menu.get("items", [])
         assert any("TestTpl" in str(it) for it in items)
 
-    def test_with_selection_adds_save(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_with_selection_adds_save(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         tpl = MagicMock()
         tpl.metadata.name = "T1"
@@ -91,8 +72,8 @@ class TestMainEntryPoint:
 # context_menu.py: trailing/leading separator cleanup (lines 221, 223)
 # ===========================================================================
 class TestContextMenuSeparatorCleanup:
-    def test_trailing_separators_removed(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_trailing_separators_removed(self, make_app):
+        app = make_app(widgets=[_w()])
         # Force a context menu with trailing separator by building manually
         from cyberpunk_designer.context_menu import open_context_menu
 
@@ -113,20 +94,20 @@ class TestContextMenuSeparatorCleanup:
 # context_menu.py: execute_context_action — view_rulers (line 221 in dispatch)
 # ===========================================================================
 class TestExecuteContextActions:
-    def test_view_rulers_toggle(self, tmp_path, monkeypatch):
+    def test_view_rulers_toggle(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.show_rulers = True
         execute_context_action(app, "view_rulers")
         assert not app.show_rulers
         execute_context_action(app, "view_rulers")
         assert app.show_rulers
 
-    def test_tpl_action(self, tmp_path, monkeypatch):
+    def test_tpl_action(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         tpl = MagicMock()
         app.template_library = MagicMock()
         app.template_library.templates = [tpl]
@@ -134,28 +115,28 @@ class TestExecuteContextActions:
         execute_context_action(app, "tpl_0")
         app._apply_template.assert_called_once_with(tpl)
 
-    def test_tpl_invalid_index(self, tmp_path, monkeypatch):
+    def test_tpl_invalid_index(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.template_library = MagicMock()
         app.template_library.templates = []
         # Should not raise
         execute_context_action(app, "tpl_99")
 
-    def test_tpl_non_numeric(self, tmp_path, monkeypatch):
+    def test_tpl_non_numeric(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.template_library = MagicMock()
         app.template_library.templates = []
         # "tpl_abc" → ValueError from int() → caught
         execute_context_action(app, "tpl_abc")
 
-    def test_save_as_template(self, tmp_path, monkeypatch):
+    def test_save_as_template(self, make_app):
         from cyberpunk_designer.context_menu import execute_context_action
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app._save_selection_as_template = MagicMock()
         execute_context_action(app, "save_as_template")
@@ -166,7 +147,7 @@ class TestExecuteContextActions:
 # inspector_logic.py: component field int kind (lines 93-94)
 # ===========================================================================
 class TestInspectorLogicIntKind:
-    def test_component_field_int_invalid_value(self, tmp_path, monkeypatch):
+    def test_component_field_int_invalid_value(self, make_app):
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
 
         # Build a card component so the int-kind code path triggers
@@ -174,7 +155,7 @@ class TestInspectorLogicIntKind:
         progress = _w(
             type="progressbar", text="x", _widget_id="card_0.progress", value=50, max_value=100
         )
-        app = _make_app(tmp_path, monkeypatch, widgets=[title, progress])
+        app = make_app(widgets=[title, progress])
         # Register the component group
         if not hasattr(app.designer, "groups"):
             app.designer.groups = {}
@@ -191,12 +172,10 @@ class TestInspectorLogicIntKind:
 # inspector_logic.py: edge case in compute_inspector_rows (lines 334-335)
 # ===========================================================================
 class TestInspectorRowsEdge:
-    def test_multi_selection_bounds_field(self, tmp_path, monkeypatch):
+    def test_multi_selection_bounds_field(self, make_app):
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
 
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(x=10, y=10, width=30, height=20),
                 _w(x=50, y=50, width=30, height=20),
@@ -213,35 +192,35 @@ class TestInspectorRowsEdge:
 # key_handlers.py: _run_action with None (line 175)
 # ===========================================================================
 class TestKeyHandlers:
-    def test_run_action_none(self, tmp_path, monkeypatch):
+    def test_run_action_none(self, make_app):
         from cyberpunk_designer.key_handlers import _run_action
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Should not raise
         _run_action(app, None)
 
-    def test_dispatch_ctrl_nosim(self, tmp_path, monkeypatch):
+    def test_dispatch_ctrl_nosim(self, make_app):
         from cyberpunk_designer.key_handlers import _dispatch_ctrl_key
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.sim_input_mode = True
         # K_t has _F_NOSIM flag → should return False in sim mode
         result = _dispatch_ctrl_key(app, pygame.K_t, pygame.KMOD_CTRL)
         assert result is False
 
-    def test_dispatch_ctrl_noalt(self, tmp_path, monkeypatch):
+    def test_dispatch_ctrl_noalt(self, make_app):
         from cyberpunk_designer.key_handlers import _dispatch_ctrl_key
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.sim_input_mode = False
         # K_t has _F_NOALT flag → should return False with ALT
         result = _dispatch_ctrl_key(app, pygame.K_t, pygame.KMOD_CTRL | pygame.KMOD_ALT)
         assert result is False
 
-    def test_dispatch_ctrl_shift_nosim_fallback(self, tmp_path, monkeypatch):
+    def test_dispatch_ctrl_shift_nosim_fallback(self, make_app):
         from cyberpunk_designer.key_handlers import _dispatch_ctrl_key
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.sim_input_mode = True
         # K_s has _F_SHIFT_NOSIM → Shift+Ctrl+S in sim_input_mode falls to plain
         app.save_json = MagicMock()
@@ -256,9 +235,9 @@ class TestKeyHandlers:
 # descriptor itself raises. Tested via direct unit test of the guard pattern.
 # ===========================================================================
 class TestInspectorCommitExcept:
-    def test_sim_listmodels_guard(self, tmp_path, monkeypatch):
+    def test_sim_listmodels_guard(self, make_app):
         """Verify _sim_listmodels getattr guard doesn't crash."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         # Ensure the attribute exists and can be accessed
         app._sim_listmodels = {"test": MagicMock()}
         # Remove it to test the except path
@@ -275,10 +254,10 @@ class TestInspectorCommitExcept:
 # io_ops.py: apply_preset add_new TypeError (lines 111-112)
 # ===========================================================================
 class TestIoOpsPreset:
-    def test_apply_preset_add_new_invalid(self, tmp_path, monkeypatch):
+    def test_apply_preset_add_new_invalid(self, make_app):
         from cyberpunk_designer.io_ops import apply_preset_slot
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Preset with invalid type that causes WidgetConfig to fail
         app.widget_presets = [{"type": "invalid_widget_type_xyz", "x": 0, "y": 0}]
         sc = app.state.current_scene()
@@ -292,10 +271,10 @@ class TestIoOpsPreset:
 # io_ops.py: save_json atomic fallback (lines 169-170)
 # ===========================================================================
 class TestIoOpsSaveFallback:
-    def test_save_json_atomic_fallback(self, tmp_path, monkeypatch):
+    def test_save_json_atomic_fallback(self, make_app, tmp_path, monkeypatch):
         from cyberpunk_designer.io_ops import save_json
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.json_path = tmp_path / "test_save.json"
         app._dirty = True
         app._dirty_scenes = set()
@@ -317,35 +296,35 @@ class TestIoOpsSaveFallback:
 # scene_ops.py: cycle_profile empty PROFILE_ORDER (line 221)
 # ===========================================================================
 class TestSceneOps:
-    def test_cycle_profile_empty(self, tmp_path, monkeypatch):
+    def test_cycle_profile_empty(self, make_app, monkeypatch):
         from cyberpunk_designer import scene_ops
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(scene_ops, "PROFILE_ORDER", [])
         scene_ops.cycle_profile(app)
         # Should return early without error
 
-    def test_delete_scene_no_current(self, tmp_path, monkeypatch):
+    def test_delete_scene_no_current(self, make_app):
         from cyberpunk_designer.scene_ops import delete_current_scene
 
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+        app = make_app(extra_scenes=True)
         app.designer.current_scene = ""
         delete_current_scene(app)
         # Should return early — both scenes still exist
         assert len(app.designer.scenes) == 2
 
-    def test_duplicate_scene_no_current(self, tmp_path, monkeypatch):
+    def test_duplicate_scene_no_current(self, make_app):
         from cyberpunk_designer.scene_ops import duplicate_current_scene
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.current_scene = ""
         duplicate_current_scene(app)
         assert "No scene" in app.dialog_message
 
-    def test_add_widget_unknown_type(self, tmp_path, monkeypatch):
+    def test_add_widget_unknown_type(self, make_app):
         from cyberpunk_designer.scene_ops import add_widget
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         n = len(sc.widgets)
         add_widget(app, "totally_invalid_type_xyz")
@@ -357,10 +336,10 @@ class TestSceneOps:
 # selection_ops/core.py: save_undo with logging (line 21)
 # ===========================================================================
 class TestCoreOps:
-    def test_save_undo_log_attribute_error(self, tmp_path, monkeypatch):
+    def test_save_undo_log_attribute_error(self, make_app):
         from cyberpunk_designer.selection_ops.core import save_undo
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer._save_state = MagicMock(side_effect=AttributeError("mock"))
         # Should log warning but not raise
         save_undo(app, log=True)
@@ -370,10 +349,10 @@ class TestCoreOps:
 # selection_ops/property_cycles.py: cycle_type ValueError (lines 82-83)
 # ===========================================================================
 class TestPropertyCycles:
-    def test_cycle_type_unknown_current(self, tmp_path, monkeypatch):
+    def test_cycle_type_unknown_current(self, make_app):
         from cyberpunk_designer.selection_ops.property_cycles import cycle_widget_type
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(type="label")])
+        app = make_app(widgets=[_w(type="label")])
         app.state.selected = [0]
         sc = app.state.current_scene()
         sc.widgets[0].type = "unknown_fake_type"
@@ -387,10 +366,10 @@ class TestPropertyCycles:
 # (first check at line 43 already returns) — test add_component with unknown
 # ===========================================================================
 class TestComponentInsert:
-    def test_unknown_component(self, tmp_path, monkeypatch):
+    def test_unknown_component(self, make_app):
         from cyberpunk_designer.component_insert import add_component
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         n = len(sc.widgets)
         add_component(app, "totally_unknown_component")

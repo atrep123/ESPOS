@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pygame
 
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_models import WidgetConfig
 
 # ---------------------------------------------------------------------------
@@ -15,46 +14,27 @@ CTRL = pygame.KMOD_CTRL
 SHIFT = pygame.KMOD_SHIFT
 ALT = pygame.KMOD_ALT
 
-
 def _w(**kw) -> WidgetConfig:
     defaults = dict(type="label", x=0, y=0, width=60, height=20, text="hello")
     defaults.update(kw)
     return WidgetConfig(**defaults)
 
-
-def _make_app(tmp_path, monkeypatch, *, widgets=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    return app
-
-
 def _sel(app, *indices):
     app.state.selected = list(indices)
     app.state.selected_idx = indices[0] if indices else None
-
 
 # ===========================================================================
 # on_mouse_down — inspector_commit_edit before toolbar (L683-684)
 # ===========================================================================
 
-
 class TestToolbarClick:
     """Cover toolbar hitbox click handlers."""
 
-    def test_toolbar_action_click(self, tmp_path, monkeypatch):
+    def test_toolbar_action_click(self, make_app, monkeypatch):
         """Click toolbar button that matches an action (L695-696)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         tr = app.layout.toolbar_rect
         hit_rect = pygame.Rect(tr.x + 5, tr.y + 2, 40, 20)
@@ -65,11 +45,11 @@ class TestToolbarClick:
         on_mouse_down(app, pos)
         assert called
 
-    def test_toolbar_commit_edit_before(self, tmp_path, monkeypatch):
+    def test_toolbar_commit_edit_before(self, make_app, monkeypatch):
         """Inspector field commit before toolbar click (L683-684)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -81,20 +61,18 @@ class TestToolbarClick:
         pos = (tr.x + 10, tr.y + 5)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_down — scene tab click (L731, L736, L742)
 # ===========================================================================
 
-
 class TestSceneTabClick:
     """Cover scene tab click handlers."""
 
-    def test_tab_new_click(self, tmp_path, monkeypatch):
+    def test_tab_new_click(self, make_app, monkeypatch):
         """Click '+ New' tab button (L731, L736)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         # Enable scene tabs
         app.layout.scene_tabs_h = 20
@@ -108,11 +86,11 @@ class TestSceneTabClick:
         on_mouse_down(app, pos)
         assert len(app.designer.scenes) >= scenes_before
 
-    def test_tab_switch_click(self, tmp_path, monkeypatch):
+    def test_tab_switch_click(self, make_app, monkeypatch):
         """Click existing scene tab to switch (L742)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         # Add a second scene
         app._add_new_scene()
@@ -126,11 +104,11 @@ class TestSceneTabClick:
         pos = (tabs_r.x + 55, tabs_r.y + 5)
         on_mouse_down(app, pos)
 
-    def test_tab_no_match_return(self, tmp_path, monkeypatch):
+    def test_tab_no_match_return(self, make_app, monkeypatch):
         """Click in tab bar but not on any tab — return (L731)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         app.layout.scene_tabs_h = 20
         tabs_r = app.layout.scene_tabs_rect
@@ -140,20 +118,18 @@ class TestSceneTabClick:
         pos = (tabs_r.x + 10, tabs_r.y + 5)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_down — palette section collapse (L736, L742, L756, L763-765, L772)
 # ===========================================================================
 
-
 class TestPaletteClick:
     """Cover palette click handlers."""
 
-    def test_palette_section_uncollapse(self, tmp_path, monkeypatch):
+    def test_palette_section_uncollapse(self, make_app, monkeypatch):
         """Click collapsed palette section to expand (L742)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         pr = app.layout.palette_rect
         cx = pr.x + pr.width // 2
@@ -170,11 +146,11 @@ class TestPaletteClick:
         on_mouse_down(app, pos)
         assert "Actions" not in coll
 
-    def test_palette_action_click(self, tmp_path, monkeypatch):
+    def test_palette_action_click(self, make_app, monkeypatch):
         """Click palette action item (L756, L763-765)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         pr = app.layout.palette_rect
         hit_rect = pygame.Rect(pr.x + 2, pr.y + 20, pr.width - 4, 16)
@@ -187,11 +163,11 @@ class TestPaletteClick:
         pos = (pr.x + 5, pr.y + 25)
         on_mouse_down(app, pos)
 
-    def test_palette_no_match_return(self, tmp_path, monkeypatch):
+    def test_palette_no_match_return(self, make_app, monkeypatch):
         """Click in palette area but not on anything — return (L772)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         pr = app.layout.palette_rect
         app.palette_section_hitboxes = []
@@ -202,11 +178,9 @@ class TestPaletteClick:
         pos = (pr.x + pr.width // 2, pr.y + pr.height // 2)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_down — inspector click (L787-921)
 # ===========================================================================
-
 
 class TestInspectorClick:
     """Cover inspector click handlers (section toggle, group, layer, toggle, editable)."""
@@ -215,11 +189,11 @@ class TestInspectorClick:
         ir = app.layout.inspector_rect
         return ir.x + 5, ir.y + dy
 
-    def test_inspector_section_toggle_collapse(self, tmp_path, monkeypatch):
+    def test_inspector_section_toggle_collapse(self, make_app, monkeypatch):
         """Click section header to collapse (L787, L793-794)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         ir = app.layout.inspector_rect
         hit_rect = pygame.Rect(ir.x + 2, ir.y + 2, ir.width - 4, 16)
@@ -230,11 +204,11 @@ class TestInspectorClick:
         on_mouse_down(app, pos)
         assert "Properties" in app.inspector_collapsed
 
-    def test_inspector_section_toggle_expand(self, tmp_path, monkeypatch):
+    def test_inspector_section_toggle_expand(self, make_app, monkeypatch):
         """Click collapsed section header to expand."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         ir = app.layout.inspector_rect
         hit_rect = pygame.Rect(ir.x + 2, ir.y + 2, ir.width - 4, 16)
@@ -245,11 +219,11 @@ class TestInspectorClick:
         on_mouse_down(app, pos)
         assert "Properties" not in app.inspector_collapsed
 
-    def test_inspector_group_click(self, tmp_path, monkeypatch):
+    def test_inspector_group_click(self, make_app, monkeypatch):
         """Click group row — select group members (L804-805, L808-809)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="label", x=0, y=0, width=60, height=10, text="A"))
@@ -263,11 +237,11 @@ class TestInspectorClick:
         on_mouse_down(app, pos)
         assert set(app.state.selected) == {0, 1}
 
-    def test_inspector_layer_click(self, tmp_path, monkeypatch):
+    def test_inspector_layer_click(self, make_app, monkeypatch):
         """Click layer row — select widget and start layer drag (L840-841, L848-849)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -280,11 +254,11 @@ class TestInspectorClick:
         assert 0 in app.state.selected
         assert app._layer_drag_idx == 0
 
-    def test_inspector_toggle_visible(self, tmp_path, monkeypatch):
+    def test_inspector_toggle_visible(self, make_app, monkeypatch):
         """Click 'visible' toggle — toggles widget visibility (L854-889)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -298,11 +272,11 @@ class TestInspectorClick:
         # visible defaults to True, so toggle should set it to False
         assert sc.widgets[0].visible is False
 
-    def test_inspector_toggle_checked_on_non_checkbox(self, tmp_path, monkeypatch):
+    def test_inspector_toggle_checked_on_non_checkbox(self, make_app, monkeypatch):
         """Click 'checked' toggle on non-checkbox — nothing to toggle (L854, L857, L860-861, L865, L868)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -315,11 +289,11 @@ class TestInspectorClick:
         on_mouse_down(app, pos)
         # "checked" toggle skips non-checkbox widgets → "Nothing to toggle."
 
-    def test_inspector_toggle_checked_on_checkbox(self, tmp_path, monkeypatch):
+    def test_inspector_toggle_checked_on_checkbox(self, make_app, monkeypatch):
         """Click 'checked' toggle on checkbox — toggles (L865, L868, L875, L877-878, L881, L886, L889)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="checkbox", x=10, y=10, width=40, height=20))
@@ -331,11 +305,11 @@ class TestInspectorClick:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
-    def test_inspector_toggle_no_selection(self, tmp_path, monkeypatch):
+    def test_inspector_toggle_no_selection(self, make_app, monkeypatch):
         """Click toggle with no selection — set status (L843-844)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -347,11 +321,11 @@ class TestInspectorClick:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
-    def test_inspector_editable_start_edit(self, tmp_path, monkeypatch):
+    def test_inspector_editable_start_edit(self, make_app, monkeypatch):
         """Click editable field — start editing (L911, L913, L921)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20, text="btn"))
@@ -364,11 +338,11 @@ class TestInspectorClick:
         on_mouse_down(app, pos)
         assert app.state.inspector_selected_field == "text"
 
-    def test_inspector_editable_same_field(self, tmp_path, monkeypatch):
+    def test_inspector_editable_same_field(self, make_app, monkeypatch):
         """Click same field already editing — no-op (L911)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20, text="btn"))
@@ -383,11 +357,11 @@ class TestInspectorClick:
         pos = (ir.x + 5, ir.y + 95)
         on_mouse_down(app, pos)
 
-    def test_inspector_editable_commit_and_switch(self, tmp_path, monkeypatch):
+    def test_inspector_editable_commit_and_switch(self, make_app, monkeypatch):
         """Click different editable field while editing — commit+switch (L877-878, L913)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20, text="btn"))
@@ -404,11 +378,11 @@ class TestInspectorClick:
         on_mouse_down(app, pos)
         assert app.state.inspector_selected_field == "x"
 
-    def test_inspector_no_match_return(self, tmp_path, monkeypatch):
+    def test_inspector_no_match_return(self, make_app, monkeypatch):
         """Click in inspector but no hitbox match — return (L881, L886)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         ir = app.layout.inspector_rect
         app.inspector_section_hitboxes = []
@@ -416,20 +390,18 @@ class TestInspectorClick:
         pos = (ir.x + 5, ir.y + 5)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_down — canvas bad scene_rect (L889)
 # ===========================================================================
 
-
 class TestCanvasClick:
     """Cover canvas click edge cases."""
 
-    def test_canvas_bad_scene_rect(self, tmp_path, monkeypatch):
+    def test_canvas_bad_scene_rect(self, make_app, monkeypatch):
         """scene_rect is not a Rect — fall back to canvas_rect (L889)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -438,31 +410,29 @@ class TestCanvasClick:
         pos = (cr.x + 20, cr.y + 20)
         on_mouse_down(app, pos)
 
-    def test_canvas_empty_box_select_start(self, tmp_path, monkeypatch):
+    def test_canvas_empty_box_select_start(self, make_app, monkeypatch):
         """Click empty canvas area — start box select (L911, L913)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         pos = (sr.x + 200, sr.y + 100)
         on_mouse_down(app, pos)
         assert app.state.box_select_start == pos
 
-
 # ===========================================================================
 # on_mouse_move — drag with bad scene_rect (L1105)
 # ===========================================================================
 
-
 class TestMouseMoveDragEdges:
     """Cover mouse move drag edge cases."""
 
-    def test_drag_bad_scene_rect(self, tmp_path, monkeypatch):
+    def test_drag_bad_scene_rect(self, make_app, monkeypatch):
         """Drag with non-Rect scene_rect (L1105)."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -476,11 +446,11 @@ class TestMouseMoveDragEdges:
         app.pointer_down = True
         on_mouse_move(app, (sr.x + 40, sr.y + 30), (1, 0, 0))
 
-    def test_drag_start_rect_none(self, tmp_path, monkeypatch):
+    def test_drag_start_rect_none(self, make_app):
         """Drag with drag_start_rect = None — early return (L1108)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
@@ -491,11 +461,11 @@ class TestMouseMoveDragEdges:
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         on_mouse_move(app, (sr.x + 40, sr.y + 30), (1, 0, 0))
 
-    def test_drag_with_snap_enabled(self, tmp_path, monkeypatch):
+    def test_drag_with_snap_enabled(self, make_app, monkeypatch):
         """Drag with snap enabled — covers snap paths (L1122, L1139-1140)."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         app.snap_enabled = True
         sc = app.state.current_scene()
@@ -508,20 +478,18 @@ class TestMouseMoveDragEdges:
         new_pos = (sr.x + 50, sr.y + 40)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
-
 # ===========================================================================
 # on_mouse_move — resize (L1152-1209)
 # ===========================================================================
 
-
 class TestMouseMoveResizeEdges:
     """Cover mouse move resize edge cases."""
 
-    def test_resize_bad_scene_rect(self, tmp_path, monkeypatch):
+    def test_resize_bad_scene_rect(self, make_app, monkeypatch):
         """Resize with bad scene_rect — fallback (L1030)."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -537,11 +505,11 @@ class TestMouseMoveResizeEdges:
         app.pointer_down = True
         on_mouse_move(app, (sr.x + 80, sr.y + 60), (1, 0, 0))
 
-    def test_resize_start_rect_none(self, tmp_path, monkeypatch):
+    def test_resize_start_rect_none(self, make_app):
         """Resize with resize_start_rect = None — early return (L1168)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
@@ -552,11 +520,11 @@ class TestMouseMoveResizeEdges:
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         on_mouse_move(app, (sr.x + 80, sr.y + 60), (1, 0, 0))
 
-    def test_resize_with_snap(self, tmp_path, monkeypatch):
+    def test_resize_with_snap(self, make_app, monkeypatch):
         """Resize with snap enabled (L1172-1173, L1206-1209)."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         app.snap_enabled = True
         sc = app.state.current_scene()
@@ -570,11 +538,11 @@ class TestMouseMoveResizeEdges:
         new_pos = (sr.x + 100, sr.y + 80)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
-    def test_resize_missing_drag_positions(self, tmp_path, monkeypatch):
+    def test_resize_missing_drag_positions(self, make_app):
         """Resize widget not in drag_start_positions — skip (L1152, L1154, L1190, L1192)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
@@ -589,11 +557,11 @@ class TestMouseMoveResizeEdges:
         app.state.drag_start_sizes = {}
         on_mouse_move(app, (sr.x + 80, sr.y + 60), (1, 0, 0))
 
-    def test_resize_multi_widget(self, tmp_path, monkeypatch):
+    def test_resize_multi_widget(self, make_app, monkeypatch):
         """Resize multiple widgets proportionally (L1185-1186)."""
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=8, y=8, width=40, height=20))
@@ -608,20 +576,18 @@ class TestMouseMoveResizeEdges:
         new_pos = (sr.x + 140, sr.y + 56)
         on_mouse_move(app, new_pos, (1, 0, 0))
 
-
 # ===========================================================================
 # on_mouse_move — tab drag (L1077-1078)
 # ===========================================================================
 
-
 class TestMouseMoveTabDrag:
     """Cover tab drag reorder."""
 
-    def test_tab_drag(self, tmp_path, monkeypatch):
+    def test_tab_drag(self, make_app):
         """Drag scene tab to reorder (L1077-1078)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app._add_new_scene()
         app._jump_to_scene(0)
         app.pointer_down = True
@@ -634,21 +600,19 @@ class TestMouseMoveTabDrag:
         pos = (tabs_r.x + 55, tabs_r.y + 5)
         on_mouse_move(app, pos, (1, 0, 0))
 
-
 # ===========================================================================
 # on_mouse_up — exception paths (L1015-1016)
 # ===========================================================================
 
-
 class TestMouseUpEdges:
     """Cover mouse up exception paths."""
 
-    def test_mouse_up_clear_guides_exception(self, tmp_path, monkeypatch):
+    def test_mouse_up_clear_guides_exception(self, make_app, monkeypatch):
         """clear_active_guides exception (L1015-1016)."""
         from cyberpunk_designer import layout_tools
         from cyberpunk_designer.input_handlers import on_mouse_up
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(
             layout_tools,
             "clear_active_guides",
@@ -657,11 +621,9 @@ class TestMouseUpEdges:
         on_mouse_up(app, (100, 100))
         assert not app.state.dragging
 
-
 # ===========================================================================
 # inspector_logic — remaining 50 miss targets
 # ===========================================================================
-
 
 class TestInspectorRemaining:
     """Cover remaining inspector_logic miss lines not in push7."""
@@ -671,17 +633,17 @@ class TestInspectorRemaining:
         app.state.inspector_input_buffer = buf
         app.state.inspector_raw_input = buf
 
-    def test_parse_pair_none(self, tmp_path, monkeypatch):
+    def test_parse_pair_none(self, make_app):
         """_parse_pair with single value returns None (L22)."""
         from cyberpunk_designer.inspector_logic import _parse_pair
 
         assert _parse_pair("abc") is None
 
-    def test_multi_text_save_throws(self, tmp_path, monkeypatch):
+    def test_multi_text_save_throws(self, make_app, monkeypatch):
         """Multi-select text edit where save throws (L766-767)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20, text="a"))
         sc.widgets.append(_w(type="button", x=50, y=0, width=40, height=20, text="b"))
@@ -694,11 +656,11 @@ class TestInspectorRemaining:
         assert result is True
         assert sc.widgets[0].text == "new_text"
 
-    def test_multi_runtime_save_throws(self, tmp_path, monkeypatch):
+    def test_multi_runtime_save_throws(self, make_app, monkeypatch):
         """Multi-select runtime edit where save throws (L773-774)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         sc.widgets.append(_w(type="button", x=50, y=0, width=40, height=20))
@@ -710,11 +672,11 @@ class TestInspectorRemaining:
         result = inspector_commit_edit(app)
         assert result is True
 
-    def test_multi_x_move_selection(self, tmp_path, monkeypatch):
+    def test_multi_x_move_selection(self, make_app):
         """Multi-select x/y edit (L790, L802)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         sc.widgets.append(_w(type="button", x=60, y=10, width=40, height=20))
@@ -723,11 +685,11 @@ class TestInspectorRemaining:
         result = inspector_commit_edit(app)
         assert result is True
 
-    def test_multi_width_resize(self, tmp_path, monkeypatch):
+    def test_multi_width_resize(self, make_app):
         """Multi-select width edit (L802)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         sc.widgets.append(_w(type="button", x=60, y=10, width=40, height=20))
@@ -736,11 +698,11 @@ class TestInspectorRemaining:
         result = inspector_commit_edit(app)
         assert result is True
 
-    def test_comp_int_field_exception(self, tmp_path, monkeypatch):
+    def test_comp_int_field_exception(self, make_app):
         """Component int field where int() throws (L140-141)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         w0 = _w(type="gauge", x=0, y=0, width=80, height=40)
         w0._widget_id = "gh.gauge"
@@ -752,11 +714,11 @@ class TestInspectorRemaining:
         # Should handle gracefully
         assert isinstance(result, str)
 
-    def test_inspector_draw_before_hitboxes(self, tmp_path, monkeypatch):
+    def test_inspector_draw_before_hitboxes(self, make_app, monkeypatch):
         """inspector_hitboxes is None — triggers draw (L787)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         ir = app.layout.inspector_rect
         app.inspector_section_hitboxes = []
@@ -764,11 +726,11 @@ class TestInspectorRemaining:
         pos = (ir.x + 5, ir.y + 5)
         on_mouse_down(app, pos)
 
-    def test_single_z_index_valid(self, tmp_path, monkeypatch):
+    def test_single_z_index_valid(self, make_app):
         """Single-widget z_index edit (covers z_index path)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         _sel(app, 0)
@@ -777,11 +739,11 @@ class TestInspectorRemaining:
         assert result is True
         assert sc.widgets[0].z_index == 5
 
-    def test_single_z_index_invalid(self, tmp_path, monkeypatch):
+    def test_single_z_index_invalid(self, make_app):
         """Single-widget z_index invalid (covers L1011)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         _sel(app, 0)
@@ -789,11 +751,11 @@ class TestInspectorRemaining:
         result = inspector_commit_edit(app)
         assert result is False
 
-    def test_comp_root_rename_with_empty_wid(self, tmp_path, monkeypatch):
+    def test_comp_root_rename_with_empty_wid(self, make_app):
         """Root rename: widget with empty _widget_id (L572, L578, L593)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
         w0._widget_id = "nav.title"
@@ -813,11 +775,11 @@ class TestInspectorRemaining:
         assert result is True
         assert sc.widgets[0]._widget_id == "newroot.title"
 
-    def test_comp_rename_groups_rekey(self, tmp_path, monkeypatch):
+    def test_comp_rename_groups_rekey(self, make_app):
         """Root rename updates group key (L602-603 path)."""
         from cyberpunk_designer.inspector_logic import inspector_commit_edit
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         w0 = _w(type="label", x=0, y=0, width=60, height=10, text="Title")
         w0._widget_id = "nav.title"
@@ -834,11 +796,11 @@ class TestInspectorRemaining:
         assert "comp:menu:nav:1" not in app.designer.groups
         assert "comp:menu:newroot2:1" in app.designer.groups
 
-    def test_comp_field_to_str_quick_set(self, tmp_path, monkeypatch):
+    def test_comp_field_to_str_quick_set(self, make_app):
         """inspector_field_to_str for quick-set fields (L80-81)."""
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20, text="test"))
         _sel(app, 0)
@@ -846,11 +808,11 @@ class TestInspectorRemaining:
         result = inspector_field_to_str(app, "_position", sc.widgets[0])
         assert isinstance(result, str)
 
-    def test_compute_rows_group_continue(self, tmp_path, monkeypatch):
+    def test_compute_rows_group_continue(self, make_app):
         """compute_inspector_rows: group with <2 valid members (L1295)."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         # Group with only 1 member — should be skipped
@@ -861,11 +823,11 @@ class TestInspectorRemaining:
         # Group should NOT appear since it has < 2 valid members
         assert not any(k.startswith("group:comp:menu") for k in keys)
 
-    def test_compute_rows_group_member_out_of_range(self, tmp_path, monkeypatch):
+    def test_compute_rows_group_member_out_of_range(self, make_app):
         """compute_inspector_rows: group member index out of range (L1309)."""
         from cyberpunk_designer.inspector_logic import compute_inspector_rows
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         sc.widgets.append(_w(type="label", x=50, y=0, width=40, height=20))
@@ -876,20 +838,18 @@ class TestInspectorRemaining:
         keys = [r[0] for r in rows]
         assert any(k.startswith("group:mygroup") for k in keys)
 
-
 # ===========================================================================
 # on_mouse_down — toggle with OOB selection (L854, L865)
 # ===========================================================================
 
-
 class TestInspectorToggleEdges:
     """Cover toggle edge cases: OOB idx, checked with mixed selection."""
 
-    def test_toggle_with_oob_idx(self, tmp_path, monkeypatch):
+    def test_toggle_with_oob_idx(self, make_app, monkeypatch):
         """Toggle 'visible' with out-of-range index in selection (L854, L865)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -903,11 +863,11 @@ class TestInspectorToggleEdges:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
-    def test_toggle_checked_mixed_selection(self, tmp_path, monkeypatch):
+    def test_toggle_checked_mixed_selection(self, make_app, monkeypatch):
         """Toggle 'checked' with mixed checkbox+non-checkbox (L865, L868)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="checkbox", x=10, y=10, width=40, height=20))
@@ -920,11 +880,11 @@ class TestInspectorToggleEdges:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
-    def test_toggle_save_state_exception(self, tmp_path, monkeypatch):
+    def test_toggle_save_state_exception(self, make_app, monkeypatch):
         """Toggle where _save_state throws (L848-849)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -939,20 +899,18 @@ class TestInspectorToggleEdges:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_down — inspector with commit-before paths (L793, L804, L840, L878)
 # ===========================================================================
 
-
 class TestInspectorCommitBefore:
     """Cover inspector commit-edit-before paths with bad edits."""
 
-    def test_group_click_with_pending_bad_edit(self, tmp_path, monkeypatch):
+    def test_group_click_with_pending_bad_edit(self, make_app, monkeypatch):
         """Group click with bad inspector edit pending (L793-794)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -970,11 +928,11 @@ class TestInspectorCommitBefore:
         pos = (ir.x + 5, ir.y + 35)
         on_mouse_down(app, pos)
 
-    def test_layer_click_with_pending_bad_edit(self, tmp_path, monkeypatch):
+    def test_layer_click_with_pending_bad_edit(self, make_app, monkeypatch):
         """Layer click with bad inspector edit pending (L804-805)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -989,11 +947,11 @@ class TestInspectorCommitBefore:
         pos = (ir.x + 5, ir.y + 55)
         on_mouse_down(app, pos)
 
-    def test_toggle_with_pending_bad_edit(self, tmp_path, monkeypatch):
+    def test_toggle_with_pending_bad_edit(self, make_app, monkeypatch):
         """Toggle click with bad inspector edit pending (L840-841)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1008,11 +966,11 @@ class TestInspectorCommitBefore:
         pos = (ir.x + 5, ir.y + 75)
         on_mouse_down(app, pos)
 
-    def test_editable_different_field_bad_edit(self, tmp_path, monkeypatch):
+    def test_editable_different_field_bad_edit(self, make_app, monkeypatch):
         """Click different editable field with bad edit pending (L878)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
@@ -1027,11 +985,11 @@ class TestInspectorCommitBefore:
         pos = (ir.x + 5, ir.y + 95)
         on_mouse_down(app, pos)
 
-    def test_inspector_no_match_with_hitboxes(self, tmp_path, monkeypatch):
+    def test_inspector_no_match_with_hitboxes(self, make_app, monkeypatch):
         """Inspector hitboxes set but none match click — return (L886)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         ir = app.layout.inspector_rect
         # Non-matching hitbox (off-screen)
@@ -1041,20 +999,18 @@ class TestInspectorCommitBefore:
         pos = (ir.x + ir.width // 2, ir.y + ir.height // 2)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_down — canvas click: Ctrl, locked, empty selection (L911-921)
 # ===========================================================================
 
-
 class TestCanvasClickEdges:
     """Cover canvas click edge cases (Ctrl, locked, empty return)."""
 
-    def test_canvas_click_ctrl_held(self, tmp_path, monkeypatch):
+    def test_canvas_click_ctrl_held(self, make_app, monkeypatch):
         """Canvas click with Ctrl — early return (L913)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1062,11 +1018,11 @@ class TestCanvasClickEdges:
         pos = (sr.x + 20, sr.y + 20)
         on_mouse_down(app, pos)
 
-    def test_canvas_click_locked_widget(self, tmp_path, monkeypatch):
+    def test_canvas_click_locked_widget(self, make_app, monkeypatch):
         """Canvas click on locked widget — early return (L921)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         w = _w(type="button", x=10, y=10, width=40, height=20)
@@ -1076,11 +1032,11 @@ class TestCanvasClickEdges:
         pos = (sr.x + 20, sr.y + 20)
         on_mouse_down(app, pos)
 
-    def test_canvas_click_empty_after_deselect(self, tmp_path, monkeypatch):
+    def test_canvas_click_empty_after_deselect(self, make_app, monkeypatch):
         """Canvas click on empty area starts box select (L911)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         # Click somewhere with no widgets
@@ -1088,11 +1044,11 @@ class TestCanvasClickEdges:
         on_mouse_down(app, pos)
         assert app.state.box_select_start is not None
 
-    def test_canvas_save_state_exception(self, tmp_path, monkeypatch):
+    def test_canvas_save_state_exception(self, make_app, monkeypatch):
         """Canvas drag save state exception (L990-991)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1104,20 +1060,18 @@ class TestCanvasClickEdges:
         pos = (sr.x + 20, sr.y + 20)
         on_mouse_down(app, pos)
 
-
 # ===========================================================================
 # on_mouse_move — edge cases (L1030, L1077-1078, L1152, L1154)
 # ===========================================================================
 
-
 class TestMouseMoveMore:
     """Cover remaining mouse move edge cases."""
 
-    def test_move_bad_scene_rect_resize(self, tmp_path, monkeypatch):
+    def test_move_bad_scene_rect_resize(self, make_app):
         """Mouse move with bad scene_rect in non-drag/non-resize path (L1030)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
@@ -1128,11 +1082,11 @@ class TestMouseMoveMore:
         sr = app.layout.canvas_rect
         on_mouse_move(app, (sr.x + 50, sr.y + 50), (1, 0, 0))
 
-    def test_layer_drag_parse_exception(self, tmp_path, monkeypatch):
+    def test_layer_drag_parse_exception(self, make_app):
         """Layer drag with unparseable layer index — exception (L1077-1078)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         sc.widgets.append(_w(type="label", x=50, y=0, width=40, height=20))
@@ -1146,11 +1100,11 @@ class TestMouseMoveMore:
         pos = (ir.x + 5, ir.y + 35)
         on_mouse_move(app, pos, (1, 0, 0))
 
-    def test_resize_with_oob_widget(self, tmp_path, monkeypatch):
+    def test_resize_with_oob_widget(self, make_app):
         """Resize with widget idx out of range (L1152, L1154, L1192)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         app.state.selected = [0, 99]  # idx 99 is OOB
@@ -1165,12 +1119,12 @@ class TestMouseMoveMore:
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         on_mouse_move(app, (sr.x + 80, sr.y + 60), (1, 0, 0))
 
-    def test_resize_clear_guides_exception(self, tmp_path, monkeypatch):
+    def test_resize_clear_guides_exception(self, make_app, monkeypatch):
         """Resize where clear_active_guides throws (L1164-1165)."""
         from cyberpunk_designer import layout_tools
         from cyberpunk_designer.input_handlers import on_mouse_down, on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
@@ -1187,11 +1141,11 @@ class TestMouseMoveMore:
         )
         on_mouse_move(app, (sr.x + 80, sr.y + 60), (1, 0, 0))
 
-    def test_resize_sx_sy_exception(self, tmp_path, monkeypatch):
+    def test_resize_sx_sy_exception(self, make_app):
         """Resize where sx/sy calculation throws (L1185-1186)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)

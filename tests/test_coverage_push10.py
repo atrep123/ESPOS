@@ -18,21 +18,6 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _make_app(tmp_path, monkeypatch, *, widgets=None):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    return app
-
-
 def _make_big_app(tmp_path, monkeypatch, *, widgets=None):
     """App with large layout so palette/inspector hitboxes have real sizes."""
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
@@ -65,11 +50,11 @@ DUMMY_MODS = 0
 
 
 class TestInspectorCommitFails:
-    def test_commit_edit_returns_false(self, tmp_path, monkeypatch):
+    def test_commit_edit_returns_false(self, make_app):
         """Click outside inspector with bad edit pending — commit returns False (L684)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=0, y=0, width=40, height=20))
         _sel(app, 0)
@@ -86,11 +71,11 @@ class TestInspectorCommitFails:
 
 
 class TestClickOutsideCanvas:
-    def test_click_outside_all_panels(self, tmp_path, monkeypatch):
+    def test_click_outside_all_panels(self, make_app):
         """Click at coordinates not in any panel or canvas (L886)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Ensure no inspector editing state
         app.state.inspector_selected_field = None
         # Click far outside any panel (negative coords or beyond layout)
@@ -103,11 +88,11 @@ class TestClickOutsideCanvas:
 
 
 class TestSelectionEmptyAfterClick:
-    def test_ctrl_click_deselects_only_widget(self, tmp_path, monkeypatch):
+    def test_ctrl_click_deselects_only_widget(self, monkeypatch, make_app):
         """Ctrl-click on the only selected widget deselects → empty selected (L911)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
@@ -126,11 +111,11 @@ class TestSelectionEmptyAfterClick:
 
 
 class TestBoundsNoneAfterSelection:
-    def test_selection_with_oob_index(self, tmp_path, monkeypatch):
+    def test_selection_with_oob_index(self, make_app):
         """selection_bounds returns None for valid selection (L921)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         _sel(app, 0)
@@ -148,11 +133,11 @@ class TestBoundsNoneAfterSelection:
 
 
 class TestPaletteEmptyHitboxes:
-    def test_palette_click_no_hitboxes(self, tmp_path, monkeypatch):
+    def test_palette_click_no_hitboxes(self, make_app):
         """Click in palette area when hitboxes empty — triggers _draw_palette (L736)."""
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Clear hitboxes so they're falsy
         app.palette_hitboxes = []
         app.palette_section_hitboxes = []
@@ -167,11 +152,11 @@ class TestPaletteEmptyHitboxes:
 
 
 class TestBoxSelectBadSceneRect:
-    def test_finish_box_select_bad_scene_rect(self, tmp_path, monkeypatch):
+    def test_finish_box_select_bad_scene_rect(self, make_app):
         """_finish_box_select with scene_rect=None (L1030)."""
         from cyberpunk_designer.input_handlers import on_mouse_up
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         # Both box_select_start AND box_select_rect must be non-None for _finish_box_select
@@ -189,11 +174,11 @@ class TestBoxSelectBadSceneRect:
 
 
 class TestMouseMoveEmptySelection:
-    def test_move_with_no_selection(self, tmp_path, monkeypatch):
+    def test_move_with_no_selection(self, make_app):
         """Mouse move while dragging but selection empty (L1108)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.pointer_down = True
         app.state.dragging = True
         app.state.selected = []
@@ -209,11 +194,11 @@ class TestMouseMoveEmptySelection:
 
 
 class TestDragMissingStartPos:
-    def test_drag_widget_not_in_start_positions(self, tmp_path, monkeypatch):
+    def test_drag_widget_not_in_start_positions(self, make_app):
         """Drag with widget index not in drag_start_positions (L1152)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         sc.widgets.append(_w(type="label", x=60, y=10, width=40, height=20))
@@ -234,11 +219,11 @@ class TestDragMissingStartPos:
 
 
 class TestDragOOBIndex:
-    def test_drag_oob_widget_index(self, tmp_path, monkeypatch):
+    def test_drag_oob_widget_index(self, make_app):
         """Drag with widget index that's OOB in widgets list (L1154)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         app.pointer_down = True
@@ -257,7 +242,7 @@ class TestDragOOBIndex:
 
 
 class TestHelpOverlayTwoColumn:
-    def test_wide_help_overlay(self, tmp_path, monkeypatch):
+    def test_wide_help_overlay(self, tmp_path, monkeypatch, make_app):
         """Help overlay in wide window uses two-column layout (L381-427)."""
         from cyberpunk_designer.drawing.overlays import draw_help_overlay
 
@@ -272,11 +257,11 @@ class TestHelpOverlayTwoColumn:
 
 
 class TestSnapDragException:
-    def test_snap_drag_raises(self, tmp_path, monkeypatch):
+    def test_snap_drag_raises(self, monkeypatch, make_app):
         """snap_drag_to_guides raises Exception → caught (L1139-1140)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         app.pointer_down = True
@@ -300,11 +285,11 @@ class TestSnapDragException:
 
 
 class TestResizeClearGuidesException:
-    def test_clear_guides_raises_during_resize(self, tmp_path, monkeypatch):
+    def test_clear_guides_raises_during_resize(self, monkeypatch, make_app):
         """clear_active_guides raises during resize (L1164-1165)."""
         from cyberpunk_designer.input_handlers import on_mouse_move
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="button", x=10, y=10, width=40, height=20))
         app.pointer_down = True

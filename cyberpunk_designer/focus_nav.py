@@ -164,7 +164,7 @@ def focus_move_direction(app, direction: str) -> None:
                     gap = cr.left - r.right
                 elif r.left >= cr.right:
                     gap = r.left - cr.right
-                else:  # pragma: no cover — requires zero-width widget
+                else:  # pragma: no cover — pygame.Rect clamps min dim to 1
                     gap = 0
                 score = int(1_000_000 + gap * 10_000 + primary * 10_000 + secondary * 100 + dist2)
                 if loose_score is None or score < loose_score:
@@ -182,7 +182,7 @@ def focus_move_direction(app, direction: str) -> None:
                     gap = cr.top - r.bottom
                 elif r.top >= cr.bottom:
                     gap = r.top - cr.bottom
-                else:  # pragma: no cover — requires zero-height widget
+                else:  # pragma: no cover — pygame.Rect clamps min dim to 1
                     gap = 0
                 score = int(1_000_000 + gap * 10_000 + primary * 10_000 + secondary * 100 + dist2)
                 if loose_score is None or score < loose_score:

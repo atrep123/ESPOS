@@ -128,12 +128,7 @@
         },
         "style": {
           "type": "string",
-          "enum": [
-            "default",
-            "bold",
-            "inverse",
-            "highlight"
-          ]
+          "description": "Widget style. Simple tokens (default, bold, inverse, highlight) or space-separated combos (e.g. 'bold highlight'). Charts may use 'bar' or 'line'."
         },
         "color_fg": {
           "$ref": "#/$defs/color"

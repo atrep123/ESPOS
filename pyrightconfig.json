@@ -37,7 +37,7 @@
   "reportUnknownLambdaType": false,
   "reportMissingTypeArgument": false,
   "reportPrivateUsage": "warning",
-  "reportAttributeAccessIssue": false,
+  "reportAttributeAccessIssue": "warning",
   "reportArgumentType": "warning",
   "reportReturnType": "warning"
 }

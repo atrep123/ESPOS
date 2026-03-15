@@ -6,20 +6,11 @@ _goto_widget, _scene_name, _search, _array_dup, _template_name.
 
 from __future__ import annotations
 
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    return CyberpunkEditorApp(json_path, (256, 128))
 
 
 def _add(app, **kw):
@@ -49,8 +40,8 @@ def _commit(app, field, buf):
 
 
 class TestCommitPosition:
-    def test_valid_xy(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_xy(self, make_app):
+        app = make_app()
         w = _add(app, x=0, y=0)
         _sel(app, 0)
         result = _commit(app, "_position", "10,20")
@@ -58,8 +49,8 @@ class TestCommitPosition:
         assert w.x == 10
         assert w.y == 20
 
-    def test_space_separator(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_space_separator(self, make_app):
+        app = make_app()
         w = _add(app, x=0, y=0)
         _sel(app, 0)
         result = _commit(app, "_position", "30 40")
@@ -67,27 +58,27 @@ class TestCommitPosition:
         assert w.x == 30
         assert w.y == 40
 
-    def test_invalid_format_returns_false(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_format_returns_false(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         result = _commit(app, "_position", "just_one")
         assert result is False
 
-    def test_non_integer_returns_false(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer_returns_false(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         result = _commit(app, "_position", "abc,def")
         assert result is False
 
-    def test_no_selection_returns_true(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection_returns_true(self, make_app):
+        app = make_app()
         result = _commit(app, "_position", "10,20")
         assert result is True
 
-    def test_multiple_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multiple_widgets(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         _sel(app, 0, 1)
@@ -95,8 +86,8 @@ class TestCommitPosition:
         assert w0.x == 5 and w0.y == 5
         assert w1.x == 5 and w1.y == 5
 
-    def test_clears_field_on_success(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clears_field_on_success(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         _commit(app, "_position", "1,2")
@@ -110,8 +101,8 @@ class TestCommitPosition:
 
 
 class TestCommitPadding:
-    def test_valid_padding(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_padding(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         result = _commit(app, "_padding", "3,2")
@@ -119,34 +110,34 @@ class TestCommitPadding:
         assert w.padding_x == 3
         assert w.padding_y == 2
 
-    def test_invalid_format(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_format(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_padding", "just_one") is False
 
-    def test_negative_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_negative_rejected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_padding", "-1,2") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_padding", "a,b") is False
 
-    def test_space_separator(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_space_separator(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         _commit(app, "_padding", "5 3")
         assert w.padding_x == 5
         assert w.padding_y == 3
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         assert _commit(app, "_padding", "1,1") is True
 
 
@@ -156,8 +147,8 @@ class TestCommitPadding:
 
 
 class TestCommitMargin:
-    def test_valid_margin(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_margin(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         result = _commit(app, "_margin", "4,6")
@@ -165,20 +156,20 @@ class TestCommitMargin:
         assert w.margin_x == 4
         assert w.margin_y == 6
 
-    def test_negative_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_negative_rejected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_margin", "2,-3") is False
 
-    def test_invalid_format(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_format(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_margin", "single") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_margin", "x,y") is False
@@ -190,8 +181,8 @@ class TestCommitMargin:
 
 
 class TestCommitSpacing:
-    def test_valid_spacing(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_spacing(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         result = _commit(app, "_spacing", "2,1,3,4")
@@ -201,34 +192,34 @@ class TestCommitSpacing:
         assert w.margin_x == 3
         assert w.margin_y == 4
 
-    def test_wrong_count(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_wrong_count(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_spacing", "1,2") is False
 
-    def test_negative_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_negative_rejected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_spacing", "1,2,-1,0") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_spacing", "a,b,c,d") is False
 
-    def test_space_mixed_separators(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_space_mixed_separators(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         result = _commit(app, "_spacing", "1 2 3 4")
         assert result is True
         assert w.padding_x == 1
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         assert _commit(app, "_spacing", "1,2,3,4") is True
 
 
@@ -238,8 +229,8 @@ class TestCommitSpacing:
 
 
 class TestCommitSize:
-    def test_valid_wxh(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_wxh(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         result = _commit(app, "_size", "64x16")
@@ -247,48 +238,48 @@ class TestCommitSize:
         assert w.width == 64
         assert w.height == 16
 
-    def test_comma_separator(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_comma_separator(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         _commit(app, "_size", "100,50")
         assert w.width == 100
         assert w.height == 50
 
-    def test_uppercase_x(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_uppercase_x(self, make_app):
+        app = make_app()
         w = _add(app)
         _sel(app, 0)
         _commit(app, "_size", "32X24")
         assert w.width == 32
         assert w.height == 24
 
-    def test_zero_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_zero_rejected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_size", "0x10") is False
 
-    def test_negative_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_negative_rejected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_size", "-5x10") is False
 
-    def test_invalid_format(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_format(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_size", "just_one") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_size", "axb") is False
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         assert _commit(app, "_size", "10x10") is True
 
 
@@ -298,8 +289,8 @@ class TestCommitSize:
 
 
 class TestCommitValueRange:
-    def test_valid_range(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_range(self, make_app):
+        app = make_app()
         w = _add(app, type="slider")
         w.value = 50
         _sel(app, 0)
@@ -309,8 +300,8 @@ class TestCommitValueRange:
         assert w.max_value == 200
         assert w.value == 50  # within range, unchanged
 
-    def test_clamps_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamps_value(self, make_app):
+        app = make_app()
         w = _add(app, type="slider")
         w.value = 90
         w.min_value = 0
@@ -319,26 +310,26 @@ class TestCommitValueRange:
         _commit(app, "_value_range", "0,50")
         assert w.value == 50  # clamped to new max
 
-    def test_min_greater_than_max_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_min_greater_than_max_rejected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_value_range", "100,50") is False
 
-    def test_invalid_format(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_format(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_value_range", "just_one") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_value_range", "a,b") is False
 
-    def test_space_separator(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_space_separator(self, make_app):
+        app = make_app()
         w = _add(app)
         w.value = 10
         _sel(app, 0)
@@ -353,37 +344,37 @@ class TestCommitValueRange:
 
 
 class TestCommitGotoWidget:
-    def test_valid_index(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_index(self, make_app):
+        app = make_app()
         _add(app, text="target")
         result = _commit(app, "_goto_widget", "0")
         assert result is True
         assert 0 in app.state.selected
 
-    def test_out_of_range(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_out_of_range(self, make_app):
+        app = make_app()
         _add(app)
         assert _commit(app, "_goto_widget", "99") is False
 
-    def test_negative_index(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_negative_index(self, make_app):
+        app = make_app()
         _add(app)
         assert _commit(app, "_goto_widget", "-1") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         assert _commit(app, "_goto_widget", "abc") is False
 
-    def test_selects_correct_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_selects_correct_widget(self, make_app):
+        app = make_app()
         _add(app, text="first")
         _add(app, text="second")
         _commit(app, "_goto_widget", "1")
         assert app.state.selected_idx == 1
 
-    def test_clears_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clears_field(self, make_app):
+        app = make_app()
         _add(app)
         _commit(app, "_goto_widget", "0")
         assert app.state.inspector_selected_field is None
@@ -395,8 +386,8 @@ class TestCommitGotoWidget:
 
 
 class TestCommitSceneName:
-    def test_valid_rename(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_rename(self, make_app):
+        app = make_app()
         old_name = app.designer.current_scene
         result = _commit(app, "_scene_name", "new_name")
         assert result is True
@@ -404,44 +395,44 @@ class TestCommitSceneName:
         assert old_name not in app.designer.scenes
         assert "new_name" in app.designer.scenes
 
-    def test_empty_name_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_name_rejected(self, make_app):
+        app = make_app()
         assert _commit(app, "_scene_name", "") is False
 
-    def test_invalid_chars_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_chars_rejected(self, make_app):
+        app = make_app()
         assert _commit(app, "_scene_name", "bad/name") is False
 
-    def test_duplicate_name_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_duplicate_name_rejected(self, make_app):
+        app = make_app()
         from ui_models import SceneConfig
 
         app.designer.scenes["other"] = SceneConfig(name="other", width=256, height=128, widgets=[])
         assert _commit(app, "_scene_name", "other") is False
 
-    def test_same_name_is_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_same_name_is_noop(self, make_app):
+        app = make_app()
         name = app.designer.current_scene
         result = _commit(app, "_scene_name", name)
         assert result is True
         assert app.designer.current_scene == name
 
-    def test_transfers_dirty_state(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_transfers_dirty_state(self, make_app):
+        app = make_app()
         old_name = app.designer.current_scene
         app._dirty_scenes = {old_name}
         _commit(app, "_scene_name", "renamed")
         assert "renamed" in app._dirty_scenes
         assert old_name not in app._dirty_scenes
 
-    def test_name_with_spaces(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_name_with_spaces(self, make_app):
+        app = make_app()
         result = _commit(app, "_scene_name", "my scene")
         assert result is True
         assert app.designer.current_scene == "my scene"
 
-    def test_name_with_hyphens(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_name_with_hyphens(self, make_app):
+        app = make_app()
         result = _commit(app, "_scene_name", "my-scene")
         assert result is True
         assert app.designer.current_scene == "my-scene"
@@ -453,8 +444,8 @@ class TestCommitSceneName:
 
 
 class TestCommitSearch:
-    def test_search_dispatches(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_search_dispatches(self, make_app):
+        app = make_app()
         _add(app, text="findme")
         _add(app, text="other")
         result = _commit(app, "_search", "findme")
@@ -462,8 +453,8 @@ class TestCommitSearch:
         # Should clear field after search
         assert app.state.inspector_selected_field is None
 
-    def test_search_empty_string(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_search_empty_string(self, make_app):
+        app = make_app()
         _add(app)
         result = _commit(app, "_search", "")
         assert result is True
@@ -475,8 +466,8 @@ class TestCommitSearch:
 
 
 class TestCommitArrayDup:
-    def test_valid_array_dup(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_array_dup(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=20, height=10)
         _sel(app, 0)
         sc = app.state.current_scene()
@@ -485,14 +476,14 @@ class TestCommitArrayDup:
         assert result is True
         assert len(sc.widgets) > before
 
-    def test_wrong_count_format(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_wrong_count_format(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_array_dup", "1,2") is False
 
-    def test_non_integer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_integer(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app, 0)
         assert _commit(app, "_array_dup", "a,b,c") is False
@@ -504,17 +495,17 @@ class TestCommitArrayDup:
 
 
 class TestCommitTemplateName:
-    def test_empty_name_rejected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_name_rejected(self, make_app):
+        app = make_app()
         assert _commit(app, "_template_name", "") is False
 
-    def test_no_pending_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_pending_widgets(self, make_app):
+        app = make_app()
         app._pending_template_widgets = None
         assert _commit(app, "_template_name", "MyTemplate") is False
 
-    def test_saves_template(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_saves_template(self, make_app):
+        app = make_app()
         app._pending_template_widgets = [
             {"type": "label", "x": 0, "y": 0, "width": 80, "height": 16, "text": "T"},
         ]
@@ -532,8 +523,8 @@ class TestCommitTemplateName:
 
 
 class TestInspectorFieldToStr:
-    def test_position_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_position_field(self, make_app):
+        app = make_app()
         w = _add(app, x=10, y=20)
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
@@ -541,8 +532,8 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "_position", w)
         assert result == "10,20"
 
-    def test_padding_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_padding_field(self, make_app):
+        app = make_app()
         w = _add(app)
         w.padding_x = 3
         w.padding_y = 2
@@ -552,8 +543,8 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "_padding", w)
         assert result == "3,2"
 
-    def test_margin_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_margin_field(self, make_app):
+        app = make_app()
         w = _add(app)
         w.margin_x = 5
         w.margin_y = 7
@@ -563,8 +554,8 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "_margin", w)
         assert result == "5,7"
 
-    def test_spacing_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_spacing_field(self, make_app):
+        app = make_app()
         w = _add(app)
         w.padding_x = 1
         w.padding_y = 2
@@ -576,8 +567,8 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "_spacing", w)
         assert result == "1,2,3,4"
 
-    def test_value_range_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_value_range_field(self, make_app):
+        app = make_app()
         w = _add(app)
         w.min_value = 10
         w.max_value = 90
@@ -587,8 +578,8 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "_value_range", w)
         assert result == "10,90"
 
-    def test_numeric_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_numeric_field(self, make_app):
+        app = make_app()
         w = _add(app, x=42)
         _sel(app, 0)
         from cyberpunk_designer.inspector_logic import inspector_field_to_str
@@ -596,8 +587,8 @@ class TestInspectorFieldToStr:
         result = inspector_field_to_str(app, "x", w)
         assert result == "42"
 
-    def test_string_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_string_field(self, make_app):
+        app = make_app()
         w = _add(app)
         w.color_fg = "#aabbcc"
         _sel(app, 0)
@@ -613,80 +604,80 @@ class TestInspectorFieldToStr:
 
 
 class TestCommitChecked:
-    def test_true_string(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_true_string(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = False
         _sel(app, 0)
         _commit(app, "checked", "true")
         assert w.checked is True
 
-    def test_false_string(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_false_string(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = True
         _sel(app, 0)
         _commit(app, "checked", "false")
         assert w.checked is False
 
-    def test_one_is_true(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_one_is_true(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = False
         _sel(app, 0)
         _commit(app, "checked", "1")
         assert w.checked is True
 
-    def test_zero_is_false(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_zero_is_false(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = True
         _sel(app, 0)
         _commit(app, "checked", "0")
         assert w.checked is False
 
-    def test_yes_is_true(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_yes_is_true(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = False
         _sel(app, 0)
         _commit(app, "checked", "yes")
         assert w.checked is True
 
-    def test_on_is_true(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_on_is_true(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = False
         _sel(app, 0)
         _commit(app, "checked", "on")
         assert w.checked is True
 
-    def test_no_is_false(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_is_false(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = True
         _sel(app, 0)
         _commit(app, "checked", "no")
         assert w.checked is False
 
-    def test_mixed_case(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mixed_case(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = False
         _sel(app, 0)
         _commit(app, "checked", "TRUE")
         assert w.checked is True
 
-    def test_random_string_is_false(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_random_string_is_false(self, make_app):
+        app = make_app()
         w = _add(app)
         w.checked = True
         _sel(app, 0)
         _commit(app, "checked", "maybe")
         assert w.checked is False
 
-    def test_multi_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multi_widget(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         w0.checked = False
@@ -703,8 +694,8 @@ class TestCommitChecked:
 
 
 class TestCommitItems:
-    def test_comma_separated(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_comma_separated(self, make_app):
+        app = make_app()
         w = _add(app)
         w.items = []
         _sel(app, 0)
@@ -712,8 +703,8 @@ class TestCommitItems:
         assert w.items == ["A", "B", "C"]
         assert w.text == "A\nB\nC"
 
-    def test_newline_separated(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_newline_separated(self, make_app):
+        app = make_app()
         w = _add(app)
         w.items = []
         _sel(app, 0)
@@ -721,8 +712,8 @@ class TestCommitItems:
         assert w.items == ["X", "Y", "Z"]
         assert w.text == "X\nY\nZ"
 
-    def test_empty_string(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_string(self, make_app):
+        app = make_app()
         w = _add(app)
         w.items = ["old"]
         _sel(app, 0)
@@ -730,24 +721,24 @@ class TestCommitItems:
         assert w.items == []
         assert w.text == ""
 
-    def test_whitespace_stripped(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_whitespace_stripped(self, make_app):
+        app = make_app()
         w = _add(app)
         w.items = []
         _sel(app, 0)
         _commit(app, "items", " A , B , C ")
         assert w.items == ["A", "B", "C"]
 
-    def test_blank_entries_removed(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_blank_entries_removed(self, make_app):
+        app = make_app()
         w = _add(app)
         w.items = []
         _sel(app, 0)
         _commit(app, "items", "A,,B,,,C")
         assert w.items == ["A", "B", "C"]
 
-    def test_single_item(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_single_item(self, make_app):
+        app = make_app()
         w = _add(app)
         w.items = []
         _sel(app, 0)
@@ -755,8 +746,8 @@ class TestCommitItems:
         assert w.items == ["Only"]
         assert w.text == "Only"
 
-    def test_multi_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multi_widget(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         w0.items = []
@@ -774,8 +765,8 @@ class TestCommitItems:
 
 
 class TestMultiSelectCommit:
-    def test_z_index(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_z_index(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         _sel(app, 0, 1)
@@ -783,8 +774,8 @@ class TestMultiSelectCommit:
         assert w0.z_index == 5
         assert w1.z_index == 5
 
-    def test_z_index_invalid(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_z_index_invalid(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w0.z_index = 0
         _sel(app, 0)
@@ -795,8 +786,8 @@ class TestMultiSelectCommit:
         assert result is False
         assert w0.z_index == 0
 
-    def test_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_value(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         _sel(app, 0, 1)
@@ -804,8 +795,8 @@ class TestMultiSelectCommit:
         assert w0.value == 42
         assert w1.value == 42
 
-    def test_min_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_min_value(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         _sel(app, 0, 1)
@@ -813,8 +804,8 @@ class TestMultiSelectCommit:
         assert w0.min_value == 10
         assert w1.min_value == 10
 
-    def test_max_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_max_value(self, make_app):
+        app = make_app()
         w0 = _add(app)
         w1 = _add(app)
         _sel(app, 0, 1)
@@ -822,16 +813,16 @@ class TestMultiSelectCommit:
         assert w0.max_value == 200
         assert w1.max_value == 200
 
-    def test_value_invalid(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_value_invalid(self, make_app):
+        app = make_app()
         _add(app)
         _add(app)
         _sel(app, 0, 1)
         result = _commit(app, "value", "nope")
         assert result is False
 
-    def test_unsupported_field(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_unsupported_field(self, make_app):
+        app = make_app()
         _add(app)
         _add(app)
         _sel(app, 0, 1)

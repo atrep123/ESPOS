@@ -25,22 +25,6 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _make_app(tmp_path, monkeypatch, *, profile=None, widgets=None, snap=False):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if profile:
-        app.hardware_profile = profile
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    app.snap_enabled = snap
-    return app
 
 
 # ===========================================================================
@@ -159,21 +143,21 @@ class TestTextMetricsEdge:
 
 
 class TestToolbarSceneTabsException:
-    def test_scene_tabs_designer_scenes_raises(self, tmp_path, monkeypatch):
+    def test_scene_tabs_designer_scenes_raises(self, make_app):
         from cyberpunk_designer.drawing.toolbar import draw_scene_tabs
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Break app.designer.scenes to raise on keys()
         app.designer.scenes = MagicMock()
         app.designer.scenes.keys.side_effect = AttributeError("fail")
         # Should not raise — just returns early (lines 51-52)
         draw_scene_tabs(app)
 
-    def test_scene_tabs_hover_arrows(self, tmp_path, monkeypatch):
+    def test_scene_tabs_hover_arrows(self, make_app):
         """Exercise arrow hover coloring (lines 111, 123)."""
         from cyberpunk_designer.drawing.toolbar import draw_scene_tabs
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Create many scenes to force overflow/arrows
         for i in range(20):
             app.designer.create_scene(f"scene_{i:02d}")
@@ -209,35 +193,33 @@ class TestMainModule:
 
 
 class TestFitWidgetEdge:
-    def test_invalid_max_lines(self, tmp_path, monkeypatch):
+    def test_invalid_max_lines(self, make_app):
         """max_lines = 'bad' triggers _parse_max_lines except (lines 41-42)."""
         from cyberpunk_designer.fit_widget import fit_selection_to_widget
 
         w = _w(text="hello world this is long", width=40, height=10, text_overflow="wrap")
         w.max_lines = "bad"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
+        app = make_app(profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_widget(app)
 
-    def test_unknown_overflow_value(self, tmp_path, monkeypatch):
+    def test_unknown_overflow_value(self, make_app):
         """Unknown text_overflow falls through to 'ellipsis' (line 71)."""
         from cyberpunk_designer.fit_widget import fit_selection_to_widget
 
         w = _w(text="hello world")
         w.text_overflow = "funky_mode"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
+        app = make_app(profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_widget(app)
 
-    def test_save_state_exception(self, tmp_path, monkeypatch):
+    def test_save_state_exception(self, make_app):
         """_save_state raising triggers except (lines 147-148)."""
         from cyberpunk_designer.fit_widget import fit_selection_to_widget
 
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             profile="esp32os_256x128_gray4",
             widgets=[
                 _w(text="hello world this is a long text that won't fit", width=20, height=10)
@@ -255,35 +237,33 @@ class TestFitWidgetEdge:
 
 
 class TestFitTextEdge:
-    def test_invalid_max_lines(self, tmp_path, monkeypatch):
+    def test_invalid_max_lines(self, make_app):
         """max_lines = 'bad' triggers _parse_max_lines except (lines 38-39)."""
         from cyberpunk_designer.fit_text import fit_selection_to_text
 
         w = _w(text="hello world this is long", width=40, height=10, text_overflow="wrap")
         w.max_lines = "bad"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
+        app = make_app(profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_text(app)
 
-    def test_unknown_overflow_value(self, tmp_path, monkeypatch):
+    def test_unknown_overflow_value(self, make_app):
         """Unknown text_overflow falls through to 'ellipsis' (line 63)."""
         from cyberpunk_designer.fit_text import fit_selection_to_text
 
         w = _w(text="hello world")
         w.text_overflow = "funky_mode"  # set after construction to bypass validation
-        app = _make_app(tmp_path, monkeypatch, profile="esp32os_256x128_gray4", widgets=[w])
+        app = make_app(profile="esp32os_256x128_gray4", widgets=[w])
         app.state.selected = [0]
         app.state.selected_idx = 0
         fit_selection_to_text(app)
 
-    def test_save_state_exception(self, tmp_path, monkeypatch):
+    def test_save_state_exception(self, make_app):
         """_save_state raising triggers except (lines 144-145)."""
         from cyberpunk_designer.fit_text import fit_selection_to_text
 
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             profile="esp32os_256x128_gray4",
             widgets=[
                 _w(
@@ -305,42 +285,42 @@ class TestFitTextEdge:
 
 
 class TestCoreEdge:
-    def test_click_shift_no_anchor(self, tmp_path, monkeypatch):
+    def test_click_shift_no_anchor(self, make_app):
         """Shift+click with no anchor falls to single select (line 62)."""
         from cyberpunk_designer.selection_ops.core import apply_click_selection
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected_idx = None
         # Simulate shift+click
         apply_click_selection(app, 0, pygame.KMOD_SHIFT)
         assert app.state.selected == [0]
 
-    def test_delete_save_state_exception(self, tmp_path, monkeypatch):
+    def test_delete_save_state_exception(self, make_app):
         """delete_selected when _save_state raises (lines 82-83)."""
         from cyberpunk_designer.selection_ops.core import delete_selected
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         delete_selected(app)
         assert app.state.selected == []
 
-    def test_delete_out_of_range_index(self, tmp_path, monkeypatch):
+    def test_delete_out_of_range_index(self, make_app):
         """delete_selected with out-of-range index should skip (line 88)."""
         from cyberpunk_designer.selection_ops.core import delete_selected
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [99]
         app.state.selected_idx = 99
         delete_selected(app)
         assert app.state.selected == []
 
-    def test_delete_reindex_exception(self, tmp_path, monkeypatch):
+    def test_delete_reindex_exception(self, make_app):
         """_reindex_after_delete raising (lines 95-96)."""
         from cyberpunk_designer.selection_ops.core import delete_selected
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer._reindex_after_delete = MagicMock(side_effect=AttributeError("fail"))
@@ -410,12 +390,12 @@ class TestIoOpsEdge:
         app.designer.create_scene("main")
         load_or_default(app)
 
-    def test_apply_preset_add_new(self, tmp_path, monkeypatch):
+    def test_apply_preset_add_new(self, make_app, monkeypatch):
         """apply_preset_slot with add_new=True (lines 98-102)."""
         from cyberpunk_designer import io_ops
         from cyberpunk_designer.io_ops import apply_preset_slot
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Monkeypatch WidgetConfig in io_ops to accept construction without x/y
 
         class _FlexWC:
@@ -431,11 +411,11 @@ class TestIoOpsEdge:
         sc = app.state.current_scene()
         assert len(sc.widgets) >= 1
 
-    def test_apply_preset_skips_xy_keys(self, tmp_path, monkeypatch):
+    def test_apply_preset_skips_xy_keys(self, make_app):
         """apply_preset_slot skips x/y keys in preset (line 114)."""
         from cyberpunk_designer.io_ops import apply_preset_slot
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.widget_presets = [{"type": "button", "x": 99, "y": 99, "width": 80, "text": "btn"}]
@@ -456,24 +436,24 @@ class TestIoOpsEdge:
         ):
             save_prefs(app)
 
-    def test_save_json_windows_rename(self, tmp_path, monkeypatch):
+    def test_save_json_windows_rename(self, make_app, tmp_path):
         """save_json with os.name == 'nt' atomic rename (line 158)."""
         from cyberpunk_designer.io_ops import save_json
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = tmp_path / "test_save.json"
         app._dirty = True
         app._dirty_scenes = set()
         save_json(app)
         assert app.json_path.exists()
 
-    def test_save_json_tempfile_failure_falls_back(self, tmp_path, monkeypatch):
+    def test_save_json_tempfile_failure_falls_back(self, make_app, tmp_path, monkeypatch):
         """save_json falls back to direct write when tempfile fails."""
         import tempfile as _tempfile
 
         from cyberpunk_designer.io_ops import save_json
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = tmp_path / "fallback_save.json"
         app._dirty = True
         app._dirty_scenes = set()
@@ -531,68 +511,68 @@ class TestLayoutToolsExceptions:
 
         assert hasattr(lt, "align_selection")
 
-    def test_align_single_save_state_exc(self, tmp_path, monkeypatch):
+    def test_align_single_save_state_exc(self, make_app):
         """Single-widget align with _save_state raising (lines 106-107)."""
         from cyberpunk_designer.layout_tools import align_selection
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=50, y=50)])
+        app = make_app(widgets=[_w(x=50, y=50)])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         align_selection(app, "left")
         assert app.state.current_scene().widgets[0].x == 0
 
-    def test_align_multi_save_state_exc(self, tmp_path, monkeypatch):
+    def test_align_multi_save_state_exc(self, make_app):
         """Multi-widget align with _save_state raising (lines 143-144)."""
         from cyberpunk_designer.layout_tools import align_selection
 
         w1 = _w(x=10, y=10, width=30, height=30)
         w2 = _w(x=50, y=50, width=30, height=30)
-        app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2])
+        app = make_app(widgets=[w1, w2])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         align_selection(app, "left")
 
-    def test_distribute_h_save_state_exc(self, tmp_path, monkeypatch):
+    def test_distribute_h_save_state_exc(self, make_app):
         """Horizontal distribute with _save_state raising (lines 195-196)."""
         from cyberpunk_designer.layout_tools import distribute_selection
 
         w1 = _w(x=0, y=0, width=20, height=20)
         w2 = _w(x=50, y=0, width=20, height=20)
         w3 = _w(x=100, y=0, width=20, height=20)
-        app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2, w3])
+        app = make_app(widgets=[w1, w2, w3])
         app.state.selected = [0, 1, 2]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         distribute_selection(app, "h")
 
-    def test_distribute_v_save_state_exc(self, tmp_path, monkeypatch):
+    def test_distribute_v_save_state_exc(self, make_app):
         """Vertical distribute with _save_state raising (lines 224-225)."""
         from cyberpunk_designer.layout_tools import distribute_selection
 
         w1 = _w(x=0, y=0, width=20, height=20)
         w2 = _w(x=0, y=50, width=20, height=20)
         w3 = _w(x=0, y=100, width=20, height=20)
-        app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2, w3])
+        app = make_app(widgets=[w1, w2, w3])
         app.state.selected = [0, 1, 2]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         distribute_selection(app, "v")
 
-    def test_match_size_save_state_exc(self, tmp_path, monkeypatch):
+    def test_match_size_save_state_exc(self, make_app):
         """Match size with _save_state raising (lines 303-304)."""
         from cyberpunk_designer.layout_tools import match_size_selection
 
         w1 = _w(x=0, y=0, width=40, height=40)
         w2 = _w(x=50, y=0, width=20, height=20)
-        app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2])
+        app = make_app(widgets=[w1, w2])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         app.designer._save_state = MagicMock(side_effect=TypeError("fail"))
         match_size_selection(app, "width")
 
-    def test_snap_drag_widget_exc(self, tmp_path, monkeypatch):
+    def test_snap_drag_widget_exc(self, make_app):
         """snap_drag_to_guides with broken widget attrs (lines 383-384)."""
         from cyberpunk_designer.layout_tools import snap_drag_to_guides
 
@@ -611,17 +591,17 @@ class TestLayoutToolsExceptions:
             width = 20
             height = 20
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=0, y=0)])
+        app = make_app(widgets=[_w(x=0, y=0)])
         app.state.current_scene().widgets.append(_BadWidget())
         app.state.selected = [0]
         bounds = pygame.Rect(10, 10, 30, 30)
         snap_drag_to_guides(app, 10, 10, bounds)
 
-    def test_clear_active_guides_exc(self, tmp_path, monkeypatch):
+    def test_clear_active_guides_exc(self, make_app, monkeypatch):
         """snap_drag_to_guides clearing guides when no snap (lines 436-437)."""
         from cyberpunk_designer.layout_tools import snap_drag_to_guides
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=0, y=0)])
+        app = make_app(widgets=[_w(x=0, y=0)])
         app.state.selected = [0]
         # Make active_guides assignment raise by patching __setattr__
         orig_setattr = type(app.state).__setattr__
@@ -635,13 +615,13 @@ class TestLayoutToolsExceptions:
         bounds = pygame.Rect(500, 500, 30, 30)  # far from any guide
         snap_drag_to_guides(app, 500, 500, bounds)
 
-    def test_set_active_guides_exc(self, tmp_path, monkeypatch):
+    def test_set_active_guides_exc(self, make_app, monkeypatch):
         """snap_drag_to_guides setting guides when snapped (lines 445-446)."""
         from cyberpunk_designer.layout_tools import snap_drag_to_guides
 
         w1 = _w(x=0, y=0, width=20, height=20)
         w2 = _w(x=50, y=0, width=20, height=20)
-        app = _make_app(tmp_path, monkeypatch, widgets=[w1, w2])
+        app = make_app(widgets=[w1, w2])
         app.state.selected = [0]
         # Make active_guides assignment raise by patching __setattr__
         orig_setattr = type(app.state).__setattr__

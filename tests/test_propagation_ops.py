@@ -22,23 +22,11 @@ from cyberpunk_designer.selection_ops import (
     propagate_text,
     propagate_value,
 )
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    return app
 
 
 def _add(app, **kw):
@@ -65,8 +53,8 @@ def _sel(app, *indices):
 
 
 class TestCopyPasteStyle:
-    def test_copy_and_paste(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copy_and_paste(self, make_app):
+        app = make_app()
         _add(
             app,
             style="bold",
@@ -91,8 +79,8 @@ class TestCopyPasteStyle:
         assert w.align == "center"
         assert w.valign == "top"
 
-    def test_copy_nothing_selected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copy_nothing_selected(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         copy_style(app)  # no crash
@@ -102,15 +90,15 @@ class TestCopyPasteStyle:
             or app._style_clipboard == {}
         )
 
-    def test_paste_without_copy(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_paste_without_copy(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _sel(app, 0)
         paste_style(app)  # no clipboard → no crash
         assert _w(app, 0).style == "bold"  # unchanged
 
-    def test_paste_to_multiple(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_paste_to_multiple(self, make_app):
+        app = make_app()
         _add(app, style="bold", color_fg="red")
         _add(app, style="default")
         _add(app, style="default")
@@ -121,8 +109,8 @@ class TestCopyPasteStyle:
         assert _w(app, 1).style == "bold"
         assert _w(app, 2).style == "bold"
 
-    def test_paste_nothing_selected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_paste_nothing_selected(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _sel(app, 0)
         copy_style(app)
@@ -136,8 +124,8 @@ class TestCopyPasteStyle:
 
 
 class TestPropagateBorder:
-    def test_copies_border_fields(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_border_fields(self, make_app):
+        app = make_app()
         _add(app, border=True, border_style="double")
         _add(app, border=False, border_style="single")
         _add(app, border=False, border_style="single")
@@ -148,14 +136,14 @@ class TestPropagateBorder:
         assert _w(app, 2).border is True
         assert _w(app, 2).border_style == "double"
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, border=True, border_style="double")
         _sel(app, 0)
         propagate_border(app)  # only 1 selected → noop
 
-    def test_preserves_first_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_preserves_first_widget(self, make_app):
+        app = make_app()
         _add(app, border=True, border_style="rounded")
         _add(app, border=False)
         _sel(app, 0, 1)
@@ -170,22 +158,22 @@ class TestPropagateBorder:
 
 
 class TestPropagateStyle:
-    def test_copies_style(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_style(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _add(app, style="default")
         _sel(app, 0, 1)
         propagate_style(app)
         assert _w(app, 1).style == "bold"
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _sel(app, 0)
         propagate_style(app)
 
-    def test_multiple_targets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multiple_targets(self, make_app):
+        app = make_app()
         _add(app, style="italic")
         _add(app, style="default")
         _add(app, style="default")
@@ -202,22 +190,22 @@ class TestPropagateStyle:
 
 
 class TestCloneText:
-    def test_copies_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_text(self, make_app):
+        app = make_app()
         _add(app, text="Source")
         _add(app, text="Other")
         _sel(app, 0, 1)
         clone_text(app)
         assert _w(app, 1).text == "Source"
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, text="Source")
         _sel(app, 0)
         clone_text(app)
 
-    def test_empty_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_text(self, make_app):
+        app = make_app()
         _add(app, text="")
         _add(app, text="Hello")
         _sel(app, 0, 1)
@@ -231,8 +219,8 @@ class TestCloneText:
 
 
 class TestPropagateAlign:
-    def test_copies_align_and_valign(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_align_and_valign(self, make_app):
+        app = make_app()
         _add(app, align="center", valign="top")
         _add(app, align="left", valign="middle")
         _sel(app, 0, 1)
@@ -240,14 +228,14 @@ class TestPropagateAlign:
         assert _w(app, 1).align == "center"
         assert _w(app, 1).valign == "top"
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, align="center")
         _sel(app, 0)
         propagate_align(app)
 
-    def test_multiple_targets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multiple_targets(self, make_app):
+        app = make_app()
         _add(app, align="right", valign="bottom")
         _add(app, align="left", valign="top")
         _add(app, align="center", valign="middle")
@@ -264,8 +252,8 @@ class TestPropagateAlign:
 
 
 class TestPropagateColors:
-    def test_copies_fg_and_bg(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_fg_and_bg(self, make_app):
+        app = make_app()
         _add(app, color_fg="#aabbcc", color_bg="#112233")
         _add(app, color_fg="white", color_bg="black")
         _sel(app, 0, 1)
@@ -273,8 +261,8 @@ class TestPropagateColors:
         assert _w(app, 1).color_fg == "#aabbcc"
         assert _w(app, 1).color_bg == "#112233"
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, color_fg="red")
         _sel(app, 0)
         propagate_colors(app)
@@ -286,8 +274,8 @@ class TestPropagateColors:
 
 
 class TestPropagateValue:
-    def test_copies_value_and_range(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_value_and_range(self, make_app):
+        app = make_app()
         _add(app, type="slider", value=42, min_value=10, max_value=200)
         _add(app, type="slider", value=0, min_value=0, max_value=100)
         _sel(app, 0, 1)
@@ -296,8 +284,8 @@ class TestPropagateValue:
         assert _w(app, 1).min_value == 10
         assert _w(app, 1).max_value == 200
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, type="slider", value=42)
         _sel(app, 0)
         propagate_value(app)
@@ -309,8 +297,8 @@ class TestPropagateValue:
 
 
 class TestPropagatePadding:
-    def test_copies_padding(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_padding(self, make_app):
+        app = make_app()
         _add(app, padding_x=5, padding_y=3)
         _add(app, padding_x=1, padding_y=0)
         _sel(app, 0, 1)
@@ -318,8 +306,8 @@ class TestPropagatePadding:
         assert _w(app, 1).padding_x == 5
         assert _w(app, 1).padding_y == 3
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, padding_x=5)
         _sel(app, 0)
         propagate_padding(app)
@@ -331,8 +319,8 @@ class TestPropagatePadding:
 
 
 class TestPropagateMargin:
-    def test_copies_margin(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_margin(self, make_app):
+        app = make_app()
         _add(app, margin_x=4, margin_y=6)
         _add(app, margin_x=0, margin_y=0)
         _sel(app, 0, 1)
@@ -340,8 +328,8 @@ class TestPropagateMargin:
         assert _w(app, 1).margin_x == 4
         assert _w(app, 1).margin_y == 6
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, margin_x=4)
         _sel(app, 0)
         propagate_margin(app)
@@ -353,8 +341,8 @@ class TestPropagateMargin:
 
 
 class TestPropagateAppearance:
-    def test_copies_all_visual_props(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_all_visual_props(self, make_app):
+        app = make_app()
         _add(
             app,
             style="bold",
@@ -385,14 +373,14 @@ class TestPropagateAppearance:
         assert w.margin_x == 3
         assert w.margin_y == 1
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, style="bold")
         _sel(app, 0)
         propagate_appearance(app)
 
-    def test_multiple_targets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multiple_targets(self, make_app):
+        app = make_app()
         _add(app, style="bold", color_fg="red")
         _add(app, style="default")
         _add(app, style="default")
@@ -408,30 +396,30 @@ class TestPropagateAppearance:
 
 
 class TestPropagateText:
-    def test_copies_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copies_text(self, make_app):
+        app = make_app()
         _add(app, text="Hello World")
         _add(app, text="Other")
         _sel(app, 0, 1)
         propagate_text(app)
         assert _w(app, 1).text == "Hello World"
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, text="Hello")
         _sel(app, 0)
         propagate_text(app)
 
-    def test_empty_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_text(self, make_app):
+        app = make_app()
         _add(app, text="")
         _add(app, text="World")
         _sel(app, 0, 1)
         propagate_text(app)
         assert _w(app, 1).text == ""
 
-    def test_multiple_targets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_multiple_targets(self, make_app):
+        app = make_app()
         _add(app, text="ABC")
         _add(app, text="X")
         _add(app, text="Y")

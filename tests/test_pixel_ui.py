@@ -1,20 +1,12 @@
 import pygame
 
 from cyberpunk_designer import drawing, focus_nav, layout_tools, windowing
-from cyberpunk_editor import GRID, PALETTE, CyberpunkEditorApp
+from cyberpunk_editor import GRID, PALETTE
 from ui_designer import UIDesigner, WidgetConfig
 
 
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    return CyberpunkEditorApp(json_path, (256, 192))
-
-
-def test_toolbar_hover_and_pressed_use_pixel_fill(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_toolbar_hover_and_pressed_use_pixel_fill(make_app):
+    app = make_app(size=(256, 192))
     app.logical_surface.fill(PALETTE["bg"])
     app._draw_toolbar()
 
@@ -38,8 +30,8 @@ def test_toolbar_hover_and_pressed_use_pixel_fill(tmp_path, monkeypatch):
     assert pressed_color == app._shade(PALETTE["panel"], -4)
 
 
-def test_palette_and_inspector_grid_alignment(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_palette_and_inspector_grid_alignment(make_app):
+    app = make_app(size=(256, 192))
     app.pointer_pos = (-9999, -9999)
 
     app.logical_surface.fill(PALETTE["bg"])
@@ -63,8 +55,8 @@ def test_palette_and_inspector_grid_alignment(tmp_path, monkeypatch):
     assert irow.x % GRID == 0
 
 
-def test_palette_click_adds_widget_and_canvas_renders(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_palette_click_adds_widget_and_canvas_renders(make_app):
+    app = make_app(size=(256, 192))
     app.pointer_pos = (-9999, -9999)
 
     sc = app.state.current_scene()
@@ -87,8 +79,8 @@ def test_palette_click_adds_widget_and_canvas_renders(tmp_path, monkeypatch):
     assert app.logical_surface.get_at(inside)[:3] != PALETTE["canvas_bg"]
 
 
-def test_window_resize_expands_layout_and_draws_device_viewport(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_window_resize_expands_layout_and_draws_device_viewport(make_app):
+    app = make_app(size=(256, 192))
     base_w = app.layout.width
     base_h = app.layout.height
 
@@ -112,8 +104,8 @@ def test_window_resize_expands_layout_and_draws_device_viewport(tmp_path, monkey
         assert app.logical_surface.get_at(outside)[:3] == PALETTE["panel"]
 
 
-def test_palette_scroll_is_clipped_to_panel_rect(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_palette_scroll_is_clipped_to_panel_rect(make_app):
+    app = make_app(size=(256, 192))
     app.pointer_pos = (-9999, -9999)
 
     # Fill with a sentinel so we can detect draw bleed.
@@ -133,8 +125,8 @@ def test_palette_scroll_is_clipped_to_panel_rect(tmp_path, monkeypatch):
     assert app.logical_surface.get_at((x, y))[:3] == sentinel
 
 
-def test_palette_scroll_does_not_overdraw_header_row(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_palette_scroll_does_not_overdraw_header_row(make_app):
+    app = make_app(size=(256, 192))
     app.pointer_pos = (-9999, -9999)
 
     r = app.layout.palette_rect
@@ -153,8 +145,8 @@ def test_palette_scroll_does_not_overdraw_header_row(tmp_path, monkeypatch):
     assert app.logical_surface.get_at(probe)[:3] == base
 
 
-def test_inspector_scroll_does_not_overdraw_header_row(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_inspector_scroll_does_not_overdraw_header_row(make_app):
+    app = make_app(size=(256, 192))
     app.pointer_pos = (-9999, -9999)
 
     r = app.layout.inspector_rect
@@ -172,8 +164,8 @@ def test_inspector_scroll_does_not_overdraw_header_row(tmp_path, monkeypatch):
     assert app.logical_surface.get_at(probe)[:3] == base
 
 
-def test_scanlines_drawn_over_frame(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_scanlines_drawn_over_frame(make_app):
+    app = make_app(size=(256, 192))
     app.window = pygame.Surface((app.layout.width, app.layout.height))
     app._draw_frame()
     # Background should be flat fill with no scanlines
@@ -181,10 +173,10 @@ def test_scanlines_drawn_over_frame(tmp_path, monkeypatch):
     assert app.window.get_at((0, GRID * 2))[:3] == PALETTE["bg"]
 
 
-def test_help_overlay_draws_and_can_be_disabled(tmp_path, monkeypatch):
+def test_help_overlay_draws_and_can_be_disabled(make_app):
     from cyberpunk_designer import drawing
 
-    app = _make_app(tmp_path, monkeypatch)
+    app = make_app(size=(256, 192))
     app._set_help_overlay(True, pinned=True)
     sentinel = (200, 100, 50)
     app.logical_surface.fill(sentinel)
@@ -216,8 +208,8 @@ def test_ascii_border_pixel_perfect_single_stroke():
     assert canvas[5][5] == "."
 
 
-def test_component_card_inserts_multiple_widgets(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_card_inserts_multiple_widgets(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     assert not sc.widgets
 
@@ -229,8 +221,8 @@ def test_component_card_inserts_multiple_widgets(tmp_path, monkeypatch):
     assert any(w.type == "progressbar" for w in sc.widgets)
 
 
-def test_component_insert_creates_group(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_insert_creates_group(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     app._add_component("card")
     assert sc.widgets
@@ -238,8 +230,8 @@ def test_component_insert_creates_group(tmp_path, monkeypatch):
     assert any(name.startswith("comp:card:") for name in app.designer.groups)
 
 
-def test_component_insert_uses_unique_root_prefix_for_multiple_instances(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_insert_uses_unique_root_prefix_for_multiple_instances(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("card")
@@ -257,8 +249,8 @@ def test_component_insert_uses_unique_root_prefix_for_multiple_instances(tmp_pat
     assert len(all_ids) == len(set(all_ids)), "widget ids must be unique for export/runtime"
 
 
-def test_component_os_menu_list_inserts_focusable_items(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_os_menu_list_inserts_focusable_items(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("menu_list")
@@ -270,8 +262,8 @@ def test_component_os_menu_list_inserts_focusable_items(tmp_path, monkeypatch):
     assert any(name.startswith("comp:menu_list:") for name in app.designer.groups)
 
 
-def test_component_os_menu_alias_inserts_focusable_items(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_os_menu_alias_inserts_focusable_items(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("menu")
@@ -282,8 +274,8 @@ def test_component_os_menu_alias_inserts_focusable_items(tmp_path, monkeypatch):
     assert any(name.startswith("comp:menu:") for name in app.designer.groups)
 
 
-def test_component_menu_scroll_comp_edit_updates_widget_text(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_menu_scroll_comp_edit_updates_widget_text(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("menu")
@@ -299,8 +291,8 @@ def test_component_menu_scroll_comp_edit_updates_widget_text(tmp_path, monkeypat
     assert scroll.text == "2/10"
 
 
-def test_component_menu_count_comp_edit_updates_scroll_text(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_menu_count_comp_edit_updates_scroll_text(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("menu")
@@ -316,8 +308,8 @@ def test_component_menu_count_comp_edit_updates_scroll_text(tmp_path, monkeypatc
     assert scroll.text == "1/12"
 
 
-def test_component_root_rename_updates_widget_ids_and_group_name(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_root_rename_updates_widget_ids_and_group_name(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("modal")
@@ -334,8 +326,8 @@ def test_component_root_rename_updates_widget_ids_and_group_name(tmp_path, monke
     assert any(g.startswith("comp:modal:modal2:") for g in app.designer.groups)
 
 
-def test_component_tabs_comp_edit_updates_widget_text(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_tabs_comp_edit_updates_widget_text(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("tabs")
@@ -352,8 +344,8 @@ def test_component_tabs_comp_edit_updates_widget_text(tmp_path, monkeypatch):
     assert tab1.text == "Home"
 
 
-def test_component_tabs_active_tab_updates_style_keeps_component_selected(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_tabs_active_tab_updates_style_keeps_component_selected(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("tabs")
@@ -376,10 +368,8 @@ def test_component_tabs_active_tab_updates_style_keeps_component_selected(tmp_pa
     assert app._selected_group_exact() == group
 
 
-def test_component_menu_list_active_item_updates_highlight_keeps_component_selected(
-    tmp_path, monkeypatch
-):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_menu_list_active_item_updates_highlight_keeps_component_selected(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("menu_list")
@@ -402,8 +392,8 @@ def test_component_menu_list_active_item_updates_highlight_keeps_component_selec
     assert app._selected_group_exact() == group
 
 
-def test_component_list_comp_edit_updates_rows_and_active_item(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_list_comp_edit_updates_rows_and_active_item(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("list")
@@ -440,8 +430,8 @@ def test_component_list_comp_edit_updates_rows_and_active_item(tmp_path, monkeyp
     assert app._selected_group_exact() == group
 
 
-def test_component_list_scroll_comp_edit_updates_widget_text(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_component_list_scroll_comp_edit_updates_widget_text(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("list")
@@ -457,8 +447,8 @@ def test_component_list_scroll_comp_edit_updates_widget_text(tmp_path, monkeypat
     assert scroll.text == "3/12"
 
 
-def test_sim_input_list_scrolls_virtualized_items_and_restores(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_sim_input_list_scrolls_virtualized_items_and_restores(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     app._add_component("list")
@@ -483,8 +473,8 @@ def test_sim_input_list_scrolls_virtualized_items_and_restores(tmp_path, monkeyp
     assert item5_label.text == "Item 6"
 
 
-def test_group_drag_moves_all_widgets(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_group_drag_moves_all_widgets(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     app._add_component("card")
 
@@ -508,8 +498,8 @@ def test_group_drag_moves_all_widgets(tmp_path, monkeypatch):
     )
 
 
-def test_ungroup_then_drag_moves_single_widget(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_ungroup_then_drag_moves_single_widget(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     app._add_component("card")
     app._ungroup_selection()
@@ -530,8 +520,8 @@ def test_ungroup_then_drag_moves_single_widget(tmp_path, monkeypatch):
     assert after[1:] == before[1:]
 
 
-def test_inspector_click_to_edit_and_toggle(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_inspector_click_to_edit_and_toggle(make_app):
+    app = make_app(size=(256, 192))
     app.pointer_pos = (-9999, -9999)
     app.pointer_down = False
 
@@ -566,8 +556,8 @@ def test_inspector_click_to_edit_and_toggle(tmp_path, monkeypatch):
     assert bool(getattr(w, "border", True)) is (not before)
 
 
-def test_layout_align_left_aligns_to_selection_bounds(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_layout_align_left_aligns_to_selection_bounds(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     sc.widgets = [
@@ -582,8 +572,8 @@ def test_layout_align_left_aligns_to_selection_bounds(tmp_path, monkeypatch):
     assert [int(w.x) for w in sc.widgets] == [GRID, GRID, GRID]
 
 
-def test_layout_distribute_vertical_sets_even_gaps(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_layout_distribute_vertical_sets_even_gaps(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     sc.widgets = [
@@ -600,8 +590,8 @@ def test_layout_distribute_vertical_sets_even_gaps(tmp_path, monkeypatch):
     assert int(sc.widgets[1].y) == GRID * 6
 
 
-def test_layout_match_width_uses_anchor_widget(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_layout_match_width_uses_anchor_widget(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     sc.widgets = [
@@ -615,8 +605,8 @@ def test_layout_match_width_uses_anchor_widget(tmp_path, monkeypatch):
     assert int(sc.widgets[1].width) == int(sc.widgets[0].width)
 
 
-def test_guides_snap_drag_to_other_widget_edge(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_guides_snap_drag_to_other_widget_edge(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
 
     sc.widgets = [
@@ -632,8 +622,8 @@ def test_guides_snap_drag_to_other_widget_edge(tmp_path, monkeypatch):
     assert any(g[0] == "v" and g[1] == 80 for g in app.state.active_guides)
 
 
-def test_fit_text_grows_width_for_ellipsis(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_fit_text_grows_width_for_ellipsis(make_app):
+    app = make_app(size=(256, 192))
     app._add_widget("label")
     w = app.state.selected_widget()
     assert w is not None
@@ -664,8 +654,8 @@ def test_fit_text_grows_width_for_ellipsis(tmp_path, monkeypatch):
     assert int(getattr(w, "x", 0) or 0) + int(getattr(w, "width", 0) or 0) <= int(sc.width)
 
 
-def test_fit_text_grows_height_for_wrap(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_fit_text_grows_height_for_wrap(make_app):
+    app = make_app(size=(256, 192))
     app._add_widget("label")
     w = app.state.selected_widget()
     assert w is not None
@@ -685,8 +675,8 @@ def test_fit_text_grows_height_for_wrap(tmp_path, monkeypatch):
     assert int(getattr(w, "height", 0) or 0) >= needed_h
 
 
-def test_fit_widget_shrinks_width_for_ellipsis(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_fit_widget_shrinks_width_for_ellipsis(make_app):
+    app = make_app(size=(256, 192))
     app._add_widget("label")
     w = app.state.selected_widget()
     assert w is not None
@@ -709,8 +699,8 @@ def test_fit_widget_shrinks_width_for_ellipsis(tmp_path, monkeypatch):
     assert int(getattr(w, "x", 0) or 0) + after_w <= int(sc.width)
 
 
-def test_fit_widget_shrinks_height_for_wrap(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_fit_widget_shrinks_height_for_wrap(make_app):
+    app = make_app(size=(256, 192))
     app._add_widget("label")
     w = app.state.selected_widget()
     assert w is not None
@@ -738,8 +728,8 @@ def test_fit_widget_shrinks_height_for_wrap(tmp_path, monkeypatch):
     assert after_h >= needed_h
 
 
-def test_input_mode_focus_navigation_and_activation(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_input_mode_focus_navigation_and_activation(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     sc.widgets.clear()
     sc.widgets.append(
@@ -766,8 +756,8 @@ def test_input_mode_focus_navigation_and_activation(tmp_path, monkeypatch):
     assert bool(getattr(sc.widgets[1], "checked", False)) is True
 
 
-def test_input_mode_focus_navigation_prefers_beam_overlap(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_input_mode_focus_navigation_prefers_beam_overlap(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     sc.widgets.clear()
     sc.widgets.append(WidgetConfig(type="button", x=100, y=50, width=50, height=20, text="CUR"))
@@ -782,8 +772,8 @@ def test_input_mode_focus_navigation_prefers_beam_overlap(tmp_path, monkeypatch)
     assert app.focus_idx == 1
 
 
-def test_input_mode_slider_edit_and_adjust(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_input_mode_slider_edit_and_adjust(make_app):
+    app = make_app(size=(256, 192))
     sc = app.state.current_scene()
     sc.widgets.clear()
     sc.widgets.append(
@@ -841,15 +831,15 @@ def _has_nonbg_pixels(surf, region):
     return False
 
 
-def test_widget_label_renders_text(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_label_renders_text(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(app, "label", text="HELLO", border=False, border_style="none")
     text_area = pygame.Rect(4, 4, 60, 20)
     assert _has_nonbg_pixels(surf, text_area), "label text should produce pixels"
 
 
-def test_widget_button_renders_bevel(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_button_renders_bevel(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app, "button", text="OK", border=True, border_style="single", color_bg="#303030"
     )
@@ -858,15 +848,15 @@ def test_widget_button_renders_bevel(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, full_area), "button should have visible fill/text"
 
 
-def test_widget_checkbox_unchecked(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_checkbox_unchecked(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(app, "checkbox", text="OPT", checked=False)
     box_area = pygame.Rect(4, 4, GRID + 4, GRID + 4)
     assert _has_nonbg_pixels(surf, box_area), "checkbox box should be visible"
 
 
-def test_widget_checkbox_checked_has_cross(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_checkbox_checked_has_cross(make_app):
+    app = make_app(size=(256, 192))
     surf_unchecked = _render_widget(app, "checkbox", text="OPT", checked=False)
     surf_checked = _render_widget(app, "checkbox", text="OPT", checked=True)
     # Count non-bg pixels in the checkbox box area
@@ -886,8 +876,8 @@ def test_widget_checkbox_checked_has_cross(tmp_path, monkeypatch):
     assert checked_px > unchecked_px, "checked checkbox should have more pixels (cross)"
 
 
-def test_widget_radiobutton_renders_circle(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_radiobutton_renders_circle(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app, "radiobutton", text="OPT", checked=False, border=False, border_style="none"
     )
@@ -895,8 +885,8 @@ def test_widget_radiobutton_renders_circle(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, circle_area), "radiobutton ring should be visible"
 
 
-def test_widget_radiobutton_checked_fills(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_radiobutton_checked_fills(make_app):
+    app = make_app(size=(256, 192))
     surf_off = _render_widget(
         app, "radiobutton", text="R", checked=False, border=False, border_style="none"
     )
@@ -919,8 +909,8 @@ def test_widget_radiobutton_checked_fills(tmp_path, monkeypatch):
     assert on_px > off_px, "checked radiobutton should have filled inner circle"
 
 
-def test_widget_progressbar_fill(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_progressbar_fill(make_app):
+    app = make_app(size=(256, 192))
     surf_empty = _render_widget(app, "progressbar", value=0, min_value=0, max_value=100)
     surf_half = _render_widget(app, "progressbar", value=50, min_value=0, max_value=100)
     # Right half should have more pixels when 50% filled
@@ -940,8 +930,8 @@ def test_widget_progressbar_fill(tmp_path, monkeypatch):
     assert half_right > empty_right, "50% progressbar should fill more than 0%"
 
 
-def test_widget_slider_renders_knob(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_slider_renders_knob(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app, "slider", value=50, min_value=0, max_value=100, border=False, border_style="none"
     )
@@ -950,8 +940,8 @@ def test_widget_slider_renders_knob(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, center), "slider should have visible track+knob"
 
 
-def test_widget_gauge_renders_arc_or_bar(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_gauge_renders_arc_or_bar(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app,
         "gauge",
@@ -967,8 +957,8 @@ def test_widget_gauge_renders_arc_or_bar(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, area), "gauge should render arc or bar"
 
 
-def test_widget_chart_bar_renders_bars(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_chart_bar_renders_bars(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app,
         "chart",
@@ -984,8 +974,8 @@ def test_widget_chart_bar_renders_bars(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, chart_area), "bar chart should have visible bars"
 
 
-def test_widget_chart_line_renders_lines(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_chart_line_renders_lines(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app,
         "chart",
@@ -1001,15 +991,15 @@ def test_widget_chart_line_renders_lines(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, chart_area), "line chart should have visible lines"
 
 
-def test_widget_textbox_renders_input(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_textbox_renders_input(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(app, "textbox", text="INPUT", border=True, border_style="single")
     text_area = pygame.Rect(4, 4, 80, 40)
     assert _has_nonbg_pixels(surf, text_area), "textbox should render text+border"
 
 
-def test_widget_icon_renders_char(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_icon_renders_char(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(
         app, "icon", icon_char="@", width=24, height=24, border=False, border_style="none"
     )
@@ -1017,22 +1007,22 @@ def test_widget_icon_renders_char(tmp_path, monkeypatch):
     assert _has_nonbg_pixels(surf, area), "icon should render character"
 
 
-def test_widget_box_renders_filled_rect(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_box_renders_filled_rect(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(app, "box", border=True, border_style="single", width=60, height=30)
     area = pygame.Rect(4, 4, 60, 30)
     assert _has_nonbg_pixels(surf, area), "box should render filled rect with border"
 
 
-def test_widget_panel_renders_hatching(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_panel_renders_hatching(make_app):
+    app = make_app(size=(256, 192))
     surf = _render_widget(app, "panel", border=True, border_style="single", width=80, height=40)
     area = pygame.Rect(4, 4, 80, 40)
     assert _has_nonbg_pixels(surf, area), "panel should render bg+hatching"
 
 
-def test_widget_border_styles_all_visible(tmp_path, monkeypatch):
-    app = _make_app(tmp_path, monkeypatch)
+def test_widget_border_styles_all_visible(make_app):
+    app = make_app(size=(256, 192))
     for bs in ["single", "double", "rounded", "bold", "dashed"]:
         surf = _render_widget(app, "label", text="X", border=True, border_style=bs)
         edge = pygame.Rect(4, 4, 100, 2)

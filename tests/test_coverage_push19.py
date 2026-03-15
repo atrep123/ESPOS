@@ -30,33 +30,12 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _make_app(tmp_path, monkeypatch, *, widgets=None, extra_scenes=False):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    app.show_help_overlay = False
-    app._help_shown_once = True
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    if extra_scenes:
-        app.designer.create_scene("second")
-        sc2 = app.designer.scenes["second"]
-        sc2.width, sc2.height = 256, 128
-    return app
-
-
 # ===================================================================
 # A) pygame.key.stop_text_input raises  (L372-373)
 # ===================================================================
 class TestStopTextInputRaises:
-    def test_inspector_cancel_edit_stop_throws(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hi")])
+    def test_inspector_cancel_edit_stop_throws(self, make_app):
+        app = make_app(widgets=[_w(text="hi")])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._inspector_start_edit("text")
@@ -69,36 +48,36 @@ class TestStopTextInputRaises:
 # B) pygame.key.start_text_input raises in prompts  (6 methods x 2 lines)
 # ===================================================================
 class TestStartTextInputRaises:
-    def test_search_widgets_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_search_widgets_prompt(self, make_app):
+        app = make_app()
         with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._search_widgets_prompt()
         assert app.state.inspector_selected_field == "_search"
 
-    def test_array_duplicate_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_array_duplicate_prompt(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._array_duplicate_prompt()
         assert app.state.inspector_selected_field == "_array_dup"
 
-    def test_set_all_spacing_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_set_all_spacing_prompt(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._set_all_spacing_prompt()
         assert app.state.inspector_selected_field == "_spacing"
 
-    def test_rename_current_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_rename_current_scene(self, make_app):
+        app = make_app()
         with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._rename_current_scene()
         assert app.state.inspector_selected_field == "_scene_name"
 
-    def test_goto_widget_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_goto_widget_prompt(self, make_app):
+        app = make_app()
         with patch.object(pygame.key, "start_text_input", side_effect=AttributeError):
             app._goto_widget_prompt()
         assert app.state.inspector_selected_field == "_goto_widget"
@@ -112,8 +91,8 @@ class TestGroupHelperPropertyErrors:
     except branches in _groups_for_index, _group_members, _next_group_name,
     _ungroup_selection."""
 
-    def test_groups_for_index_except(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_groups_for_index_except(self, make_app):
+        app = make_app(widgets=[_w()])
         with patch.object(
             type(app.designer),
             "groups",
@@ -124,8 +103,8 @@ class TestGroupHelperPropertyErrors:
             result = app._groups_for_index(0)
         assert result == []
 
-    def test_group_members_except(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_group_members_except(self, make_app):
+        app = make_app(widgets=[_w()])
         with patch.object(
             type(app.designer),
             "groups",
@@ -136,24 +115,24 @@ class TestGroupHelperPropertyErrors:
             result = app._group_members("g1")
         assert result == []
 
-    def test_group_members_non_int_member(self, tmp_path, monkeypatch):
+    def test_group_members_non_int_member(self, make_app):
         """L1140-1141: int(m) raises for non-integer member → continue."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.designer.groups = {"g1": ["not_an_int", 0]}
         result = app._group_members("g1")
         assert 0 in result
 
-    def test_selected_component_group_bad_idx(self, tmp_path, monkeypatch):
+    def test_selected_component_group_bad_idx(self, make_app):
         """L1162-1163: int(selected_idx) raises → return None."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = "not_a_number"
         result = app._selected_component_group()
         assert result is None
 
-    def test_selected_component_group_empty_members(self, tmp_path, monkeypatch):
+    def test_selected_component_group_empty_members(self, make_app):
         """L1172: members empty → continue."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         # Group exists but has no valid members (all out of range)
@@ -161,8 +140,8 @@ class TestGroupHelperPropertyErrors:
         result = app._selected_component_group()
         assert result is None
 
-    def test_next_group_name_except(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_next_group_name_except(self, make_app):
+        app = make_app()
         with patch.object(
             type(app.designer),
             "groups",
@@ -173,9 +152,9 @@ class TestGroupHelperPropertyErrors:
             result = app._next_group_name("group")
         assert result == "group1"
 
-    def test_ungroup_selection_except_outer(self, tmp_path, monkeypatch):
+    def test_ungroup_selection_except_outer(self, make_app):
         """L1286-1287: getattr raises → gdict = {}."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         with patch.object(
@@ -188,9 +167,9 @@ class TestGroupHelperPropertyErrors:
             app._ungroup_selection()
         # Should complete without error (no group found)
 
-    def test_ungroup_selection_except_inner(self, tmp_path, monkeypatch):
+    def test_ungroup_selection_except_inner(self, make_app):
         """L1292-1293: inner except when set(members) fails → continue."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         # members is not iterable → inner except triggers
@@ -202,8 +181,8 @@ class TestGroupHelperPropertyErrors:
 # D) _cycle_profile with empty PROFILE_ORDER  (L487)
 # ===================================================================
 class TestCycleProfileEmpty:
-    def test_cycle_profile_empty_order(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_profile_empty_order(self, make_app):
+        app = make_app()
         with patch("cyberpunk_designer.app.PROFILE_ORDER", []):
             app._cycle_profile()
 
@@ -212,7 +191,7 @@ class TestCycleProfileEmpty:
 # E) _restored_from_autosave print  (L349)
 # ===================================================================
 class TestAutosaveRestoredPrint:
-    def test_autosave_restores_and_prints(self, tmp_path, monkeypatch):
+    def test_autosave_restores_and_prints(self, tmp_path, monkeypatch, make_app):
         monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
         monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
         monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
@@ -237,10 +216,8 @@ class TestAutosaveRestoredPrint:
 # F) draw_overflow_marker delegate  (L1079)
 # ===================================================================
 class TestDrawOverflowMarker:
-    def test_draw_overflow_marker_called(self, tmp_path, monkeypatch):
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+    def test_draw_overflow_marker_called(self, make_app):
+        app = make_app(
             widgets=[
                 _w(x=0, y=0, width=300, height=200, text="overflow"),
             ],
@@ -256,7 +233,7 @@ class TestDrawOverflowMarker:
 # G) Context menu separator cleanup  (L1721, L1723)
 # ===================================================================
 class TestContextMenuSeparators:
-    def test_trailing_separator_removed(self, tmp_path, monkeypatch):
+    def test_trailing_separator_removed(self, make_app):
         """L1720-1721: while cleaned[-1] is separator → pop."""
         # Inline test of the cleanup algorithm
         items = [("Copy", "C+C", "copy"), ("---", "", None)]
@@ -275,7 +252,7 @@ class TestContextMenuSeparators:
         assert len(cleaned) == 1
         assert cleaned[0][0] == "Copy"
 
-    def test_leading_separator_removed(self, tmp_path, monkeypatch):
+    def test_leading_separator_removed(self, make_app):
         """L1722-1723: while cleaned[0] is separator → pop(0)."""
         items = [("---", "", None), ("Copy", "C+C", "copy")]
         cleaned: list = []
@@ -298,8 +275,8 @@ class TestContextMenuSeparators:
 # H) _execute_context_action "delete"  (L1759)
 # ===================================================================
 class TestContextActionDelete:
-    def test_delete_action(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_delete_action(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._execute_context_action("delete")
@@ -311,9 +288,9 @@ class TestContextActionDelete:
 # I) _handle_double_click out-of-range  (L2177)
 # ===================================================================
 class TestDoubleClickOutOfRange:
-    def test_hit_out_of_range(self, tmp_path, monkeypatch):
+    def test_hit_out_of_range(self, make_app):
         """L2176-2177: hit index out of widget range → return."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         # Make hit_test_at return an out-of-range index
         app.state.hit_test_at = lambda pos, sr: 999
         sr = app.layout.canvas_rect
@@ -325,11 +302,11 @@ class TestDoubleClickOutOfRange:
 # J) _add_new_scene with name collision  (L2901)
 # ===================================================================
 class TestAddNewSceneCollision:
-    def test_name_collision_increments(self, tmp_path, monkeypatch):
+    def test_name_collision_increments(self, make_app):
         """L2901: trigger while-loop in _add_new_scene.
         idx = len(names)+1.  Rename 'main' → 'scene_2' so with len=1, idx=2
         collides with the existing 'scene_2' name."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.designer.scenes.pop("main")
         app.designer.scenes["scene_2"] = sc
         app.designer.current_scene = "scene_2"
@@ -341,16 +318,16 @@ class TestAddNewSceneCollision:
 # K) _duplicate_current_scene edge cases  (L2919-2920, L2926-2927, L2933-2934)
 # ===================================================================
 class TestDuplicateSceneEdgeCases:
-    def test_no_scene_to_duplicate(self, tmp_path, monkeypatch):
+    def test_no_scene_to_duplicate(self, make_app):
         """L2919-2920: src is None → status + return."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.current_scene = "nonexistent"
         app._duplicate_current_scene()
         # Should not crash
 
-    def test_naming_collision_increments(self, tmp_path, monkeypatch):
+    def test_naming_collision_increments(self, make_app):
         """L2926-2927: while name in names → idx += 1."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         cur = app.designer.current_scene
         # Pre-create the first copy name so it collides
         copy_name = f"{cur}_copy"
@@ -363,9 +340,9 @@ class TestDuplicateSceneEdgeCases:
         # collision → idx=2, name = f"{base}_2"
         assert f"{cur}_copy_2" in app.designer.scenes
 
-    def test_widget_copy_exception(self, tmp_path, monkeypatch):
+    def test_widget_copy_exception(self, make_app):
         """L2933-2934: asdict(w) raises → continue."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         # Patch dataclasses.asdict to raise (imported inside the method)
         with patch("dataclasses.asdict", side_effect=TypeError("bad")):
             app._duplicate_current_scene()
@@ -379,18 +356,18 @@ class TestDuplicateSceneEdgeCases:
 # L) _export_c_header except branches  (L2985-2986, L3000-3001)
 # ===================================================================
 class TestExportCHeaderExcept:
-    def test_save_json_raises(self, tmp_path, monkeypatch):
+    def test_save_json_raises(self, tmp_path, make_app):
         """L2985-2986: save_json() raises → pass, then generate succeeds."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = tmp_path / "scene.json"
         app.json_path.write_text("{}", encoding="utf-8")
         with patch.object(app, "save_json", side_effect=OSError("fail")):
             with patch("tools.ui_codegen.generate_scenes_header", return_value="// ok"):
                 app._export_c_header()
 
-    def test_generate_header_raises(self, tmp_path, monkeypatch):
+    def test_generate_header_raises(self, tmp_path, make_app):
         """L3000-3001: generate_scenes_header raises → status message."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = tmp_path / "scene.json"
         app.json_path.write_text("{}", encoding="utf-8")
         with patch.object(app, "save_json"):
@@ -402,8 +379,8 @@ class TestExportCHeaderExcept:
 # M) _add_widget _save_state raises  (L3008-3009)
 # ===================================================================
 class TestAddWidgetSaveStateRaises:
-    def test_save_state_raises(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_save_state_raises(self, make_app):
+        app = make_app()
         with patch.object(app.designer, "_save_state", side_effect=TypeError("fail")):
             app._add_widget("label")
         sc = app.state.current_scene()
@@ -414,9 +391,9 @@ class TestAddWidgetSaveStateRaises:
 # N) _toggle_panels window.get_size() raises  (L3144-3145)
 # ===================================================================
 class TestTogglePanelsWindowError:
-    def test_window_get_size_raises(self, tmp_path, monkeypatch):
+    def test_window_get_size_raises(self, make_app):
         """L3144-3145: window.get_size() raises → win_size = None."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.window = MagicMock()
         app.window.get_size.side_effect = AttributeError("no window")
         app._toggle_panels()
@@ -426,9 +403,9 @@ class TestTogglePanelsWindowError:
 # O) overlays.py wide window two-column layout  (L381-427)
 # ===================================================================
 class TestOverlaysWideHelp:
-    def test_help_overlay_two_column(self, tmp_path, monkeypatch):
+    def test_help_overlay_two_column(self, make_app):
         """Trigger use_cols branch: content_rect.width >= GRID * 70."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         wide = GRID * 70 + 100  # > 560
         surface = pygame.Surface((wide + 40, 400))
         app.show_help_overlay = True
@@ -446,18 +423,18 @@ class TestOverlaysWideHelp:
 # P) text.py wrap_text_px edge cases  (L60, L68-69, L110)
 # ===================================================================
 class TestTextWrapEdgeCases:
-    def test_empty_text_single_para(self, tmp_path, monkeypatch):
+    def test_empty_text_single_para(self, make_app):
         """L60: paras = [s] when text has no visible lines."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         from cyberpunk_designer.drawing.text import wrap_text_px
 
         # Empty string with max_lines > 1 → paras falls through to [s]
         result = wrap_text_px(app, "   ", max_width_px=200, max_lines=5)
         assert isinstance(result, list)
 
-    def test_truncated_line_ellipsized(self, tmp_path, monkeypatch):
+    def test_truncated_line_ellipsized(self, make_app):
         """L68-69, L110: more lines than max_lines → truncated + ellipsis."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         from cyberpunk_designer.drawing.text import wrap_text_px
 
         long_text = "\n".join(["word " * 20] * 10)
@@ -469,9 +446,9 @@ class TestTextWrapEdgeCases:
 # P2) text.py draw_text_clipped clip exception  (L181-182)
 # ===================================================================
 class TestTextClipException:
-    def test_clip_rect_exception(self, tmp_path, monkeypatch):
+    def test_clip_rect_exception(self, make_app):
         """L181-182: clip_rect.clip(old_clip) raises → new_clip = clip_rect."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         from cyberpunk_designer.drawing.text import draw_text_clipped
 
         # Use a mock surface (pygame.Surface C extension can't be patched)
@@ -500,15 +477,14 @@ class TestTextClipException:
 # Q) panels.py layer drag highlight  (L231-232)
 # ===================================================================
 class TestPanelsLayerDrag:
-    def test_layer_drag_highlight(self, tmp_path, monkeypatch):
+    def test_layer_drag_highlight(self, make_app):
         """L231-232: layer drag with key 'layer:X' and hover target."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(y=30)])
+        app = make_app(widgets=[_w(), _w(y=30)])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._layer_drag_idx = 1  # Dragging layer 1
         surface = pygame.Surface((256, 128))
         app.logical_surface = surface
-        app.show_help_overlay = False
         app._optimized_draw_frame()
 
 
@@ -516,9 +492,9 @@ class TestPanelsLayerDrag:
 # R) panels.py scene tab  (L295-296)
 # ===================================================================
 class TestPanelsSceneTab:
-    def test_scene_tab_multi_scene(self, tmp_path, monkeypatch):
+    def test_scene_tab_multi_scene(self, make_app):
         """L292-296: scene label with multiple scenes."""
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+        app = make_app(extra_scenes=True)
         surface = pygame.Surface((256, 128))
         app.logical_surface = surface
         app._optimized_draw_frame()
@@ -528,14 +504,12 @@ class TestPanelsSceneTab:
 # S) focus_nav.py: focus_cycle cur not in focusables  (L348-349)
 # ===================================================================
 class TestFocusCycleNotInFocusables:
-    def test_focus_idx_not_in_focusables(self, tmp_path, monkeypatch):
+    def test_focus_idx_not_in_focusables(self, make_app):
         """L348-349: cur not in focusables → set_focus(focusables[0])."""
         from cyberpunk_designer import focus_nav
 
         # Widgets must be focusable (type="button"); labels are NOT focusable
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(type="button", x=10, y=10, width=40, height=20),
                 _w(type="button", x=60, y=10, width=40, height=20),
@@ -551,14 +525,12 @@ class TestFocusCycleNotInFocusables:
 # T) focus_nav.py: focus_move_direction gap=0 branches (L412, L430)
 # ===================================================================
 class TestFocusMoveDirectionGap:
-    def test_left_gap_zero(self, tmp_path, monkeypatch):
+    def test_left_gap_zero(self, make_app):
         """L407-412: horizontally overlapping widgets → gap = 0."""
         from cyberpunk_designer import focus_nav
 
         # Widgets must be focusable (type=button)
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(type="button", x=10, y=10, width=50, height=20),
                 _w(type="button", x=30, y=10, width=50, height=20),
@@ -567,13 +539,11 @@ class TestFocusMoveDirectionGap:
         app.focus_idx = 0
         focus_nav.focus_move_direction(app, "right")
 
-    def test_up_gap_zero(self, tmp_path, monkeypatch):
+    def test_up_gap_zero(self, make_app):
         """L425-430: vertically overlapping widgets → gap = 0."""
         from cyberpunk_designer import focus_nav
 
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(type="button", x=10, y=10, width=40, height=30),
                 _w(type="button", x=10, y=20, width=40, height=30),
@@ -596,44 +566,44 @@ class TestInputHandlersShortcuts:
 
         input_handlers.on_key_down(app, event)
 
-    def test_ctrl_f10_scene_overview(self, tmp_path, monkeypatch):
+    def test_ctrl_f10_scene_overview(self, monkeypatch, make_app):
         """L138-139: Ctrl+F10 → _scene_overview."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         with patch.object(app, "_scene_overview") as mock:
             self._send_key(app, pygame.K_F10, pygame.KMOD_CTRL, monkeypatch=monkeypatch)
             mock.assert_called_once()
 
-    def test_ctrl_f11_export_selection_json(self, tmp_path, monkeypatch):
+    def test_ctrl_f11_export_selection_json(self, monkeypatch, make_app):
         """L148: Ctrl+F11 → _export_selection_json."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         with patch.object(app, "_export_selection_json") as mock:
             self._send_key(app, pygame.K_F11, pygame.KMOD_CTRL, monkeypatch=monkeypatch)
             mock.assert_called_once()
 
-    def test_ctrl_pageup_switch_scene(self, tmp_path, monkeypatch):
+    def test_ctrl_pageup_switch_scene(self, monkeypatch, make_app):
         """L396-401: Ctrl+PageUp → _jump_to_scene (first handler catches it)."""
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+        app = make_app(extra_scenes=True)
         with patch.object(app, "_jump_to_scene") as mock:
             self._send_key(app, pygame.K_PAGEUP, pygame.KMOD_CTRL, monkeypatch=monkeypatch)
             mock.assert_called_once()
 
-    def test_ctrl_pagedown_switch_scene(self, tmp_path, monkeypatch):
+    def test_ctrl_pagedown_switch_scene(self, monkeypatch, make_app):
         """L390-395: Ctrl+PageDown → _jump_to_scene (first handler catches it)."""
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+        app = make_app(extra_scenes=True)
         with patch.object(app, "_jump_to_scene") as mock:
             self._send_key(app, pygame.K_PAGEDOWN, pygame.KMOD_CTRL, monkeypatch=monkeypatch)
             mock.assert_called_once()
 
-    def test_f4_zoom_to_fit(self, tmp_path, monkeypatch):
+    def test_f4_zoom_to_fit(self, monkeypatch, make_app):
         """L542-543: F4 → _zoom_to_fit."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         with patch.object(app, "_zoom_to_fit") as mock:
             self._send_key(app, pygame.K_F4, 0, monkeypatch=monkeypatch)
             mock.assert_called_once()
 
-    def test_k0_add_list(self, tmp_path, monkeypatch):
+    def test_k0_add_list(self, monkeypatch, make_app):
         """L550: K_0 without modifiers → _add_widget('list')."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         with patch.object(app, "_add_widget") as mock:
             self._send_key(app, pygame.K_0, 0, monkeypatch=monkeypatch)
             mock.assert_called_once_with("list")
@@ -643,9 +613,9 @@ class TestInputHandlersShortcuts:
 # V) canvas.py: _draw_distance_indicators with zero scene size  (L288)
 # ===================================================================
 class TestCanvasDistanceLinesZeroScene:
-    def test_zero_scene_size_returns(self, tmp_path, monkeypatch):
+    def test_zero_scene_size_returns(self, make_app):
         """L287-288: sc_w or sc_h <= 0 → return."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         sc = app.state.current_scene()
         sc.width = 0  # zero width
@@ -659,9 +629,9 @@ class TestCanvasDistanceLinesZeroScene:
 # W) query_select.py: select_overflow no widgets  (L157)
 # ===================================================================
 class TestQuerySelectNoWidgets:
-    def test_select_overflow_no_widgets(self, tmp_path, monkeypatch):
+    def test_select_overflow_no_widgets(self, make_app):
         """L157: No widgets → status message."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         sc = app.state.current_scene()
         sc.widgets.clear()
         from cyberpunk_designer.selection_ops.query_select import select_overflow
@@ -673,9 +643,9 @@ class TestQuerySelectNoWidgets:
 # X) transforms.py: bounds width/height zero  (L84, L89-90)
 # ===================================================================
 class TestTransformsZeroBounds:
-    def test_bounds_zero_width_returns_false(self, tmp_path, monkeypatch):
+    def test_bounds_zero_width_returns_false(self, monkeypatch, make_app):
         """L83-84: bounds.width <= 0 → return False."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         from cyberpunk_designer.selection_ops import transforms
@@ -689,11 +659,11 @@ class TestTransformsZeroBounds:
         result = transforms.resize_selection_to(app, new_w=50, new_h=50)
         assert result is False
 
-    def test_bounds_division_by_zero(self, tmp_path, monkeypatch):
+    def test_bounds_division_by_zero(self, make_app):
         """L89-90: except in float division → sx, sy = 1.0, 1.0.
         This except branch is hard to reach naturally because L83 guards
         against zero. We exercise the normal resize path instead."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         from cyberpunk_designer.selection_ops.transforms import resize_selection_to
@@ -706,13 +676,11 @@ class TestTransformsZeroBounds:
 # Y) focus_nav.focus_cycle: bypass ensure_focus → L348-349
 # ===================================================================
 class TestFocusCycleBranchCurNotInFocusables:
-    def test_mock_ensure_focus_noop(self, tmp_path, monkeypatch):
+    def test_mock_ensure_focus_noop(self, monkeypatch, make_app):
         """L348-349: after ensure_focus, cur still not in focusables."""
         from cyberpunk_designer import focus_nav
 
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(type="button", x=0, y=0, width=40, height=20),
             ],
@@ -728,9 +696,9 @@ class TestFocusCycleBranchCurNotInFocusables:
 # Z) app._snap_up with g <= 0  →  L2901
 # ===================================================================
 class TestSnapUpZeroGrid:
-    def test_add_new_scene_name_collision_loop(self, tmp_path, monkeypatch):
+    def test_add_new_scene_name_collision_loop(self, make_app):
         """L2901: _add_new_scene while loop when name already exists."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Rename 'main' to 'scene_2' so len=1, idx=2 collides AND
         # also add 'scene_3' as another scene so the loop iterates twice
         sc = app.designer.scenes.pop("main")
@@ -748,11 +716,11 @@ class TestSnapUpZeroGrid:
 # AA) fit_text._snap_up and fit_widget._snap_up with g<=0  →  L28, L31
 # ===================================================================
 class TestFitSnapUpZero:
-    def test_fit_text_snap_up_zero(self, tmp_path, monkeypatch):
+    def test_fit_text_snap_up_zero(self, make_app):
         """fit_text.py L28: _snap_up(v, 0) → v."""
         from cyberpunk_designer import fit_text
 
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(text="hello")])
+        app = make_app(widgets=[_w(text="hello")])
         app.state.selected = [0]
         app.state.selected_idx = 0
         # _snap_up is a closure inside fit_selection_to_text, using GRID from
@@ -761,13 +729,11 @@ class TestFitSnapUpZero:
         # GRID is always 8. Just exercise the normal fit path.
         fit_text.fit_selection_to_text(app)
 
-    def test_fit_widget_snap_up_zero(self, tmp_path, monkeypatch):
+    def test_fit_widget_snap_up_zero(self, make_app):
         """fit_widget.py L31: exercise normal fit path."""
         from cyberpunk_designer import fit_widget
 
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(type="button", x=0, y=0, width=40, height=20),
             ],
@@ -781,19 +747,19 @@ class TestFitSnapUpZero:
 # AB) text.py wrap_text_px whitespace-only paras, truncation  →  L60, L68-69, L110
 # ===================================================================
 class TestWrapTextPxBranches:
-    def test_whitespace_only_paras(self, tmp_path, monkeypatch):
+    def test_whitespace_only_paras(self, make_app):
         """L60: all paras empty after strip → paras = [s]."""
         from cyberpunk_designer.drawing.text import wrap_text_px
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         result = wrap_text_px(app, "  \n  ", 200, max_lines=3)
         assert isinstance(result, list)
 
-    def test_truncation_triggers_ellipsis(self, tmp_path, monkeypatch):
+    def test_truncation_triggers_ellipsis(self, make_app):
         """L68-69, L110: text exceeds max_lines → truncated=True and last line ellipsized."""
         from cyberpunk_designer.drawing.text import wrap_text_px
 
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Use very long text with narrow width to force multi-line wrapping and truncation
         long_text = "abcdefghijklmnopqrstuvwxyz " * 50
         result = wrap_text_px(app, long_text, 40, max_lines=2, ellipsis="...")
@@ -805,7 +771,7 @@ class TestWrapTextPxBranches:
 # AC) text_metrics.wrap_text_chars truncation across lines  →  L76
 # ===================================================================
 class TestTextMetricsTruncation:
-    def test_push_after_truncation(self, tmp_path, monkeypatch):
+    def test_push_after_truncation(self, make_app):
         """text_metrics.py L76: _push called after truncation already set."""
         from cyberpunk_designer import text_metrics
 
@@ -820,10 +786,10 @@ class TestTextMetricsTruncation:
 # AD) io_ops.save_json → os.replace on Windows (L158)
 # ===================================================================
 class TestIoOpsSaveReplace:
-    def test_save_json_replaces_existing(self, tmp_path, monkeypatch):
+    def test_save_json_replaces_existing(self, tmp_path, make_app):
         """io_ops.py L158: second save hits os.replace branch on Windows."""
         json_path = tmp_path / "test.json"
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = json_path
         from cyberpunk_designer import io_ops
 
@@ -838,18 +804,18 @@ class TestIoOpsSaveReplace:
 # AE) inspector_logic._parse_pair unreachable L22, but exercise L20-21
 # ===================================================================
 class TestParsePairNoSeparator:
-    def test_no_separator_found(self, tmp_path, monkeypatch):
+    def test_no_separator_found(self, make_app):
         """inspector_logic.py L20-21: no separator found → return None."""
         from cyberpunk_designer.inspector_logic import _parse_pair
 
         assert _parse_pair("nosep") is None
 
-    def test_valid_pair(self, tmp_path, monkeypatch):
+    def test_valid_pair(self, make_app):
         from cyberpunk_designer.inspector_logic import _parse_pair
 
         assert _parse_pair("10,20") == (10, 20)
 
-    def test_invalid_values(self, tmp_path, monkeypatch):
+    def test_invalid_values(self, make_app):
         from cyberpunk_designer.inspector_logic import _parse_pair
 
         assert _parse_pair("abc,def") is None
@@ -859,13 +825,11 @@ class TestParsePairNoSeparator:
 # AF) inspector_logic root rename: empty wid, collision  →  L572, L578, L593
 # ===================================================================
 class TestInspectorRootRename:
-    def test_root_rename_skips_empty_wid(self, tmp_path, monkeypatch):
+    def test_root_rename_skips_empty_wid(self, make_app):
         """L572, L593: widgets with empty _widget_id are skipped."""
         # 3-part group comp:mytype:X returns root=comp_type="mytype"
         # so widget IDs need to use "mytype" as root prefix
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(_widget_id="mytype"),
                 _w(_widget_id="mytype.child"),
@@ -886,11 +850,9 @@ class TestInspectorRootRename:
         assert sc.widgets[1]._widget_id == "newroot.child"
         assert sc.widgets[2]._widget_id == ""
 
-    def test_root_rename_collision(self, tmp_path, monkeypatch):
+    def test_root_rename_collision(self, make_app):
         """L578: rename collides with existing widget id."""
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(_widget_id="mytype"),
                 _w(_widget_id="existing"),
@@ -911,11 +873,11 @@ class TestInspectorRootRename:
 # AG) overlays.py two-column help (L381-427)
 # ===================================================================
 class TestOverlaysTwoColumnHelp:
-    def test_wide_help_overlay_draws(self, tmp_path, monkeypatch):
+    def test_wide_help_overlay_draws(self, make_app):
         """overlays.py L381-427: two-column layout requires content_rect.width >= GRID*70.
         With GRID=8 and panel_w capped at GRID*70=560 minus padding, this branch is
         effectively unreachable. We exercise the single-column path instead."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.show_help_overlay = True
         from cyberpunk_designer.drawing import overlays
 
@@ -930,11 +892,9 @@ class TestOverlaysTwoColumnHelp:
 # AH) app._selected_component_group returns match  →  L1172
 # ===================================================================
 class TestSelectedComponentGroupMatch:
-    def test_returns_component_info(self, tmp_path, monkeypatch):
+    def test_returns_component_info(self, make_app):
         """app.py L1172: all selected in one group → returns group info."""
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(_widget_id="btn.label"),
                 _w(_widget_id="btn.icon"),
@@ -952,11 +912,9 @@ class TestSelectedComponentGroupMatch:
 # AI) query_select.py L161-163: _selected_component_group branches
 # ===================================================================
 class TestQuerySelectComponentGroup:
-    def test_select_overflow_with_widgets(self, tmp_path, monkeypatch):
+    def test_select_overflow_with_widgets(self, make_app):
         """query_select.py L161-163: exercise select_overflow with widgets."""
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(
                     type="label",
@@ -975,12 +933,11 @@ class TestQuerySelectComponentGroup:
 # AJ) panels.py scene tab label (L295-296) — multiple scenes
 # ===================================================================
 class TestPanelsSceneTabLabel:
-    def test_scene_tab_with_multi_scene(self, tmp_path, monkeypatch):
+    def test_scene_tab_with_multi_scene(self, make_app):
         """panels.py L295-296: scene label 'idx/N:name' when multiple scenes."""
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+        app = make_app(extra_scenes=True)
         surface = pygame.Surface((256, 128))
         app.logical_surface = surface
-        app.show_help_overlay = False
         from cyberpunk_designer.drawing import panels
 
         panels.draw_status(app)
@@ -990,10 +947,10 @@ class TestPanelsSceneTabLabel:
 # AK) io_ops save_json exception fallback (L159-165)
 # ===================================================================
 class TestIoOpsSaveFallback:
-    def test_save_json_tempfile_raises(self, tmp_path, monkeypatch):
+    def test_save_json_tempfile_raises(self, tmp_path, monkeypatch, make_app):
         """io_ops.py L159-165: save_to_json raises → fallback direct save."""
         json_path = tmp_path / "test.json"
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.json_path = json_path
         from cyberpunk_designer import io_ops
 
@@ -1015,11 +972,9 @@ class TestIoOpsSaveFallback:
 # AL) inspector_logic grouped widget layers (L1310-1315)
 # ===================================================================
 class TestInspectorGroupedLayers:
-    def test_grouped_widgets_in_layers(self, tmp_path, monkeypatch):
+    def test_grouped_widgets_in_layers(self, make_app):
         """inspector_logic.py L1310-1315: grouped widgets shown indented."""
-        app = _make_app(
-            tmp_path,
-            monkeypatch,
+        app = make_app(
             widgets=[
                 _w(type="button", _widget_id="btn.label"),
                 _w(type="button", _widget_id="btn.icon"),
@@ -1042,9 +997,9 @@ class TestInspectorGroupedLayers:
 # AM) app.run() one-iteration — covers main loop body (L843-875)
 # ===================================================================
 class TestRunOneIteration:
-    def test_run_loop_body_and_exit(self, tmp_path, monkeypatch):
+    def test_run_loop_body_and_exit(self, monkeypatch, make_app):
         """Exercise run() with one loop iteration then exit."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         exit_calls = []
         monkeypatch.setattr(sys, "exit", lambda code=0: exit_calls.append(code))
 
@@ -1066,9 +1021,9 @@ class TestRunOneIteration:
         app.run()
         assert exit_calls == [0]
 
-    def test_run_vsync_branch(self, tmp_path, monkeypatch):
+    def test_run_vsync_branch(self, monkeypatch, make_app):
         """Exercise run() with vsync_enabled=True."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(sys, "exit", lambda code=0: None)
         monkeypatch.setattr(app, "_handle_events", lambda: setattr(app, "running", False))
         monkeypatch.setattr(app, "_update_cursor", lambda: None)
@@ -1080,9 +1035,9 @@ class TestRunOneIteration:
         app.auto_optimize = False
         app.run()
 
-    def test_run_auto_scale_branch(self, tmp_path, monkeypatch):
+    def test_run_auto_scale_branch(self, monkeypatch, make_app):
         """Exercise run() with auto_scale_adjust=True, vsync off."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(sys, "exit", lambda code=0: None)
         monkeypatch.setattr(app, "_handle_events", lambda: setattr(app, "running", False))
         monkeypatch.setattr(app, "_update_cursor", lambda: None)
@@ -1095,9 +1050,9 @@ class TestRunOneIteration:
         app.auto_optimize = False
         app.run()
 
-    def test_run_no_fps_limit(self, tmp_path, monkeypatch):
+    def test_run_no_fps_limit(self, monkeypatch, make_app):
         """Exercise run() with fps_limit=0 (uncapped)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.setattr(sys, "exit", lambda code=0: None)
         monkeypatch.setattr(app, "_handle_events", lambda: setattr(app, "running", False))
         monkeypatch.setattr(app, "_update_cursor", lambda: None)
@@ -1116,36 +1071,36 @@ class TestRunOneIteration:
 # AN) _load_pixel_font non-headless path (L895-914)
 # ===================================================================
 class TestLoadPixelFontNonHeadless:
-    def test_system_font_found(self, tmp_path, monkeypatch):
+    def test_system_font_found(self, monkeypatch, make_app):
         """Exercise font loading with is_headless=False, system font found."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Remove markers that make is_headless True
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_env_font_file_path(self, tmp_path, monkeypatch):
+    def test_env_font_file_path(self, monkeypatch, make_app):
         """Exercise font loading with ESP32OS_FONT set to a real file (L907-909)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Use pygame's bundled font as an actual file path
         font_file = os.path.join(os.path.dirname(pygame.__file__), "freesansbold.ttf")
         monkeypatch.setenv("ESP32OS_FONT", font_file)
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_env_font_name_match(self, tmp_path, monkeypatch):
+    def test_env_font_name_match(self, monkeypatch, make_app):
         """Exercise font loading with ESP32OS_FONT as font name (L910-912)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         # Use a name that doesn't exist as a file so it falls through to match_font
         monkeypatch.setenv("ESP32OS_FONT", "nonexistent_font_xyz")
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_font_constructor_raises(self, tmp_path, monkeypatch):
+    def test_font_constructor_raises(self, monkeypatch, make_app):
         """Exercise exception in font loop (L913-914): Font() raises."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         orig_Font = pygame.font.Font
@@ -1166,9 +1121,9 @@ class TestLoadPixelFontNonHeadless:
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_all_fonts_fail_sysfont_fallback(self, tmp_path, monkeypatch):
+    def test_all_fonts_fail_sysfont_fallback(self, monkeypatch, make_app):
         """Exercise fallback chain when all named fonts fail (L923-924)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         # Make match_font always return None so named fonts fail
@@ -1176,9 +1131,9 @@ class TestLoadPixelFontNonHeadless:
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_sysfont_fails_default_font(self, tmp_path, monkeypatch):
+    def test_sysfont_fails_default_font(self, monkeypatch, make_app):
         """Exercise fallback when SysFont also fails (L926-927)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.setattr(pygame.font, "match_font", lambda name: None)
@@ -1188,9 +1143,9 @@ class TestLoadPixelFontNonHeadless:
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_all_fail_to_get_default_font(self, tmp_path, monkeypatch):
+    def test_all_fail_to_get_default_font(self, monkeypatch, make_app):
         """Exercise final fallback with Font(None) also failing (L928-929)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
         monkeypatch.setattr(pygame.font, "match_font", lambda name: None)
@@ -1210,9 +1165,9 @@ class TestLoadPixelFontNonHeadless:
         font = app._load_pixel_font(8)
         assert font is not None
 
-    def test_headless_font_none_fails(self, tmp_path, monkeypatch):
+    def test_headless_font_none_fails(self, monkeypatch, make_app):
         """Exercise headless path where Font(None) fails (L920-921)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         # Keep headless markers so is_headless=True
         orig_Font = pygame.font.Font
 

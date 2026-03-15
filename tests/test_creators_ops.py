@@ -24,23 +24,11 @@ from cyberpunk_designer.selection_ops import (
     create_toggle_group,
     wrap_in_panel,
 )
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    return app
 
 
 def _add(app, **kw):
@@ -71,27 +59,31 @@ def _widget_count(app):
 
 
 class TestCreateHeaderBar:
-    def test_creates_panel_and_label(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_panel_and_label(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_header_bar(app)
         assert _widget_count(app) == 2
         assert _w(app, 0).type == "panel"
         assert _w(app, 1).type == "label"
 
-    def test_header_full_width(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_header_full_width(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_header_bar(app)
         assert _w(app, 0).width == 256
         assert _w(app, 0).y == 0
 
-    def test_header_label_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_header_label_text(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_header_bar(app)
         assert _w(app, 1).text == "Header"
         assert _w(app, 1).style == "bold"
 
-    def test_updates_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_updates_selection(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_header_bar(app)
         assert app.state.selected == [0, 1]
         assert app.state.selected_idx == 0
@@ -103,27 +95,31 @@ class TestCreateHeaderBar:
 
 
 class TestCreateNavRow:
-    def test_creates_three_buttons(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_three_buttons(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_nav_row(app)
         assert _widget_count(app) == 3
         for i in range(3):
             assert _w(app, i).type == "button"
 
-    def test_button_labels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_button_labels(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_nav_row(app)
         texts = [_w(app, i).text for i in range(3)]
         assert texts == ["Back", "OK", "Next"]
 
-    def test_buttons_at_scene_bottom(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_buttons_at_scene_bottom(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_nav_row(app)
         for i in range(3):
             assert _w(app, i).y == 128 - 24
 
-    def test_updates_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_updates_selection(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_nav_row(app)
         assert app.state.selected == [0, 1, 2]
 
@@ -134,20 +130,23 @@ class TestCreateNavRow:
 
 
 class TestCreateFormPair:
-    def test_creates_label_and_textbox(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_label_and_textbox(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_form_pair(app)
         assert _widget_count(app) == 2
         assert _w(app, 0).type == "label"
         assert _w(app, 1).type == "textbox"
 
-    def test_label_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_label_text(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_form_pair(app)
         assert _w(app, 0).text == "Label:"
 
-    def test_places_below_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_places_below_selection(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         _add(app, x=0, y=10, width=80, height=16)
         _sel(app, 0)
         y_before = _w(app, 0).y + _w(app, 0).height
@@ -155,8 +154,9 @@ class TestCreateFormPair:
         # the textbox should be below the existing widget
         assert _w(app, 2).y > y_before
 
-    def test_selection_points_to_textbox(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_selection_points_to_textbox(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_form_pair(app)
         # selected_idx should be the textbox (index 1)
         assert app.state.selected_idx == 1
@@ -168,26 +168,30 @@ class TestCreateFormPair:
 
 
 class TestCreateStatusBar:
-    def test_creates_panel_and_label(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_panel_and_label(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_status_bar(app)
         assert _widget_count(app) == 2
         assert _w(app, 0).type == "panel"
         assert _w(app, 1).type == "label"
 
-    def test_at_scene_bottom(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_at_scene_bottom(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_status_bar(app)
         bar_h = 16
         assert _w(app, 0).y == 128 - bar_h
 
-    def test_status_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_status_text(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_status_bar(app)
         assert _w(app, 1).text == "Status: ready"
 
-    def test_full_width(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_full_width(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_status_bar(app)
         assert _w(app, 0).width == 256
 
@@ -198,28 +202,32 @@ class TestCreateStatusBar:
 
 
 class TestCreateToggleGroup:
-    def test_creates_three_checkboxes(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_three_checkboxes(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_toggle_group(app)
         assert _widget_count(app) == 3
         for i in range(3):
             assert _w(app, i).type == "checkbox"
 
-    def test_checkbox_labels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_checkbox_labels(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_toggle_group(app)
         texts = [_w(app, i).text for i in range(3)]
         assert texts == ["Option A", "Option B", "Option C"]
 
-    def test_first_checked(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_first_checked(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_toggle_group(app)
         assert _w(app, 0).checked is True
         assert _w(app, 1).checked is False
         assert _w(app, 2).checked is False
 
-    def test_places_below_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_places_below_selection(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         _add(app, x=0, y=10, width=80, height=16)
         _sel(app, 0)
         create_toggle_group(app)
@@ -234,29 +242,33 @@ class TestCreateToggleGroup:
 
 
 class TestCreateSliderWithLabel:
-    def test_creates_three_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_three_widgets(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_slider_with_label(app)
         assert _widget_count(app) == 3
         assert _w(app, 0).type == "label"
         assert _w(app, 1).type == "slider"
         assert _w(app, 2).type == "label"
 
-    def test_slider_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_slider_value(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_slider_with_label(app)
         assert _w(app, 1).value == 50
         assert _w(app, 1).min_value == 0
         assert _w(app, 1).max_value == 100
 
-    def test_label_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_label_text(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_slider_with_label(app)
         assert _w(app, 0).text == "Volume:"
         assert _w(app, 2).text == "50"
 
-    def test_selection_on_slider(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_selection_on_slider(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_slider_with_label(app)
         assert app.state.selected_idx == 1
 
@@ -267,26 +279,30 @@ class TestCreateSliderWithLabel:
 
 
 class TestCreateGaugePanel:
-    def test_creates_panel_title_gauge(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_panel_title_gauge(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_gauge_panel(app)
         assert _widget_count(app) == 3
         assert _w(app, 0).type == "panel"
         assert _w(app, 1).type == "label"
         assert _w(app, 2).type == "gauge"
 
-    def test_gauge_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_gauge_value(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_gauge_panel(app)
         assert _w(app, 2).value == 70
 
-    def test_title_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_title_text(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_gauge_panel(app)
         assert _w(app, 1).text == "Speed"
 
-    def test_selection_on_gauge(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_selection_on_gauge(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_gauge_panel(app)
         assert app.state.selected_idx == 2
 
@@ -297,20 +313,23 @@ class TestCreateGaugePanel:
 
 
 class TestCreateProgressSection:
-    def test_creates_label_and_progressbar(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_label_and_progressbar(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_progress_section(app)
         assert _widget_count(app) == 2
         assert _w(app, 0).type == "label"
         assert _w(app, 1).type == "progressbar"
 
-    def test_progressbar_value(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_progressbar_value(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_progress_section(app)
         assert _w(app, 1).value == 65
 
-    def test_label_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_label_text(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_progress_section(app)
         assert _w(app, 0).text == "Loading:"
 
@@ -321,15 +340,17 @@ class TestCreateProgressSection:
 
 
 class TestCreateIconButtonRow:
-    def test_creates_four_buttons(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_four_buttons(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_icon_button_row(app)
         assert _widget_count(app) == 4
         for i in range(4):
             assert _w(app, i).type == "button"
 
-    def test_buttons_are_square(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_buttons_are_square(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_icon_button_row(app)
         for i in range(4):
             assert _w(app, i).width == 24
@@ -342,8 +363,9 @@ class TestCreateIconButtonRow:
 
 
 class TestCreateCardLayout:
-    def test_creates_four_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_four_widgets(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_card_layout(app)
         assert _widget_count(app) == 4
         assert _w(app, 0).type == "panel"
@@ -351,13 +373,15 @@ class TestCreateCardLayout:
         assert _w(app, 2).type == "panel"  # separator
         assert _w(app, 3).type == "label"  # body
 
-    def test_card_title(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_card_title(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_card_layout(app)
         assert _w(app, 1).text == "Card Title"
 
-    def test_card_body(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_card_body(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_card_layout(app)
         assert "Body content" in _w(app, 3).text
 
@@ -368,14 +392,16 @@ class TestCreateCardLayout:
 
 
 class TestCreateDashboardGrid:
-    def test_creates_twelve_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_twelve_widgets(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_dashboard_grid(app)
         # 2x2 grid, 3 widgets per cell
         assert _widget_count(app) == 12
 
-    def test_cells_have_panel_label_gauge(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cells_have_panel_label_gauge(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_dashboard_grid(app)
         for cell in range(4):
             base = cell * 3
@@ -383,8 +409,9 @@ class TestCreateDashboardGrid:
             assert _w(app, base + 1).type == "label"
             assert _w(app, base + 2).type == "gauge"
 
-    def test_gauge_titles(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_gauge_titles(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_dashboard_grid(app)
         titles = [_w(app, i * 3 + 1).text for i in range(4)]
         assert titles == ["Speed", "Temp", "RPM", "Batt"]
@@ -396,8 +423,9 @@ class TestCreateDashboardGrid:
 
 
 class TestCreateSplitLayout:
-    def test_creates_four_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_four_widgets(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_split_layout(app)
         assert _widget_count(app) == 4
         # left panel, left label, right panel, right label
@@ -406,14 +434,16 @@ class TestCreateSplitLayout:
         assert _w(app, 2).type == "panel"
         assert _w(app, 3).type == "label"
 
-    def test_pane_labels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_pane_labels(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_split_layout(app)
         assert _w(app, 1).text == "Left Pane"
         assert _w(app, 3).text == "Right Pane"
 
-    def test_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_selection(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         create_split_layout(app)
         assert app.state.selected == [0, 1, 2, 3]
 
@@ -424,8 +454,9 @@ class TestCreateSplitLayout:
 
 
 class TestWrapInPanel:
-    def test_wraps_single_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_wraps_single_widget(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         _add(app, x=20, y=20, width=40, height=16)
         _sel(app, 0)
         wrap_in_panel(app)
@@ -435,8 +466,9 @@ class TestWrapInPanel:
         # Original widget shifted to index 1
         assert _w(app, 1).type == "label"
 
-    def test_panel_encloses_widget_with_padding(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_panel_encloses_widget_with_padding(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         from cyberpunk_designer.constants import GRID
 
         _add(app, x=20, y=20, width=40, height=16)
@@ -448,8 +480,9 @@ class TestWrapInPanel:
         assert panel.width == 40 + GRID * 2
         assert panel.height == 16 + GRID * 2
 
-    def test_wraps_multiple_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_wraps_multiple_widgets(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         _add(app, x=10, y=10, width=30, height=10)
         _add(app, x=50, y=20, width=30, height=10)
         _sel(app, 0, 1)
@@ -457,15 +490,17 @@ class TestWrapInPanel:
         assert _widget_count(app) == 3
         assert _w(app, 0).type == "panel"
 
-    def test_empty_selection_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection_noop(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         _add(app, x=10, y=10, width=30, height=10)
         _sel(app)
         wrap_in_panel(app)
         assert _widget_count(app) == 1  # no panel added
 
-    def test_selection_updated_after_wrap(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_selection_updated_after_wrap(self, make_app):
+        app = make_app()
+        app._save_undo_state = lambda: None
         _add(app, x=10, y=10, width=30, height=10)
         _sel(app, 0)
         wrap_in_panel(app)

@@ -47,23 +47,11 @@ from cyberpunk_designer.selection_ops import (
     widget_type_summary,
     z_by_position,
 )
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    return app
 
 
 def _add(app, **kw):
@@ -94,28 +82,28 @@ def _count(app):
 
 
 class TestMeasureSelection:
-    def test_single_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_single_widget(self, make_app):
+        app = make_app()
         _add(app, x=10, y=20, width=80, height=16)
         _sel(app, 0)
         measure_selection(app)  # status shows pos/size
 
-    def test_two_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_two_widgets(self, make_app):
+        app = make_app()
         _add(app, x=0, y=0, width=40, height=16)
         _add(app, x=60, y=0, width=40, height=16)
         _sel(app, 0, 1)
         measure_selection(app)  # status shows bbox + gaps
 
-    def test_three_plus_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_three_plus_widgets(self, make_app):
+        app = make_app()
         for i in range(3):
             _add(app, x=i * 30, y=0, width=20, height=10)
         _sel(app, 0, 1, 2)
         measure_selection(app)  # status shows count + bbox
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         measure_selection(app)  # no crash
@@ -127,14 +115,14 @@ class TestMeasureSelection:
 
 
 class TestReplaceTextInScene:
-    def test_first_call_sets_flag(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_first_call_sets_flag(self, make_app):
+        app = make_app()
         _add(app, text="hello")
         replace_text_in_scene(app)
         assert app._replace_buf == ""
 
-    def test_replace_with_pattern(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_replace_with_pattern(self, make_app):
+        app = make_app()
         _add(app, text="hello world")
         _add(app, text="hello there")
         app._replace_buf = "hello|goodbye"
@@ -143,15 +131,15 @@ class TestReplaceTextInScene:
         assert _w(app, 1).text == "goodbye there"
         assert app._replace_buf is None
 
-    def test_invalid_pattern_cancels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_invalid_pattern_cancels(self, make_app):
+        app = make_app()
         _add(app, text="hello")
         app._replace_buf = "nopipe"
         replace_text_in_scene(app)
         assert _w(app, 0).text == "hello"  # unchanged
 
-    def test_empty_find_cancels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_find_cancels(self, make_app):
+        app = make_app()
         _add(app, text="hello")
         app._replace_buf = "|replacement"
         replace_text_in_scene(app)
@@ -164,8 +152,8 @@ class TestReplaceTextInScene:
 
 
 class TestSceneOverview:
-    def test_shows_scene_info(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_shows_scene_info(self, make_app):
+        app = make_app()
         _add(app, text="w1")
         _add(app, text="w2")
         scene_overview(app)  # no crash, sets status
@@ -177,15 +165,15 @@ class TestSceneOverview:
 
 
 class TestWidgetTypeSummary:
-    def test_shows_type_counts(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_shows_type_counts(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _add(app, type="button")
         _add(app, type="label")
         widget_type_summary(app)  # no crash
 
-    def test_empty_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_scene(self, make_app):
+        app = make_app()
         widget_type_summary(app)  # no crash
 
 
@@ -195,14 +183,14 @@ class TestWidgetTypeSummary:
 
 
 class TestToggleFocusOrderOverlay:
-    def test_toggles_on(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggles_on(self, make_app):
+        app = make_app()
         app.show_focus_order = False
         toggle_focus_order_overlay(app)
         assert app.show_focus_order is True
 
-    def test_toggles_off(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggles_off(self, make_app):
+        app = make_app()
         app.show_focus_order = True
         toggle_focus_order_overlay(app)
         assert app.show_focus_order is False
@@ -214,8 +202,8 @@ class TestToggleFocusOrderOverlay:
 
 
 class TestFillScene:
-    def test_fills_widget_to_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_fills_widget_to_scene(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=40, height=20)
         _sel(app, 0)
         fill_scene(app)
@@ -223,8 +211,8 @@ class TestFillScene:
         assert w.x == 0 and w.y == 0
         assert w.width == 256 and w.height == 128
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, x=10, width=40)
         _sel(app)
         fill_scene(app)
@@ -237,8 +225,8 @@ class TestFillScene:
 
 
 class TestAutoLabelWidgets:
-    def test_labels_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_labels_widgets(self, make_app):
+        app = make_app()
         _add(app, type="label", text="x")
         _add(app, type="button", text="y")
         _sel(app, 0, 1)
@@ -246,8 +234,8 @@ class TestAutoLabelWidgets:
         assert _w(app, 0).text == "Label 1"
         assert _w(app, 1).text == "Button 2"
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         auto_label_widgets(app)
@@ -259,8 +247,8 @@ class TestAutoLabelWidgets:
 
 
 class TestInsetWidgets:
-    def test_shrinks_inward(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_shrinks_inward(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=80, height=40)
         _sel(app, 0)
         inset_widgets(app, amount=4)
@@ -268,8 +256,8 @@ class TestInsetWidgets:
         assert w.x == 14 and w.y == 14
         assert w.width == 72 and w.height == 32
 
-    def test_default_amount_is_grid(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_default_amount_is_grid(self, make_app):
+        app = make_app()
         _add(app, x=0, y=0, width=80, height=40)
         _sel(app, 0)
         inset_widgets(app)
@@ -277,23 +265,23 @@ class TestInsetWidgets:
         assert w.x == GRID and w.y == GRID
         assert w.width == 80 - GRID * 2
 
-    def test_too_small_skipped(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_too_small_skipped(self, make_app):
+        app = make_app()
         _add(app, x=0, y=0, width=10, height=10)
         _sel(app, 0)
         inset_widgets(app, amount=8)
         assert _w(app, 0).width == 10  # too small, skipped
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         inset_widgets(app)
 
 
 class TestOutsetWidgets:
-    def test_expands_outward(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_expands_outward(self, make_app):
+        app = make_app()
         _add(app, x=20, y=20, width=40, height=20)
         _sel(app, 0)
         outset_widgets(app, amount=4)
@@ -301,16 +289,16 @@ class TestOutsetWidgets:
         assert w.x == 16 and w.y == 16
         assert w.width == 48 and w.height == 28
 
-    def test_clamps_at_zero(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamps_at_zero(self, make_app):
+        app = make_app()
         _add(app, x=2, y=2, width=40, height=20)
         _sel(app, 0)
         outset_widgets(app, amount=8)
         assert _w(app, 0).x == 0
         assert _w(app, 0).y == 0
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         outset_widgets(app)
@@ -322,8 +310,8 @@ class TestOutsetWidgets:
 
 
 class TestDeleteHiddenWidgets:
-    def test_removes_invisible(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_removes_invisible(self, make_app):
+        app = make_app()
         _add(app, text="visible")
         w = _add(app, text="hidden")
         w.visible = False
@@ -332,24 +320,24 @@ class TestDeleteHiddenWidgets:
         assert _count(app) == 1
         assert _w(app, 0).text == "visible"
 
-    def test_no_hidden(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_hidden(self, make_app):
+        app = make_app()
         _add(app)
         delete_hidden_widgets(app)
         assert _count(app) == 1
 
 
 class TestDeleteOffscreenWidgets:
-    def test_removes_offscreen(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_removes_offscreen(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=40, height=16)  # inside
         _add(app, x=300, y=0, width=40, height=16)  # outside right
         _add(app, x=-100, y=0, width=40, height=16)  # outside left
         delete_offscreen_widgets(app)
         assert _count(app) == 1
 
-    def test_no_offscreen(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_offscreen(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=40, height=16)
         delete_offscreen_widgets(app)
         assert _count(app) == 1
@@ -361,24 +349,24 @@ class TestDeleteOffscreenWidgets:
 
 
 class TestTileFillScene:
-    def test_tiles_single_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_tiles_single_widget(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=64, height=32)
         _sel(app, 0)
         tile_fill_scene(app)
         # 256/64=4 cols, 128/32=4 rows → 16 tiles
         assert _count(app) >= 4  # at least some tiling happened
 
-    def test_requires_single_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_requires_single_selection(self, make_app):
+        app = make_app()
         _add(app, width=64, height=32)
         _add(app, width=64, height=32)
         _sel(app, 0, 1)
         tile_fill_scene(app)  # noop, 2 selected
         assert _count(app) == 2
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         tile_fill_scene(app)
@@ -390,8 +378,8 @@ class TestTileFillScene:
 
 
 class TestMatchFirstWidth:
-    def test_sets_to_first_width(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_sets_to_first_width(self, make_app):
+        app = make_app()
         _add(app, width=100)
         _add(app, width=50)
         _add(app, width=30)
@@ -401,16 +389,16 @@ class TestMatchFirstWidth:
         assert _w(app, 2).width == 100
         assert _w(app, 0).width == 100  # first unchanged
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, width=80)
         _sel(app, 0)
         match_first_width(app)
 
 
 class TestMatchFirstHeight:
-    def test_sets_to_first_height(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_sets_to_first_height(self, make_app):
+        app = make_app()
         _add(app, height=40)
         _add(app, height=16)
         _add(app, height=20)
@@ -419,8 +407,8 @@ class TestMatchFirstHeight:
         assert _w(app, 1).height == 40
         assert _w(app, 2).height == 40
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, height=40)
         _sel(app, 0)
         match_first_height(app)
@@ -432,8 +420,8 @@ class TestMatchFirstHeight:
 
 
 class TestScatterRandom:
-    def test_moves_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_moves_widgets(self, make_app):
+        app = make_app()
         _add(app, x=0, y=0, width=20, height=16)
         _add(app, x=0, y=0, width=20, height=16)
         _sel(app, 0, 1)
@@ -444,8 +432,8 @@ class TestScatterRandom:
             assert 0 <= w.x <= 256
             assert 0 <= w.y <= 128
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10)
         _sel(app)
         scatter_random(app)
@@ -458,8 +446,8 @@ class TestScatterRandom:
 
 
 class TestToggleAllChecked:
-    def test_toggles_checkboxes(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggles_checkboxes(self, make_app):
+        app = make_app()
         _add(app, type="checkbox", checked=False)
         _add(app, type="checkbox", checked=True)
         _sel(app, 0, 1)
@@ -467,14 +455,14 @@ class TestToggleAllChecked:
         assert _w(app, 0).checked is True
         assert _w(app, 1).checked is False
 
-    def test_ignores_non_checkbox(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_ignores_non_checkbox(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _sel(app, 0)
         toggle_all_checked(app)  # no crash, no change
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, type="checkbox")
         _sel(app)
         toggle_all_checked(app)
@@ -486,8 +474,8 @@ class TestToggleAllChecked:
 
 
 class TestResetAllValues:
-    def test_resets_to_min(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_resets_to_min(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=75, min_value=10, max_value=100)
         _add(app, type="slider", value=50, min_value=0, max_value=100)
         _sel(app, 0, 1)
@@ -495,14 +483,14 @@ class TestResetAllValues:
         assert _w(app, 0).value == 10
         assert _w(app, 1).value == 0
 
-    def test_ignores_non_value_types(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_ignores_non_value_types(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _sel(app, 0)
         reset_all_values(app)  # no crash
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=50)
         _sel(app)
         reset_all_values(app)
@@ -514,8 +502,8 @@ class TestResetAllValues:
 
 
 class TestFlattenZIndex:
-    def test_resets_z_to_zero(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_resets_z_to_zero(self, make_app):
+        app = make_app()
         w1 = _add(app)
         w2 = _add(app)
         w1.z_index = 5
@@ -524,13 +512,13 @@ class TestFlattenZIndex:
         assert _w(app, 0).z_index == 0
         assert _w(app, 1).z_index == 0
 
-    def test_already_zero(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_zero(self, make_app):
+        app = make_app()
         _add(app)
         flatten_z_index(app)  # no crash
 
-    def test_empty_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_scene(self, make_app):
+        app = make_app()
         flatten_z_index(app)  # no crash
 
 
@@ -540,8 +528,8 @@ class TestFlattenZIndex:
 
 
 class TestNumberWidgetIds:
-    def test_assigns_ids(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_assigns_ids(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _add(app, type="button")
         _add(app, type="label")
@@ -550,8 +538,8 @@ class TestNumberWidgetIds:
         assert _w(app, 1)._widget_id == "button_0"
         assert _w(app, 2)._widget_id == "label_1"
 
-    def test_empty_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_scene(self, make_app):
+        app = make_app()
         number_widget_ids(app)
 
 
@@ -561,8 +549,8 @@ class TestNumberWidgetIds:
 
 
 class TestZByPosition:
-    def test_z_order_by_position(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_z_order_by_position(self, make_app):
+        app = make_app()
         _add(app, x=100, y=100)  # last in position
         _add(app, x=0, y=0)  # first in position
         _add(app, x=50, y=50)  # middle
@@ -571,8 +559,8 @@ class TestZByPosition:
         assert _w(app, 2).z_index == 1  # (50,50) second
         assert _w(app, 0).z_index == 2  # (100,100) third
 
-    def test_empty_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_scene(self, make_app):
+        app = make_app()
         z_by_position(app)
 
 
@@ -582,24 +570,24 @@ class TestZByPosition:
 
 
 class TestCloneToGrid:
-    def test_clones_into_grid(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clones_into_grid(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=32, height=16, text="cell")
         _sel(app, 0)
         clone_to_grid(app)
         assert _count(app) > 1  # multiple copies created
         assert _w(app, 0).x == 0  # original repositioned to 0,0
 
-    def test_requires_single_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_requires_single_selection(self, make_app):
+        app = make_app()
         _add(app, width=32, height=16)
         _add(app, width=32, height=16)
         _sel(app, 0, 1)
         clone_to_grid(app)  # noop
         assert _count(app) == 2
 
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_selection(self, make_app):
+        app = make_app()
         _add(app)
         _sel(app)
         clone_to_grid(app)
@@ -611,8 +599,8 @@ class TestCloneToGrid:
 
 
 class TestSortWidgetsByZ:
-    def test_sorts_by_z_index(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_sorts_by_z_index(self, make_app):
+        app = make_app()
         w1 = _add(app, text="A")
         w2 = _add(app, text="B")
         w3 = _add(app, text="C")
@@ -624,8 +612,8 @@ class TestSortWidgetsByZ:
         assert _w(app, 1).text == "C"  # z=2
         assert _w(app, 2).text == "A"  # z=3
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app)
         sort_widgets_by_z(app)
 
@@ -636,32 +624,32 @@ class TestSortWidgetsByZ:
 
 
 class TestClampToScene:
-    def test_clamps_negative(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamps_negative(self, make_app):
+        app = make_app()
         _add(app, x=-20, y=-10, width=40, height=16)
         _sel(app, 0)
         clamp_to_scene(app)
         assert _w(app, 0).x == 0
         assert _w(app, 0).y == 0
 
-    def test_clamps_overflow(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamps_overflow(self, make_app):
+        app = make_app()
         _add(app, x=240, y=120, width=40, height=16)
         _sel(app, 0)
         clamp_to_scene(app)
         assert _w(app, 0).x == 256 - 40
         assert _w(app, 0).y == 128 - 16
 
-    def test_already_inside(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_inside(self, make_app):
+        app = make_app()
         _add(app, x=10, y=10, width=40, height=16)
         _sel(app, 0)
         clamp_to_scene(app)
         assert _w(app, 0).x == 10
         assert _w(app, 0).y == 10
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, x=-10)
         _sel(app)
         clamp_to_scene(app)
@@ -674,8 +662,8 @@ class TestClampToScene:
 
 
 class TestSnapAllToGrid:
-    def test_snaps_all_dimensions(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_snaps_all_dimensions(self, make_app):
+        app = make_app()
         _add(app, x=5, y=13, width=33, height=19)
         _sel(app, 0)
         snap_all_to_grid(app)
@@ -687,8 +675,8 @@ class TestSnapAllToGrid:
         assert w.width >= GRID
         assert w.height >= GRID
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, x=5, y=5)
         _sel(app)
         snap_all_to_grid(app)
@@ -701,8 +689,8 @@ class TestSnapAllToGrid:
 
 
 class TestSizeToText:
-    def test_resizes_to_text_length(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_resizes_to_text_length(self, make_app):
+        app = make_app()
         _add(app, text="Hello", width=200, padding_x=1)
         _sel(app, 0)
         size_to_text(app)
@@ -711,15 +699,15 @@ class TestSizeToText:
         assert w.width < 200  # should shrink
         assert w.width >= GRID
 
-    def test_empty_text_skipped(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_text_skipped(self, make_app):
+        app = make_app()
         _add(app, text="", width=80)
         _sel(app, 0)
         size_to_text(app)
         assert _w(app, 0).width == 80  # unchanged
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, text="hi", width=80)
         _sel(app)
         size_to_text(app)
@@ -732,8 +720,8 @@ class TestSizeToText:
 
 
 class TestFillParent:
-    def test_fills_enclosing_panel(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_fills_enclosing_panel(self, make_app):
+        app = make_app()
         _add(app, type="panel", x=0, y=0, width=100, height=60)
         _add(app, type="label", x=5, y=5, width=20, height=10)
         _sel(app, 1)
@@ -744,15 +732,15 @@ class TestFillParent:
         assert w.width == 100 - GRID * 2
         assert w.height == 60 - GRID * 2
 
-    def test_no_parent(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_parent(self, make_app):
+        app = make_app()
         _add(app, type="label", x=5, y=5, width=20, height=10)
         _sel(app, 0)
         fill_parent(app)
         assert _w(app, 0).width == 20  # unchanged
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, type="panel", x=0, y=0, width=100, height=60)
         _sel(app)
         fill_parent(app)
@@ -764,8 +752,8 @@ class TestFillParent:
 
 
 class TestClearAllText:
-    def test_clears_text(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clears_text(self, make_app):
+        app = make_app()
         _add(app, text="Hello")
         _add(app, text="World")
         _sel(app, 0, 1)
@@ -773,8 +761,8 @@ class TestClearAllText:
         assert _w(app, 0).text == ""
         assert _w(app, 1).text == ""
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, text="Hi")
         _sel(app)
         clear_all_text(app)
@@ -787,8 +775,8 @@ class TestClearAllText:
 
 
 class TestNumberText:
-    def test_numbers_by_position(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_numbers_by_position(self, make_app):
+        app = make_app()
         _add(app, x=100, y=100, text="x")  # position: last
         _add(app, x=0, y=0, text="y")  # position: first
         _add(app, x=50, y=50, text="z")  # position: middle
@@ -798,8 +786,8 @@ class TestNumberText:
         assert _w(app, 2).text == "2"  # (50,50)
         assert _w(app, 0).text == "3"  # (100,100)
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, text="x")
         _sel(app)
         number_text(app)
@@ -812,8 +800,8 @@ class TestNumberText:
 
 
 class TestSpreadValues:
-    def test_linear_spread(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_linear_spread(self, make_app):
+        app = make_app()
         _add(app, type="gauge", x=0, y=0, value=0, min_value=0, max_value=100)
         _add(app, type="gauge", x=0, y=10, value=0, min_value=0, max_value=100)
         _add(app, type="gauge", x=0, y=20, value=0, min_value=0, max_value=100)
@@ -823,14 +811,14 @@ class TestSpreadValues:
         assert _w(app, 1).value == 50
         assert _w(app, 2).value == 100
 
-    def test_less_than_two_noop(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_less_than_two_noop(self, make_app):
+        app = make_app()
         _add(app, type="gauge", value=50)
         _sel(app, 0)
         spread_values(app)
 
-    def test_non_value_types_skipped(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_non_value_types_skipped(self, make_app):
+        app = make_app()
         _add(app, type="label")
         _add(app, type="label")
         _sel(app, 0, 1)
@@ -843,8 +831,8 @@ class TestSpreadValues:
 
 
 class TestResetPadding:
-    def test_zeros_padding_and_margin(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_zeros_padding_and_margin(self, make_app):
+        app = make_app()
         _add(app, padding_x=5, padding_y=3, margin_x=2, margin_y=4)
         _sel(app, 0)
         reset_padding(app)
@@ -854,14 +842,14 @@ class TestResetPadding:
         assert w.margin_x == 0
         assert w.margin_y == 0
 
-    def test_already_zero(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_zero(self, make_app):
+        app = make_app()
         _add(app, padding_x=0, padding_y=0, margin_x=0, margin_y=0)
         _sel(app, 0)
         reset_padding(app)  # no change but no crash
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, padding_x=5)
         _sel(app)
         reset_padding(app)
@@ -874,22 +862,22 @@ class TestResetPadding:
 
 
 class TestResetColors:
-    def test_resets_to_white_black(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_resets_to_white_black(self, make_app):
+        app = make_app()
         _add(app, color_fg="red", color_bg="blue")
         _sel(app, 0)
         reset_colors(app)
         assert _w(app, 0).color_fg == "white"
         assert _w(app, 0).color_bg == "black"
 
-    def test_already_default(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_already_default(self, make_app):
+        app = make_app()
         _add(app, color_fg="white", color_bg="black")
         _sel(app, 0)
         reset_colors(app)  # no change needed
 
-    def test_empty_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_selection(self, make_app):
+        app = make_app()
         _add(app, color_fg="red")
         _sel(app)
         reset_colors(app)

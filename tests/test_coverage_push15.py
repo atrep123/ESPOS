@@ -21,53 +21,30 @@ def _w(**kw) -> WidgetConfig:
     return WidgetConfig(**defaults)
 
 
-def _make_app(tmp_path, monkeypatch, *, widgets=None, extra_scenes=False):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    from cyberpunk_editor import CyberpunkEditorApp
-
-    app = CyberpunkEditorApp(json_path, (256, 128))
-    app.show_help_overlay = False
-    app._help_shown_once = True
-    if not hasattr(app, "_save_undo_state"):
-        app._save_undo_state = lambda: None
-    if widgets:
-        sc = app.state.current_scene()
-        for w in widgets:
-            sc.widgets.append(w)
-    if extra_scenes:
-        app.designer.create_scene("second")
-        sc2 = app.designer.scenes["second"]
-        sc2.width, sc2.height = 256, 128
-    return app
-
-
 # ===========================================================================
 # A) _value_ratio — compute value as 0..1 ratio
 # ===========================================================================
 
 
 class TestValueRatio:
-    def test_normal(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_normal(self, make_app):
+        app = make_app()
         w = _w(min_value=0, max_value=100, value=50)
         assert app._value_ratio(w) == pytest.approx(0.5)
 
-    def test_zero_range(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_zero_range(self, make_app):
+        app = make_app()
         w = _w(min_value=50, max_value=50, value=50)
         # denom = max(1, 0) = 1, (50-50)/1 = 0
         assert app._value_ratio(w) == pytest.approx(0.0)
 
-    def test_clamp_high(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_clamp_high(self, make_app):
+        app = make_app()
         w = _w(min_value=0, max_value=10, value=999)
         assert app._value_ratio(w) == pytest.approx(1.0)
 
-    def test_exception_fallback(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_exception_fallback(self, make_app):
+        app = make_app()
         w = SimpleNamespace(min_value="bad", max_value="bad", value="bad")
         result = app._value_ratio(w)
         assert result == pytest.approx(0.0)
@@ -79,26 +56,26 @@ class TestValueRatio:
 
 
 class TestFontSettings:
-    def test_custom_values(self, tmp_path, monkeypatch):
+    def test_custom_values(self, monkeypatch, make_app):
         monkeypatch.setenv("ESP32OS_FONT_SIZE", "14")
         monkeypatch.setenv("ESP32OS_FONT_SCALE", "3")
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         size, scale = app._font_settings()
         assert size == 14
         assert scale == 3
 
-    def test_clamped_high(self, tmp_path, monkeypatch):
+    def test_clamped_high(self, monkeypatch, make_app):
         monkeypatch.setenv("ESP32OS_FONT_SIZE", "100")
         monkeypatch.setenv("ESP32OS_FONT_SCALE", "99")
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         size, scale = app._font_settings()
         assert size == 24
         assert scale == 6
 
-    def test_bad_values(self, tmp_path, monkeypatch):
+    def test_bad_values(self, monkeypatch, make_app):
         monkeypatch.setenv("ESP32OS_FONT_SIZE", "abc")
         monkeypatch.setenv("ESP32OS_FONT_SCALE", "xyz")
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         size, scale = app._font_settings()
         assert size == 10
         assert scale == 2
@@ -110,14 +87,14 @@ class TestFontSettings:
 
 
 class TestHexOrDefault:
-    def test_valid_hex(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_valid_hex(self, make_app):
+        app = make_app()
         result = app._hex_or_default("#ffffff", (0, 0, 0))
         assert result == (255, 255, 255)
 
-    def test_invalid_returns_default(self, tmp_path, monkeypatch):
+    def test_invalid_returns_default(self, make_app):
         """hex_to_rgb raises → except returns default."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         with patch("cyberpunk_designer.app.hex_to_rgb", side_effect=ValueError("bad")):
             result = app._hex_or_default("bad", (42, 42, 42))
         assert result == (42, 42, 42)
@@ -129,8 +106,8 @@ class TestHexOrDefault:
 
 
 class TestSnapping:
-    def test_snap_rect(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_snap_rect(self, make_app):
+        app = make_app()
         r = pygame.Rect(13, 15, 50, 32)
         result = app._snap_rect(r)
         assert result.x % GRID == 0
@@ -138,21 +115,21 @@ class TestSnapping:
         assert result.width >= GRID
         assert result.height >= GRID
 
-    def test_snap_rect_small_dims(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_snap_rect_small_dims(self, make_app):
+        app = make_app()
         r = pygame.Rect(0, 0, 1, 1)
         result = app._snap_rect(r)
         assert result.width >= GRID
         assert result.height >= GRID
 
-    def test_apply_snap_enabled(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_apply_snap_enabled(self, make_app):
+        app = make_app()
         app.snap_enabled = True
         result = app._apply_snap(13)
         assert result % GRID == 0
 
-    def test_apply_snap_disabled(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_apply_snap_disabled(self, make_app):
+        app = make_app()
         app.snap_enabled = False
         assert app._apply_snap(13) == 13
 
@@ -163,35 +140,35 @@ class TestSnapping:
 
 
 class TestGroupOps:
-    def test_groups_for_index_normal(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(), _w()])
+    def test_groups_for_index_normal(self, make_app):
+        app = make_app(widgets=[_w(), _w(), _w()])
         app.designer.groups = {"g1": [0, 1], "g2": [1, 2]}
         result = app._groups_for_index(1)
         assert result == ["g1", "g2"]
 
-    def test_groups_for_index_bad_members(self, tmp_path, monkeypatch):
+    def test_groups_for_index_bad_members(self, make_app):
         """Inner except: 'idx in members' raises (members not iterable)."""
-        app = _make_app(tmp_path, monkeypatch)
+        app = make_app()
         app.designer.groups = {"g1": 42}  # int, not iterable → TypeError
         result = app._groups_for_index(0)
         assert result == []
 
-    def test_group_members_normal(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(), _w()])
+    def test_group_members_normal(self, make_app):
+        app = make_app(widgets=[_w(), _w(), _w()])
         app.designer.groups = {"g1": [0, 1, 2]}
         result = app._group_members("g1")
         assert result == [0, 1, 2]
 
-    def test_group_members_bad_values(self, tmp_path, monkeypatch):
+    def test_group_members_bad_values(self, make_app):
         """Members contain non-int values."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+        app = make_app(widgets=[_w(), _w()])
         app.designer.groups = {"g1": [0, "abc", 1]}
         result = app._group_members("g1")
         assert result == [0, 1]
 
-    def test_group_selection(self, tmp_path, monkeypatch):
+    def test_group_selection(self, make_app):
         """Group 2+ selected widgets."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w(), _w()])
+        app = make_app(widgets=[_w(), _w(), _w()])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         app._group_selection()
@@ -199,53 +176,53 @@ class TestGroupOps:
         groups = getattr(app.designer, "groups", {}) or {}
         assert len(groups) >= 1
 
-    def test_group_selection_too_few(self, tmp_path, monkeypatch):
+    def test_group_selection_too_few(self, make_app):
         """Group with <2 selected shows status message."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._group_selection()
 
-    def test_ungroup_selection(self, tmp_path, monkeypatch):
+    def test_ungroup_selection(self, make_app):
         """Ungroup an existing group."""
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+        app = make_app(widgets=[_w(), _w()])
         app.designer.groups = {"group1": [0, 1]}
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         app._ungroup_selection()
 
-    def test_next_group_name(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_next_group_name(self, make_app):
+        app = make_app()
         app.designer.groups = {"group1": [0], "group2": [1]}
         result = app._next_group_name("group")
         assert result == "group3"
 
-    def test_component_info_from_group(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_component_info_from_group(self, make_app):
+        app = make_app()
         assert app._component_info_from_group("comp:button:btn:1") == ("button", "btn")
         assert app._component_info_from_group("comp:slider:2") == ("slider", "slider")
         assert app._component_info_from_group("group:foo") is None
         assert app._component_info_from_group("") is None
 
-    def test_component_role_index(self, tmp_path, monkeypatch):
+    def test_component_role_index(self, make_app):
         w0 = _w(_widget_id="btn.ok")
         w1 = _w(_widget_id="btn.cancel")
         w2 = _w(_widget_id="other")
-        app = _make_app(tmp_path, monkeypatch, widgets=[w0, w1, w2])
+        app = make_app(widgets=[w0, w1, w2])
         roles = app._component_role_index([0, 1, 2], "btn")
         assert "ok" in roles
         assert "cancel" in roles
         assert roles["ok"] == 0
         assert roles["cancel"] == 1
 
-    def test_format_group_label_component(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_format_group_label_component(self, make_app):
+        app = make_app()
         result = app._format_group_label("comp:button:btn:1", [0, 1])
         assert "button" in result
         assert "btn" in result
 
-    def test_format_group_label_plain(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_format_group_label_plain(self, make_app):
+        app = make_app()
         result = app._format_group_label("mygroup", [0, 1, 2])
         assert "mygroup" in result
         assert "3" in result
@@ -257,16 +234,16 @@ class TestGroupOps:
 
 
 class TestZOrder:
-    def test_z_order_step(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+    def test_z_order_step(self, make_app):
+        app = make_app(widgets=[_w(), _w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._z_order_step(1)
         sc = app.state.current_scene()
         assert int(getattr(sc.widgets[0], "z_index", 0) or 0) == 1
 
-    def test_z_order_bring_to_front(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+    def test_z_order_bring_to_front(self, make_app):
+        app = make_app(widgets=[_w(), _w()])
         sc = app.state.current_scene()
         sc.widgets[1].z_index = 5
         app.state.selected = [0]
@@ -274,8 +251,8 @@ class TestZOrder:
         app._z_order_bring_to_front()
         assert int(sc.widgets[0].z_index) > 5
 
-    def test_z_order_send_to_back(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+    def test_z_order_send_to_back(self, make_app):
+        app = make_app(widgets=[_w(), _w()])
         sc = app.state.current_scene()
         sc.widgets[0].z_index = 5
         app.state.selected = [0]
@@ -290,8 +267,8 @@ class TestZOrder:
 
 
 class TestToggleLock:
-    def test_lock_and_unlock(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+    def test_lock_and_unlock(self, make_app):
+        app = make_app(widgets=[_w(), _w()])
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         sc = app.state.current_scene()
@@ -302,8 +279,8 @@ class TestToggleLock:
         app._toggle_lock_selection()
         assert sc.widgets[0].locked is False
 
-    def test_lock_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_lock_no_selection(self, make_app):
+        app = make_app()
         app.state.selected = []
         app._toggle_lock_selection()  # early return
 
@@ -314,14 +291,14 @@ class TestToggleLock:
 
 
 class TestSwitchScene:
-    def test_switch_forward(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_switch_forward(self, make_app):
+        app = make_app(extra_scenes=True)
         original = app.designer.current_scene
         app._switch_scene(1)
         assert app.designer.current_scene != original
 
-    def test_switch_single_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_switch_single_scene(self, make_app):
+        app = make_app()
         app._switch_scene(1)  # only one scene → status message
 
 
@@ -331,8 +308,8 @@ class TestSwitchScene:
 
 
 class TestOpenContextMenu:
-    def test_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_no_selection(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = []
         app.state.selected_idx = None
         app._open_context_menu((5, 5))
@@ -341,8 +318,8 @@ class TestOpenContextMenu:
         # Should have at least view toggles and add widgets
         assert len(menu["items"]) > 5
 
-    def test_single_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10, width=40, height=20)])
+    def test_single_selection(self, make_app):
+        app = make_app(widgets=[_w(x=10, y=10, width=40, height=20)])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._open_context_menu((15, 15))
@@ -353,9 +330,9 @@ class TestOpenContextMenu:
         assert "copy" in actions
         assert "z_forward" in actions
 
-    def test_multi_selection(self, tmp_path, monkeypatch):
+    def test_multi_selection(self, make_app):
         widgets = [_w(x=10, y=10), _w(x=60, y=10), _w(x=110, y=10)]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         app.state.selected = [0, 1, 2]
         app.state.selected_idx = 0
         app._open_context_menu((15, 15))
@@ -372,8 +349,8 @@ class TestOpenContextMenu:
 
 
 class TestClickContextMenu:
-    def test_click_on_action(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_click_on_action(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         # Set up a fake menu with hitboxes
@@ -388,8 +365,8 @@ class TestClickContextMenu:
         assert app.show_grid != old_grid  # toggled
         assert not app._context_menu["visible"]
 
-    def test_click_outside_dismiss(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_click_outside_dismiss(self, make_app):
+        app = make_app()
         app._context_menu = {
             "visible": True,
             "pos": (10, 10),
@@ -524,9 +501,9 @@ _TAB_ACTIONS = [
 
 
 class TestExecuteContextActions:
-    def test_single_selection_actions(self, tmp_path, monkeypatch):
+    def test_single_selection_actions(self, make_app):
         widgets = [_w(x=8, y=8, width=40, height=20, text="A")]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         app.state.selected = [0]
         app.state.selected_idx = 0
         for action in _SINGLE_ACTIONS:
@@ -540,26 +517,26 @@ class TestExecuteContextActions:
             except Exception:
                 pass  # some actions may fail without full GUI, that's OK
 
-    def test_view_actions(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_view_actions(self, make_app):
+        app = make_app()
         for action in _VIEW_ACTIONS:
             app._execute_context_action(action)
 
-    def test_add_actions(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_actions(self, make_app):
+        app = make_app()
         for action in _ADD_ACTIONS:
             app._execute_context_action(action)
         # Should have added widgets
         sc = app.state.current_scene()
         assert len(sc.widgets) >= len(_ADD_ACTIONS)
 
-    def test_multi_selection_actions(self, tmp_path, monkeypatch):
+    def test_multi_selection_actions(self, make_app):
         widgets = [
             _w(x=8, y=8, width=40, height=20, text="A"),
             _w(x=56, y=8, width=40, height=20, text="B"),
             _w(x=104, y=8, width=40, height=20, text="C"),
         ]
-        app = _make_app(tmp_path, monkeypatch, widgets=widgets)
+        app = make_app(widgets=widgets)
         for action in _MULTI_ACTIONS:
             sc = app.state.current_scene()
             # Ensure 3 widgets and multi-select
@@ -573,8 +550,8 @@ class TestExecuteContextActions:
             except Exception:
                 pass
 
-    def test_tab_actions(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_tab_actions(self, make_app):
+        app = make_app(extra_scenes=True)
         for action in _TAB_ACTIONS:
             try:
                 app._execute_context_action(action)
@@ -588,40 +565,40 @@ class TestExecuteContextActions:
 
 
 class TestHandleEvent:
-    def test_videoresize(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_videoresize(self, make_app):
+        app = make_app()
         ev = SimpleNamespace(type=pygame.VIDEORESIZE, w=800, h=600)
         app._dispatch_event(ev)
 
-    def test_keydown(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_keydown(self, make_app):
+        app = make_app()
         ev = SimpleNamespace(type=pygame.KEYDOWN, key=pygame.K_g, mod=0, unicode="g")
         app._dispatch_event(ev)
 
-    def test_mouse_button_down_left(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10)])
+    def test_mouse_button_down_left(self, make_app):
+        app = make_app(widgets=[_w(x=10, y=10)])
         ev = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, button=1, pos=(50, 50))
         app._dispatch_event(ev)
 
-    def test_mouse_button_up_left(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mouse_button_up_left(self, make_app):
+        app = make_app()
         ev = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, button=1, pos=(50, 50))
         app._dispatch_event(ev)
         ev2 = SimpleNamespace(type=pygame.MOUSEBUTTONUP, button=1, pos=(50, 50))
         app._dispatch_event(ev2)
 
-    def test_mouse_motion(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mouse_motion(self, make_app):
+        app = make_app()
         ev = SimpleNamespace(type=pygame.MOUSEMOTION, pos=(60, 60), buttons=(0, 0, 0))
         app._dispatch_event(ev)
 
-    def test_mousewheel(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mousewheel(self, make_app):
+        app = make_app()
         ev = SimpleNamespace(type=pygame.MOUSEWHEEL, x=0, y=3)
         app._dispatch_event(ev)
 
-    def test_textinput(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_textinput(self, make_app):
+        app = make_app()
         # Start an edit to make text input meaningful
         app.state.inspector_selected_field = "text"
         app.state.inspector_input_buffer = ""
@@ -629,16 +606,16 @@ class TestHandleEvent:
         app._dispatch_event(ev)
         assert "a" in app.state.inspector_input_buffer
 
-    def test_right_click(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10)])
+    def test_right_click(self, make_app):
+        app = make_app(widgets=[_w(x=10, y=10)])
         ev = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, button=3, pos=(15, 15))
         app._dispatch_event(ev)
         # Context menu should be visible
         menu = getattr(app, "_context_menu", None)
         assert menu is not None
 
-    def test_quit_with_dirty(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_quit_with_dirty(self, make_app):
+        app = make_app()
         app._dirty_scenes = {"main"}
         ev = SimpleNamespace(type=pygame.QUIT)
         app._dispatch_event(ev)
@@ -647,8 +624,8 @@ class TestHandleEvent:
         app._dispatch_event(ev)
         assert not app.running
 
-    def test_middle_click_tab(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_middle_click_tab(self, make_app):
+        app = make_app(extra_scenes=True)
         ev = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, button=2, pos=(5, 5))
         app._dispatch_event(ev)
 
@@ -659,42 +636,42 @@ class TestHandleEvent:
 
 
 class TestSceneManagement:
-    def test_add_new_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_new_scene(self, make_app):
+        app = make_app()
         count_before = len(app.designer.scenes)
         app._add_new_scene()
         assert len(app.designer.scenes) == count_before + 1
 
-    def test_duplicate_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_duplicate_scene(self, make_app):
+        app = make_app(widgets=[_w()])
         count_before = len(app.designer.scenes)
         app._duplicate_current_scene()
         assert len(app.designer.scenes) == count_before + 1
 
-    def test_delete_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_delete_scene(self, make_app):
+        app = make_app(extra_scenes=True)
         count_before = len(app.designer.scenes)
         app._delete_current_scene()
         assert len(app.designer.scenes) == count_before - 1
 
-    def test_delete_only_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_delete_only_scene(self, make_app):
+        app = make_app()
         count = len(app.designer.scenes)
         app._delete_current_scene()
         assert len(app.designer.scenes) == count  # can't delete only scene
 
-    def test_close_other_scenes(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_close_other_scenes(self, make_app):
+        app = make_app(extra_scenes=True)
         app._close_other_scenes()
         assert len(app.designer.scenes) == 1
 
-    def test_close_scenes_to_right(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, extra_scenes=True)
+    def test_close_scenes_to_right(self, make_app):
+        app = make_app(extra_scenes=True)
         app._close_scenes_to_right()
         # depends on which scene is current
 
-    def test_rename_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_rename_scene(self, make_app):
+        app = make_app()
         app._rename_current_scene()
         assert app.state.inspector_selected_field == "_scene_name"
 
@@ -705,8 +682,8 @@ class TestSceneManagement:
 
 
 class TestColorPresets:
-    def test_apply_preset(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_apply_preset(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._apply_color_preset("#ff0000", "#00ff00")
@@ -714,13 +691,13 @@ class TestColorPresets:
         assert sc.widgets[0].color_fg == "#ff0000"
         assert sc.widgets[0].color_bg == "#00ff00"
 
-    def test_apply_preset_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_apply_preset_no_selection(self, make_app):
+        app = make_app()
         app.state.selected = []
         app._apply_color_preset("#ff0000", "#00ff00")  # noop
 
-    def test_apply_preset_by_index(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_apply_preset_by_index(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._apply_color_preset_index(0)
@@ -734,14 +711,14 @@ class TestColorPresets:
 
 
 class TestAddWidget:
-    def test_add_label(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_label(self, make_app):
+        app = make_app()
         count = len(app.state.current_scene().widgets)
         app._add_widget("label")
         assert len(app.state.current_scene().widgets) == count + 1
 
-    def test_add_all_types(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_add_all_types(self, make_app):
+        app = make_app()
         for kind in [
             "label",
             "button",
@@ -764,13 +741,13 @@ class TestAddWidget:
 
 
 class TestProfile:
-    def test_cycle_profile(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_profile(self, make_app):
+        app = make_app()
         app._cycle_profile()
         # Should have changed (or wrapped around)
 
-    def test_set_profile(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_set_profile(self, make_app):
+        app = make_app()
         from ui_designer import HARDWARE_PROFILES
 
         if HARDWARE_PROFILES:
@@ -785,16 +762,16 @@ class TestProfile:
 
 
 class TestDoubleClick:
-    def test_handle_double_click_on_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(x=10, y=10, width=40, height=20)])
+    def test_handle_double_click_on_widget(self, make_app):
+        app = make_app(widgets=[_w(x=10, y=10, width=40, height=20)])
         # Need to position inside the canvas rect
         sr = getattr(app, "scene_rect", app.layout.canvas_rect)
         # Double-click on the widget area
         pos = (sr.x + 15, sr.y + 15)
         app._handle_double_click(pos)
 
-    def test_double_click_outside_canvas(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_double_click_outside_canvas(self, make_app):
+        app = make_app()
         app._handle_double_click((-100, -100))  # outside canvas
 
 
@@ -804,37 +781,37 @@ class TestDoubleClick:
 
 
 class TestMiscHelpers:
-    def test_mark_dirty(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mark_dirty(self, make_app):
+        app = make_app()
         app._dirty = False
         app._mark_dirty()
         assert app._dirty
 
-    def test_mark_dirty_with_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mark_dirty_with_scene(self, make_app):
+        app = make_app()
         app._dirty_scenes.clear()
         app._mark_dirty()
         # current_scene should be in dirty_scenes
         if app.designer.current_scene:
             assert app.designer.current_scene in app._dirty_scenes
 
-    def test_set_status(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_set_status(self, make_app):
+        app = make_app()
         app._set_status("Hello", ttl_sec=5.0)
         assert app.dialog_message == "Hello"
 
-    def test_selected_group_exact(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+    def test_selected_group_exact(self, make_app):
+        app = make_app(widgets=[_w(), _w()])
         app.designer.groups = {"g1": [0, 1]}
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
         result = app._selected_group_exact()
         assert result == "g1"
 
-    def test_selected_component_group(self, tmp_path, monkeypatch):
+    def test_selected_component_group(self, make_app):
         w0 = _w(_widget_id="btn.ok")
         w1 = _w(_widget_id="btn.cancel")
-        app = _make_app(tmp_path, monkeypatch, widgets=[w0, w1])
+        app = make_app(widgets=[w0, w1])
         app.designer.groups = {"comp:button:btn:1": [0, 1]}
         app.state.selected = [0, 1]
         app.state.selected_idx = 0
@@ -842,42 +819,41 @@ class TestMiscHelpers:
         assert result is not None
         assert result[1] == "button"  # component type
 
-    def test_new_scene(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w(), _w()])
+    def test_new_scene(self, make_app):
+        app = make_app(widgets=[_w(), _w()])
         app._new_scene()
         assert len(app.state.current_scene().widgets) == 0
 
-    def test_zoom_to_fit(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_zoom_to_fit(self, make_app):
+        app = make_app()
         app._zoom_to_fit()
 
-    def test_search_widgets_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_search_widgets_prompt(self, make_app):
+        app = make_app()
         app._search_widgets_prompt()
         assert app.state.inspector_selected_field == "_search"
 
-    def test_array_duplicate_prompt(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_array_duplicate_prompt(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._array_duplicate_prompt()
         assert app.state.inspector_selected_field == "_array_dup"
 
-    def test_array_duplicate_prompt_no_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_array_duplicate_prompt_no_selection(self, make_app):
+        app = make_app()
         app.state.selected = []
         app._array_duplicate_prompt()
 
-    def test_save_selection_as_template(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch, widgets=[_w()])
+    def test_save_selection_as_template(self, make_app):
+        app = make_app(widgets=[_w()])
         app.state.selected = [0]
         app.state.selected_idx = 0
         app._save_selection_as_template()
         assert app.state.inspector_selected_field == "_template_name"
 
-    def test_help_overlay_toggle(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
-        app.show_help_overlay = False
+    def test_help_overlay_toggle(self, make_app):
+        app = make_app()
         app._help_pinned = False
         app._toggle_help_overlay()
         assert app.show_help_overlay
@@ -886,8 +862,8 @@ class TestMiscHelpers:
         app._toggle_help_overlay()
         assert not app.show_help_overlay
 
-    def test_maybe_hide_help_overlay(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_maybe_hide_help_overlay(self, make_app):
+        app = make_app()
         app.show_help_overlay = True
         app._help_shown_once = False
         app._help_pinned = False
@@ -896,8 +872,8 @@ class TestMiscHelpers:
         app._maybe_hide_help_overlay()
         assert not app.show_help_overlay
 
-    def test_is_valid_color_str(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_is_valid_color_str(self, make_app):
+        app = make_app()
         assert app._is_valid_color_str("") is True
         assert app._is_valid_color_str("white") is True
         assert app._is_valid_color_str("#f5f5f5") is True
@@ -905,8 +881,8 @@ class TestMiscHelpers:
         assert app._is_valid_color_str("0x12345678") is False
         assert app._is_valid_color_str("badcolor") is False
 
-    def test_on_key_down_dismiss_menu(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_on_key_down_dismiss_menu(self, make_app):
+        app = make_app()
         app._context_menu = {"visible": True, "items": []}
         ev = SimpleNamespace(type=pygame.KEYDOWN, key=pygame.K_ESCAPE, mod=0, unicode="")
         app._on_key_down(ev)

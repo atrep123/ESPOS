@@ -21,14 +21,6 @@ from ui_template_manager import Template, TemplateMetadata
 # ---------------------------------------------------------------------------
 
 
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    return CyberpunkEditorApp(json_path, (256, 128))
-
-
 def _add(app, **kw):
     defaults = dict(type="label", x=0, y=0, width=80, height=16, text="W")
     defaults.update(kw)
@@ -56,8 +48,8 @@ def _make_template(widget_dicts, name="TestTpl"):
 
 
 class TestApplyTemplate:
-    def test_replaces_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_replaces_widgets(self, make_app):
+        app = make_app()
         _add(app, text="old")
         tpl = _make_template(
             [
@@ -69,8 +61,8 @@ class TestApplyTemplate:
         assert len(sc.widgets) == 1
         assert sc.widgets[0].text == "new"
 
-    def test_sets_selection(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_sets_selection(self, make_app):
+        app = make_app()
         tpl = _make_template(
             [
                 {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "a"},
@@ -80,8 +72,8 @@ class TestApplyTemplate:
         assert app.state.selected_idx == 0
         assert app.state.selected == [0]
 
-    def test_empty_template(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_empty_template(self, make_app):
+        app = make_app()
         _add(app, text="old")
         tpl = _make_template([])
         app._apply_template(tpl)
@@ -90,8 +82,8 @@ class TestApplyTemplate:
         assert app.state.selected_idx is None
         assert app.state.selected == []
 
-    def test_skips_invalid_widget_dicts(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_skips_invalid_widget_dicts(self, make_app):
+        app = make_app()
         tpl = _make_template(
             [
                 {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "ok"},
@@ -109,8 +101,8 @@ class TestApplyTemplate:
 
 
 class TestApplyFirstTemplate:
-    def test_applies_first(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_applies_first(self, make_app):
+        app = make_app()
         tpl = _make_template(
             [
                 {"type": "label", "x": 0, "y": 0, "width": 40, "height": 16, "text": "first"},
@@ -120,8 +112,8 @@ class TestApplyFirstTemplate:
         app._apply_first_template()
         assert app.state.current_scene().widgets[0].text == "first"
 
-    def test_noop_when_no_templates(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_noop_when_no_templates(self, make_app):
+        app = make_app()
         _add(app, text="keep")
         app.template_library.templates = []
         app._apply_first_template()
@@ -134,21 +126,21 @@ class TestApplyFirstTemplate:
 
 
 class TestNewScene:
-    def test_resets_to_empty(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_resets_to_empty(self, make_app):
+        app = make_app()
         _add(app, text="old")
         app._new_scene()
         sc = app.state.current_scene()
         assert len(sc.widgets) == 0
 
-    def test_new_designer(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_new_designer(self, make_app):
+        app = make_app()
         old_designer = app.designer
         app._new_scene()
         assert app.designer is not old_designer
 
-    def test_dirty_set(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_dirty_set(self, make_app):
+        app = make_app()
         app._dirty = False
         app._new_scene()
         assert app._dirty is True
@@ -160,16 +152,16 @@ class TestNewScene:
 
 
 class TestBuildWidgetPresetsActions:
-    def test_returns_header_and_slots(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_returns_header_and_slots(self, make_app):
+        app = make_app()
         actions = app._build_widget_presets_actions()
         # Header + 3 slots × 3 actions each = 10
         assert len(actions) == 10
         assert actions[0][0] == "-- Widget Presets --"
         assert actions[0][1] is None
 
-    def test_slot_labels(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_slot_labels(self, make_app):
+        app = make_app()
         actions = app._build_widget_presets_actions()
         labels = [a[0] for a in actions]
         assert "Save preset slot 1" in labels
@@ -177,8 +169,8 @@ class TestBuildWidgetPresetsActions:
         assert "Add preset slot 1" in labels
         assert "Save preset slot 3" in labels
 
-    def test_slot_callbacks_callable(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_slot_callbacks_callable(self, make_app):
+        app = make_app()
         actions = app._build_widget_presets_actions()
         for _label, cb in actions:
             if cb is not None:
@@ -258,28 +250,28 @@ class TestDedupeKeydowns:
 
 
 class TestSmartDirtyTracking:
-    def test_force_full_redraw(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_force_full_redraw(self, make_app):
+        app = make_app()
         app._force_full_redraw = True
         app._smart_dirty_tracking()
         assert len(app.dirty_rects) == 1
 
-    def test_help_overlay_forces_full(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_help_overlay_forces_full(self, make_app):
+        app = make_app()
         app.show_help_overlay = True
         app._smart_dirty_tracking()
         assert len(app.dirty_rects) == 1
 
-    def test_dragging_directs_canvas(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_dragging_directs_canvas(self, make_app):
+        app = make_app()
         app._force_full_redraw = False
         app.show_help_overlay = False
         app.state.dragging = True
         app._smart_dirty_tracking()
         assert any(r == app.layout.canvas_rect for r in app.dirty_rects)
 
-    def test_inspector_field_active(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_inspector_field_active(self, make_app):
+        app = make_app()
         app._force_full_redraw = False
         app.show_help_overlay = False
         app.state.dragging = False
@@ -288,8 +280,8 @@ class TestSmartDirtyTracking:
         app._smart_dirty_tracking()
         assert any(r == app.layout.inspector_rect for r in app.dirty_rects)
 
-    def test_nothing_specific_full_redraw(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_nothing_specific_full_redraw(self, make_app):
+        app = make_app()
         app._force_full_redraw = False
         app.show_help_overlay = False
         app.state.dragging = False
@@ -305,24 +297,24 @@ class TestSmartDirtyTracking:
 
 
 class TestAutoAdjustQuality:
-    def test_noop_when_disabled(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_noop_when_disabled(self, make_app):
+        app = make_app()
         app.auto_optimize = False
         app.fps_history = deque([60] * 60, maxlen=60)
         app.show_grid = True
         app._auto_adjust_quality()
         assert app.show_grid is True  # unchanged
 
-    def test_noop_when_insufficient_history(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_noop_when_insufficient_history(self, make_app):
+        app = make_app()
         app.auto_optimize = True
         app.fps_history = deque([10] * 10, maxlen=60)
         app.show_grid = True
         app._auto_adjust_quality()
         assert app.show_grid is True  # unchanged
 
-    def test_low_fps_disables_grid(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_low_fps_disables_grid(self, make_app):
+        app = make_app()
         app.auto_optimize = True
         app.min_acceptable_fps = 30
         app.fps_history = deque([15] * 60, maxlen=60)
@@ -330,8 +322,8 @@ class TestAutoAdjustQuality:
         app._auto_adjust_quality()
         assert app.show_grid is False
 
-    def test_high_fps_enables_grid(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_high_fps_enables_grid(self, make_app):
+        app = make_app()
         app.auto_optimize = True
         app.min_acceptable_fps = 30
         app.fps_history = deque([120] * 60, maxlen=60)

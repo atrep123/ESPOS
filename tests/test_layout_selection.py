@@ -40,20 +40,11 @@ from cyberpunk_designer.selection_ops import (
     swap_fg_bg,
     toggle_visibility,
 )
-from cyberpunk_editor import CyberpunkEditorApp
 from ui_designer import WidgetConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_app(tmp_path, monkeypatch):
-    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
-    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
-    monkeypatch.setenv("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-    json_path = tmp_path / "scene.json"
-    return CyberpunkEditorApp(json_path, (256, 192))
 
 
 def _add(app, wtype="label", **kw):
@@ -84,15 +75,15 @@ def _w(app, idx):
 class TestAlignSelection:
     """align_selection positions widgets correctly."""
 
-    def test_align_left_single(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_left_single(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=40, y=20, width=24, height=16)
         set_selection(app, [i])
         align_selection(app, "left")
         assert _w(app, i).x == 0
 
-    def test_align_right_single(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_right_single(self, make_app):
+        app = make_app(size=(256, 192))
         sc = app.state.current_scene()
         i = _add(app, x=10, y=10, width=24, height=16)
         set_selection(app, [i])
@@ -100,15 +91,15 @@ class TestAlignSelection:
         expected = int(sc.width) - 24
         assert _w(app, i).x == expected or abs(_w(app, i).x - expected) <= GRID
 
-    def test_align_top_single(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_top_single(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=10, y=40, width=24, height=16)
         set_selection(app, [i])
         align_selection(app, "top")
         assert _w(app, i).y == 0
 
-    def test_align_bottom_single(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_bottom_single(self, make_app):
+        app = make_app(size=(256, 192))
         sc = app.state.current_scene()
         i = _add(app, x=10, y=10, width=24, height=16)
         set_selection(app, [i])
@@ -116,8 +107,8 @@ class TestAlignSelection:
         expected = int(sc.height) - 16
         assert _w(app, i).y == expected or abs(_w(app, i).y - expected) <= GRID
 
-    def test_align_hcenter_single(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_hcenter_single(self, make_app):
+        app = make_app(size=(256, 192))
         sc = app.state.current_scene()
         i = _add(app, x=0, y=0, width=32, height=16)
         set_selection(app, [i])
@@ -126,8 +117,8 @@ class TestAlignSelection:
         widget_center = _w(app, i).x + 32 // 2
         assert abs(widget_center - center) <= GRID
 
-    def test_align_left_multi(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_left_multi(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=8, y=0, width=24, height=16)
         i1 = _add(app, x=40, y=0, width=24, height=16)
         set_selection(app, [i0, i1])
@@ -135,20 +126,20 @@ class TestAlignSelection:
         # Both should have same x (the left edge of the bounding box = 8)
         assert _w(app, i0).x == _w(app, i1).x
 
-    def test_align_locked_skipped(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_locked_skipped(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=40, y=20, width=24, height=16, locked=True)
         set_selection(app, [i])
         align_selection(app, "left")
         assert _w(app, i).x == 40  # unchanged
 
-    def test_align_no_selection_no_crash(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_no_selection_no_crash(self, make_app):
+        app = make_app(size=(256, 192))
         app.state.selected = []
         align_selection(app, "left")  # should not raise
 
-    def test_align_unknown_mode_no_crash(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_align_unknown_mode_no_crash(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, x=10, y=10)
         set_selection(app, [0])
         align_selection(app, "xyz")  # invalid mode
@@ -158,8 +149,8 @@ class TestAlignSelection:
 # DISTRIBUTE
 # ===================================================================
 class TestDistributeSelection:
-    def test_distribute_horizontal(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_distribute_horizontal(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0, width=16, height=16)
         i1 = _add(app, x=32, y=0, width=16, height=16)
         i2 = _add(app, x=80, y=0, width=16, height=16)
@@ -169,8 +160,8 @@ class TestDistributeSelection:
         assert _w(app, i0).x == 0
         assert _w(app, i2).x == 80
 
-    def test_distribute_vertical(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_distribute_vertical(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0, width=16, height=16)
         i1 = _add(app, x=0, y=32, width=16, height=16)
         i2 = _add(app, x=0, y=80, width=16, height=16)
@@ -179,8 +170,8 @@ class TestDistributeSelection:
         assert _w(app, i0).y == 0
         assert _w(app, i2).y == 80
 
-    def test_distribute_needs_3_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_distribute_needs_3_widgets(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0)
         i1 = _add(app, x=32, y=0)
         set_selection(app, [i0, i1])
@@ -191,8 +182,8 @@ class TestDistributeSelection:
 # MATCH SIZE
 # ===================================================================
 class TestMatchSizeSelection:
-    def test_match_width(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_match_width(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0, width=64, height=16)
         i1 = _add(app, x=0, y=24, width=32, height=16)
         set_selection(app, [i0, i1])
@@ -201,8 +192,8 @@ class TestMatchSizeSelection:
         # i1 should have width matching i0 (possibly snapped)
         assert abs(_w(app, i1).width - 64) <= GRID
 
-    def test_match_height(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_match_height(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0, width=32, height=40)
         i1 = _add(app, x=40, y=0, width=32, height=16)
         set_selection(app, [i0, i1])
@@ -210,8 +201,8 @@ class TestMatchSizeSelection:
         match_size_selection(app, "height")
         assert abs(_w(app, i1).height - 40) <= GRID
 
-    def test_match_needs_2_widgets(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_match_needs_2_widgets(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app)
         set_selection(app, [i0])
         match_size_selection(app, "width")  # no crash
@@ -221,8 +212,8 @@ class TestMatchSizeSelection:
 # CENTER IN SCENE
 # ===================================================================
 class TestCenterInScene:
-    def test_center_both(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_center_both(self, make_app):
+        app = make_app(size=(256, 192))
         sc = app.state.current_scene()
         i = _add(app, x=0, y=0, width=32, height=16)
         set_selection(app, [i])
@@ -232,16 +223,16 @@ class TestCenterInScene:
         assert abs(cx - int(sc.width) // 2) <= GRID
         assert abs(cy - int(sc.height) // 2) <= GRID
 
-    def test_center_x_only(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_center_x_only(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=0, y=0, width=32, height=16)
         old_y = _w(app, i).y
         set_selection(app, [i])
         center_selection_in_scene(app, "x")
         assert _w(app, i).y == old_y  # y should not change
 
-    def test_center_locked_blocked(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_center_locked_blocked(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=0, y=0, width=32, height=16, locked=True)
         set_selection(app, [i])
         center_selection_in_scene(app, "both")
@@ -252,8 +243,8 @@ class TestCenterInScene:
 # SNAP DRAG TO GUIDES
 # ===================================================================
 class TestSnapDragToGuides:
-    def test_snaps_to_scene_edge(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_snaps_to_scene_edge(self, make_app):
+        app = make_app(size=(256, 192))
         app.state.selected = []
         bounds = pygame.Rect(0, 0, 32, 16)
         rx, ry = snap_drag_to_guides(app, 2, 2, bounds)
@@ -261,8 +252,8 @@ class TestSnapDragToGuides:
         assert rx == 0 or abs(rx - 2) <= GRID
         assert ry == 0 or abs(ry - 2) <= GRID
 
-    def test_no_snap_far_from_guides(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_no_snap_far_from_guides(self, make_app):
+        app = make_app(size=(256, 192))
         app.state.selected = []
         bounds = pygame.Rect(0, 0, 32, 16)
         rx, ry = snap_drag_to_guides(app, 100, 80, bounds)
@@ -274,8 +265,8 @@ class TestSnapDragToGuides:
 # SELECTION OPS: cycle functions
 # ===================================================================
 class TestCycleFunctions:
-    def test_cycle_style(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_style(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, style="default")
         set_selection(app, [i])
         cycle_style(app)
@@ -287,8 +278,8 @@ class TestCycleFunctions:
         cycle_style(app)
         assert _w(app, i).style == "default"
 
-    def test_cycle_widget_type(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_widget_type(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, type="label")
         set_selection(app, [i])
         cycle_widget_type(app)
@@ -296,22 +287,22 @@ class TestCycleFunctions:
         cycle_widget_type(app)
         assert _w(app, i).type == "panel"
 
-    def test_cycle_border_style(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_border_style(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, border_style="single")
         set_selection(app, [i])
         cycle_border_style(app)
         assert _w(app, i).border_style == "double"
 
-    def test_cycle_text_overflow(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_text_overflow(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, text_overflow="ellipsis")
         set_selection(app, [i])
         cycle_text_overflow(app)
         assert _w(app, i).text_overflow == "wrap"
 
-    def test_cycle_align(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_align(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, align="left")
         set_selection(app, [i])
         cycle_align(app)
@@ -321,15 +312,15 @@ class TestCycleFunctions:
         cycle_align(app)
         assert _w(app, i).align == "left"
 
-    def test_cycle_valign(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_valign(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, valign="top")
         set_selection(app, [i])
         cycle_valign(app)
         assert _w(app, i).valign == "middle"
 
-    def test_cycle_applies_to_all_selected(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_applies_to_all_selected(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, style="default")
         i1 = _add(app, style="default")
         set_selection(app, [i0, i1])
@@ -337,8 +328,8 @@ class TestCycleFunctions:
         assert _w(app, i0).style == "bold"
         assert _w(app, i1).style == "bold"
 
-    def test_cycle_no_selection_no_crash(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_cycle_no_selection_no_crash(self, make_app):
+        app = make_app(size=(256, 192))
         app.state.selected = []
         cycle_style(app)
         cycle_widget_type(app)
@@ -349,8 +340,8 @@ class TestCycleFunctions:
 # TOGGLE & SWAP
 # ===================================================================
 class TestToggleAndSwap:
-    def test_toggle_visibility(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_toggle_visibility(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, visible=True)
         set_selection(app, [i])
         toggle_visibility(app)
@@ -358,8 +349,8 @@ class TestToggleAndSwap:
         toggle_visibility(app)
         assert _w(app, i).visible is True
 
-    def test_swap_fg_bg(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_swap_fg_bg(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, color_fg="#ff0000", color_bg="#00ff00")
         set_selection(app, [i])
         swap_fg_bg(app)
@@ -371,8 +362,8 @@ class TestToggleAndSwap:
 # MIRROR
 # ===================================================================
 class TestMirrorSelection:
-    def test_mirror_horizontal(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mirror_horizontal(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0, width=16, height=16)
         i1 = _add(app, x=48, y=0, width=16, height=16)
         set_selection(app, [i0, i1])
@@ -381,8 +372,8 @@ class TestMirrorSelection:
         assert _w(app, i0).x == 48
         assert _w(app, i1).x == 0
 
-    def test_mirror_vertical(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_mirror_vertical(self, make_app):
+        app = make_app(size=(256, 192))
         i0 = _add(app, x=0, y=0, width=16, height=16)
         i1 = _add(app, x=0, y=48, width=16, height=16)
         set_selection(app, [i0, i1])
@@ -395,8 +386,8 @@ class TestMirrorSelection:
 # ARRAY DUPLICATE
 # ===================================================================
 class TestArrayDuplicate:
-    def test_creates_copies(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_creates_copies(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=0, y=0, width=16, height=16)
         set_selection(app, [i])
         sc = app.state.current_scene()
@@ -404,8 +395,8 @@ class TestArrayDuplicate:
         array_duplicate(app, count=3, dx=20, dy=0)
         assert len(sc.widgets) == before + 3
 
-    def test_offset_applied(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_offset_applied(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=0, y=0, width=16, height=16)
         set_selection(app, [i])
         sc = app.state.current_scene()
@@ -413,8 +404,8 @@ class TestArrayDuplicate:
         assert sc.widgets[-2].x == 24
         assert sc.widgets[-1].x == 48
 
-    def test_count_zero_no_crash(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_count_zero_no_crash(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app)
         set_selection(app, [i])
         array_duplicate(app, count=0, dx=8, dy=0)  # Invalid, should not crash
@@ -424,8 +415,8 @@ class TestArrayDuplicate:
 # DUPLICATE / COPY-PASTE
 # ===================================================================
 class TestDuplicateAndCopyPaste:
-    def test_duplicate_adds_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_duplicate_adds_widget(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=8, y=8, width=24, height=16, type="button")
         set_selection(app, [i])
         sc = app.state.current_scene()
@@ -436,8 +427,8 @@ class TestDuplicateAndCopyPaste:
         new_w = sc.widgets[-1]
         assert new_w.type == "button"
 
-    def test_copy_paste(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_copy_paste(self, make_app):
+        app = make_app(size=(256, 192))
         i = _add(app, x=8, y=8, width=24, height=16, type="slider")
         set_selection(app, [i])
         copy_selection(app)
@@ -452,8 +443,8 @@ class TestDuplicateAndCopyPaste:
 # DELETE / SELECT ALL / REORDER
 # ===================================================================
 class TestDeleteSelectReorder:
-    def test_delete_removes_widget(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_delete_removes_widget(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, type="label")
         _add(app, type="button")
         _add(app, type="slider")
@@ -462,24 +453,24 @@ class TestDeleteSelectReorder:
         delete_selected(app)
         assert len(sc.widgets) == 2
 
-    def test_delete_locked_skipped(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_delete_locked_skipped(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, type="label", locked=True)
         sc = app.state.current_scene()
         set_selection(app, [0])
         delete_selected(app)
         assert len(sc.widgets) == 1  # still there
 
-    def test_select_all(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_select_all(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app)
         _add(app)
         _add(app)
         select_all(app)
         assert len(app.state.selected) == 3
 
-    def test_reorder_up(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_reorder_up(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, type="label")
         _add(app, type="button")
         _add(app, type="slider")
@@ -489,8 +480,8 @@ class TestDeleteSelectReorder:
         # slider (was idx=2) should now be at idx=1
         assert sc.widgets[1].type == "slider"
 
-    def test_reorder_down(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_reorder_down(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, type="label")
         _add(app, type="button")
         _add(app, type="slider")
@@ -504,8 +495,8 @@ class TestDeleteSelectReorder:
 # SELECT SAME
 # ===================================================================
 class TestSelectSame:
-    def test_select_same_type(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_select_same_type(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, type="button")
         _add(app, type="label")
         _add(app, type="button")
@@ -513,8 +504,8 @@ class TestSelectSame:
         select_same_type(app)
         assert sorted(app.state.selected) == [0, 2]
 
-    def test_select_same_style(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_select_same_style(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, style="bold")
         _add(app, style="default")
         _add(app, style="bold")
@@ -522,8 +513,8 @@ class TestSelectSame:
         select_same_style(app)
         assert sorted(app.state.selected) == [0, 2]
 
-    def test_select_same_z(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_select_same_z(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, z_index=3)
         _add(app, z_index=0)
         _add(app, z_index=3)
@@ -531,8 +522,8 @@ class TestSelectSame:
         select_same_z(app)
         assert sorted(app.state.selected) == [0, 2]
 
-    def test_select_same_color(self, tmp_path, monkeypatch):
-        app = _make_app(tmp_path, monkeypatch)
+    def test_select_same_color(self, make_app):
+        app = make_app(size=(256, 192))
         _add(app, color_fg="#ff0000", color_bg="#000000")
         _add(app, color_fg="#00ff00", color_bg="#000000")
         _add(app, color_fg="#ff0000", color_bg="#000000")
