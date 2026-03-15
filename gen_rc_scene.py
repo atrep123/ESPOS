@@ -1833,35 +1833,40 @@ def _print_errors(all_errors):
         print("✓ Perimeter validation passed — 26 rules, all OK")
 
 
-# ─── Assemble ───
-doc = {
-    "width": W,
-    "height": H,
-    "groups": {},
-    "scenes": {
-        "rc_main": scene_rc_main(),
-        "rc_channels": scene_rc_channels(),
-        "rc_trims": scene_rc_trims(),
-        "rc_setup": scene_rc_setup(),
-        "rc_model": scene_rc_model(),
-        "rc_failsafe": scene_rc_failsafe(),
-        "rc_telemetry": scene_rc_telemetry(),
-        "rc_rates": scene_rc_rates(),
-        "rc_mixer": scene_rc_mixer(),
-    },
-}
+def _build_doc() -> dict:
+    """Assemble the full RC scene document."""
+    return {
+        "width": W,
+        "height": H,
+        "groups": {},
+        "scenes": {
+            "rc_main": scene_rc_main(),
+            "rc_channels": scene_rc_channels(),
+            "rc_trims": scene_rc_trims(),
+            "rc_setup": scene_rc_setup(),
+            "rc_model": scene_rc_model(),
+            "rc_failsafe": scene_rc_failsafe(),
+            "rc_telemetry": scene_rc_telemetry(),
+            "rc_rates": scene_rc_rates(),
+            "rc_mixer": scene_rc_mixer(),
+        },
+    }
 
-# Run perimeter validation BEFORE writing
-if not validate_all(doc):
-    import sys
 
-    sys.exit(1)
+if __name__ == "__main__":
+    doc = _build_doc()
 
-with open("rc_scene.json", "w", encoding="utf-8") as f:
-    json.dump(doc, f, indent=2, ensure_ascii=False)
+    # Run perimeter validation BEFORE writing
+    if not validate_all(doc):
+        import sys
 
-# Stats
-total = sum(len(s["widgets"]) for s in doc["scenes"].values())
-print(f"Generated rc_scene.json: {len(doc['scenes'])} scenes, {total} widgets")
-for name, scene in doc["scenes"].items():
-    print(f"  {name}: {len(scene['widgets'])} widgets")
+        sys.exit(1)
+
+    with open("rc_scene.json", "w", encoding="utf-8") as f:
+        json.dump(doc, f, indent=2, ensure_ascii=False)
+
+    # Stats
+    total = sum(len(s["widgets"]) for s in doc["scenes"].values())
+    print(f"Generated rc_scene.json: {len(doc['scenes'])} scenes, {total} widgets")
+    for name, scene in doc["scenes"].items():
+        print(f"  {name}: {len(scene['widgets'])} widgets")

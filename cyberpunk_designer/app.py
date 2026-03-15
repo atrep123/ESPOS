@@ -396,6 +396,7 @@ class CyberpunkEditorApp:
             ("Save", self.save_json),
             ("Undo", self._do_undo),
             ("Redo", self._do_redo),
+            ("Tpl", self._open_template_menu),
             ("Live", self._open_live_dialog),
             ("Arrange", self._auto_arrange_grid),
             ("Fit Text", self._fit_selection_to_text),
@@ -423,6 +424,22 @@ class CyberpunkEditorApp:
             self._set_status("Redo.", ttl_sec=1.5)
         else:
             self._set_status("Nothing to redo.", ttl_sec=1.5)
+
+    def _open_template_menu(self) -> None:
+        """Open a context-menu-style template picker below the Tpl button."""
+        templates = self.template_library.templates
+        if not templates:
+            self._set_status("No templates available.", ttl_sec=2.0)
+            return
+        items: list = []
+        for i, tpl in enumerate(templates[:12]):
+            items.append((tpl.metadata.name, tpl.metadata.category, f"tpl_{i}"))
+        if self.state.selected:
+            items.append(("---", "", None))
+            items.append(("Save Selection as Template", "", "save_as_template"))
+        # Position below toolbar
+        pos = (self.layout.toolbar_rect.x + 200, self.layout.toolbar_rect.bottom + 2)
+        self._context_menu = {"visible": True, "pos": pos, "items": items}
 
     # ------------------------------------------------------------------ #
     # Status, inspector, and input helpers

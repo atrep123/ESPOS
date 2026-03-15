@@ -14,7 +14,7 @@ class RenderCache:
 
     def __init__(self, max_size: int = 1024):
         self.cache: Dict[int, pygame.Surface] = {}
-        self.access_history = deque(maxlen=max_size)
+        self.access_history: deque[int] = deque(maxlen=max_size)
         self.max_size = max_size
 
     def get(self, key: int) -> Optional[pygame.Surface]:

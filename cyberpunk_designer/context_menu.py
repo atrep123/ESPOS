@@ -442,6 +442,16 @@ def execute_context_action(app: CyberpunkEditorApp, action: str) -> None:
         app._mark_dirty()
     elif action.startswith("add_"):
         app._add_widget(action[4:])
+    elif action.startswith("tpl_"):
+        try:
+            idx = int(action[4:])
+            templates = app.template_library.templates
+            if 0 <= idx < len(templates):
+                app._apply_template(templates[idx])
+        except (ValueError, IndexError, AttributeError):
+            pass
+    elif action == "save_as_template":
+        app._save_selection_as_template()
     else:
         method_name = CONTEXT_ACTION_MAP.get(action)
         if method_name is not None:
