@@ -21,6 +21,12 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
     if icon_palette.handle_click(app, pos):
         return
 
+    # Template Manager is modal: it eats the click (row/button or dismiss).
+    from . import template_manager
+
+    if template_manager.handle_click(app, pos):
+        return
+
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))
         app._set_help_overlay(False)
@@ -571,6 +577,12 @@ def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     from . import icon_palette
 
     if icon_palette.handle_wheel(app, dy):
+        return
+
+    # Template Manager is modal: wheel moves the list selection.
+    from . import template_manager
+
+    if template_manager.handle_wheel(app, dy):
         return
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))

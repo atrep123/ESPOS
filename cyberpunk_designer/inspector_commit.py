@@ -46,6 +46,9 @@ from .inspector_handlers import (
     _handle_template_name as _handle_template_name,
 )
 from .inspector_handlers import (
+    _handle_template_rename as _handle_template_rename,
+)
+from .inspector_handlers import (
     _handle_value_range as _handle_value_range,
 )
 from .inspector_utils import parse_int_list

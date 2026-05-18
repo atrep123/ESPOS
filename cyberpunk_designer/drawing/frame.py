@@ -11,6 +11,7 @@ from .. import windowing
 from ..constants import PALETTE
 from ..icon_palette import draw_icon_palette
 from ..perf import RenderCache, compute_dirty_rects
+from ..template_manager import draw_template_manager
 from .canvas import draw_canvas
 from .overlays import draw_context_menu, draw_help_overlay, draw_shortcuts_panel, draw_tooltip
 from .panels import draw_inspector, draw_palette, draw_status
@@ -62,6 +63,7 @@ def optimized_draw_frame(app: CyberpunkEditorApp) -> None:
 
     draw_shortcuts_panel(app)
     draw_icon_palette(app)
+    draw_template_manager(app)
     draw_context_menu(app)
     draw_tooltip(app)
 

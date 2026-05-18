@@ -78,6 +78,53 @@ class TemplateLibrary:
             self.templates.remove(template)
             self._save()
 
+    def rename_template(self, template: Template, new_name: str) -> bool:
+        """Rename *template* in place and persist. Returns False if invalid/dup."""
+        new_name = str(new_name or "").strip()
+        if not new_name:
+            return False
+        if template not in self.templates:
+            return False
+        if any(
+            t is not template and t.metadata.name == new_name for t in self.templates
+        ):
+            return False
+        template.metadata.name = new_name
+        self._save()
+        return True
+
+    def save_scene_as_template(
+        self,
+        name: str,
+        widgets: List[Dict[str, Any]],
+        category: str = "Custom",
+        description: str = "",
+        tags: Optional[List[str]] = None,
+    ) -> Optional[Template]:
+        """Build a Template from raw widget dicts, register + persist it.
+
+        This is the single real entry point the designer uses to turn the
+        current scene/selection into a reusable template (so the save path
+        is the library's own API, not an ad-hoc proxy at the call site).
+        Returns the new Template, or None when *name* is empty/duplicate.
+        """
+        name = str(name or "").strip()
+        if not name:
+            return None
+        if any(t.metadata.name == name for t in self.templates):
+            return None
+        cat = category if category in self.CATEGORIES else "Custom"
+        meta = TemplateMetadata(
+            name=name,
+            category=cat,
+            description=description or f"{len(widgets)} widget(s)",
+            tags=list(tags or []),
+        )
+        scene_data = {"name": name, "widgets": list(widgets)}
+        tpl = Template(meta, _make_scene(scene_data))
+        self.add_template(tpl)
+        return tpl
+
     def get_templates_by_category(self, category: str) -> List[Template]:
         return [t for t in self.templates if t.metadata.category == category]
 

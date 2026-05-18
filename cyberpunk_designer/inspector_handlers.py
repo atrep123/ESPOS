@@ -187,6 +187,41 @@ def _handle_template_name(app) -> bool:
     return True
 
 
+def _handle_template_rename(app) -> bool:
+    """Commit a Template Manager rename through the real library API."""
+    raw = app.state.inspector_input_buffer
+    name = raw.strip()
+    app.state.inspector_selected_field = None
+    app.state.inspector_input_buffer = ""
+    try:
+        pygame.key.stop_text_input()
+    except (pygame.error, AttributeError):
+        pass
+    target = getattr(app, "_template_rename_target", None)
+    app._template_rename_target = None
+    if target is None:
+        return False
+    if not name:
+        app._set_status("Template name cannot be empty.", ttl_sec=3.0)
+        return False
+    lib = getattr(app, "template_library", None)
+    if lib is None or not hasattr(lib, "rename_template"):
+        app._set_status("No template library.", ttl_sec=3.0)
+        return False
+    if not lib.rename_template(target, name):
+        app._set_status(
+            f"Rename failed (empty or duplicate name '{name}').", ttl_sec=3.0
+        )
+        return False
+    try:
+        app.template_actions = app._build_template_actions()
+    except (AttributeError, TypeError):
+        pass
+    app._set_status(f"Renamed template to '{name}'.", ttl_sec=2.0)
+    app._mark_dirty()
+    return True
+
+
 def _handle_value_range(app) -> bool:
     raw = app.state.inspector_input_buffer
     pair = _parse_pair(raw.strip())
@@ -311,6 +346,7 @@ _SPECIAL_HANDLERS = {
     "_spacing": _handle_spacing,
     "_array_dup": _handle_array_dup,
     "_template_name": _handle_template_name,
+    "_template_rename": _handle_template_rename,
     "_value_range": _handle_value_range,
     "_size": _handle_size,
     "_goto_widget": _handle_goto_widget,

@@ -122,7 +122,7 @@ _CTRL_DISPATCH: dict = {
     pygame.K_n: ("_add_new_scene", "_compact_widgets", _F_NOSIM),
     pygame.K_r: ("_rename_current_scene", "_reset_to_defaults", _F_NOSIM),
     pygame.K_j: ("_goto_widget_prompt", "_snap_sizes_to_grid", _F_NOSIM),
-    pygame.K_t: ("_save_selection_as_template", "_list_templates", _F_NOSIM | _F_NOALT),
+    pygame.K_t: ("_save_selection_as_template", "_open_template_manager", _F_NOSIM | _F_NOALT),
     pygame.K_i: ("_invert_selection", "_show_all_widgets", _F_NOSIM | _F_NOALT),
     pygame.K_b: ("_select_same_color", "_select_bordered", _F_NOSIM | _F_NOALT),
     pygame.K_w: ("_scene_stats", "_fit_scene_to_content", _F_NOSIM | _F_NOALT),
@@ -251,6 +251,13 @@ def on_key_down(app, event: pygame.event.Event) -> None:
     from . import icon_palette
 
     if icon_palette.handle_key(app, event):
+        return
+
+    # Template Manager is modal too. It defers to the inspector text field
+    # (rename / save-as-template name prompt) so that flow keeps working.
+    from . import template_manager
+
+    if template_manager.handle_key(app, event):
         return
 
     if bool(getattr(app, "show_help_overlay", False)) and bool(getattr(app, "_help_pinned", False)):

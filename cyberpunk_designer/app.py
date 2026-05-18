@@ -41,6 +41,7 @@ from . import (
     reporting,
     scene_ops,
     selection_ops,
+    template_manager,
     text_metrics,
     widget_factory,
     windowing,
@@ -733,7 +734,26 @@ class CyberpunkEditorApp:
             self._set_status("Nothing to redo.", ttl_sec=1.5)
 
     def _open_template_menu(self) -> None:
-        """Open a context-menu-style template picker below the Tpl button."""
+        """Open the full Template Manager window.
+
+        Real management surface: browse the actual ``TemplateLibrary``,
+        preview each template's real scene, and apply/insert/rename/delete
+        or save the current scene/selection as a new template — all wired
+        through the library's persisted API and the undo-safe save path.
+        """
+        template_manager.open_template_manager(self)
+
+    def _open_template_manager(self) -> None:
+        """Alias for the Template Manager window (toggle-friendly)."""
+        template_manager.toggle_template_manager(self)
+
+    def _open_template_quick_picker(self) -> None:
+        """Legacy context-menu-style quick picker (kept for keymaps/tests).
+
+        The full window (``_open_template_menu``) supersedes this, but the
+        lightweight inline picker is still reachable for power users and is
+        the path the right-click ``tpl_`` actions reuse.
+        """
         templates = self.template_library.templates
         if not templates:
             self._set_status("No templates available.", ttl_sec=2.0)
