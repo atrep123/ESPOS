@@ -37,6 +37,25 @@ static const char *TAG = "ui";
 
 static TaskHandle_t s_ui_task = NULL;
 
+/* Active background fill level (0..15 gray) used by the renderer when
+ * clearing the software framebuffer.  Derived from store_conf_t.bg_rgb at
+ * startup and updated live via the "set_bg" UART RPC (TOP_RPC_CALL).
+ * Default 0 (black) preserves the original hard-coded clear behavior. */
+static uint8_t s_bg_level = 0;
+
+/* Map a 0xRRGGBB color to a 0..15 grayscale level for the 4bpp panel.
+ * Uses Rec.601 luma weights (same channel weighting rationale as
+ * ui_core_rgb565); pure + side-effect free for static verification. */
+static uint8_t ui_bg_rgb_to_gray4(uint32_t rgb)
+{
+    uint32_t r = (rgb >> 16) & 0xFFu;
+    uint32_t g = (rgb >> 8) & 0xFFu;
+    uint32_t b = rgb & 0xFFu;
+    /* Rec.601: Y = 0.299R + 0.587G + 0.114B, fixed-point /1000. */
+    uint32_t y8 = (r * 299u + g * 587u + b * 114u) / 1000u; /* 0..255 */
+    return (uint8_t)(y8 >> 4);                               /* 0..15  */
+}
+
 enum { UI_MAX_WIDGETS = 128 };
 static UiWidget s_widgets[UI_MAX_WIDGETS];
 static UiScene s_scene;
@@ -1078,6 +1097,42 @@ static void ui_handle_ui_cmd(
     }
 }
 
+/* Dispatch a TOP_RPC_CALL message (produced by the rpc/UART service).
+ *
+ * Only "set_bg" has a real producer (rpc_parse_line); unknown methods are
+ * decoded by the parser as "noop" and are intentionally ignored here — no
+ * speculative commands are invented.  Returns true if the background changed
+ * and the caller must force a full repaint.
+ *
+ * The set_bg contract is completed end-to-end here:
+ *   1. persist the new color (store_set_bg_rgb -> NVS),
+ *   2. update the live render fill level (s_bg_level),
+ * so the next frame clears to the requested background.
+ */
+static bool ui_handle_rpc_call(const msg_t *m)
+{
+    if (m == NULL) {
+        return false;
+    }
+    if (strcmp(m->u.rpc.method, "set_bg") == 0) {
+        uint32_t rgb = m->u.rpc.arg & 0xFFFFFFu;
+        esp_err_t serr = store_set_bg_rgb(rgb);
+        if (serr != ESP_OK) {
+            /* Persist failed (e.g. NVS) — do not apply, keep state coherent
+             * with what is stored.  Reported, never silently swallowed. */
+            ESP_LOGW(TAG, "set_bg 0x%06" PRIX32 ": store_set_bg_rgb failed: %s",
+                     rgb, esp_err_to_name(serr));
+            return false;
+        }
+        s_bg_level = ui_bg_rgb_to_gray4(rgb);
+        ESP_LOGI(TAG, "RPC set_bg 0x%06" PRIX32 " -> gray4 level %u",
+                 rgb, (unsigned)s_bg_level);
+        return true;
+    }
+    /* "noop" / unrecognized: nothing to do. */
+    return false;
+}
+
 static void ui_task(void *arg)
 {
     (void)arg;
@@ -1089,11 +1144,15 @@ static void ui_task(void *arg)
         conf.display_contrast = 0xFF;
         conf.display_invert = 0;
         conf.display_col_offset = SSD1363_COL_OFFSET;
+        /* s_bg_level keeps its default (0 = black). */
     } else {
         esp_err_t coerr = ssd1363_set_col_offset_units(conf.display_col_offset);
         if (coerr != ESP_OK) {
             ESP_LOGW(TAG, "ssd1363_set_col_offset_units failed: %s", esp_err_to_name(coerr));
         }
+        s_bg_level = ui_bg_rgb_to_gray4(conf.bg_rgb);
+        ESP_LOGI(TAG, "bg_rgb=0x%06" PRIX32 " -> gray4 level %u",
+                 conf.bg_rgb & 0xFFFFFFu, (unsigned)s_bg_level);
     }
 
     esp_err_t err = ssd1363_init_panel();
@@ -1127,7 +1186,11 @@ static void ui_task(void *arg)
     }
     if (bus_subscribe(TOP_INPUT_BTN, q) != ESP_OK ||
         bus_subscribe(TOP_METRICS_RET, q) != ESP_OK ||
-        bus_subscribe(TOP_UI_CMD, q) != ESP_OK) {
+        bus_subscribe(TOP_UI_CMD, q) != ESP_OK ||
+        /* UART RPC (set_bg ...) is produced on TOP_RPC_CALL by the rpc
+         * service; the UI task owns the scene/framebuffer/store, so it is
+         * the correct consumer that applies the background change. */
+        bus_subscribe(TOP_RPC_CALL, q) != ESP_OK) {
         ESP_LOGE(TAG, "bus_subscribe failed");
         vTaskDelete(NULL);
         return;
@@ -1241,6 +1304,14 @@ static void ui_task(void *arg)
 
         if (got && m.topic == TOP_METRICS_RET) {
             ui_update_status_bar(scene, m.u.metrics.free_heap, m.u.metrics.min_free_heap, &dirty);
+        }
+
+        if (got && m.topic == TOP_RPC_CALL) {
+            if (ui_handle_rpc_call(&m)) {
+                /* New background: full repaint so the clear color takes
+                 * effect across the whole panel. */
+                ui_dirty_full(&dirty);
+            }
         }
 
         if (got && m.topic == TOP_UI_CMD) {
@@ -1572,8 +1643,10 @@ static void ui_task(void *arg)
             continue;
         }
 
-        /* Render and flush only the union dirty region. */
-        ui_swbuf_clear(&sw, 0);
+        /* Render and flush only the union dirty region.
+         * Clear to the configured background (s_bg_level), set from
+         * store_conf_t.bg_rgb at startup and the set_bg UART RPC. */
+        ui_swbuf_clear(&sw, s_bg_level);
         ui_render_scene(scene, &ops);
         if (flash > 0) {
 #if DISPLAY_COLOR_BITS == 4
