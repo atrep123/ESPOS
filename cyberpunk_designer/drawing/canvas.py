@@ -74,10 +74,7 @@ def draw_canvas(app) -> None:
         pygame.draw.line(app.logical_surface, gc, (cx, scene_rect.top), (cx, scene_rect.bottom - 1))
         pygame.draw.line(app.logical_surface, gc, (scene_rect.left, cy), (scene_rect.right - 1, cy))
 
-    # Pixel rulers on edges
     preview = bool(getattr(app, "clean_preview", False))
-    if not preview and getattr(app, "show_rulers", True):
-        draw_rulers(app, scene_rect, scene_w, scene_h)
 
     origin_x = int(scene_rect.x)
     origin_y = int(scene_rect.y)
@@ -149,6 +146,12 @@ def draw_canvas(app) -> None:
         _draw_canvas_overlays(app, sc, items, origin_x, origin_y, scene_rect, preview)
     finally:
         app.logical_surface.set_clip(old_clip)
+
+    # Pixel rulers on edges — drawn last so they stay visible as a coordinate
+    # guide even when a widget hugs the top/left edge of the scene (e.g. a
+    # full-width header panel at y=0 would otherwise occlude the top ruler).
+    if not preview and getattr(app, "show_rulers", True):
+        draw_rulers(app, scene_rect, scene_w, scene_h)
 
 
 def _draw_canvas_overlays(
