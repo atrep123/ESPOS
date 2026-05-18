@@ -41,6 +41,55 @@ static esp_err_t ssd1363_cmd_unlock(void)
     return ssd1363_write_cmd_args(0xFD, &arg, 1);
 }
 
+/* Probe a single 7-bit I2C address: returns ESP_OK if the device ACKs,
+ * ESP_ERR_NOT_FOUND if not, or the underlying bus error. */
+static esp_err_t ssd1363_probe_addr(uint8_t addr7)
+{
+    if (!s_i2c_inited) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    if (cmd == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    esp_err_t err = i2c_master_start(cmd);
+    if (err == ESP_OK) {
+        err = i2c_master_write_byte(cmd, (uint8_t)((addr7 << 1) | I2C_MASTER_WRITE), true);
+    }
+    if (err == ESP_OK) {
+        err = i2c_master_stop(cmd);
+    }
+    if (err != ESP_OK) {
+        i2c_cmd_link_delete(cmd);
+        return err;
+    }
+    err = i2c_master_cmd_begin(DISPLAY_I2C_PORT, cmd, pdMS_TO_TICKS(I2C_SCAN_TIMEOUT_MS));
+    i2c_cmd_link_delete(cmd);
+    if (err == ESP_OK) {
+        return ESP_OK;
+    }
+    if (err == ESP_ERR_TIMEOUT || err == ESP_FAIL) {
+        /* No ACK from this address. */
+        return ESP_ERR_NOT_FOUND;
+    }
+    return err;
+}
+
+esp_err_t ssd1363_probe(void)
+{
+    esp_err_t err = ssd1363_probe_addr(DISPLAY_I2C_ADDR);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "SSD1363 ACK at I2C addr 0x%02X", DISPLAY_I2C_ADDR);
+    } else if (err == ESP_ERR_NOT_FOUND) {
+        ESP_LOGE(TAG, "SSD1363 did NOT ACK at I2C addr 0x%02X (no panel / wrong addr / wiring)",
+                 DISPLAY_I2C_ADDR);
+    } else {
+        ESP_LOGE(TAG, "SSD1363 probe bus error at 0x%02X: %s",
+                 DISPLAY_I2C_ADDR, esp_err_to_name(err));
+    }
+    return err;
+}
+
 #if SSD1363_I2C_SCAN_ON_BOOT
 static void ssd1363_scan_i2c(void)
 {
@@ -302,121 +351,215 @@ esp_err_t ssd1363_init_panel(void)
     ssd1363_scan_i2c();
 #endif
 
+    /* Failure detection (root-cause fix for "init always returns OK"):
+     * before sending any init bytes, verify the panel actually ACKs its
+     * I2C address. The write-only SSD1363 command path cannot be read
+     * back, but a missing ACK is a definitive, detectable signal that the
+     * panel is absent / mis-wired / on the wrong address. Without this the
+     * old code happily streamed the whole init to a NAKing bus and still
+     * returned ESP_OK, producing a silent blank screen with no diagnostic.
+     *
+     * Gated by SSD1363_REQUIRE_PROBE so bring-up on exotic bus expanders
+     * that don't ACK cleanly can still opt out (defaults to required). */
+#if SSD1363_REQUIRE_PROBE
+    err = ssd1363_probe();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Aborting init: SSD1363 not detected on I2C "
+                      "(set -DSSD1363_REQUIRE_PROBE=0 to bypass for bring-up)");
+        return (err == ESP_ERR_NOT_FOUND) ? ESP_ERR_NOT_FOUND : err;
+    }
+#else
+    /* Probe is advisory only; still log so a blank screen is explainable. */
+    (void)ssd1363_probe();
+#endif
+
     /* Clamp runtime column offset against current DISPLAY_WIDTH. */
     err = ssd1363_set_col_offset_units(ssd1363_get_col_offset_units());
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Default init sequence (based on U8g2's SSD1363 256x128 driver). */
+    /* ===================================================================
+     * SSD1363 256x128 init sequence.
+     *
+     * !!! UNVERIFIED-ON-HARDWARE !!!  Best-effort, sourced per command
+     * against olikraus/u8g2 csrc/u8x8_d_ssd1363.c (master branch,
+     * u8x8_d_ssd1363_256x128_init_seq[]) which is the de-facto reference
+     * for this controller (Solomon Systech SSD1363, 320x160 GDDRAM, 16
+     * gray levels). Order and values below were cross-checked byte-for-byte
+     * against that array; the U8g2 array itself is annotated "(midas
+     * datasheet)" by its author. No public Solomon Systech SSD1363
+     * datasheet PDF was retrievable to independently confirm bitfields, so
+     * every register here remains a tuning candidate via SSD1363_INIT_*.
+     *
+     * Per-command source map (cmd : U8g2 ref line : note):
+     *   0xFD,0x12  unlock                 : U8X8_CA(0xfd,0x12)
+     *   0xAE       display off            : U8X8_C(0xae)
+     *   0xB3,clk   clock/osc              : U8X8_CA(0xb3,0x30)   default 0x30
+     *   0xCA,mux   multiplex ratio        : U8X8_CA(0xca,127)    127 == 0x7F
+     *   0xA2,off   display offset         : U8X8_CA(0xa2,0x20)   default 0x20
+     *   0xA1,sl    start line             : U8X8_CA(0xa1,0x00)
+     *   0xA0,a,b   remap / dual-COM       : U8X8_CAA(0xa0,0x32,0x00)
+     *   0xB4,a,b   display enhancement A  : U8X8_CAA(0xb4,0x32,0x0c)
+     *   0xC1,ct    contrast               : U8X8_CA(0xc1,0xff)   0..255
+     *   0xBA,v     Vp voltage config      : U8X8_CA(0xba,0x03)
+     *   0xB9       linear grayscale       : U8X8_C(0xb9)
+     *   0xAD,ir    IREF (0x90 int/0x80 ext): U8X8_CA(0xad,0x90)
+     *   0xB1,ph    phase1/2 period        : U8X8_CA(0xb1,0x74)
+     *   0xBB,pv    precharge voltage      : U8X8_CA(0xbb,0x0c)
+     *   0xB6,sp    second precharge       : U8X8_CA(0xb6,0xc8)
+     *   0xBE,vc    VCOMH                  : U8X8_CA(0xbe,0x04)
+     *   0xA6       normal (non-invert)    : U8X8_C(0xa6)
+     *   0xA9       exit partial display   : U8X8_C(0xa9)
+     *
+     * Known-correct cross-checks (do NOT "fix" these):
+     *  - default_x_offset == 8 byte-columns matches SSD1363_COL_OFFSET=8;
+     *    the GDDRAM is 320 wide, panel 256, (320-256)/2=32px, 32px/4=8
+     *    column-units. ssd1363_set_addr_window() computes
+     *    col = 8 + (pixel_x>>2) which equals U8g2's x*2+8 per 8px tile.
+     *  - 0xA6 (normal) is correct; 0xA4/0xA5 are entire-display-on, a
+     *    different command (was a documented confusion in U8g2 #2298).
+     *  - 0x5C "write RAM" must precede each data block; see
+     *    ssd1363_begin_frame()/ssd1363_write_ram_start().
+     *
+     * Concrete discrepancy fixed here:
+     *  - Multiplex ratio previously used (DISPLAY_HEIGHT-1). For the 128px
+     *    panel that is 127, which coincidentally equals U8g2's literal 127,
+     *    but the "-1" form is wrong for SSD1363: U8g2 programs the MUX as
+     *    the literal active-COM count (127 for a 128-row visible area on a
+     *    160-COM part), not height-1 in the SSD13xx "ratio = N-1" sense.
+     *    Now driven by SSD1363_INIT_MUX_RATIO (default 127) so it tracks
+     *    the reference exactly and is tunable. UNVERIFIED-ON-HARDWARE.
+     * =================================================================== */
 #if SSD1363_USE_DEFAULT_INIT
-    err = ssd1363_cmd_unlock();
+    err = ssd1363_cmd_unlock();                                  /* 0xFD,0x12 unlock — U8g2 ref. UNVERIFIED-ON-HARDWARE */
     if (err != ESP_OK) {
         return err;
     }
 
-    err = ssd1363_display_off();
+    err = ssd1363_display_off();                                 /* 0xAE display off — U8g2 ref. UNVERIFIED-ON-HARDWARE */
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Set Display Clock Divide/Oscillator Frequency (B3h, 1 byte). */
+    /* 0xB3 clock divide / osc freq (1 byte). Src: U8X8_CA(0xb3,0x30). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xB3, (const uint8_t[]){ SSD1363_INIT_CLOCK }, 1);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Set Multiplex Ratio (CAh, 1 byte). Value is MUX-1. */
-    err = ssd1363_set_multiplex_ratio((uint8_t)(DISPLAY_HEIGHT - 1));
+    /* 0xCA multiplex ratio (1 byte). Src: U8X8_CA(0xca,127). NOTE: literal
+     * active-COM count, NOT (height-1). Driven by SSD1363_INIT_MUX_RATIO
+     * (default 127) to match U8g2 exactly. UNVERIFIED-ON-HARDWARE */
+    err = ssd1363_set_multiplex_ratio((uint8_t)SSD1363_INIT_MUX_RATIO);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Display offset and start line. */
+    /* 0xA2 display offset (1 byte). Src: U8X8_CA(0xa2,0x20). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_set_display_offset(SSD1363_INIT_DISPLAY_OFFSET);
     if (err != ESP_OK) {
         return err;
     }
+    /* 0xA1 display start line (1 byte). Src: U8X8_CA(0xa1,0x00). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_set_start_line(SSD1363_INIT_START_LINE);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Set Re-Map / Dual COM Line Mode (A0h, 2 bytes). */
+    /* 0xA0 re-map / dual-COM (2 bytes). Src: U8X8_CAA(0xa0,0x32,0x00).
+     * Bit semantics (per U8g2 inline comment): A[0] addr-increment dir,
+     * A[1] column re-map, A[4] COM scan dir, A[5] COM split odd/even,
+     * B[4] dual-COM enable (only when MUX<=79). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xA0, (const uint8_t[]){ SSD1363_INIT_REMAP_A, SSD1363_INIT_REMAP_B }, 2);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Display Enhancement A (B4h, 2 bytes). */
+    /* 0xB4 display enhancement A (2 bytes). Src: U8X8_CAA(0xb4,0x32,0x0c).
+     * Undocumented in U8g2 ("NOT DOCUMENTED"); kept as-is. UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xB4, (const uint8_t[]){ SSD1363_INIT_ENH_A0, SSD1363_INIT_ENH_A1 }, 2);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Contrast (C1h). */
+    /* 0xC1 contrast (1 byte, 0..255). Src: U8X8_CA(0xc1,0xff). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_set_contrast(SSD1363_INIT_CONTRAST);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Set voltage config: Vp pin (BAh). */
+    /* 0xBA Vp voltage config (1 byte). Src: U8X8_CA(0xba,0x03). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xBA, (const uint8_t[]){ SSD1363_INIT_VOLTAGE_CONFIG }, 1);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Linear grayscale table (B9h). */
+    /* 0xB9 linear grayscale table (no args). Src: U8X8_C(0xb9). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd(0xB9);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* IREF selection (ADh). */
+    /* 0xAD IREF select (1 byte; 0x90 internal / 0x80 external). Src:
+     * U8X8_CA(0xad,0x90). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xAD, (const uint8_t[]){ SSD1363_INIT_IREF }, 1);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Phase length / precharge timing (B1h). */
+    /* 0xB1 phase 1/2 (reset/precharge) period (1 byte). Src:
+     * U8X8_CA(0xb1,0x74). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_set_precharge(SSD1363_INIT_PHASE_LENGTH);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Precharge voltage (BBh). */
+    /* 0xBB precharge voltage (1 byte). Src: U8X8_CA(0xbb,0x0c). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xBB, (const uint8_t[]){ SSD1363_INIT_PRECHARGE_VOLTAGE }, 1);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Second precharge period (B6h). */
+    /* 0xB6 second precharge period (1 byte). Src: U8X8_CA(0xb6,0xc8). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd_args(0xB6, (const uint8_t[]){ SSD1363_INIT_SECOND_PRECHARGE }, 1);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* VCOMH (BEh). */
+    /* 0xBE VCOMH (1 byte). Src: U8X8_CA(0xbe,0x04). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_set_vcomh(SSD1363_INIT_VCOMH);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Normal display. */
+    /* 0xA6 normal (non-inverted) display. Src: U8X8_C(0xa6). NOTE: this is
+     * NOT 0xA4/0xA5 (entire-display-on) — that confusion caused blank/all-on
+     * screens in U8g2 #2298. UNVERIFIED-ON-HARDWARE */
     err = ssd1363_invert_display(false);
     if (err != ESP_OK) {
         return err;
     }
 
-    /* Exit partial display (A9h). */
+    /* 0xA9 exit partial display. Src: U8X8_C(0xa9). UNVERIFIED-ON-HARDWARE */
     err = ssd1363_write_cmd(0xA9);
     if (err != ESP_OK) {
         return err;
     }
 #else
-    /* Minimal init for custom bring-up: unlock + display off. */
-    (void)ssd1363_cmd_unlock();
-    (void)ssd1363_display_off();
+    /* Minimal init for custom bring-up: unlock + display off.
+     * Root-cause fix: previously these used (void) casts and discarded
+     * the I2C error, so init reported success on a dead bus. Propagate. */
+    err = ssd1363_cmd_unlock();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "minimal init: unlock failed: %s", esp_err_to_name(err));
+        return err;
+    }
+    err = ssd1363_display_off();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "minimal init: display_off failed: %s", esp_err_to_name(err));
+        return err;
+    }
 #endif
 
     /* Set a default full-frame address window so subsequent writes cover the panel. */
@@ -438,9 +581,63 @@ esp_err_t ssd1363_init_panel(void)
     }
 #endif
 
-    ESP_LOGI(TAG, "SSD1363 init OK (addr=0x%02X, col_offset=%u)", DISPLAY_I2C_ADDR, (unsigned)ssd1363_get_col_offset_units());
+    /* Init bytes were ACKed on the bus, but the SSD1363 command path is
+     * write-only here: visual correctness (offsets, remap, grayscale) is
+     * UNVERIFIED-ON-HARDWARE. "init OK" means "panel present and accepted
+     * the sequence", NOT "image is correct". Use the bring-up checklist. */
+    ESP_LOGI(TAG, "SSD1363 init sequence accepted (addr=0x%02X, col_offset=%u) "
+                  "- visual params UNVERIFIED, see bring-up checklist",
+             DISPLAY_I2C_ADDR, (unsigned)ssd1363_get_col_offset_units());
     return ESP_OK;
 }
+
+/* =======================================================================
+ * SSD1363 HARDWARE BRING-UP CHECKLIST  (UNVERIFIED-ON-HARDWARE driver)
+ * -----------------------------------------------------------------------
+ * Do these in order the first time real hardware is attached. All knobs
+ * live in src/user_config.h (uncomment) or PlatformIO -D build_flags.
+ *
+ * 1. WIRING / BUS
+ *    - Set DISPLAY_I2C_SDA_GPIO / DISPLAY_I2C_SCL_GPIO to real pins.
+ *    - Confirm panel I2C address (0x3C or 0x3D) -> DISPLAY_I2C_ADDR.
+ *    - Build with -DSSD1363_I2C_SCAN_ON_BOOT=1 and check the log: every
+ *      device on the bus is listed; DISPLAY_I2C_ADDR must appear. If the
+ *      panel does not ACK, ssd1363_init_panel() now returns
+ *      ESP_ERR_NOT_FOUND instead of a false ESP_OK (fixed root cause).
+ *
+ * 2. RAW PANEL LIFE
+ *    - Build with -DSSD1363_BOOT_TEST_PATTERN=1. Expect a grayscale ramp
+ *      with alternating-row inversion across the full 256x128 area.
+ *    - All blank  -> check contrast (SSD1363_INIT_CONTRAST), VCOMH
+ *      (SSD1363_INIT_VCOMH), IREF (SSD1363_INIT_IREF), panel Vcc.
+ *    - All on / noise -> remap/dual-COM (SSD1363_INIT_REMAP_A/B) or
+ *      mux ratio (SSD1363_INIT_MUX_RATIO) wrong (U8g2 #2298/#2608).
+ *
+ * 3. HORIZONTAL OFFSET / WRAP  (most common SSD1363 symptom)
+ *    - Image shifted left/right or wrapping: tune SSD1363_COL_OFFSET
+ *      (units of 4 px; GDDRAM is 320 wide vs 256 visible, default 8).
+ *    - Also try SSD1363_INIT_DISPLAY_OFFSET (0xA2) for a COM/row shift.
+ *
+ * 4. MIRROR / UPSIDE-DOWN
+ *    - Flip via SSD1363_INIT_REMAP_A bits (A[1] column re-map, A[4] COM
+ *      scan dir) — see the 0xA0 comment in ssd1363_init_panel().
+ *
+ * 5. GRAYSCALE / CONTRAST POLARITY
+ *    - Inverted shades: toggle store display_invert (0xA6/0xA7).
+ *    - Banding: SSD1363_INIT_PHASE_LENGTH (0xB1) /
+ *      SSD1363_INIT_PRECHARGE_VOLTAGE (0xBB) /
+ *      SSD1363_INIT_SECOND_PRECHARGE (0xB6).
+ *
+ * 6. DATA NOT APPEARING THOUGH PANEL ALIVE
+ *    - Confirm 0x5C "write RAM" precedes every data block: callers must
+ *      use ssd1363_begin_frame() (which does set-window then 0x5C), or
+ *      call ssd1363_write_ram_start() after any bare ssd1363_set_addr_window().
+ *      (U8g2 #2298: missing 0x5C => data silently dropped.)
+ *
+ * Reference: olikraus/u8g2 csrc/u8x8_d_ssd1363.c (BSD-2-Clause) and
+ * issues #2298 / #2490 / #2608. No Solomon Systech SSD1363 datasheet PDF
+ * was publicly retrievable; bitfield-level claims remain UNVERIFIED.
+ * ======================================================================= */
 
 esp_err_t ssd1363_display_on(void)
 {
@@ -478,11 +675,18 @@ esp_err_t ssd1363_set_col_offset_units(uint8_t offset_units)
 
 esp_err_t ssd1363_set_addr_window(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1)
 {
-    /* Common SSD13xx style addressing; verify with SSD1363 datasheet for final use.
+    /* SSD1363 4bpp addressing. Cross-checked against U8g2
+     * u8x8_d_ssd1363.c U8X8_MSG_DISPLAY_DRAW_TILE: U8g2 computes
+     * col = tile_x*2 + x_offset(8) per 8-px tile; per pixel that is
+     * (pixel_x>>2) + 8, which is exactly the formula below. The column
+     * unit = 4 px (2 bytes); the +offset centres the 256-px panel in the
+     * 320-wide GDDRAM. This arithmetic is VERIFIED against the reference;
+     * only the absolute offset value (SSD1363_COL_OFFSET) is panel-tunable.
      *
-     * For SSD1363 in 4bpp mode, column address units are groups of 4 pixels
-     * (2 bytes per column per row). Most 256x128 panels require a horizontal
-     * column offset because the controller has 320 segments.
+     * IMPORTANT: callers that invoke this directly (not via
+     * ssd1363_begin_frame) MUST call ssd1363_write_ram_start() (0x5C)
+     * before the pixel data, or the controller drops the data
+     * (U8g2 issue #2298). UNVERIFIED-ON-HARDWARE for absolute placement.
      */
 #if DISPLAY_COLOR_BITS == 4
     uint16_t col0 = (uint16_t)(ssd1363_get_col_offset_units() + (x0 >> 2));

@@ -10,8 +10,17 @@
  *
  * This is intentionally minimal: it sets up the I2C bus and
  * provides helpers to send commands and data bytes.
- * The actual init sequence and drawing logic can be refined
- * once the panel is wired and tested.
+ *
+ * !!! UNVERIFIED-ON-HARDWARE !!!
+ * The init sequence below is a best-effort transcription of U8g2's
+ * `csrc/u8x8_d_ssd1363.c` (u8x8_d_ssd1363_256x128_init_seq, master branch)
+ * cross-checked command-by-command. It has NOT been confirmed on a real
+ * SSD1363 panel by this driver. See ssd1363.c init for per-command sources
+ * and the bring-up checklist. Treat every register value as a candidate to
+ * tune via the SSD1363_INIT_* / SSD1363_COL_OFFSET switches in
+ * display_config.h / user_config.h.
+ *
+ * Source of record: olikraus/u8g2 (BSD-2-Clause), file csrc/u8x8_d_ssd1363.c.
  */
 
 /* Initialise the I2C bus for the display, using pins and
@@ -23,6 +32,14 @@ esp_err_t ssd1363_bus_init(void);
  * even when DISPLAY_RST_GPIO is -1.
  */
 esp_err_t ssd1363_reset(void);
+
+/* Probe DISPLAY_I2C_ADDR on the bus: returns ESP_OK only if the panel
+ * ACKs its address byte, ESP_ERR_NOT_FOUND if it does not respond, or a
+ * bus error. Used by ssd1363_init_panel() to refuse to silently report
+ * success when no panel is present (blank-screen root cause).
+ * Requires ssd1363_bus_init() to have run first.
+ */
+esp_err_t ssd1363_probe(void);
 
 /* Minimal panel initialisation.
  *
@@ -44,6 +61,10 @@ esp_err_t ssd1363_write_data(const uint8_t *data, size_t len);
 esp_err_t ssd1363_display_on(void);
 esp_err_t ssd1363_display_off(void);
 esp_err_t ssd1363_set_addr_window(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1);
+/* Issues the "Write RAM" (0x5C) command. MUST be sent after every column/row
+ * address change and immediately before the pixel data block, otherwise the
+ * controller ignores the data (U8g2 issue #2298: data not written to RAM).
+ */
 esp_err_t ssd1363_write_ram_start(void);
 /* Begin a frame (sets clipped address window and enters RAM write). Returns error on invalid window. */
 esp_err_t ssd1363_begin_frame(uint16_t x0, uint16_t y0, uint16_t x1_incl, uint16_t y1_incl);

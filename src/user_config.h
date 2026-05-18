@@ -37,9 +37,21 @@
 /* #define DISPLAY_COLOR_BITS 4 */
 #endif
 
-/* Set to 1 to use the conservative built-in init sequence (see `ssd1363.c`). */
+/* Set to 1 to use the conservative built-in init sequence (see `ssd1363.c`).
+ * NOTE: that sequence is UNVERIFIED-ON-HARDWARE (sourced from U8g2). */
 #ifndef SSD1363_USE_DEFAULT_INIT
 /* #define SSD1363_USE_DEFAULT_INIT 1 */
+#endif
+
+/* Set to 0 to bypass the "panel must ACK on I2C" gate during bring-up
+ * behind a non-ACKing bus expander (default 1 = required). */
+#ifndef SSD1363_REQUIRE_PROBE
+/* #define SSD1363_REQUIRE_PROBE 0 */
+#endif
+
+/* Multiplex ratio byte for 0xCA (U8g2 uses literal 127, not height-1). */
+#ifndef SSD1363_INIT_MUX_RATIO
+/* #define SSD1363_INIT_MUX_RATIO 127 */
 #endif
 
 /* Bring-up diagnostics (off by default). */

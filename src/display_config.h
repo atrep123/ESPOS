@@ -54,10 +54,22 @@
 #endif
 
 /* Use a conservative built-in SSD1363 init sequence (set to 1 to enable).
- * Leave disabled until verified against your module's datasheet.
+ *
+ * !!! UNVERIFIED-ON-HARDWARE !!! The sequence in ssd1363.c is a per-command
+ * transcription of U8g2's u8x8_d_ssd1363.c (the de-facto reference for this
+ * controller); it has NOT been confirmed against a real panel here. No
+ * Solomon Systech SSD1363 datasheet PDF was publicly retrievable to verify
+ * bitfields. Every SSD1363_INIT_* value below is a tuning candidate.
  */
 #ifndef SSD1363_USE_DEFAULT_INIT
 #define SSD1363_USE_DEFAULT_INIT 1
+#endif
+
+/* Refuse to report init success if the panel does not ACK its I2C address
+ * (root-cause fix for "blank screen + init returns OK"). Set to 0 only for
+ * bring-up behind a bus expander that does not ACK cleanly. */
+#ifndef SSD1363_REQUIRE_PROBE
+#define SSD1363_REQUIRE_PROBE 1
 #endif
 
 /* Optional bring-up diagnostics (off by default). */
@@ -70,14 +82,26 @@
 
 /* SSD1363 addressing (4bpp):
  * - Column address units are groups of 4 pixels (2 bytes per row).
- * - Most 256x128 panels use a horizontal offset because SSD1363 has 320 segments:
- *   (320 - 256) / 2 = 32 px -> 32/4 = 8 column units.
+ * - SSD1363 GDDRAM is 320 x 160 (per U8g2 csrc/u8x8_d_ssd1363.c header);
+ *   a 256-wide panel is centred: (320 - 256) / 2 = 32 px -> 32/4 = 8
+ *   column units. Matches U8g2 default_x_offset = 8. Cross-checked OK.
  */
 #ifndef SSD1363_COL_OFFSET
 #define SSD1363_COL_OFFSET 8
 #endif
 
-/* Default init params (based on U8g2's SSD1363 256x128 sequence). */
+/* Multiplex ratio byte for command 0xCA. U8g2 programs the literal
+ * active-COM count (127), NOT the SSD13xx "ratio = N-1" convention.
+ * UNVERIFIED-ON-HARDWARE. */
+#ifndef SSD1363_INIT_MUX_RATIO
+#define SSD1363_INIT_MUX_RATIO 127
+#endif
+
+/* Default init params. Source of record: olikraus/u8g2 (BSD-2-Clause)
+ * csrc/u8x8_d_ssd1363.c -> u8x8_d_ssd1363_256x128_init_seq[], master.
+ * Values cross-checked byte-for-byte. UNVERIFIED-ON-HARDWARE: no Solomon
+ * Systech SSD1363 datasheet PDF was publicly retrievable to confirm
+ * bitfield meanings; treat each as a tuning candidate. */
 #ifndef SSD1363_INIT_CLOCK
 #define SSD1363_INIT_CLOCK 0x30
 #endif
