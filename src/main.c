@@ -8,6 +8,8 @@
 
 #include "esp_log.h"
 #include "esp_spiffs.h"
+#include "esp_system.h"
+#include "esp_sleep.h"
 
 #include "display/ssd1363.h"
 #include "kernel/msgbus.h"
@@ -161,8 +163,45 @@ void app_main(void)
 
     ESP_LOGI(TAG, "=== System Ready ===");
 
-    while (1) {
-        ESP_LOGI(TAG, "System running...");
-        vTaskDelay(pdMS_TO_TICKS(5000));
+    /* app_main owns process lifecycle: it performed startup ordering, so it
+     * also owns the reverse-ordered shutdown. Subscribe to the RPC bus and
+     * watch for the documented control commands. This makes the graceful
+     * shutdown chain genuinely reachable via the existing UART/RPC surface
+     * (see rpc_parse_line: "reboot" / "shutdown").
+     *
+     * The bus fans each message out to every subscriber's own queue, so this
+     * subscriber composes with any other TOP_RPC_CALL consumer (e.g. the UI
+     * RPC dispatcher) without contention. */
+    QueueHandle_t lifecycle_q = bus_make_queue(4);
+    if (lifecycle_q == NULL || bus_subscribe(TOP_RPC_CALL, lifecycle_q) != ESP_OK) {
+        ESP_LOGE(TAG, "lifecycle bus subscribe failed; shutdown RPC disabled");
+        while (1) {
+            vTaskDelay(portMAX_DELAY);
+        }
+    }
+
+    for (;;) {
+        msg_t m;
+        if (xQueueReceive(lifecycle_q, &m, portMAX_DELAY) != pdTRUE) {
+            continue;
+        }
+        if (m.topic != TOP_RPC_CALL) {
+            continue;
+        }
+        if (strcmp(m.u.rpc.method, "reboot") == 0) {
+            ESP_LOGW(TAG, "reboot requested via RPC");
+            system_shutdown();
+            esp_restart();
+            /* esp_restart() does not return. */
+        } else if (strcmp(m.u.rpc.method, "shutdown") == 0) {
+            ESP_LOGW(TAG, "shutdown requested via RPC; entering deep sleep");
+            system_shutdown();
+            /* No wake source configured: this is a graceful power-down that
+             * halts the CPU until an external reset. */
+            esp_deep_sleep_start();
+            /* esp_deep_sleep_start() does not return. */
+        }
+        /* Other RPC methods (e.g. set_bg) are handled by their own
+         * subscribers; ignore them here. */
     }
 }

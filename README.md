@@ -122,7 +122,17 @@ ui_app_stop → ui_stop → metrics_stop → rpc_stop → input_stop
 → kernel_stop_ticker → bus_deinit → store_deinit
 ```
 
-Funkci je možné zavolat z libovolného kontextu (např. RPC příkaz, deep-sleep handler).
+Spouští se přes RPC (UART, řádkové příkazy přes `rpc_parse_line`).
+`app_main` je vlastníkem životního cyklu: po startu odebírá `TOP_RPC_CALL`
+a reaguje na dva příkazy:
+
+- `reboot` → `system_shutdown()` a poté `esp_restart()`
+- `shutdown` → `system_shutdown()` a poté `esp_deep_sleep_start()` (deep
+  sleep bez wake source = řízené vypnutí do externího resetu)
+
+Subscriber běží přes message bus (fan-out do vlastní fronty), takže
+koexistuje s případným dalším konzumentem `TOP_RPC_CALL` (např. UI RPC
+dispatcher).
 
 Poznámka:
 - PlatformIO verze jsou v repu připnuté záměrně kvůli reprodukovatelným buildům a stabilním `sdkconfig`.

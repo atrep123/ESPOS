@@ -35,6 +35,14 @@ int rpc_parse_line(const char *line, msg_t *m)
         } else {
             snprintf(m->u.rpc.method, sizeof(m->u.rpc.method), "noop");
         }
+    } else if (strcmp(line, "reboot") == 0) {
+        /* Graceful restart: app_main stops all services via
+         * system_shutdown(), then esp_restart(). */
+        snprintf(m->u.rpc.method, sizeof(m->u.rpc.method), "reboot");
+    } else if (strcmp(line, "shutdown") == 0) {
+        /* Graceful power-down: app_main stops all services via
+         * system_shutdown(), then enters deep sleep (lowest power). */
+        snprintf(m->u.rpc.method, sizeof(m->u.rpc.method), "shutdown");
     } else {
         snprintf(m->u.rpc.method, sizeof(m->u.rpc.method), "noop");
     }
