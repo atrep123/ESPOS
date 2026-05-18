@@ -140,6 +140,227 @@
         "-DESPOS_WS2812_GPIO=8"
       ],
       "notes": "Filip's real \"C6L\" prop module. ESP32-C6 (RISC-V, WiFi6/BLE5/802.15.4) + Semtech SX1262 LoRa transceiver. NO display panel at all -> has_display=false, the UI designer does NOT apply; this entry exists purely to carry pins/peripherals/backend config and a buildable headless firmware env (ESPOS_NO_DISPLAY). PlatformIO has no dedicated M5Stamp-C6 board, so it uses the generic `esp32-c6-devkitm-1` ESP32-C6 board (same SoC, 4MB flash) -- this is the honest, pio-valid choice rather than a fabricated board id. SX1262 wired over SPI; single WS2812 on GPIO8. LoRa pin map is the typical Stamp-C6LoRa layout; confirm against the specific unit's silk before flashing radio firmware. Source: github.com/m5stack/M5_Hardware (Stamp-C6LoRa)."
+    },
+    {
+      "id": "m5stickc",
+      "label": "M5StickC original (ESP32-PICO, ST7735 80x160, AXP192)",
+      "platformio_board": "m5stick-c",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32",
+      "vendor": "M5Stack",
+      "has_display": true,
+      "display_profile": "tft_160x80_st7735",
+      "display": {
+        "w": 160,
+        "h": 80,
+        "depth": 16,
+        "driver": "ST7735S",
+        "bus": "spi",
+        "rotation_native": "portrait_80x160"
+      },
+      "pins": {
+        "tft_mosi": 15,
+        "tft_clk": 13,
+        "tft_dc": 23,
+        "tft_rst": 18,
+        "tft_cs": 5,
+        "i2c_sda": 21,
+        "i2c_scl": 22,
+        "btn_a": 37,
+        "btn_b": 39,
+        "ir_tx": 9,
+        "buzzer": 2,
+        "led_red": 10,
+        "grove_sda": 32,
+        "grove_scl": 33,
+        "mic_data": 34,
+        "pmic_irq": 35
+      },
+      "peripherals": [
+        "pmic_axp192",
+        "imu",
+        "ir",
+        "buzzer",
+        "button",
+        "rtc",
+        "microphone",
+        "grove"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_M5STICKC=1",
+        "-DESPOS_DISPLAY_DRIVER_ST7735=1",
+        "-DDISPLAY_W=160",
+        "-DDISPLAY_H=80",
+        "-DDISPLAY_SPI_MOSI_GPIO=15",
+        "-DDISPLAY_SPI_CLK_GPIO=13",
+        "-DDISPLAY_SPI_DC_GPIO=23",
+        "-DDISPLAY_SPI_RST_GPIO=18",
+        "-DDISPLAY_SPI_CS_GPIO=5",
+        "-DESPOS_PMIC_AXP192=1",
+        "-DESPOS_PMIC_I2C_SDA_GPIO=21",
+        "-DESPOS_PMIC_I2C_SCL_GPIO=22",
+        "-DESPOS_IMU_MPU6886=1"
+      ],
+      "notes": "ESP32-PICO-D4 StickC original. PlatformIO board id `m5stick-c` is the dedicated StickC entry and was verified in espressif32@6.12.0. Physical LCD is 80x160 portrait ST7735S; registry uses the existing landscape `tft_160x80_st7735` designer profile and records native portrait orientation. AXP192 supplies display/backlight rails and must be brought up over I2C before the TFT. IMU revisions may be MPU6886 or SH200Q on older units. Source: docs.m5stack.com/en/core/M5StickC."
+    },
+    {
+      "id": "m5stamp-s3",
+      "label": "M5Stamp-S3 (ESP32-S3, NO display, RGB LED)",
+      "platformio_board": "m5stack-stamps3",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32s3",
+      "vendor": "M5Stack",
+      "has_display": false,
+      "pins": {
+        "led_ws2812": 21,
+        "btn": 0,
+        "uart_tx": 43,
+        "uart_rx": 44
+      },
+      "peripherals": [
+        "ws2812",
+        "wifi",
+        "ble",
+        "button"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_M5STAMP_S3=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1",
+        "-DESPOS_WS2812_GPIO=21"
+      ],
+      "notes": "ESP32-S3FN8 Stamp module with no display panel, one WS2812B-2020 RGB LED on GPIO21, and download/user button on GPIO0. Dedicated PlatformIO board id `m5stack-stamps3` was verified in espressif32@6.12.0. Source: docs.m5stack.com/en/core/StampS3."
+    },
+    {
+      "id": "m5atoms3",
+      "label": "M5AtomS3 (ESP32-S3, 128x128 GC9107 LCD, profile pending)",
+      "platformio_board": "m5stack-atoms3",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32s3",
+      "vendor": "M5Stack",
+      "has_display": false,
+      "pins": {
+        "tft_mosi": 21,
+        "tft_clk": 17,
+        "tft_cs": 15,
+        "tft_dc": 33,
+        "tft_rst": 34,
+        "tft_bl": 16,
+        "i2c_sda": 38,
+        "i2c_scl": 39,
+        "btn": 41,
+        "ir_tx": 4,
+        "grove_sda": 2,
+        "grove_scl": 1
+      },
+      "peripherals": [
+        "imu",
+        "ir",
+        "button",
+        "grove",
+        "wifi",
+        "ble"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_M5ATOMS3=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1"
+      ],
+      "notes": "ESP32-S3 AtomS3 with 128x128 GC9107 color LCD and MPU6886 IMU. Dedicated PlatformIO board id `m5stack-atoms3` was verified in espressif32@6.12.0. `HARDWARE_PROFILES` has no matching 128x128 RGB LCD profile (the existing 128x128 key is 1bpp SH1107 OLED), so this entry is intentionally marked has_display=false until a real GC9107 profile exists. Source: docs.m5stack.com/en/core/AtomS3."
+    },
+    {
+      "id": "m5atom-lite",
+      "label": "M5Atom-Lite (ESP32-PICO, NO display, RGB LED)",
+      "platformio_board": "m5stack-atom",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32",
+      "vendor": "M5Stack",
+      "has_display": false,
+      "pins": {
+        "led_ws2812": 27,
+        "btn": 39,
+        "ir_tx": 12,
+        "i2c_sda": 25,
+        "i2c_scl": 21,
+        "grove_sda": 26,
+        "grove_scl": 32
+      },
+      "peripherals": [
+        "ws2812",
+        "ir",
+        "button",
+        "grove",
+        "wifi",
+        "ble"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_M5ATOM_LITE=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1",
+        "-DESPOS_WS2812_GPIO=27",
+        "-DESPOS_WS2812_COUNT=1"
+      ],
+      "notes": "ESP32-PICO-D4 Atom Lite with no display panel. PlatformIO board id `m5stack-atom` covers the Atom Lite/Matrix family and was verified in espressif32@6.12.0. Official Atom Lite hardware has one SK6812/WS2812-compatible RGB LED on GPIO27; the 5x5 RGB matrix is Atom Matrix hardware on the same shared PlatformIO id, not this Lite entry. Source: docs.m5stack.com/en/core/ATOM%20Lite."
+    },
+    {
+      "id": "esp32-c6-devkitc-1",
+      "label": "Espressif ESP32-C6-DevKitC-1 (reference, NO display, RGB LED)",
+      "platformio_board": "esp32-c6-devkitc-1",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32c6",
+      "vendor": "Espressif",
+      "has_display": false,
+      "pins": {
+        "led_ws2812": 8,
+        "btn_boot": 9,
+        "uart_tx": 16,
+        "uart_rx": 17
+      },
+      "peripherals": [
+        "ws2812",
+        "wifi",
+        "ble",
+        "button"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_ESP32_C6_DEVKITC_1=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1",
+        "-DESPOS_WS2812_GPIO=8"
+      ],
+      "notes": "Generic Espressif ESP32-C6-DevKitC-1 target, distinct from the M5Stamp-C6LoRa registry entry. Dedicated PlatformIO board id `esp32-c6-devkitc-1` was verified in espressif32@6.12.0. The on-board addressable RGB LED is GPIO8 and UART0 defaults to GPIO16/GPIO17. Source: docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitc-1/user_guide.html."
+    },
+    {
+      "id": "esp32-wroom-32e-ue",
+      "label": "ESP32-WROOM-32E/UE Dev Module (classic esp32dev, NO display)",
+      "platformio_board": "esp32dev",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32",
+      "vendor": "Espressif",
+      "has_display": false,
+      "pins": {
+        "uart_tx": 1,
+        "uart_rx": 3,
+        "i2c_sda": 21,
+        "i2c_scl": 22,
+        "spi_sck": 18,
+        "spi_miso": 19,
+        "spi_mosi": 23,
+        "spi_cs": 5,
+        "btn_boot": 0,
+        "led_status": 2
+      },
+      "peripherals": [
+        "wifi",
+        "ble",
+        "button"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_ESP32DEV=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1"
+      ],
+      "notes": "Classic ESP32-WROOM-32E/32UE dev-module target using PlatformIO `esp32dev`, verified in espressif32@6.12.0. GPIO1/GPIO3 are UART0, GPIO21/GPIO22 are the common I2C defaults, and GPIO18/19/23/5 are the common VSPI defaults. GPIO2 LED is common on many ESP32 DevKitC-style modules but not guaranteed across clones. Source: docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html."
     }
   ]
 }
