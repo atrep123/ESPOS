@@ -609,8 +609,12 @@ void ui_render_icon(const UiWidget *w, const UiDrawOps *ops)
         ui_draw_border_style(ops, w->x, w->y, w->width, w->height, bstyle, border);
     }
 
+    /* Icon glyph source: prefer the dedicated icon_char field (set by the
+     * designer for icon widgets); fall back to text for back-compat. */
+    const char *glyph = (w->icon_char && w->icon_char[0]) ? w->icon_char : w->text;
+
 #if HAVE_ICONS
-    if (ops->blit_mono && w->text && w->text[0]) {
+    if (ops->blit_mono && glyph && glyph[0]) {
         int inset = w->border ? 1 : 0;
         int pad = 1;
         int ix = (int)w->x + inset + pad;
@@ -620,7 +624,7 @@ void ui_render_icon(const UiWidget *w, const UiDrawOps *ops)
 
         if (iw >= 16 && ih >= 16) {
             uint8_t want = (iw >= 24 && ih >= 24) ? 24 : 16;
-            const icon_t *ic = icons_find(w->text, want);
+            const icon_t *ic = icons_find(glyph, want);
             if (ic != NULL && ic->width <= (uint16_t)iw && ic->height <= (uint16_t)ih) {
                 int dx = ix;
                 if (w->align == UI_ALIGN_CENTER) {
@@ -647,7 +651,7 @@ void ui_render_icon(const UiWidget *w, const UiDrawOps *ops)
 #endif
 
     if (ops->draw_text && w->height >= UI_FONT_CHAR_H) {
-        const char *s = (w->text && w->text[0]) ? w->text : "?";
+        const char *s = (glyph && glyph[0]) ? glyph : "?";
         char buf[2] = { s[0], '\0' };
         int inset = w->border ? 1 : 0;
         int pad = 1;
@@ -727,8 +731,13 @@ void ui_render_chart(const UiWidget *w, const UiDrawOps *ops)
         ops->draw_vline(ops->ctx, chart_x + chart_w, chart_y, chart_h + 1, ui_gray4_add(bg, 1));
     }
 
+    /* Data source: real authored series (data_points) when present,
+     * otherwise a synthetic sweep derived from value/min/max. */
+    const int16_t *series = w->data_points;
+    int series_n = (series != NULL) ? (int)w->data_count : 0;
+
     /* Data bars with Bayer-dithered gradient + bright cap */
-    int bars = 6;
+    int bars = (series_n > 0) ? series_n : 6;
     int gap = 2;
     int bar_w = (chart_w - (gap * (bars - 1))) / bars;
     if (bar_w < 1) bar_w = 1;
@@ -743,7 +752,16 @@ void ui_render_chart(const UiWidget *w, const UiDrawOps *ops)
     int max_bh = 0;
     int max_bi = 0;
     for (int i = 0; i < bars; ++i) {
-        int v = (base + i * 11) % (range + 1);
+        int v;
+        if (series_n > 0) {
+            /* Map the i-th sample (clamped to [min,max]) to bar height. */
+            int sv = (int)series[i] - w->min_value;
+            if (sv < 0) sv = 0;
+            if (sv > range) sv = range;
+            v = sv;
+        } else {
+            v = (base + i * 11) % (range + 1);
+        }
         int bh = (int)(((int64_t)v * (chart_h - 2)) / range);
         int bx = chart_x + 1 + i * (bar_w + gap);
         int by = chart_y + chart_h - 1 - bh;

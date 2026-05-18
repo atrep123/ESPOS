@@ -79,6 +79,9 @@ typedef struct {
     const char *text;
     const char *constraints_json; /* optional constraints metadata */
     const char *animations_csv;   /* optional animations list */
+    const char *icon_char;        /* optional icon glyph/name for UIW_ICON */
+    const int16_t *data_points;   /* optional chart series (UIW_CHART); NULL if unset */
+    uint16_t data_count;          /* number of entries in data_points (0 if none) */
 
     /* Extended styling/state */
     uint8_t  fg;            /* 0..15 (4bpp gray); 0/1 also OK for 1bpp */

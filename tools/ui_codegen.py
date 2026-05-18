@@ -221,6 +221,30 @@ def build_string_pool(values: list[str], *, symbol_prefix: str) -> StringPool:
     return StringPool(mapping=mapping, decls=decls)
 
 
+_DATA_POINTS_MAX = 128  # mirrors validate_design.py Rule 101 (sub-pixel beyond 128)
+
+
+def chart_data_points(widget: dict[str, Any]) -> list[int]:
+    """Return the chart series clamped to int16 and capped at _DATA_POINTS_MAX.
+
+    Only meaningful for chart widgets; callers gate on widget type. Non-numeric
+    or boolean entries are skipped so generated C always compiles.
+    """
+    raw = widget.get("data_points")
+    if not isinstance(raw, list) or not raw:
+        return []
+    out: list[int] = []
+    for v in raw:
+        if isinstance(v, bool):
+            continue
+        if not isinstance(v, (int, float)):
+            continue
+        out.append(_clamp(int(v), -32768, 32767))
+        if len(out) >= _DATA_POINTS_MAX:
+            break
+    return out
+
+
 def select_scene(data: dict[str, Any], prefer_name: str) -> tuple[str, dict[str, Any]]:
     scenes = data.get("scenes", {})
     if isinstance(scenes, dict):
@@ -261,8 +285,9 @@ def collect_widget_strings(widget: dict[str, Any]) -> list[str]:
         anims = widget.get("animations")
         if isinstance(anims, list) and anims:
             anim_csv = ";".join([str(x) for x in anims])
+    icon_char = str(widget.get("icon_char", "") or "")
     out: list[str] = []
-    for s in (widget_id, text, constraints, anim_csv):
+    for s in (widget_id, text, constraints, anim_csv, icon_char):
         if s:
             out.append(s)
     return out
@@ -329,6 +354,36 @@ def _widgets_in_paint_order(widgets: list[Any]) -> list[Any]:
     return ordered
 
 
+def build_data_point_arrays(
+    widgets: list[Any], *, symbol_prefix: str
+) -> tuple[list[str], dict[int, str]]:
+    """Emit per-chart ``static const int16_t`` data arrays.
+
+    Returns ``(decls, by_id)`` where ``by_id`` maps ``id(widget_dict)`` to the
+    C symbol of its array. Arrays are emitted in widget order so the generated
+    C is deterministic. Charts without numeric data produce no array (the
+    widget keeps ``data_points = NULL``).
+    """
+    decls: list[str] = []
+    by_id: dict[int, str] = {}
+    seq = 0
+    for w in widgets:
+        if not isinstance(w, dict):
+            continue
+        if str(w.get("type", "")).lower() != "chart":
+            continue
+        pts = chart_data_points(w)
+        if not pts:
+            continue
+        name = f"{symbol_prefix}{seq}"
+        seq += 1
+        by_id[id(w)] = name
+        decls.append(
+            f"static const int16_t {name}[] = {{ {', '.join(str(v) for v in pts)} }};"
+        )
+    return decls, by_id
+
+
 def generate_ui_design_pair(
     json_path: Path, *, scene_name: str, source_label: str
 ) -> tuple[str, str]:
@@ -393,6 +448,11 @@ def generate_ui_design_pair(
     else:
         c_lines.append("/* (empty) */")
     c_lines.append("")
+    dp_decls, dp_by_id = build_data_point_arrays(widgets, symbol_prefix="dp_")
+    if dp_decls:
+        c_lines.append("/* Chart data series */")
+        c_lines.extend(dp_decls)
+        c_lines.append("")
     c_lines.append("/* Widget definitions */")
     if not widgets or not any(isinstance(w, dict) for w in widgets):
         c_lines.append("static const UiWidget widgets[] = {")
@@ -439,10 +499,15 @@ def generate_ui_design_pair(
             if isinstance(anims, list) and anims:
                 anim_csv = ";".join([str(x) for x in anims])
 
+        icon_char = str(w.get("icon_char", "") or "")
+
         id_ref = pool.mapping.get(widget_id, "") if widget_id else ""
         text_ref = pool.mapping.get(text, "") if text else ""
         c_ref = pool.mapping.get(constraints, "") if constraints else ""
         a_ref = pool.mapping.get(anim_csv, "") if anim_csv else ""
+        ic_ref = pool.mapping.get(icon_char, "") if icon_char else ""
+        dp_ref = dp_by_id.get(id(w), "")
+        dp_count = len(chart_data_points(w)) if dp_ref else 0
 
         fg = parse_gray4(w.get("color_fg", ""), default=15)
         bg = parse_gray4(w.get("color_bg", ""), default=0)
@@ -467,6 +532,9 @@ def generate_ui_design_pair(
         c_lines.append(f"        .text = {text_ref if text_ref else 'NULL'},")
         c_lines.append(f"        .constraints_json = {c_ref if c_ref else 'NULL'},")
         c_lines.append(f"        .animations_csv = {a_ref if a_ref else 'NULL'},")
+        c_lines.append(f"        .icon_char = {ic_ref if ic_ref else 'NULL'},")
+        c_lines.append(f"        .data_points = {dp_ref if dp_ref else 'NULL'},")
+        c_lines.append(f"        .data_count = {dp_count},")
         c_lines.append(f"        .fg = {fg}, .bg = {bg},")
         c_lines.append(f"        .border_style = {border_style},")
         c_lines.append(f"        .align = {align}, .valign = {valign},")
@@ -548,6 +616,11 @@ def generate_scenes_header(
             pass
 
         lines.append(f"/* Scene: {scene_name} ({width}x{height}) */")
+        dp_decls, dp_by_id = build_data_point_arrays(
+            widgets, symbol_prefix=f"{safe}_dp_"
+        )
+        if dp_decls:
+            lines.extend(dp_decls)
         lines.append(f"static const UiWidget {safe}_widgets[] = {{")
         if not widgets or not any(isinstance(w, dict) for w in widgets):
             lines.append("    {0}  /* empty sentinel */")
@@ -585,11 +658,15 @@ def generate_scenes_header(
                 anims = w.get("animations")
                 if isinstance(anims, list) and anims:
                     anim_csv = ";".join([str(x) for x in anims])
+            icon_char = str(w.get("icon_char", "") or "")
 
             id_ref = pool.mapping.get(widget_id, "") if widget_id else ""
             text_ref = pool.mapping.get(text, "") if text else ""
             c_ref = pool.mapping.get(constraints, "") if constraints else ""
             a_ref = pool.mapping.get(anim_csv, "") if anim_csv else ""
+            ic_ref = pool.mapping.get(icon_char, "") if icon_char else ""
+            dp_ref = dp_by_id.get(id(w), "")
+            dp_count = len(chart_data_points(w)) if dp_ref else 0
 
             fg = parse_gray4(w.get("color_fg", ""), default=15)
             bg = parse_gray4(w.get("color_bg", ""), default=0)
@@ -614,6 +691,9 @@ def generate_scenes_header(
             lines.append(f"        .text = {text_ref if text_ref else 'NULL'},")
             lines.append(f"        .constraints_json = {c_ref if c_ref else 'NULL'},")
             lines.append(f"        .animations_csv = {a_ref if a_ref else 'NULL'},")
+            lines.append(f"        .icon_char = {ic_ref if ic_ref else 'NULL'},")
+            lines.append(f"        .data_points = {dp_ref if dp_ref else 'NULL'},")
+            lines.append(f"        .data_count = {dp_count},")
             lines.append(f"        .fg = {fg}, .bg = {bg},")
             lines.append(f"        .border_style = {border_style},")
             lines.append(f"        .align = {align}, .valign = {valign},")
@@ -647,7 +727,12 @@ def generate_scenes_header(
     return "\n".join(lines)
 
 
-def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
+def _emit_widget(
+    w: dict[str, Any],
+    idx: int,
+    pool: StringPool,
+    dp_by_id: dict[int, str] | None = None,
+) -> list[str]:
     """Return C initializer lines for a single UiWidget."""
     lines: list[str] = []
     wtype = WIDGET_TYPE_MAP.get(str(w.get("type", "label")).lower(), "UIW_LABEL")
@@ -670,10 +755,15 @@ def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
         if isinstance(anims, list) and anims:
             anim_csv = ";".join([str(a) for a in anims])
 
+    icon_char = str(w.get("icon_char", "") or "")
+
     id_ref = pool.mapping.get(widget_id, "") if widget_id else ""
     text_ref = pool.mapping.get(text, "") if text else ""
     c_ref = pool.mapping.get(constraints, "") if constraints else ""
     a_ref = pool.mapping.get(anim_csv, "") if anim_csv else ""
+    ic_ref = pool.mapping.get(icon_char, "") if icon_char else ""
+    dp_ref = (dp_by_id or {}).get(id(w), "")
+    dp_count = len(chart_data_points(w)) if dp_ref else 0
 
     fg = parse_gray4(w.get("color_fg", ""), default=15)
     bg = parse_gray4(w.get("color_bg", ""), default=0)
@@ -696,6 +786,9 @@ def _emit_widget(w: dict[str, Any], idx: int, pool: StringPool) -> list[str]:
     lines.append(f"        .text = {text_ref if text_ref else 'NULL'},")
     lines.append(f"        .constraints_json = {c_ref if c_ref else 'NULL'},")
     lines.append(f"        .animations_csv = {a_ref if a_ref else 'NULL'},")
+    lines.append(f"        .icon_char = {ic_ref if ic_ref else 'NULL'},")
+    lines.append(f"        .data_points = {dp_ref if dp_ref else 'NULL'},")
+    lines.append(f"        .data_count = {dp_count},")
     lines.append(f"        .fg = {fg}, .bg = {bg},")
     lines.append(f"        .border_style = {bs},")
     lines.append(f"        .align = {al}, .valign = {va},")
@@ -768,13 +861,18 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
         height = as_uint16(scene_data.get("height", 64), 64)
 
         c.append(f"/* Scene: {escape_c_comment(scene_name)} ({len(widgets)} widgets) */")
+        dp_decls, dp_by_id = build_data_point_arrays(
+            widgets, symbol_prefix=f"{safe}_dp_"
+        )
+        if dp_decls:
+            c.extend(dp_decls)
         c.append(f"static const UiWidget {safe}_widgets[] = {{")
         has_widgets = any(isinstance(w, dict) for w in widgets)
         if not has_widgets:
             c.append("    {0}  /* empty sentinel */")
         for idx, w in enumerate(widgets):
             if isinstance(w, dict):
-                c.extend(_emit_widget(w, idx, pool))
+                c.extend(_emit_widget(w, idx, pool, dp_by_id))
         c.append("};")
         c.append("")
 
