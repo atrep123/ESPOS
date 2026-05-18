@@ -98,6 +98,63 @@ testpaths = ["tests"]
 timeout = 300
 timeout_method = "thread"
 
+[tool.coverage.run]
+# Scope coverage to the real product code ONLY. Previously CI used `--cov=.`
+# with NO [tool.coverage] section anywhere, so coverage.py instrumented and
+# retained line-data for the ENTIRE working tree — including `.venv`
+# site-packages, `.pio`, `output/`, and the 2.7MB test corpus itself. Under
+# `-n auto` that whole-tree coverage map was duplicated across one worker per
+# logical CPU (32 on the dev host), which is the dominant contributor to the
+# 100+GB-per-process memory blow-up. Restricting `source` to the actual
+# packages bounds the coverage data set to a few thousand product lines per
+# worker regardless of host core count.
+source = [
+    "cyberpunk_designer",
+    "tools",
+    "ui_models.py",
+    "ui_designer.py",
+    "ui_template_manager.py",
+    "shared_undo_redo.py",
+    "event_manager.py",
+    "design_tokens.py",
+    "constants.py",
+]
+branch = true
+parallel = true
+omit = [
+    "*/.venv/*",
+    "*/.pio/*",
+    "*/.platformio-local/*",
+    "*/tests/*",
+    "*/output/*",
+    "*/build/*",
+    "*/dist/*",
+    "*/generated/*",
+    "*/__pycache__/*",
+    ".claude/*",
+    "demo_screenshot.py",
+    "verify_all_visual.py",
+]
+
+[tool.coverage.report]
+# HONEST gate. The prior `--cov-fail-under=97` was a manufactured number: the
+# test/CI audit found ~23% of test LOC (19 `test_coverage_push*.py` files,
+# 14,388 LOC) existed solely to force `except: pass` lines and self-admitted
+# dead-code branches, with no behavioral assertions. With coverage now scoped
+# to product code and the padding no longer counted against an inflated whole-
+# tree denominator, 80% is a defensible floor that real behavioral tests can
+# sustain without resorting to vanity padding. The number was LOWERED to a
+# truthful, enforceable value — never raise it by adding assertion-free tests.
+# See docs/coverage_policy.md for the full rationale.
+fail_under = 80
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
 [tool.mutmut]
 paths_to_mutate = "cyberpunk_designer/"
 tests_dir = "tests/"

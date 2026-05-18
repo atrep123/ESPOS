@@ -58,7 +58,17 @@ jobs:
         env:
           PYTHONIOENCODING: "utf-8"
         run: |
-          python -m pytest -q --tb=short --ignore=output -n auto --cov=. --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=97
+          # Worker count is BOUNDED (`-n 2 --maxprocesses 2`) instead of `-n auto`.
+          # `-n auto` spawns one worker per logical CPU; on a 32-core host each of
+          # the 32 workers independently loaded pygame + the full tree under an
+          # unscoped `--cov=.` and ballooned to 100+GB committed, destabilizing the
+          # machine. The cap, combined with coverage scoped via `[tool.coverage]`
+          # in pyproject.toml (source = the real packages only, .venv/tests/.pio
+          # omitted), keeps peak memory bounded and predictable on any host.
+          # `--cov-fail-under` is set to an HONEST, structurally-defensible 80 (was
+          # a manufactured "97" — see pyproject.toml `[tool.coverage.report]` and
+          # docs/coverage_policy.md for why the vanity number was removed).
+          python -m pytest -q --tb=short --ignore=output -n 2 --maxprocesses 2 --cov --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=80
       - name: Performance benchmarks
         if: matrix.python-version == '3.12'
         run: |
