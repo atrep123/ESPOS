@@ -1,0 +1,23 @@
+# ESP32OS UI Toolkit — MCP server dependency (optional add-on layer)
+#
+# `python -m espos_mcp` runs a Model Context Protocol (stdio) server that
+# exposes the real espos library (scenes, widgets, the #36 logic model, the
+# board registry, the validator, C/SVG export, and the integrated PlatformIO
+# build/flash) to any MCP client — an external orchestrator, an IDE agent,
+# etc. This makes the embedded workflow drivable end-to-end by an automation
+# layer without that layer reaching into espos internals.
+#
+# It is kept in a SEPARATE requirements file (not folded into the core
+# requirements.txt) because the MCP server is an optional integration surface:
+# the designer, validator, codegen and build/flash all work without it. Mirror
+# of how the integrated toolchain documents `platformio` in requirements.txt
+# (a managed dependency with an actionable, single `pip install` hint —
+# `espos_mcp.server` raises one if `mcp` is missing).
+#
+# Install (does not pull in the core deps; combine with requirements.txt for a
+# full environment):
+#     pip install -r requirements-mcp.txt
+#
+# The official Model Context Protocol Python SDK (FastMCP server API:
+# `from mcp.server.fastmcp import FastMCP`).
+mcp>=1.2,<2

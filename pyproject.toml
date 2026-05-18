@@ -68,6 +68,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "scripts/*.py" = ["E402"]
 "tools/*.py" = ["E402"]
+# The MCP server bootstraps sys.path with the repo root before importing the
+# espos library modules (identical pattern to tools/*.py above).
+"espos_mcp/*.py" = ["E402"]
 "verify_all_visual.py" = ["E402"]
 "ui_designer.py" = ["E402"]
 

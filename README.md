@@ -49,7 +49,56 @@ label, button, panel, box, textbox, checkbox, radiobutton, progressbar, slider, 
 | `tools/` | Export & validation utilities |
 | `src/` | ESP32 firmware (C, PlatformIO) |
 | `schemas/` | JSON schema for design files |
+| `espos_mcp/` | MCP server exposing the toolkit to any MCP client |
 | `tests/` | Python test suite (pytest) |
+
+### MCP server (drive espos from an automation/agent layer)
+
+`espos_mcp/` is a [Model Context Protocol](https://modelcontextprotocol.io)
+server (stdio transport, built on the official `mcp` Python SDK) that exposes
+the **real** toolkit — scene/widget CRUD, the events/rules logic model, the
+board registry, the schema validator, C/SVG export, and the integrated
+PlatformIO build/flash — as well-typed tools. Every tool is a thin wrapper
+over a genuine espos library function; nothing is simulated.
+
+```bash
+# Install the optional MCP dependency (separate from core requirements.txt)
+python -m pip install -r requirements-mcp.txt
+
+# Inspect the tool inventory (no server loop)
+python -m espos_mcp --list-tools
+
+# Run the server (an MCP client spawns this and talks to it over stdio)
+python -m espos_mcp
+```
+
+Tools: `list_scenes`, `get_scene`, `add_scene`, `delete_scene`, `add_widget`,
+`set_widget`, `delete_widget`, `set_widget_event`, `add_rule`, `list_boards`,
+`set_board`, `validate_design`, `export_c`, `export_svg_scene`,
+`toolchain_status`, `build`, `flash`. Each operates on a design JSON path
+argument (default `main_scene.json`); mutations are schema-validated with the
+real validator and written atomically.
+
+Point any MCP client at it with this generic config (Šumílek is one such
+client — configure it on the client side; espos stays generic and never
+couples to it):
+
+```jsonc
+{
+  "mcpServers": {
+    "espos": {
+      "command": "python",
+      "args": ["-m", "espos_mcp"],
+      // Run from the espos repo root (or an absolute path to it) so the
+      // server resolves designs and the bundled toolchain correctly.
+      "cwd": "/absolute/path/to/espos"
+    }
+  }
+}
+```
+
+If `python` is not the interpreter that has the deps, use its absolute path
+(e.g. the project venv's `python`/`python.exe`) as `command`.
 
 ---
 Repo je záměrně osekaný na “embedded OS UI” cestu:
