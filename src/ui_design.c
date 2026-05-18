@@ -3,106 +3,82 @@
 #include "ui_design.h"
 
 /* String pool */
-static const char str_0[] = "status_bar.left";
+static const char str_0[] = "main.title";
 static const char str_1[] = "ESP32OS";
-static const char str_2[] = "status_bar.right";
-static const char str_3[] = "menu.panel";
-static const char str_4[] = "menu.title";
-static const char str_5[] = "Menu";
-static const char str_6[] = "menu.scroll";
-static const char str_7[] = "1/3";
-static const char str_8[] = "menu.item0";
-static const char str_9[] = "Display";
-static const char str_10[] = "menu.item1";
-static const char str_11[] = "Inputs";
-static const char str_12[] = "menu.item2";
-static const char str_13[] = "About";
-static const char str_14[] = "menu.item3";
-static const char str_15[] = "menu.item4";
-static const char str_16[] = "list.panel";
-static const char str_17[] = "list.title";
-static const char str_18[] = "list.scroll";
-static const char str_19[] = "1/12";
-static const char str_20[] = "list.item0";
-static const char str_21[] = "list.item0.label";
-static const char str_22[] = "Contrast";
-static const char str_23[] = "list.item0.value";
-static const char str_24[] = "0";
-static const char str_25[] = "list.item1";
-static const char str_26[] = "list.item1.label";
-static const char str_27[] = "Invert";
-static const char str_28[] = "list.item1.value";
-static const char str_29[] = "off";
-static const char str_30[] = "list.item2";
-static const char str_31[] = "list.item2.label";
-static const char str_32[] = "ColOffset";
-static const char str_33[] = "list.item2.value";
-static const char str_34[] = "list.item3";
-static const char str_35[] = "list.item3.label";
-static const char str_36[] = "list.item3.value";
-static const char str_37[] = "list.item4";
-static const char str_38[] = "list.item4.label";
-static const char str_39[] = "list.item4.value";
-static const char str_40[] = "edit.panel";
-static const char str_41[] = "edit.title";
-static const char str_42[] = "Edit";
-static const char str_43[] = "edit.hint";
-static const char str_44[] = "UP/DOWN adjust  B back";
-static const char str_45[] = "edit_contrast.value";
-static const char str_46[] = "bind=contrast;kind=int;min=0;max=255;step=8;suffix= /255";
-static const char str_47[] = "edit_invert.value";
-static const char str_48[] = "bind=invert;kind=bool;values=off|on";
-static const char str_49[] = "edit_col_offset.value";
-static const char str_50[] = "bind=col_offset;kind=int;min=0;max=16;step=1;suffix= px";
-static const char str_51[] = "toast.panel";
-static const char str_52[] = "toast.message";
-static const char str_53[] = "Toast";
-static const char str_54[] = "settings.title";
-static const char str_55[] = "Settings";
-static const char str_56[] = "settings.scene_ind";
-static const char str_57[] = "2/3";
-static const char str_58[] = "set.contrast.label";
-static const char str_59[] = "set.contrast";
-static const char str_60[] = "bind=contrast";
-static const char str_61[] = "set.invert.label";
-static const char str_62[] = "set.invert";
-static const char str_63[] = "bind=invert";
-static const char str_64[] = "set.coloffset.label";
-static const char str_65[] = "set.coloffset";
-static const char str_66[] = "bind=col_offset";
-static const char str_67[] = "settings.hint";
-static const char str_68[] = "A=edit  B=back  C=next";
-static const char str_69[] = "settings.status";
-static const char str_70[] = "metrics.title";
-static const char str_71[] = "Metrics";
-static const char str_72[] = "metrics.scene_ind";
-static const char str_73[] = "3/3";
-static const char str_74[] = "metrics.heap.label";
-static const char str_75[] = "Heap";
-static const char str_76[] = "metrics.heap";
-static const char str_77[] = "75%";
-static const char str_78[] = "metrics.minheap.label";
-static const char str_79[] = "MinHeap";
-static const char str_80[] = "metrics.minheap";
-static const char str_81[] = "50%";
-static const char str_82[] = "metrics.uptime.label";
-static const char str_83[] = "Uptime";
-static const char str_84[] = "metrics.uptime";
-static const char str_85[] = "metrics.chart.label";
-static const char str_86[] = "History";
-static const char str_87[] = "metrics.chart";
-static const char str_88[] = "metrics.free_text";
-static const char str_89[] = "Free: --";
-static const char str_90[] = "metrics.min_text";
-static const char str_91[] = "Min: --";
-static const char str_92[] = "metrics.hint";
-static const char str_93[] = "B=back  C=next";
+static const char str_2[] = "main.scene_ind";
+static const char str_3[] = "1/4";
+static const char str_4[] = "main.panel";
+static const char str_5[] = "main.brand";
+static const char str_6[] = "main.subtitle";
+static const char str_7[] = "embedded UI";
+static const char str_8[] = "main.hint";
+static const char str_9[] = "B=back  C=next";
+static const char str_10[] = "toast.panel";
+static const char str_11[] = "toast.message";
+static const char str_12[] = "Toast";
+static const char str_13[] = "menu.title";
+static const char str_14[] = "Menu";
+static const char str_15[] = "menu.scene_ind";
+static const char str_16[] = "2/4";
+static const char str_17[] = "menu.panel";
+static const char str_18[] = "menu.scroll";
+static const char str_19[] = "1/3";
+static const char str_20[] = "menu.item0";
+static const char str_21[] = "Display";
+static const char str_22[] = "menu.item1";
+static const char str_23[] = "Inputs";
+static const char str_24[] = "menu.item2";
+static const char str_25[] = "About";
+static const char str_26[] = "menu.hint";
+static const char str_27[] = "A=select  B=back  C=next";
+static const char str_28[] = "settings.title";
+static const char str_29[] = "Settings";
+static const char str_30[] = "settings.scene_ind";
+static const char str_31[] = "3/4";
+static const char str_32[] = "set.contrast.label";
+static const char str_33[] = "Contrast";
+static const char str_34[] = "set.contrast";
+static const char str_35[] = "bind=contrast";
+static const char str_36[] = "set.invert.label";
+static const char str_37[] = "Invert";
+static const char str_38[] = "set.invert";
+static const char str_39[] = "bind=invert";
+static const char str_40[] = "set.coloffset.label";
+static const char str_41[] = "ColOffset";
+static const char str_42[] = "set.coloffset";
+static const char str_43[] = "bind=col_offset";
+static const char str_44[] = "settings.hint";
+static const char str_45[] = "A=edit  B=back  C=next";
+static const char str_46[] = "settings.status";
+static const char str_47[] = "metrics.title";
+static const char str_48[] = "Metrics";
+static const char str_49[] = "metrics.scene_ind";
+static const char str_50[] = "4/4";
+static const char str_51[] = "metrics.heap.label";
+static const char str_52[] = "Heap";
+static const char str_53[] = "metrics.heap";
+static const char str_54[] = "75%";
+static const char str_55[] = "metrics.minheap.label";
+static const char str_56[] = "MinHeap";
+static const char str_57[] = "metrics.minheap";
+static const char str_58[] = "50%";
+static const char str_59[] = "metrics.uptime.label";
+static const char str_60[] = "Uptime";
+static const char str_61[] = "metrics.uptime";
+static const char str_62[] = "metrics.chart.label";
+static const char str_63[] = "History";
+static const char str_64[] = "metrics.chart";
+static const char str_65[] = "metrics.free_text";
+static const char str_66[] = "Free: --";
+static const char str_67[] = "metrics.min_text";
+static const char str_68[] = "Min: --";
+static const char str_69[] = "metrics.hint";
 
-/* Scene: main (38 widgets) */
+/* Scene: main (9 widgets) */
 static const UiWidget main_widgets[] = {
     { /* [0] UIW_PANEL "" */
         .type = UIW_PANEL,
-        .x = 8, .y = 16, .width = 246, .height = 16,
+        .x = 0, .y = 0, .width = 256, .height = 14,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = NULL,
@@ -112,13 +88,13 @@ static const UiWidget main_widgets[] = {
         .fg = 15, .bg = 0,
         .border_style = UI_BORDER_SINGLE,
         .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 0,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_NONE,
         .visible = 1, .enabled = 1,
     },
     { /* [1] UIW_LABEL "ESP32OS" */
         .type = UIW_LABEL,
-        .x = 8, .y = 40, .width = 160, .height = 16,
+        .x = 2, .y = 0, .width = 150, .height = 14,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_0,
@@ -132,44 +108,28 @@ static const UiWidget main_widgets[] = {
         .style = UI_STYLE_BOLD,
         .visible = 1, .enabled = 1,
     },
-    { /* [2] UIW_LABEL "status_bar.right" */
+    { /* [2] UIW_LABEL "1/4" */
         .type = UIW_LABEL,
-        .x = 8, .y = 64, .width = 84, .height = 16,
+        .x = 200, .y = 0, .width = 54, .height = 14,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_2,
-        .text = NULL,
+        .text = str_3,
         .constraints_json = NULL,
         .animations_csv = NULL,
-        .fg = 14, .bg = 0,
+        .fg = 8, .bg = 0,
         .border_style = UI_BORDER_NONE,
         .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_NONE,
         .visible = 1, .enabled = 1,
     },
-    { /* [3] UIW_PANEL "" */
+    { /* [3] UIW_PANEL "main.panel" */
         .type = UIW_PANEL,
-        .x = 8, .y = 88, .width = 246, .height = 38,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = NULL,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 15, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 0,
-        .style = UI_STYLE_NONE,
-        .visible = 1, .enabled = 1,
-    },
-    { /* [4] UIW_PANEL "menu.panel" */
-        .type = UIW_PANEL,
-        .x = 8, .y = 208, .width = 240, .height = 104,
+        .x = 4, .y = 18, .width = 248, .height = 70,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_3,
+        .id = str_4,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -180,124 +140,144 @@ static const UiWidget main_widgets[] = {
         .style = UI_STYLE_NONE,
         .visible = 1, .enabled = 1,
     },
-    { /* [5] UIW_LABEL "Menu" */
+    { /* [4] UIW_LABEL "ESP32OS" */
         .type = UIW_LABEL,
-        .x = 8, .y = 320, .width = 172, .height = 16,
+        .x = 12, .y = 32, .width = 232, .height = 18,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_4,
-        .text = str_5,
+        .id = str_5,
+        .text = str_1,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 13, .bg = 1,
         .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .align = UI_ALIGN_CENTER, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_BOLD,
         .visible = 1, .enabled = 1,
     },
-    { /* [6] UIW_LABEL "1/3" */
+    { /* [5] UIW_LABEL "embedded UI" */
         .type = UIW_LABEL,
-        .x = 188, .y = 320, .width = 48, .height = 16,
+        .x = 12, .y = 56, .width = 232, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_6,
         .text = str_7,
         .constraints_json = NULL,
         .animations_csv = NULL,
-        .fg = 14, .bg = 1,
+        .fg = 9, .bg = 1,
+        .border_style = UI_BORDER_NONE,
+        .align = UI_ALIGN_CENTER, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 1, .enabled = 1,
+    },
+    { /* [6] UIW_LABEL "B=back  C=next" */
+        .type = UIW_LABEL,
+        .x = 4, .y = 90, .width = 248, .height = 12,
+        .border = 0, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_8,
+        .text = str_9,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 6, .bg = 0,
+        .border_style = UI_BORDER_NONE,
+        .align = UI_ALIGN_CENTER, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 1, .enabled = 1,
+    },
+    { /* [7] UIW_PANEL "toast.panel" */
+        .type = UIW_PANEL,
+        .x = 8, .y = 104, .width = 240, .height = 18,
+        .border = 1, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_10,
+        .text = NULL,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 15, .bg = 0,
+        .border_style = UI_BORDER_SINGLE,
+        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 0, .enabled = 1,
+    },
+    { /* [8] UIW_LABEL "Toast" */
+        .type = UIW_LABEL,
+        .x = 12, .y = 107, .width = 232, .height = 12,
+        .border = 0, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_11,
+        .text = str_12,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 15, .bg = 0,
+        .border_style = UI_BORDER_NONE,
+        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 0, .enabled = 1,
+    },
+};
+
+/* Scene: menu (11 widgets) */
+static const UiWidget menu_widgets[] = {
+    { /* [0] UIW_PANEL "" */
+        .type = UIW_PANEL,
+        .x = 0, .y = 0, .width = 256, .height = 14,
+        .border = 1, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = NULL,
+        .text = NULL,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 15, .bg = 0,
+        .border_style = UI_BORDER_SINGLE,
+        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 1, .enabled = 1,
+    },
+    { /* [1] UIW_LABEL "Menu" */
+        .type = UIW_LABEL,
+        .x = 2, .y = 0, .width = 150, .height = 14,
+        .border = 0, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_13,
+        .text = str_14,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 13, .bg = 0,
+        .border_style = UI_BORDER_NONE,
+        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_BOLD,
+        .visible = 1, .enabled = 1,
+    },
+    { /* [2] UIW_LABEL "2/4" */
+        .type = UIW_LABEL,
+        .x = 200, .y = 0, .width = 54, .height = 14,
+        .border = 0, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_15,
+        .text = str_16,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 8, .bg = 0,
         .border_style = UI_BORDER_NONE,
         .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_NONE,
         .visible = 1, .enabled = 1,
     },
-    { /* [7] UIW_BUTTON "Display" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 344, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_8,
-        .text = str_9,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_HIGHLIGHT,
-        .visible = 1, .enabled = 1,
-    },
-    { /* [8] UIW_BUTTON "Inputs" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 368, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_10,
-        .text = str_11,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 1, .enabled = 1,
-    },
-    { /* [9] UIW_BUTTON "About" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 392, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_12,
-        .text = str_13,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 1, .enabled = 1,
-    },
-    { /* [10] UIW_BUTTON "menu.item3" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 416, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_14,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 1, .enabled = 0,
-    },
-    { /* [11] UIW_BUTTON "menu.item4" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 440, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_15,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 1, .enabled = 0,
-    },
-    { /* [12] UIW_PANEL "list.panel" */
+    { /* [3] UIW_PANEL "menu.panel" */
         .type = UIW_PANEL,
-        .x = 8, .y = 464, .width = 240, .height = 104,
+        .x = 2, .y = 16, .width = 252, .height = 72,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_16,
+        .id = str_17,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -306,27 +286,11 @@ static const UiWidget main_widgets[] = {
         .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 0,
         .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
+        .visible = 1, .enabled = 1,
     },
-    { /* [13] UIW_LABEL "Display" */
+    { /* [4] UIW_LABEL "1/3" */
         .type = UIW_LABEL,
-        .x = 8, .y = 576, .width = 172, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_17,
-        .text = str_9,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 1,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_BOLD,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [14] UIW_LABEL "1/12" */
-        .type = UIW_LABEL,
-        .x = 188, .y = 576, .width = 48, .height = 16,
+        .x = 192, .y = 19, .width = 58, .height = 10,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_18,
@@ -338,15 +302,15 @@ static const UiWidget main_widgets[] = {
         .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
+        .visible = 1, .enabled = 1,
     },
-    { /* [15] UIW_BUTTON "list.item0" */
+    { /* [5] UIW_BUTTON "Display" */
         .type = UIW_BUTTON,
-        .x = 8, .y = 600, .width = 224, .height = 16,
+        .x = 8, .y = 32, .width = 240, .height = 15,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_20,
-        .text = NULL,
+        .text = str_21,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 14, .bg = 0,
@@ -354,47 +318,15 @@ static const UiWidget main_widgets[] = {
         .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_HIGHLIGHT,
-        .visible = 0, .enabled = 1,
+        .visible = 1, .enabled = 1,
     },
-    { /* [16] UIW_LABEL "Contrast" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 624, .width = 144, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_21,
-        .text = str_22,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [17] UIW_LABEL "0" */
-        .type = UIW_LABEL,
-        .x = 160, .y = 624, .width = 72, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_23,
-        .text = str_24,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [18] UIW_BUTTON "list.item1" */
+    { /* [6] UIW_BUTTON "Inputs" */
         .type = UIW_BUTTON,
-        .x = 8, .y = 648, .width = 224, .height = 16,
+        .x = 8, .y = 51, .width = 240, .height = 15,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_25,
-        .text = NULL,
+        .id = str_22,
+        .text = str_23,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 14, .bg = 0,
@@ -402,311 +334,71 @@ static const UiWidget main_widgets[] = {
         .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
+        .visible = 1, .enabled = 1,
     },
-    { /* [19] UIW_LABEL "Invert" */
+    { /* [7] UIW_BUTTON "About" */
+        .type = UIW_BUTTON,
+        .x = 8, .y = 70, .width = 240, .height = 15,
+        .border = 1, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_24,
+        .text = str_25,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 14, .bg = 0,
+        .border_style = UI_BORDER_SINGLE,
+        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 1, .enabled = 1,
+    },
+    { /* [8] UIW_LABEL "A=select  B=back  C=next" */
         .type = UIW_LABEL,
-        .x = 8, .y = 672, .width = 144, .height = 16,
+        .x = 4, .y = 92, .width = 248, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_26,
         .text = str_27,
         .constraints_json = NULL,
         .animations_csv = NULL,
-        .fg = 14, .bg = 0,
+        .fg = 6, .bg = 0,
         .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .align = UI_ALIGN_CENTER, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [20] UIW_LABEL "off" */
-        .type = UIW_LABEL,
-        .x = 160, .y = 672, .width = 72, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_28,
-        .text = str_29,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [21] UIW_BUTTON "list.item2" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 696, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_30,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [22] UIW_LABEL "ColOffset" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 720, .width = 144, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_31,
-        .text = str_32,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [23] UIW_LABEL "0" */
-        .type = UIW_LABEL,
-        .x = 160, .y = 720, .width = 72, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_33,
-        .text = str_24,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [24] UIW_BUTTON "list.item3" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 744, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_34,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [25] UIW_LABEL "list.item3.label" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 768, .width = 144, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_35,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [26] UIW_LABEL "list.item3.value" */
-        .type = UIW_LABEL,
-        .x = 160, .y = 768, .width = 72, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_36,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [27] UIW_BUTTON "list.item4" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 792, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_37,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [28] UIW_LABEL "list.item4.label" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 816, .width = 144, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_38,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [29] UIW_LABEL "list.item4.value" */
-        .type = UIW_LABEL,
-        .x = 160, .y = 816, .width = 72, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_39,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 0,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_RIGHT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [30] UIW_PANEL "edit.panel" */
-        .type = UIW_PANEL,
-        .x = 8, .y = 840, .width = 240, .height = 104,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_40,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 1,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 0,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [31] UIW_LABEL "Edit" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 952, .width = 224, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_41,
-        .text = str_42,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 13, .bg = 1,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_BOLD,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [32] UIW_LABEL "UP/DOWN adjust  B back" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 976, .width = 224, .height = 16,
-        .border = 0, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_43,
-        .text = str_44,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 9, .bg = 1,
-        .border_style = UI_BORDER_NONE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [33] UIW_BUTTON "Contrast" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 1000, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_45,
-        .text = str_22,
-        .constraints_json = str_46,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [34] UIW_BUTTON "Invert" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 1024, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_47,
-        .text = str_27,
-        .constraints_json = str_48,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [35] UIW_BUTTON "ColOffset" */
-        .type = UIW_BUTTON,
-        .x = 8, .y = 1048, .width = 224, .height = 16,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_49,
-        .text = str_32,
-        .constraints_json = str_50,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 0,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
-        .style = UI_STYLE_NONE,
-        .visible = 0, .enabled = 1,
-    },
-    { /* [36] UIW_PANEL "toast.panel" */
-        .type = UIW_PANEL,
-        .x = 8, .y = 1072, .width = 240, .height = 20,
-        .border = 1, .checked = 0,
-        .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_51,
-        .text = NULL,
-        .constraints_json = NULL,
-        .animations_csv = NULL,
-        .fg = 14, .bg = 1,
-        .border_style = UI_BORDER_SINGLE,
-        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
-        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 0,
         .style = UI_STYLE_NONE,
         .visible = 1, .enabled = 1,
     },
-    { /* [37] UIW_LABEL "Toast" */
-        .type = UIW_LABEL,
-        .x = 8, .y = 1100, .width = 232, .height = 16,
-        .border = 0, .checked = 0,
+    { /* [9] UIW_PANEL "toast.panel" */
+        .type = UIW_PANEL,
+        .x = 8, .y = 104, .width = 240, .height = 18,
+        .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_52,
-        .text = str_53,
+        .id = str_10,
+        .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
-        .fg = 14, .bg = 1,
+        .fg = 15, .bg = 0,
+        .border_style = UI_BORDER_SINGLE,
+        .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
+        .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
+        .style = UI_STYLE_NONE,
+        .visible = 0, .enabled = 1,
+    },
+    { /* [10] UIW_LABEL "Toast" */
+        .type = UIW_LABEL,
+        .x = 12, .y = 107, .width = 232, .height = 12,
+        .border = 0, .checked = 0,
+        .value = 0, .min_value = 0, .max_value = 100,
+        .id = str_11,
+        .text = str_12,
+        .constraints_json = NULL,
+        .animations_csv = NULL,
+        .fg = 15, .bg = 0,
         .border_style = UI_BORDER_NONE,
         .align = UI_ALIGN_LEFT, .valign = UI_VALIGN_MIDDLE,
         .text_overflow = UI_TEXT_OVERFLOW_ELLIPSIS, .max_lines = 1,
         .style = UI_STYLE_NONE,
-        .visible = 1, .enabled = 1,
+        .visible = 0, .enabled = 1,
     },
 };
 
@@ -733,8 +425,8 @@ static const UiWidget settings_widgets[] = {
         .x = 2, .y = 0, .width = 100, .height = 14,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_54,
-        .text = str_55,
+        .id = str_28,
+        .text = str_29,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 13, .bg = 0,
@@ -744,13 +436,13 @@ static const UiWidget settings_widgets[] = {
         .style = UI_STYLE_BOLD,
         .visible = 1, .enabled = 1,
     },
-    { /* [2] UIW_LABEL "2/3" */
+    { /* [2] UIW_LABEL "3/4" */
         .type = UIW_LABEL,
         .x = 200, .y = 0, .width = 54, .height = 14,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_56,
-        .text = str_57,
+        .id = str_30,
+        .text = str_31,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 8, .bg = 0,
@@ -765,8 +457,8 @@ static const UiWidget settings_widgets[] = {
         .x = 4, .y = 18, .width = 80, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_58,
-        .text = str_22,
+        .id = str_32,
+        .text = str_33,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -781,9 +473,9 @@ static const UiWidget settings_widgets[] = {
         .x = 88, .y = 18, .width = 160, .height = 16,
         .border = 1, .checked = 0,
         .value = 127, .min_value = 0, .max_value = 255,
-        .id = str_59,
+        .id = str_34,
         .text = NULL,
-        .constraints_json = str_60,
+        .constraints_json = str_35,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
         .border_style = UI_BORDER_SINGLE,
@@ -797,8 +489,8 @@ static const UiWidget settings_widgets[] = {
         .x = 4, .y = 38, .width = 80, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_61,
-        .text = str_27,
+        .id = str_36,
+        .text = str_37,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -813,9 +505,9 @@ static const UiWidget settings_widgets[] = {
         .x = 88, .y = 38, .width = 16, .height = 16,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_62,
+        .id = str_38,
         .text = NULL,
-        .constraints_json = str_63,
+        .constraints_json = str_39,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
         .border_style = UI_BORDER_SINGLE,
@@ -829,8 +521,8 @@ static const UiWidget settings_widgets[] = {
         .x = 4, .y = 58, .width = 80, .height = 16,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_64,
-        .text = str_32,
+        .id = str_40,
+        .text = str_41,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -845,9 +537,9 @@ static const UiWidget settings_widgets[] = {
         .x = 88, .y = 58, .width = 160, .height = 16,
         .border = 1, .checked = 0,
         .value = 28, .min_value = 0, .max_value = 63,
-        .id = str_65,
+        .id = str_42,
         .text = NULL,
-        .constraints_json = str_66,
+        .constraints_json = str_43,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
         .border_style = UI_BORDER_SINGLE,
@@ -877,8 +569,8 @@ static const UiWidget settings_widgets[] = {
         .x = 4, .y = 82, .width = 248, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_67,
-        .text = str_68,
+        .id = str_44,
+        .text = str_45,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 6, .bg = 0,
@@ -893,7 +585,7 @@ static const UiWidget settings_widgets[] = {
         .x = 4, .y = 98, .width = 248, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_69,
+        .id = str_46,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -909,7 +601,7 @@ static const UiWidget settings_widgets[] = {
         .x = 8, .y = 104, .width = 240, .height = 18,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_51,
+        .id = str_10,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -925,8 +617,8 @@ static const UiWidget settings_widgets[] = {
         .x = 12, .y = 107, .width = 232, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_52,
-        .text = str_53,
+        .id = str_11,
+        .text = str_12,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -961,8 +653,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 2, .y = 0, .width = 100, .height = 14,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_70,
-        .text = str_71,
+        .id = str_47,
+        .text = str_48,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 13, .bg = 0,
@@ -972,13 +664,13 @@ static const UiWidget metrics_widgets[] = {
         .style = UI_STYLE_BOLD,
         .visible = 1, .enabled = 1,
     },
-    { /* [2] UIW_LABEL "3/3" */
+    { /* [2] UIW_LABEL "4/4" */
         .type = UIW_LABEL,
         .x = 200, .y = 0, .width = 54, .height = 14,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_72,
-        .text = str_73,
+        .id = str_49,
+        .text = str_50,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 8, .bg = 0,
@@ -993,8 +685,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 4, .y = 16, .width = 60, .height = 10,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_74,
-        .text = str_75,
+        .id = str_51,
+        .text = str_52,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 11, .bg = 0,
@@ -1009,8 +701,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 4, .y = 26, .width = 60, .height = 48,
         .border = 1, .checked = 0,
         .value = 75, .min_value = 0, .max_value = 100,
-        .id = str_76,
-        .text = str_77,
+        .id = str_53,
+        .text = str_54,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -1025,8 +717,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 68, .y = 16, .width = 60, .height = 10,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_78,
-        .text = str_79,
+        .id = str_55,
+        .text = str_56,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 11, .bg = 0,
@@ -1041,8 +733,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 68, .y = 26, .width = 60, .height = 48,
         .border = 1, .checked = 0,
         .value = 50, .min_value = 0, .max_value = 100,
-        .id = str_80,
-        .text = str_81,
+        .id = str_57,
+        .text = str_58,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -1057,8 +749,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 132, .y = 16, .width = 120, .height = 10,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_82,
-        .text = str_83,
+        .id = str_59,
+        .text = str_60,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 11, .bg = 0,
@@ -1073,7 +765,7 @@ static const UiWidget metrics_widgets[] = {
         .x = 132, .y = 26, .width = 120, .height = 14,
         .border = 1, .checked = 0,
         .value = 60, .min_value = 0, .max_value = 100,
-        .id = str_84,
+        .id = str_61,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -1089,8 +781,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 132, .y = 44, .width = 120, .height = 10,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_85,
-        .text = str_86,
+        .id = str_62,
+        .text = str_63,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 11, .bg = 0,
@@ -1105,7 +797,7 @@ static const UiWidget metrics_widgets[] = {
         .x = 132, .y = 54, .width = 120, .height = 36,
         .border = 1, .checked = 0,
         .value = 60, .min_value = 0, .max_value = 100,
-        .id = str_87,
+        .id = str_64,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -1121,8 +813,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 4, .y = 78, .width = 124, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_88,
-        .text = str_89,
+        .id = str_65,
+        .text = str_66,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 9, .bg = 0,
@@ -1137,8 +829,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 4, .y = 92, .width = 124, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_90,
-        .text = str_91,
+        .id = str_67,
+        .text = str_68,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 9, .bg = 0,
@@ -1153,8 +845,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 4, .y = 108, .width = 248, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_92,
-        .text = str_93,
+        .id = str_69,
+        .text = str_9,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 6, .bg = 0,
@@ -1169,7 +861,7 @@ static const UiWidget metrics_widgets[] = {
         .x = 8, .y = 104, .width = 240, .height = 18,
         .border = 1, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_51,
+        .id = str_10,
         .text = NULL,
         .constraints_json = NULL,
         .animations_csv = NULL,
@@ -1185,8 +877,8 @@ static const UiWidget metrics_widgets[] = {
         .x = 12, .y = 107, .width = 232, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
-        .id = str_52,
-        .text = str_53,
+        .id = str_11,
+        .text = str_12,
         .constraints_json = NULL,
         .animations_csv = NULL,
         .fg = 15, .bg = 0,
@@ -1205,6 +897,12 @@ const UiScene ui_scenes[] = {
         .width = 256, .height = 128,
         .widget_count = (uint16_t)(sizeof(main_widgets) / sizeof(main_widgets[0])),
         .widgets = main_widgets,
+    },
+    { /* menu */
+        .name = "menu",
+        .width = 256, .height = 128,
+        .widget_count = (uint16_t)(sizeof(menu_widgets) / sizeof(menu_widgets[0])),
+        .widgets = menu_widgets,
     },
     { /* settings */
         .name = "settings",

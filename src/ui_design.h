@@ -13,12 +13,13 @@
 extern "C" {
 #endif
 
-#define UI_SCENE_COUNT 3
+#define UI_SCENE_COUNT 4
 
 /* Scene index macros */
 #define UI_SCENE_IDX_MAIN 0
-#define UI_SCENE_IDX_SETTINGS 1
-#define UI_SCENE_IDX_METRICS 2
+#define UI_SCENE_IDX_MENU 1
+#define UI_SCENE_IDX_SETTINGS 2
+#define UI_SCENE_IDX_METRICS 3
 
 /* Scene array */
 extern const UiScene ui_scenes[];
