@@ -470,6 +470,75 @@ def export_c_header(app: CyberpunkEditorApp) -> None:
         app._set_status(f"Export failed: {exc}", ttl_sec=4.0)
 
 
+def export_svg(app: CyberpunkEditorApp) -> None:
+    """Quick-export the *current* scene to a pixel-faithful .svg next to the JSON.
+
+    Renders through the real designer renderer and gray4-quantizes, so the SVG
+    is pixel-exact to what the firmware shows (see tools/ui_export_svg.py for
+    the fonts/gradients/shadows fidelity rationale). The file is written beside
+    the design JSON as ``<json-stem>__<scene>.svg``.
+    """
+    from pathlib import Path
+
+    json_path = getattr(app, "json_path", None)
+    if json_path is None:
+        app._set_status("SVG export: no JSON file loaded.", ttl_sec=2.0)
+        return
+    json_path = Path(json_path)
+    try:
+        import sys
+
+        repo_root = json_path.resolve().parent
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        from tools.ui_export_svg import pixels_to_svg, render_scene_to_gray4
+    except ImportError:
+        app._set_status("SVG export: ui_export_svg not found.", ttl_sec=3.0)
+        return
+
+    # Persist first so the on-disk JSON matches what we render (best effort).
+    try:
+        app.save_json()
+    except OSError:
+        pass
+
+    try:
+        sc = app.state.current_scene()
+        scene_name = str(getattr(sc, "name", "") or "")
+    except (AttributeError, KeyError):
+        scene_name = ""
+
+    if not json_path.exists():
+        app._set_status("SVG export: JSON file not found.", ttl_sec=2.0)
+        return
+
+    try:
+        from datetime import datetime
+
+        profile = str(getattr(app, "hardware_profile", "") or "") or None
+        pixels, width, height, resolved = render_scene_to_gray4(
+            json_path,
+            scene_name=scene_name or None,
+            profile=profile or "esp32os_256x128_gray4",
+        )
+        svg = pixels_to_svg(
+            pixels,
+            width,
+            height,
+            resolved,
+            source_name=json_path.name,
+            generated_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        safe_scene = "".join(c if c.isalnum() or c in "-_" else "_" for c in resolved)
+        out_path = json_path.with_name(f"{json_path.stem}__{safe_scene}.svg")
+        out_path.write_text(svg, encoding="utf-8", newline="\n")
+        app._set_status(
+            f"Exported SVG: {out_path.name} ({width}x{height})", ttl_sec=3.0
+        )
+    except (OSError, ValueError, TypeError, SystemExit) as exc:
+        app._set_status(f"SVG export failed: {exc}", ttl_sec=4.0)
+
+
 def toggle_clean_preview(app: CyberpunkEditorApp) -> None:
     """Toggle clean preview mode — shows only the scene with no UI chrome."""
     app.clean_preview = not app.clean_preview

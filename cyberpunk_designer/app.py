@@ -286,6 +286,7 @@ def _build_delegate_registry():
         "duplicate_current_scene",
         "rename_current_scene",
         "export_c_header",
+        "export_svg",
         "toggle_clean_preview",
         "goto_widget_prompt",
     }
@@ -709,6 +710,7 @@ class CyberpunkEditorApp:
             ("Arrange", self._auto_arrange_grid),
             ("Fit Text", self._fit_selection_to_text),
             ("Fit Widget", self._fit_selection_to_widget),
+            ("SVG", self._export_svg),
             ("Warn", self._toggle_overflow_warnings),
         ]
 
