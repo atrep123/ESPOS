@@ -1,4 +1,7 @@
 # Development and CI tooling dependencies
+# Runtime deps (incl. jsonschema, now a hard requirement) come from requirements.txt:
+-r requirements.txt
+
 pytest>=7.4.0,<9
 pytest-cov>=4.1.0,<6
 pytest-xdist>=3.5.0,<5
@@ -8,6 +11,6 @@ mypy>=1.7.0,<2
 ruff>=0.6.0,<1
 pyinstaller>=6.0.0,<7
 
-jsonschema>=4.20.0,<5\nmutmut>=2.5.0,<3
+mutmut>=2.5.0,<3
 
 # Security tooling is installed ad-hoc in workflows (pip-audit, bandit, cyclonedx-bom, safety, pip-licenses).

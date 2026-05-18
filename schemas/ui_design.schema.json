@@ -220,9 +220,16 @@
             "type": "number"
           }
         },
+        "items": {
+          "type": "array",
+          "description": "List widget entries. This is the canonical key emitted by WidgetConfig save (asdict). Always present on every widget (default []).",
+          "items": {
+            "type": "string"
+          }
+        },
         "list_items": {
           "type": "array",
-          "description": "List widget entries (alternative to newline-separated text). Maps to WidgetConfig.items.",
+          "description": "Legacy/external read-side alias for `items` (alternative to newline-separated text). Normalized into WidgetConfig.items on load; never emitted by save.",
           "items": {
             "type": "string"
           }
