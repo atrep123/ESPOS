@@ -480,6 +480,7 @@ class UIDesigner:
             height=prev_state["height"],
             widgets=widgets,
             bg_color=prev_state.get("bg_color", "black"),
+            rules=list(prev_state.get("rules") or []),
         )
         return True
 
@@ -506,6 +507,7 @@ class UIDesigner:
             height=next_state["height"],
             widgets=widgets,
             bg_color=next_state.get("bg_color", "black"),
+            rules=list(next_state.get("rules") or []),
         )
         return True
 
@@ -1380,6 +1382,7 @@ class UIDesigner:
             "height": scene.height,
             "bg_color": scene.bg_color,
             "widgets": [asdict(w) for w in scene.widgets],
+            "rules": [dict(r) for r in getattr(scene, "rules", []) if isinstance(r, dict)],
         }
 
     def create_checkpoint(self, name: str) -> bool:
@@ -1420,6 +1423,7 @@ class UIDesigner:
                 height=int(snap.get("height", self.height)),
                 widgets=widgets,
                 bg_color=snap.get("bg_color", "black"),
+                rules=list(snap.get("rules") or []),
             )
             self.current_scene = snap["name"]
             return True
@@ -1552,6 +1556,9 @@ class UIDesigner:
                     "height": scene.height,
                     "bg_color": scene.bg_color,
                     "widgets": [asdict(w) for w in scene.widgets],
+                    "rules": [
+                        dict(r) for r in getattr(scene, "rules", []) if isinstance(r, dict)
+                    ],
                 }
                 for name, scene in self.scenes.items()
             },
@@ -1676,6 +1683,7 @@ class UIDesigner:
             hardware_profile=scene_data.get("hardware_profile"),
             max_fb_kb=scene_data.get("max_fb_kb"),
             max_flash_kb=scene_data.get("max_flash_kb"),
+            rules=list(scene_data.get("rules") or []),
         )
 
     def _validate_scene_dict(
@@ -1692,6 +1700,13 @@ class UIDesigner:
         if hw_profile is not None and not isinstance(hw_profile, str):
             raise WidgetValidationError("hardware_profile must be a string or None")
 
+        raw_rules = scene_data.get("rules")
+        rules = (
+            [dict(r) for r in raw_rules if isinstance(r, dict)]
+            if isinstance(raw_rules, list)
+            else []
+        )
+
         return {
             "name": name,
             "width": width,
@@ -1700,6 +1715,7 @@ class UIDesigner:
             "hardware_profile": hw_profile,
             "max_fb_kb": self._opt_scene_int(scene_data.get("max_fb_kb")),
             "max_flash_kb": self._opt_scene_int(scene_data.get("max_flash_kb")),
+            "rules": rules,
         }
 
     def _scene_defaults(self, root_data: Dict[str, Any]) -> Dict[str, int]:

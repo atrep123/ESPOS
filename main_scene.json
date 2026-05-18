@@ -42,6 +42,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -91,6 +92,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -140,6 +142,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -189,6 +192,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -238,6 +242,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -287,6 +292,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -336,6 +342,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -385,6 +392,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -434,6 +442,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -449,6 +458,79 @@
           "border_width": null,
           "border_color": null,
           "_widget_id": "toast.message"
+        }
+      ],
+      "rules": [
+        {
+          "name": "boot init",
+          "trigger": {
+            "type": "boot"
+          },
+          "actions": [
+            {
+              "type": "set_var",
+              "var": "heartbeats",
+              "expr": "0"
+            },
+            {
+              "type": "start_timer",
+              "timer_id": 0,
+              "ms": 1000
+            },
+            {
+              "type": "toast",
+              "text": "ESPOS ready"
+            }
+          ]
+        },
+        {
+          "name": "heartbeat",
+          "trigger": {
+            "type": "timer",
+            "timer_id": 0
+          },
+          "conditions": [
+            {
+              "lhs": "var:heartbeats",
+              "op": "<",
+              "rhs": 1000
+            }
+          ],
+          "actions": [
+            {
+              "type": "set_var",
+              "var": "heartbeats",
+              "expr": "heartbeats + 1"
+            },
+            {
+              "type": "gpio_write",
+              "pin": 38,
+              "level": 1
+            }
+          ]
+        },
+        {
+          "name": "boot button",
+          "trigger": {
+            "type": "gpio_in",
+            "pin": 0,
+            "edge": "falling"
+          },
+          "actions": [
+            {
+              "type": "toast",
+              "text": "BOOT pressed"
+            },
+            {
+              "type": "stop_timer",
+              "timer_id": 0
+            },
+            {
+              "type": "gpio_write",
+              "pin": 38,
+              "level": 0
+            }
+          ]
         }
       ]
     },
@@ -491,6 +573,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -540,6 +623,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -589,6 +673,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -638,6 +723,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -687,6 +773,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -736,6 +823,14 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {
+            "on_press": [
+              {
+                "type": "set_scene",
+                "scene": "settings"
+              }
+            ]
+          },
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -785,6 +880,16 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {
+            "on_press": [
+              {
+                "type": "set_widget",
+                "widget": "menu.scroll",
+                "prop": "text",
+                "text": "picked item 2"
+              }
+            ]
+          },
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -834,6 +939,14 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {
+            "on_press": [
+              {
+                "type": "set_scene",
+                "scene": "main"
+              }
+            ]
+          },
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -883,6 +996,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -932,6 +1046,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -981,6 +1096,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -997,7 +1113,8 @@
           "border_color": null,
           "_widget_id": "toast.message"
         }
-      ]
+      ],
+      "rules": []
     },
     "settings": {
       "name": "settings",
@@ -1038,6 +1155,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1087,6 +1205,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1136,6 +1255,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1185,6 +1305,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1234,6 +1355,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "bind=contrast",
           "locked": false,
           "theme_fg_role": "",
@@ -1283,6 +1405,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1332,6 +1455,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "bind=invert",
           "locked": false,
           "theme_fg_role": "",
@@ -1381,6 +1505,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1430,6 +1555,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "bind=col_offset",
           "locked": false,
           "theme_fg_role": "",
@@ -1479,6 +1605,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1528,6 +1655,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1577,6 +1705,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1626,6 +1755,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1675,6 +1805,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1691,7 +1822,8 @@
           "border_color": null,
           "_widget_id": "toast.message"
         }
-      ]
+      ],
+      "rules": []
     },
     "metrics": {
       "name": "metrics",
@@ -1732,6 +1864,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1781,6 +1914,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1830,6 +1964,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1879,6 +2014,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1928,6 +2064,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -1977,6 +2114,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2026,6 +2164,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2075,6 +2214,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2124,6 +2264,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2173,6 +2314,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2222,6 +2364,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2271,6 +2414,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2320,6 +2464,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2369,6 +2514,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2418,6 +2564,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2467,6 +2614,7 @@
           "constraints": {},
           "responsive_rules": [],
           "animations": [],
+          "events": {},
           "runtime": "",
           "locked": false,
           "theme_fg_role": "",
@@ -2483,7 +2631,8 @@
           "border_color": null,
           "_widget_id": "toast.message"
         }
-      ]
+      ],
+      "rules": []
     }
   }
 }

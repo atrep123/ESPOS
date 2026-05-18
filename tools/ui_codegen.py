@@ -384,6 +384,445 @@ def build_data_point_arrays(
     return decls, by_id
 
 
+# --------------------------------------------------------------------------- #
+# Visual-backend logic (events / rules) -> deterministic C
+#
+# The designer stores per-widget `events` ({on_press|on_change|on_focus:[..]})
+# and per-scene `rules` ([{trigger, conditions?, actions}, ...]). These are
+# compiled into the flat PODs declared in src/ui_logic.h and executed by the
+# firmware logic service. Every action type emits real, working C — there is
+# no inert/TODO path.
+# --------------------------------------------------------------------------- #
+
+_TRIG_MAP = {
+    "boot": "UI_TRIG_BOOT",
+    "timer": "UI_TRIG_TIMER",
+    "gpio_in": "UI_TRIG_GPIO_IN",
+    "ble_recv": "UI_TRIG_BLE_RECV",
+    "lora_recv": "UI_TRIG_LORA_RECV",
+    "widget": "UI_TRIG_WIDGET",
+}
+_WEV_MAP = {
+    "on_press": "UI_WEV_PRESS",
+    "on_change": "UI_WEV_CHANGE",
+    "on_focus": "UI_WEV_FOCUS",
+}
+_EDGE_MAP = {"any": "UI_EDGE_ANY", "rising": "UI_EDGE_RISING", "falling": "UI_EDGE_FALLING"}
+_ACT_MAP = {
+    "set_scene": "UI_ACT_SET_SCENE",
+    "set_widget": "UI_ACT_SET_WIDGET",
+    "set_var": "UI_ACT_SET_VAR",
+    "gpio_write": "UI_ACT_GPIO_WRITE",
+    "toast": "UI_ACT_TOAST",
+    "start_timer": "UI_ACT_START_TIMER",
+    "stop_timer": "UI_ACT_STOP_TIMER",
+    "ble_send": "UI_ACT_BLE_SEND",
+    "lora_send": "UI_ACT_LORA_SEND",
+}
+_PROP_MAP = {
+    "value": "UI_PROP_VALUE",
+    "text": "UI_PROP_TEXT",
+    "checked": "UI_PROP_CHECKED",
+    "visible": "UI_PROP_VISIBLE",
+    "enabled": "UI_PROP_ENABLED",
+}
+_CMP_MAP = {
+    "==": "UI_CMP_EQ",
+    "!=": "UI_CMP_NE",
+    "<": "UI_CMP_LT",
+    ">": "UI_CMP_GT",
+    "<=": "UI_CMP_LE",
+    ">=": "UI_CMP_GE",
+}
+_JOIN_MAP = {"&&": "UI_JOIN_AND", "||": "UI_JOIN_OR"}
+_ARITH_MAP = {"+": 0, "-": 1, "*": 2, "/": 3}
+_LOGIC_MAX_VARS = 32  # mirrors UI_LOGIC_MAX_VARS in services/logic/logic.c
+
+
+class LogicCodegenError(ValueError):
+    """Raised on a structurally invalid event/rule (defensive; the validator
+    is the primary gate but codegen must never emit broken C)."""
+
+
+def _logic_collect_strings(scenes: dict[str, Any]) -> list[str]:
+    """Every string literal referenced by events/rules (widget ids, toast
+    text, payloads, rule names) so they share the design string pool."""
+    out: list[str] = []
+
+    def _from_actions(actions: Any) -> None:
+        # Only collect strings that _emit_action actually emits as C
+        # ``const char *`` refs. ``scene`` resolves to a scene *index* and
+        # ``var``/``expr`` names resolve to integer *var indices* — pooling
+        # them would create unreferenced statics (-Werror=unused-const).
+        if not isinstance(actions, list):
+            return
+        for a in actions:
+            if not isinstance(a, dict):
+                continue
+            t = str(a.get("type", "")).strip().lower()
+            if t == "set_widget":
+                wid = a.get("widget")
+                if isinstance(wid, str) and wid:
+                    out.append(wid)
+                if str(a.get("prop", "value") or "value").lower() == "text":
+                    txt = a.get("text", a.get("value", ""))
+                    if isinstance(txt, str) and txt:
+                        out.append(txt)
+            elif t == "toast":
+                v = a.get("text")
+                if isinstance(v, str) and v:
+                    out.append(v)
+            elif t in ("ble_send", "lora_send"):
+                v = a.get("bytes")
+                if isinstance(v, str) and v:
+                    out.append(v)
+            # set_scene (scene->index) and set_var (var/expr->index) emit NO
+            # string refs — intentionally not pooled.
+
+    def _from_operand(ref: Any) -> None:
+        if isinstance(ref, str) and ref.startswith("widget:"):
+            wid = ref[len("widget:") :].split(".", 1)[0]
+            if wid:
+                out.append(wid)
+
+    for _name, scene in scenes.items():
+        for w in list(scene.get("widgets", []) or []):
+            if not isinstance(w, dict):
+                continue
+            ev = w.get("events")
+            if isinstance(ev, dict):
+                for key in ("on_press", "on_change", "on_focus"):
+                    _from_actions(ev.get(key))
+        for r in list(scene.get("rules", []) or []):
+            if not isinstance(r, dict):
+                continue
+            nm = r.get("name")
+            if isinstance(nm, str) and nm:
+                out.append(nm)
+            trig = r.get("trigger") or {}
+            if isinstance(trig, dict):
+                wid = trig.get("widget")
+                if isinstance(wid, str) and wid:
+                    out.append(wid)
+            for cond in list(r.get("conditions", []) or []):
+                if isinstance(cond, dict):
+                    _from_operand(cond.get("lhs"))
+                    _from_operand(cond.get("rhs"))
+            _from_actions(r.get("actions"))
+    return out
+
+
+def _scene_index_map(scene_keys: list[str]) -> dict[str, int]:
+    return {k: i for i, k in enumerate(scene_keys)}
+
+
+class _VarTable:
+    """Stable name -> index allocator for integer logic variables."""
+
+    def __init__(self) -> None:
+        self.order: list[str] = []
+        self.index: dict[str, int] = {}
+
+    def intern(self, name: str) -> int:
+        name = str(name or "").strip()
+        if not name:
+            raise LogicCodegenError("empty variable name")
+        if name not in self.index:
+            if len(self.order) >= _LOGIC_MAX_VARS:
+                raise LogicCodegenError(
+                    f"too many logic variables (max {_LOGIC_MAX_VARS}): {name!r}"
+                )
+            self.index[name] = len(self.order)
+            self.order.append(name)
+        return self.index[name]
+
+
+def _str_ref(pool: StringPool, s: str) -> str:
+    ref = pool.mapping.get(s, "") if s else ""
+    return ref if ref else "NULL"
+
+
+_TOKEN_RE = _re.compile(r"\s*([A-Za-z_][A-Za-z0-9_]*|-?\d+|[+\-*/])\s*")
+
+
+def _emit_operand_from_token(tok: str, vt: _VarTable) -> str:
+    """A bare set_var term: integer literal or a variable name."""
+    if _re.fullmatch(r"-?\d+", tok):
+        return f"{{ .kind = UI_OPND_LITERAL, .value = {int(tok)}, .s0 = NULL }}"
+    vi = vt.intern(tok)
+    return f"{{ .kind = UI_OPND_VAR, .value = {vi}, .s0 = NULL }}"
+
+
+def _emit_operand_ref(ref: Any, vt: _VarTable, pool: StringPool) -> str:
+    """A condition operand: int literal, 'var:<n>', or 'widget:<id>.value|checked'."""
+    if isinstance(ref, bool):
+        raise LogicCodegenError("boolean operand not allowed; use 0/1")
+    if isinstance(ref, int):
+        return f"{{ .kind = UI_OPND_LITERAL, .value = {int(ref)}, .s0 = NULL }}"
+    s = str(ref or "").strip()
+    if _re.fullmatch(r"-?\d+", s):
+        return f"{{ .kind = UI_OPND_LITERAL, .value = {int(s)}, .s0 = NULL }}"
+    if s.startswith("var:"):
+        vi = vt.intern(s[len("var:") :])
+        return f"{{ .kind = UI_OPND_VAR, .value = {vi}, .s0 = NULL }}"
+    if s.startswith("widget:"):
+        body = s[len("widget:") :]
+        wid, _, attr = body.partition(".")
+        wid = wid.strip()
+        attr = (attr or "value").strip().lower()
+        if not wid:
+            raise LogicCodegenError(f"widget operand missing id: {s!r}")
+        kind = "UI_OPND_WIDGET_CHECKED" if attr == "checked" else "UI_OPND_WIDGET_VALUE"
+        return f"{{ .kind = {kind}, .value = 0, .s0 = {_str_ref(pool, wid)} }}"
+    raise LogicCodegenError(f"unparseable operand: {ref!r}")
+
+
+def _emit_expr(expr: Any, vt: _VarTable) -> str:
+    """Compile a bounded set_var expression into a UiLogicExpr initializer.
+
+    Accepts a single optional binary op: ``A``, ``A + B`` (+,-,*,/). A and B
+    are integer literals or variable names. This is intentionally bounded but
+    fully real (the executor evaluates it)."""
+    s = str(expr or "").strip()
+    if not s:
+        raise LogicCodegenError("set_var requires a non-empty expr")
+    toks: list[str] = []
+    pos = 0
+    while pos < len(s):
+        m = _TOKEN_RE.match(s, pos)
+        if not m:
+            raise LogicCodegenError(f"bad token in expr {s!r} at {s[pos:]!r}")
+        toks.append(m.group(1))
+        pos = m.end()
+    if len(toks) == 1:
+        lhs = _emit_operand_from_token(toks[0], vt)
+        return (
+            f"{{ .lhs = {lhs}, .arith = 0, .has_rhs = 0, "
+            f".rhs = {{ .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }} }}"
+        )
+    if len(toks) == 3 and toks[1] in _ARITH_MAP:
+        lhs = _emit_operand_from_token(toks[0], vt)
+        rhs = _emit_operand_from_token(toks[2], vt)
+        return (
+            f"{{ .lhs = {lhs}, .arith = {_ARITH_MAP[toks[1]]}, "
+            f".has_rhs = 1, .rhs = {rhs} }}"
+        )
+    raise LogicCodegenError(
+        f"expr {s!r} too complex (only 'A' or 'A op B' with +,-,*,/ supported)"
+    )
+
+
+_EMPTY_EXPR = (
+    "{ .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, "
+    ".arith = 0, .has_rhs = 0, "
+    ".rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } }"
+)
+
+
+def _emit_action(
+    a: dict[str, Any],
+    scene_idx: dict[str, int],
+    vt: _VarTable,
+    pool: StringPool,
+) -> str:
+    t = str(a.get("type", "")).strip().lower()
+    if t not in _ACT_MAP:
+        raise LogicCodegenError(f"unknown action type {t!r}")
+    sym = _ACT_MAP[t]
+    i0, i1, prop, s0, s1, expr = 0, 0, "UI_PROP_VALUE", "NULL", "NULL", _EMPTY_EXPR
+
+    if t == "set_scene":
+        target = str(a.get("scene", "") or "")
+        if target not in scene_idx:
+            raise LogicCodegenError(f"set_scene -> unknown scene {target!r}")
+        i0 = scene_idx[target]
+    elif t == "set_widget":
+        wid = str(a.get("widget", "") or "")
+        if not wid:
+            raise LogicCodegenError("set_widget requires 'widget'")
+        s0 = _str_ref(pool, wid)
+        prop_name = str(a.get("prop", "value") or "value").lower()
+        if prop_name not in _PROP_MAP:
+            raise LogicCodegenError(f"set_widget bad prop {prop_name!r}")
+        prop = _PROP_MAP[prop_name]
+        if prop_name == "text":
+            s1 = _str_ref(pool, str(a.get("text", a.get("value", "")) or ""))
+        else:
+            v = a.get("value", 0)
+            i0 = (1 if v else 0) if isinstance(v, bool) else as_int(v, 0)
+    elif t == "set_var":
+        i0 = vt.intern(str(a.get("var", "") or ""))
+        expr = _emit_expr(a.get("expr", ""), vt)
+    elif t == "gpio_write":
+        i0 = as_int(a.get("pin", 0), 0)
+        i1 = 1 if as_int(a.get("level", 0), 0) else 0
+    elif t == "toast":
+        s0 = _str_ref(pool, str(a.get("text", "") or ""))
+    elif t == "start_timer":
+        i0 = as_int(a.get("timer_id", 0), 0)
+        i1 = as_int(a.get("ms", 1000), 1000)
+        if i1 < 1:
+            i1 = 1
+    elif t == "stop_timer":
+        i0 = as_int(a.get("timer_id", 0), 0)
+    elif t in ("ble_send", "lora_send"):
+        s0 = _str_ref(pool, str(a.get("bytes", "") or ""))
+
+    return (
+        f"{{ .type = {sym}, .i0 = {i0}, .i1 = {i1}, .prop = {prop}, "
+        f".s0 = {s0}, .s1 = {s1}, .expr = {expr} }}"
+    )
+
+
+def _emit_cond(c: dict[str, Any], vt: _VarTable, pool: StringPool) -> str:
+    op = str(c.get("op", "==")).strip()
+    if op not in _CMP_MAP:
+        raise LogicCodegenError(f"bad condition op {op!r}")
+    lhs = _emit_operand_ref(c.get("lhs"), vt, pool)
+    rhs = _emit_operand_ref(c.get("rhs"), vt, pool)
+    join = _JOIN_MAP.get(str(c.get("join", "&&")).strip(), "UI_JOIN_AND")
+    return (
+        f"{{ .lhs = {lhs}, .op = {_CMP_MAP[op]}, .rhs = {rhs}, .join = {join} }}"
+    )
+
+
+def build_logic_tables(
+    scenes: dict[str, Any],
+    scene_keys: list[str],
+    pool: StringPool,
+    *,
+    symbol_prefix: str,
+) -> tuple[list[str], list[str], int]:
+    """Compile every scene's events+rules into flat C tables.
+
+    Returns ``(c_decls, h_lines, var_count)``. ``c_decls`` defines the action
+    /cond/rule arrays + ``ui_logic_programs[]`` (index-aligned with
+    ``ui_scenes[]``). ``h_lines`` exports it. Deterministic ordering: scene
+    order, then rule order, then action order.
+    """
+    scene_idx = _scene_index_map(scene_keys)
+    vt = _VarTable()
+    c: list[str] = []
+    prog_inits: list[str] = []
+
+    for s_i, key in enumerate(scene_keys):
+        scene = scenes.get(key, {})
+        safe = sanitize_ident(key)
+        rules_out: list[str] = []  # per-rule UiLogicRule initializer text
+
+        # Synthesize widget-event rules first (deterministic: widget order,
+        # then on_press/on_change/on_focus), then explicit scene rules.
+        synth: list[dict[str, Any]] = []
+        for w in list(scene.get("widgets", []) or []):
+            if not isinstance(w, dict):
+                continue
+            wid = str(w.get("_widget_id") or w.get("id") or "")
+            ev = w.get("events")
+            if not wid or not isinstance(ev, dict):
+                continue
+            for ek in ("on_press", "on_change", "on_focus"):
+                acts = ev.get(ek)
+                if isinstance(acts, list) and acts:
+                    synth.append(
+                        {
+                            "name": f"{wid}.{ek}",
+                            "trigger": {"type": "widget", "widget": wid, "event": ek},
+                            "actions": acts,
+                        }
+                    )
+        explicit = [r for r in list(scene.get("rules", []) or []) if isinstance(r, dict)]
+        all_rules = synth + explicit
+
+        for r_i, rule in enumerate(all_rules):
+            trig = rule.get("trigger") or {}
+            if not isinstance(trig, dict):
+                raise LogicCodegenError(f"{key}: rule {r_i} missing trigger")
+            ttype = str(trig.get("type", "")).strip().lower()
+            if ttype not in _TRIG_MAP:
+                raise LogicCodegenError(f"{key}: rule {r_i} bad trigger {ttype!r}")
+            trig_i0 = 0
+            trig_edge = "UI_EDGE_ANY"
+            trig_s0 = "NULL"
+            trig_wev = "UI_WEV_PRESS"
+            if ttype == "timer":
+                trig_i0 = as_int(trig.get("timer_id", 0), 0)
+            elif ttype == "gpio_in":
+                trig_i0 = as_int(trig.get("pin", 0), 0)
+                trig_edge = _EDGE_MAP.get(
+                    str(trig.get("edge", "any")).strip().lower(), "UI_EDGE_ANY"
+                )
+            elif ttype == "widget":
+                wid = str(trig.get("widget", "") or "")
+                if not wid:
+                    raise LogicCodegenError(f"{key}: rule {r_i} widget trigger needs id")
+                trig_s0 = _str_ref(pool, wid)
+                trig_wev = _WEV_MAP.get(
+                    str(trig.get("event", "on_press")).strip().lower(), "UI_WEV_PRESS"
+                )
+
+            conds = [
+                c2 for c2 in list(rule.get("conditions", []) or []) if isinstance(c2, dict)
+            ]
+            acts = [
+                a for a in list(rule.get("actions", []) or []) if isinstance(a, dict)
+            ]
+            if not acts:
+                raise LogicCodegenError(f"{key}: rule {r_i} has no actions")
+
+            cond_sym = "NULL"
+            if conds:
+                cond_sym = f"{symbol_prefix}{safe}_r{r_i}_conds"
+                c.append(f"static const UiLogicCond {cond_sym}[] = {{")
+                for cc in conds:
+                    c.append("    " + _emit_cond(cc, vt, pool) + ",")
+                c.append("};")
+            act_sym = f"{symbol_prefix}{safe}_r{r_i}_acts"
+            c.append(f"static const UiLogicAction {act_sym}[] = {{")
+            for aa in acts:
+                c.append("    " + _emit_action(aa, scene_idx, vt, pool) + ",")
+            c.append("};")
+
+            name_ref = _str_ref(pool, str(rule.get("name", "") or ""))
+            rules_out.append(
+                f"    {{ .trig = {_TRIG_MAP[ttype]}, .trig_i0 = {trig_i0}, "
+                f".trig_edge = {trig_edge}, .trig_s0 = {trig_s0}, "
+                f".trig_wev = {trig_wev}, .name = {name_ref}, "
+                f".conds = {cond_sym if cond_sym != 'NULL' else 'NULL'}, "
+                f".cond_count = {len(conds)}, .actions = {act_sym}, "
+                f".action_count = {len(acts)} }},"
+            )
+
+        if rules_out:
+            rules_sym = f"{symbol_prefix}{safe}_rules"
+            c.append(f"static const UiLogicRule {rules_sym}[] = {{")
+            c.extend(rules_out)
+            c.append("};")
+            prog_inits.append(
+                f'    {{ .scene_name = "{escape_c_string(key)}", '
+                f".rules = {rules_sym}, "
+                f".rule_count = (uint16_t)(sizeof({rules_sym}) / sizeof({rules_sym}[0])) }},"
+            )
+        else:
+            prog_inits.append(
+                f'    {{ .scene_name = "{escape_c_string(key)}", '
+                ".rules = NULL, .rule_count = 0 },"
+            )
+        _ = s_i  # ordering only
+
+    c.append("/* Per-scene logic programs (index-aligned with ui_scenes[]) */")
+    c.append("const UiLogicProgram ui_logic_programs[] = {")
+    c.extend(prog_inits)
+    c.append("};")
+    c.append("")
+
+    h: list[str] = []
+    h.append('#include "ui_logic.h"')
+    h.append("extern const UiLogicProgram ui_logic_programs[];")
+    h.append(f"#define UI_LOGIC_PROGRAM_COUNT {len(scene_keys)}")
+    h.append(f"#define UI_LOGIC_VAR_COUNT {len(vt.order)}")
+    return c, h, len(vt.order)
+
+
 def generate_ui_design_pair(
     json_path: Path, *, scene_name: str, source_label: str
 ) -> tuple[str, str]:
@@ -401,8 +840,16 @@ def generate_ui_design_pair(
     for w in widgets:
         if isinstance(w, dict):
             pool_values.extend(collect_widget_strings(w))
+    # Single-scene logic strings share the same pool.
+    _single = {selected_name: scene}
+    pool_values.extend(_logic_collect_strings(_single))
 
     pool = build_string_pool(pool_values, symbol_prefix="str_")
+
+    # Visual-backend logic tables for this single scene.
+    logic_c, logic_h, _vc = build_logic_tables(
+        _single, [selected_name], pool, symbol_prefix="lg_"
+    )
 
     # Header
     h_lines: list[str] = []
@@ -426,6 +873,9 @@ def generate_ui_design_pair(
     h_lines.append("/* Exported scene */")
     h_lines.append("extern const UiScene ui_design;")
     h_lines.append("#define UI_SCENE_DEMO ui_design")
+    h_lines.append("")
+    h_lines.append("/* Visual-backend logic program registry */")
+    h_lines.extend(logic_h)
     h_lines.append("")
     h_lines.append("#ifdef __cplusplus")
     h_lines.append("}")
@@ -468,6 +918,8 @@ def generate_ui_design_pair(
         c_lines.append("    .widgets = NULL,")
         c_lines.append("};")
         c_lines.append("")
+        c_lines.append("/* Visual-backend logic (events / rules) */")
+        c_lines.extend(logic_c)
         return "\n".join(c_lines), "\n".join(h_lines)
 
     c_lines.append("static const UiWidget widgets[] = {")
@@ -554,6 +1006,8 @@ def generate_ui_design_pair(
     c_lines.append("    .widgets = widgets,")
     c_lines.append("};")
     c_lines.append("")
+    c_lines.append("/* Visual-backend logic (events / rules) */")
+    c_lines.extend(logic_c)
 
     return "\n".join(c_lines), "\n".join(h_lines)
 
@@ -812,7 +1266,10 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     if not scenes:
         raise ValueError("No scenes found in JSON.")
 
-    pool = build_string_pool(collect_scenes_strings(scenes), symbol_prefix="str_")
+    pool = build_string_pool(
+        collect_scenes_strings(scenes) + _logic_collect_strings(scenes),
+        symbol_prefix="str_",
+    )
 
     scene_names: list[str] = []  # sanitised C identifiers
     scene_keys: list[str] = []  # original names
@@ -902,6 +1359,13 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     c.append("};")
     c.append("")
 
+    # Visual-backend logic tables (events + rules) -> deterministic C.
+    logic_c, logic_h, _var_count = build_logic_tables(
+        scenes, scene_keys, pool, symbol_prefix="lg_"
+    )
+    c.append("/* ─────────── Visual-backend logic (events / rules) ─────────── */")
+    c.extend(logic_c)
+
     # Header: extern + defines
     h.append(f"#define UI_SCENE_COUNT {len(scene_names)}")
     h.append("")
@@ -914,6 +1378,9 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     h.append("")
     h.append("/* Backward-compatible alias (first scene) */")
     h.append("#define UI_SCENE_DEMO ui_scenes[0]")
+    h.append("")
+    h.append("/* Visual-backend logic program registry */")
+    h.extend(logic_h)
     h.append("")
     h.append("#ifdef __cplusplus")
     h.append("}")

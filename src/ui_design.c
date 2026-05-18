@@ -73,6 +73,12 @@ static const char str_66[] = "Free: --";
 static const char str_67[] = "metrics.min_text";
 static const char str_68[] = "Min: --";
 static const char str_69[] = "metrics.hint";
+static const char str_70[] = "boot init";
+static const char str_71[] = "ESPOS ready";
+static const char str_72[] = "heartbeat";
+static const char str_73[] = "boot button";
+static const char str_74[] = "BOOT pressed";
+static const char str_75[] = "picked item 2";
 
 /* Scene: main (9 widgets) */
 static const UiWidget main_widgets[] = {
@@ -1066,4 +1072,49 @@ const UiScene ui_scenes[] = {
         .widget_count = (uint16_t)(sizeof(metrics_widgets) / sizeof(metrics_widgets[0])),
         .widgets = metrics_widgets,
     },
+};
+
+/* ─────────── Visual-backend logic (events / rules) ─────────── */
+static const UiLogicAction lg_main_r0_acts[] = {
+    { .type = UI_ACT_SET_VAR, .i0 = 0, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+    { .type = UI_ACT_START_TIMER, .i0 = 0, .i1 = 1000, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+    { .type = UI_ACT_TOAST, .i0 = 0, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = str_71, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+};
+static const UiLogicCond lg_main_r1_conds[] = {
+    { .lhs = { .kind = UI_OPND_VAR, .value = 0, .s0 = NULL }, .op = UI_CMP_LT, .rhs = { .kind = UI_OPND_LITERAL, .value = 1000, .s0 = NULL }, .join = UI_JOIN_AND },
+};
+static const UiLogicAction lg_main_r1_acts[] = {
+    { .type = UI_ACT_SET_VAR, .i0 = 0, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_VAR, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 1, .rhs = { .kind = UI_OPND_LITERAL, .value = 1, .s0 = NULL } } },
+    { .type = UI_ACT_GPIO_WRITE, .i0 = 38, .i1 = 1, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+};
+static const UiLogicAction lg_main_r2_acts[] = {
+    { .type = UI_ACT_TOAST, .i0 = 0, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = str_74, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+    { .type = UI_ACT_STOP_TIMER, .i0 = 0, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+    { .type = UI_ACT_GPIO_WRITE, .i0 = 38, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+};
+static const UiLogicRule lg_main_rules[] = {
+    { .trig = UI_TRIG_BOOT, .trig_i0 = 0, .trig_edge = UI_EDGE_ANY, .trig_s0 = NULL, .trig_wev = UI_WEV_PRESS, .name = str_70, .conds = NULL, .cond_count = 0, .actions = lg_main_r0_acts, .action_count = 3 },
+    { .trig = UI_TRIG_TIMER, .trig_i0 = 0, .trig_edge = UI_EDGE_ANY, .trig_s0 = NULL, .trig_wev = UI_WEV_PRESS, .name = str_72, .conds = lg_main_r1_conds, .cond_count = 1, .actions = lg_main_r1_acts, .action_count = 2 },
+    { .trig = UI_TRIG_GPIO_IN, .trig_i0 = 0, .trig_edge = UI_EDGE_FALLING, .trig_s0 = NULL, .trig_wev = UI_WEV_PRESS, .name = str_73, .conds = NULL, .cond_count = 0, .actions = lg_main_r2_acts, .action_count = 3 },
+};
+static const UiLogicAction lg_menu_r0_acts[] = {
+    { .type = UI_ACT_SET_SCENE, .i0 = 2, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+};
+static const UiLogicAction lg_menu_r1_acts[] = {
+    { .type = UI_ACT_SET_WIDGET, .i0 = 0, .i1 = 0, .prop = UI_PROP_TEXT, .s0 = str_18, .s1 = str_75, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+};
+static const UiLogicAction lg_menu_r2_acts[] = {
+    { .type = UI_ACT_SET_SCENE, .i0 = 0, .i1 = 0, .prop = UI_PROP_VALUE, .s0 = NULL, .s1 = NULL, .expr = { .lhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL }, .arith = 0, .has_rhs = 0, .rhs = { .kind = UI_OPND_LITERAL, .value = 0, .s0 = NULL } } },
+};
+static const UiLogicRule lg_menu_rules[] = {
+    { .trig = UI_TRIG_WIDGET, .trig_i0 = 0, .trig_edge = UI_EDGE_ANY, .trig_s0 = str_20, .trig_wev = UI_WEV_PRESS, .name = NULL, .conds = NULL, .cond_count = 0, .actions = lg_menu_r0_acts, .action_count = 1 },
+    { .trig = UI_TRIG_WIDGET, .trig_i0 = 0, .trig_edge = UI_EDGE_ANY, .trig_s0 = str_22, .trig_wev = UI_WEV_PRESS, .name = NULL, .conds = NULL, .cond_count = 0, .actions = lg_menu_r1_acts, .action_count = 1 },
+    { .trig = UI_TRIG_WIDGET, .trig_i0 = 0, .trig_edge = UI_EDGE_ANY, .trig_s0 = str_24, .trig_wev = UI_WEV_PRESS, .name = NULL, .conds = NULL, .cond_count = 0, .actions = lg_menu_r2_acts, .action_count = 1 },
+};
+/* Per-scene logic programs (index-aligned with ui_scenes[]) */
+const UiLogicProgram ui_logic_programs[] = {
+    { .scene_name = "main", .rules = lg_main_rules, .rule_count = (uint16_t)(sizeof(lg_main_rules) / sizeof(lg_main_rules[0])) },
+    { .scene_name = "menu", .rules = lg_menu_rules, .rule_count = (uint16_t)(sizeof(lg_menu_rules) / sizeof(lg_menu_rules[0])) },
+    { .scene_name = "settings", .rules = NULL, .rule_count = 0 },
+    { .scene_name = "metrics", .rules = NULL, .rule_count = 0 },
 };

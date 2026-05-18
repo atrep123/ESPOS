@@ -20,6 +20,7 @@
 #include "services/metrics/metrics.h"
 #include "services/ui/ui.h"
 #include "services/ui_app/ui_app.h"
+#include "services/logic/logic.h"
 
 static const char *TAG = "ESP32OS";
 
@@ -107,6 +108,7 @@ static void test_spiffs(void)
 void system_shutdown(void)
 {
     ESP_LOGI(TAG, "System shutting down...");
+    logic_stop();
     ui_app_stop();
     ui_stop();
     metrics_stop();
@@ -160,6 +162,9 @@ void app_main(void)
     /* Start runtime UI service (SSD1363). */
     ui_start();
     ui_app_start();
+    /* Visual-backend logic executor: runs the compiled event/rule programs
+     * (ui_logic_programs[]). Composes with the bus + UI service above. */
+    logic_start();
 
     ESP_LOGI(TAG, "=== System Ready ===");
 

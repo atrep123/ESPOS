@@ -1,0 +1,230 @@
+{
+  "$doc": "Full visual-backend coverage fixture: exercises every action + trigger type. board=m5stamp-c6lora (has ble+lora) so ble_send/lora_send validate. Proves the whole event/rule -> ui_codegen -> firmware path compiles.",
+  "board": "m5stamp-c6lora",
+  "width": 256,
+  "height": 128,
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 256,
+      "height": 128,
+      "bg_color": "black",
+      "widgets": [
+        {
+          "type": "button",
+          "x": 8,
+          "y": 8,
+          "width": 80,
+          "height": 24,
+          "text": "Open Menu",
+          "id": "btn_menu",
+          "events": {
+            "on_press": [
+              {
+                "type": "set_var",
+                "var": "presses",
+                "expr": "presses + 1"
+              },
+              {
+                "type": "toast",
+                "text": "opening"
+              },
+              {
+                "type": "set_scene",
+                "scene": "menu"
+              }
+            ]
+          }
+        },
+        {
+          "type": "slider",
+          "x": 8,
+          "y": 40,
+          "width": 120,
+          "height": 16,
+          "id": "sl_level",
+          "value": 5,
+          "min_value": 0,
+          "max_value": 10,
+          "events": {
+            "on_change": [
+              {
+                "type": "set_widget",
+                "widget": "lbl_echo",
+                "prop": "text",
+                "text": "moved"
+              },
+              {
+                "type": "gpio_write",
+                "pin": 21,
+                "level": 1
+              }
+            ]
+          }
+        },
+        {
+          "type": "checkbox",
+          "x": 8,
+          "y": 64,
+          "width": 16,
+          "height": 16,
+          "id": "cb_led",
+          "checked": false,
+          "events": {
+            "on_change": [
+              {
+                "type": "set_widget",
+                "widget": "lbl_echo",
+                "prop": "visible",
+                "value": true
+              }
+            ]
+          }
+        },
+        {
+          "type": "label",
+          "x": 8,
+          "y": 96,
+          "width": 200,
+          "height": 16,
+          "text": "echo",
+          "id": "lbl_echo"
+        }
+      ],
+      "rules": [
+        {
+          "name": "boot setup",
+          "trigger": {
+            "type": "boot"
+          },
+          "actions": [
+            {
+              "type": "set_var",
+              "var": "presses",
+              "expr": "0"
+            },
+            {
+              "type": "start_timer",
+              "timer_id": 0,
+              "ms": 1000
+            },
+            {
+              "type": "toast",
+              "text": "booted"
+            }
+          ]
+        },
+        {
+          "name": "heartbeat",
+          "trigger": {
+            "type": "timer",
+            "timer_id": 0
+          },
+          "conditions": [
+            {
+              "lhs": "var:presses",
+              "op": "<",
+              "rhs": 100,
+              "join": "&&"
+            },
+            {
+              "lhs": "widget:cb_led.checked",
+              "op": "==",
+              "rhs": 0
+            }
+          ],
+          "actions": [
+            {
+              "type": "gpio_write",
+              "pin": 2,
+              "level": 0
+            },
+            {
+              "type": "stop_timer",
+              "timer_id": 0
+            },
+            {
+              "type": "set_var",
+              "var": "ticks",
+              "expr": "ticks + 1"
+            }
+          ]
+        },
+        {
+          "name": "button gpio",
+          "trigger": {
+            "type": "gpio_in",
+            "pin": 0,
+            "edge": "falling"
+          },
+          "actions": [
+            {
+              "type": "set_widget",
+              "widget": "sl_level",
+              "prop": "value",
+              "value": 7
+            },
+            {
+              "type": "set_scene",
+              "scene": "main"
+            }
+          ]
+        },
+        {
+          "name": "ble inbound",
+          "trigger": {
+            "type": "ble_recv"
+          },
+          "actions": [
+            {
+              "type": "ble_send",
+              "bytes": "ack"
+            },
+            {
+              "type": "toast",
+              "text": "ble rx"
+            }
+          ]
+        },
+        {
+          "name": "lora inbound",
+          "trigger": {
+            "type": "lora_recv"
+          },
+          "actions": [
+            {
+              "type": "lora_send",
+              "bytes": "pong"
+            }
+          ]
+        }
+      ]
+    },
+    "menu": {
+      "name": "menu",
+      "width": 256,
+      "height": 128,
+      "bg_color": "black",
+      "widgets": [
+        {
+          "type": "button",
+          "x": 8,
+          "y": 8,
+          "width": 80,
+          "height": 24,
+          "text": "Back",
+          "id": "btn_back",
+          "events": {
+            "on_press": [
+              {
+                "type": "set_scene",
+                "scene": "main"
+              }
+            ]
+          }
+        }
+      ],
+      "rules": []
+    }
+  }
+}

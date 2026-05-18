@@ -227,6 +227,314 @@ def _parse_runtime_meta(runtime: str) -> dict[str, str]:
     return meta
 
 
+# ── Visual-backend logic (events / rules) vocabulary ──────────────────────
+_LOGIC_TRIGGERS = {"boot", "timer", "gpio_in", "ble_recv", "lora_recv", "widget"}
+_LOGIC_ACTIONS = {
+    "set_scene",
+    "set_widget",
+    "set_var",
+    "gpio_write",
+    "toast",
+    "start_timer",
+    "stop_timer",
+    "ble_send",
+    "lora_send",
+}
+_LOGIC_PROPS = {"value", "text", "checked", "visible", "enabled"}
+_LOGIC_OPS = {"==", "!=", "<", ">", "<=", ">="}
+_LOGIC_WIDGET_EVENTS = {"on_press", "on_change", "on_focus"}
+_RADIO_ACTIONS = {"ble_send": "ble", "lora_send": "lora_sx1262"}
+_VAR_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
+_EXPR_RE = re.compile(
+    r"^\s*[A-Za-z_][A-Za-z0-9_]*|-?\d+"
+    r"(\s*[+\-*/]\s*([A-Za-z_][A-Za-z0-9_]*|-?\d+))?\s*$"
+)
+
+
+def _board_peripherals(data: dict[str, Any]) -> tuple[set[str] | None, str]:
+    """Resolve declared board -> its peripheral set via board_registry.
+
+    Returns ``(peripherals_or_None, board_label)``. ``None`` means no board
+    was declared or it is unknown — radio actions then warn (capability
+    unverifiable) rather than hard-error, so generic designs still validate.
+    """
+    board_id = data.get("board") or data.get("active_board")
+    if not isinstance(board_id, str) or not board_id:
+        return None, ""
+    try:
+        from board_registry import load_registry
+
+        reg = load_registry()
+        b = reg.get(board_id)
+    except Exception:  # registry missing/broken — treat as unverifiable
+        return None, board_id
+    if b is None:
+        return None, board_id
+    return set(b.peripherals or []), board_id
+
+
+def _logic_operand_issue(ref: Any, where: str, widget_ids: set[str]) -> str | None:
+    """Validate a condition operand / rhs. Returns an error message or None."""
+    if isinstance(ref, bool):
+        return f"{where}: boolean operand not allowed (use 0/1)"
+    if isinstance(ref, int):
+        return None
+    if not isinstance(ref, str) or not ref:
+        return f"{where}: operand must be int, 'var:<n>' or 'widget:<id>.value|checked'"
+    s = ref.strip()
+    if re.fullmatch(r"-?\d+", s):
+        return None
+    if s.startswith("var:"):
+        return None if _VAR_NAME_RE.match(s[4:].strip()) else f"{where}: bad var name {s!r}"
+    if s.startswith("widget:"):
+        body = s[len("widget:") :]
+        wid, _, attr = body.partition(".")
+        wid = wid.strip()
+        attr = (attr or "value").strip().lower()
+        if not wid:
+            return f"{where}: widget operand missing id"
+        if attr not in ("value", "checked"):
+            return f"{where}: widget operand attr must be .value or .checked"
+        if wid not in widget_ids:
+            return f"{where}: references unknown widget id {wid!r}"
+        return None
+    return f"{where}: unparseable operand {ref!r}"
+
+
+def _validate_action(
+    a: Any,
+    where: str,
+    scene_names: set[str],
+    widget_ids: set[str],
+    board_per: set[str] | None,
+    board_label: str,
+) -> list[Issue]:
+    out: list[Issue] = []
+    if not isinstance(a, dict):
+        out.append(Issue("ERROR", f"{where}: action must be an object"))
+        return out
+    t = str(a.get("type", "")).strip().lower()
+    if t not in _LOGIC_ACTIONS:
+        out.append(Issue("ERROR", f"{where}: unknown action type {a.get('type')!r}"))
+        return out
+    if t == "set_scene":
+        sc = a.get("scene")
+        if not isinstance(sc, str) or not sc:
+            out.append(Issue("ERROR", f"{where}: set_scene needs 'scene'"))
+        elif sc not in scene_names:
+            out.append(Issue("ERROR", f"{where}: set_scene -> unknown scene {sc!r}"))
+    elif t == "set_widget":
+        wid = a.get("widget")
+        if not isinstance(wid, str) or not wid:
+            out.append(Issue("ERROR", f"{where}: set_widget needs 'widget'"))
+        elif wid not in widget_ids:
+            out.append(Issue("ERROR", f"{where}: set_widget -> unknown widget id {wid!r}"))
+        prop = str(a.get("prop", "value") or "value").lower()
+        if prop not in _LOGIC_PROPS:
+            out.append(Issue("ERROR", f"{where}: set_widget bad prop {prop!r}"))
+        if prop == "text" and not isinstance(a.get("text", a.get("value", "")), str):
+            out.append(Issue("WARN", f"{where}: set_widget(text) value should be a string"))
+    elif t == "set_var":
+        v = a.get("var")
+        if not isinstance(v, str) or not _VAR_NAME_RE.match(v or ""):
+            out.append(Issue("ERROR", f"{where}: set_var needs a [a-z0-9_] 'var' name"))
+        ex = a.get("expr")
+        if not isinstance(ex, str) or not ex.strip():
+            out.append(Issue("ERROR", f"{where}: set_var needs a non-empty 'expr'"))
+        elif not _EXPR_RE.match(ex):
+            out.append(
+                Issue("ERROR", f"{where}: set_var expr {ex!r} too complex (only 'A' or 'A op B')")
+            )
+    elif t == "gpio_write":
+        if not _is_int(a.get("pin")):
+            out.append(Issue("ERROR", f"{where}: gpio_write needs int 'pin'"))
+        if a.get("level") not in (0, 1):
+            out.append(Issue("ERROR", f"{where}: gpio_write 'level' must be 0 or 1"))
+    elif t == "toast":
+        if not isinstance(a.get("text"), str):
+            out.append(Issue("WARN", f"{where}: toast should have a 'text' string"))
+    elif t == "start_timer":
+        tid = a.get("timer_id")
+        if not _is_int(tid) or not (0 <= int(tid) <= 15):
+            out.append(Issue("ERROR", f"{where}: start_timer 'timer_id' must be 0..15"))
+        ms = a.get("ms")
+        if not _is_int(ms) or int(ms) < 1:
+            out.append(Issue("ERROR", f"{where}: start_timer 'ms' must be a positive int"))
+    elif t == "stop_timer":
+        tid = a.get("timer_id")
+        if not _is_int(tid) or not (0 <= int(tid) <= 15):
+            out.append(Issue("ERROR", f"{where}: stop_timer 'timer_id' must be 0..15"))
+    elif t in _RADIO_ACTIONS:
+        if not isinstance(a.get("bytes"), str) or not a.get("bytes"):
+            out.append(Issue("ERROR", f"{where}: {t} needs a non-empty 'bytes' string"))
+        need = _RADIO_ACTIONS[t]
+        if board_per is None:
+            out.append(
+                Issue(
+                    "WARN",
+                    f"{where}: {t} requires a board with '{need}' - no/unknown board "
+                    f"declared, capability unverifiable",
+                )
+            )
+        elif need not in board_per:
+            out.append(
+                Issue(
+                    "ERROR",
+                    f"{where}: {t} not allowed - board '{board_label}' lacks '{need}' "
+                    f"peripheral",
+                )
+            )
+    return out
+
+
+def _validate_logic(
+    data: dict[str, Any], scenes: dict[str, dict[str, Any]], file_label: str
+) -> list[Issue]:
+    """Validate per-widget ``events`` and per-scene ``rules`` end to end.
+
+    Rule 130 (this block): trigger/action/condition vocabulary, var-name
+    format, set_scene/set_widget/widget-operand cross-references, and
+    board-peripheral gating for ble_send/lora_send.
+    """
+    issues: list[Issue] = []
+    scene_names = set(scenes.keys())
+    board_per, board_label = _board_peripherals(data)
+
+    for scene_name, scene in scenes.items():
+        pfx = f"{file_label}: {scene_name}"
+        widgets = scene.get("widgets") or []
+        widget_ids: set[str] = set()
+        for w in widgets:
+            if isinstance(w, dict):
+                wid = w.get("_widget_id") or w.get("id")
+                if isinstance(wid, str) and wid:
+                    widget_ids.add(wid)
+
+        # ── Per-widget events ──
+        for idx, w in enumerate(widgets):
+            if not isinstance(w, dict):
+                continue
+            ev = w.get("events")
+            if ev is None:
+                continue
+            ref = _wref(scene_name, w, idx)
+            if not isinstance(ev, dict):
+                issues.append(Issue("ERROR", f"{pfx}: {ref}: 'events' must be an object"))
+                continue
+            wid = w.get("_widget_id") or w.get("id")
+            for ek, acts in ev.items():
+                if ek not in _LOGIC_WIDGET_EVENTS:
+                    issues.append(
+                        Issue("ERROR", f"{pfx}: {ref}: unknown event handler {ek!r}")
+                    )
+                    continue
+                if not isinstance(acts, list) or not acts:
+                    issues.append(
+                        Issue("WARN", f"{pfx}: {ref}: events.{ek} is empty")
+                    )
+                    continue
+                if not (isinstance(wid, str) and wid):
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{pfx}: {ref}: widget has events but no id — handlers "
+                            f"cannot be wired in firmware",
+                        )
+                    )
+                for ai, a in enumerate(acts):
+                    issues.extend(
+                        _validate_action(
+                            a,
+                            f"{pfx}: {ref}: events.{ek}[{ai}]",
+                            scene_names,
+                            widget_ids,
+                            board_per,
+                            board_label,
+                        )
+                    )
+
+        # ── Per-scene rules ──
+        rules = scene.get("rules")
+        if rules is None:
+            continue
+        if not isinstance(rules, list):
+            issues.append(Issue("ERROR", f"{pfx}: 'rules' must be a list"))
+            continue
+        for r_i, rule in enumerate(rules):
+            rl = f"{pfx}: rule[{r_i}]"
+            if not isinstance(rule, dict):
+                issues.append(Issue("ERROR", f"{rl}: rule must be an object"))
+                continue
+            trig = rule.get("trigger")
+            if not isinstance(trig, dict):
+                issues.append(Issue("ERROR", f"{rl}: missing/invalid 'trigger'"))
+            else:
+                tt = str(trig.get("type", "")).strip().lower()
+                if tt not in _LOGIC_TRIGGERS:
+                    issues.append(Issue("ERROR", f"{rl}: bad trigger type {tt!r}"))
+                elif tt == "timer":
+                    if not _is_int(trig.get("timer_id")) or not (
+                        0 <= int(trig.get("timer_id")) <= 15
+                    ):
+                        issues.append(Issue("ERROR", f"{rl}: timer 'timer_id' must be 0..15"))
+                elif tt == "gpio_in":
+                    if not _is_int(trig.get("pin")):
+                        issues.append(Issue("ERROR", f"{rl}: gpio_in needs int 'pin'"))
+                    edge = str(trig.get("edge", "any")).lower()
+                    if edge not in ("any", "rising", "falling"):
+                        issues.append(Issue("ERROR", f"{rl}: gpio_in bad 'edge' {edge!r}"))
+                elif tt == "widget":
+                    twid = trig.get("widget")
+                    if not isinstance(twid, str) or not twid:
+                        issues.append(Issue("ERROR", f"{rl}: widget trigger needs 'widget'"))
+                    elif twid not in widget_ids:
+                        issues.append(
+                            Issue("ERROR", f"{rl}: widget trigger -> unknown id {twid!r}")
+                        )
+                    wev = str(trig.get("event", "on_press")).lower()
+                    if wev not in _LOGIC_WIDGET_EVENTS:
+                        issues.append(Issue("ERROR", f"{rl}: widget trigger bad event {wev!r}"))
+
+            conds = rule.get("conditions")
+            if conds is not None:
+                if not isinstance(conds, list):
+                    issues.append(Issue("ERROR", f"{rl}: 'conditions' must be a list"))
+                else:
+                    for ci, c in enumerate(conds):
+                        cl = f"{rl}: cond[{ci}]"
+                        if not isinstance(c, dict):
+                            issues.append(Issue("ERROR", f"{cl}: must be an object"))
+                            continue
+                        if str(c.get("op", "")) not in _LOGIC_OPS:
+                            issues.append(Issue("ERROR", f"{cl}: bad op {c.get('op')!r}"))
+                        m = _logic_operand_issue(c.get("lhs"), f"{cl}.lhs", widget_ids)
+                        if m:
+                            issues.append(Issue("ERROR", m))
+                        m = _logic_operand_issue(c.get("rhs"), f"{cl}.rhs", widget_ids)
+                        if m:
+                            issues.append(Issue("ERROR", m))
+                        jn = c.get("join", "&&")
+                        if jn not in ("&&", "||"):
+                            issues.append(Issue("ERROR", f"{cl}: bad join {jn!r}"))
+
+            acts = rule.get("actions")
+            if not isinstance(acts, list) or not acts:
+                issues.append(Issue("ERROR", f"{rl}: 'actions' must be a non-empty list"))
+            else:
+                for ai, a in enumerate(acts):
+                    issues.extend(
+                        _validate_action(
+                            a,
+                            f"{rl}: actions[{ai}]",
+                            scene_names,
+                            widget_ids,
+                            board_per,
+                            board_label,
+                        )
+                    )
+    return issues
+
+
 def _scenes_from_data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     scenes_raw = data.get("scenes", {})
     if isinstance(scenes_raw, dict):
@@ -1772,6 +2080,9 @@ def validate_data(
                     )
             else:
                 bind_kinds[bk] = (kd_lower, scene_name)
+
+    # ── Rule 130: Visual-backend events / rules validation ──
+    issues.extend(_validate_logic(data, scenes, file_label))
 
     if warnings_as_errors:
         return [Issue("ERROR", i.message) if i.level == "WARN" else i for i in issues]

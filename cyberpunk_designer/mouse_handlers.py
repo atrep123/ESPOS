@@ -27,6 +27,12 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
     if template_manager.handle_click(app, pos):
         return
 
+    # Logic Editor is modal: it eats the click (focus a row or dismiss).
+    from . import logic_editor
+
+    if logic_editor.handle_click(app, pos):
+        return
+
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))
         app._set_help_overlay(False)
@@ -583,6 +589,12 @@ def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     from . import template_manager
 
     if template_manager.handle_wheel(app, dy):
+        return
+
+    # Logic Editor is modal: wheel moves the row cursor.
+    from . import logic_editor
+
+    if logic_editor.handle_wheel(app, dy):
         return
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))

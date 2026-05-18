@@ -38,6 +38,7 @@ from . import (
     io_ops,
     layout_tools,
     live_preview,
+    logic_editor,
     reporting,
     scene_ops,
     selection_ops,
@@ -467,6 +468,14 @@ class CyberpunkEditorApp:
             "cols": 1,
             "rows": 1,
         }
+        # Logic Editor modal state (visual-backend events/rules over the
+        # real model; compiles to firmware C via ui_codegen).
+        self._logic_editor: dict = {
+            "visible": False,
+            "section": 0,
+            "cursor": 0,
+            "hitboxes": [],
+        }
         self._default_palette_w = DEFAULT_PALETTE_W
         self._default_inspector_w = DEFAULT_INSPECTOR_W
         self.panels_collapsed = False
@@ -717,6 +726,7 @@ class CyberpunkEditorApp:
             ("Fit Widget", self._fit_selection_to_widget),
             ("SVG", self._export_svg),
             ("Board", self._cycle_board),
+            ("Logic", self._open_logic_editor),
             ("Warn", self._toggle_overflow_warnings),
         ]
 
@@ -784,6 +794,16 @@ class CyberpunkEditorApp:
         JSON -> C codegen -> firmware `icons_find()` unchanged.
         """
         icon_palette.open_icon_palette(self)
+
+    def _open_logic_editor(self) -> None:
+        """Open the Logic Editor: attach visual-backend events/rules.
+
+        Edits the selected widget's ``events`` (on_press/on_change/on_focus)
+        and the current scene's ``rules`` (trigger -> action(s)) on the real
+        model via the undo-safe save path. What is built here round-trips
+        save -> ui_codegen -> firmware logic service and actually executes.
+        """
+        logic_editor.toggle_logic_editor(self)
 
     # ------------------------------------------------------------------ #
     # Status, inspector, and input helpers

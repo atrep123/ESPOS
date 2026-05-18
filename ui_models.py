@@ -104,6 +104,7 @@ class SceneConfigDict(TypedDict):
     hardware_profile: Optional[str]
     max_fb_kb: Optional[int]
     max_flash_kb: Optional[int]
+    rules: List[Dict[str, Any]]
 
 
 def _coerce_int(value: Optional[int]) -> int:
@@ -147,6 +148,17 @@ class ResponsiveRule(TypedDict, total=False):
 def _empty_responsive_rules() -> List["ResponsiveRule"]:
     """Typed default factory for responsive rules."""
     return []
+
+
+# Visual-backend event handler keys recognised on a widget. Each maps to a
+# list of action dicts (validated by tools/validate_design.py and compiled by
+# tools/ui_codegen.py). Kept here so the model, codegen and validator agree.
+WIDGET_EVENT_KEYS = ("on_press", "on_change", "on_focus")
+
+
+def _empty_events() -> Dict[str, List[Dict[str, Any]]]:
+    """Typed default factory for per-widget visual-backend event handlers."""
+    return {}
 
 
 class WidgetType(Enum):
@@ -222,6 +234,9 @@ class WidgetConfig:
     constraints: Constraints = field(default_factory=empty_constraints)
     responsive_rules: List[ResponsiveRule] = field(default_factory=_empty_responsive_rules)
     animations: List[str] = field(default_factory=_empty_str_list)
+    # Visual-backend event handlers: {on_press|on_change|on_focus: [action,...]}.
+    # Compiled to deterministic C and run by the firmware logic service.
+    events: Dict[str, List[Dict[str, Any]]] = field(default_factory=_empty_events)
     # Firmware/runtime metadata (exported as `constraints_json` in C headers).
     runtime: str = ""
     # Editing safeguards
@@ -253,6 +268,28 @@ class WidgetConfig:
         self._apply_dimension_defaults()
         self._apply_integer_bounds()
         self._sync_items_text()
+        self._normalize_events()
+
+    def _normalize_events(self) -> None:
+        """Coerce ``events`` into ``{handler: [action_dict, ...]}``.
+
+        Tolerant of missing/None/garbage so external component libraries can
+        pass widgets without a logic model; only the three known handler keys
+        are kept and only dict actions survive (so codegen never sees junk).
+        """
+        ev = getattr(self, "events", None)
+        if not isinstance(ev, dict):
+            self.events = {}
+            return
+        clean: Dict[str, List[Dict[str, Any]]] = {}
+        for key in WIDGET_EVENT_KEYS:
+            raw = ev.get(key)
+            if not isinstance(raw, list):
+                continue
+            actions = [dict(a) for a in raw if isinstance(a, dict)]
+            if actions:
+                clean[key] = actions
+        self.events = clean
 
     def _apply_text_defaults(self) -> None:
         try:
@@ -473,6 +510,9 @@ class SceneConfig:
     height: int
     widgets: List[WidgetConfig]
     bg_color: str = "black"
+    # Visual-backend scene rules: [{trigger, conditions?, actions}, ...].
+    # Compiled to deterministic C and run by the firmware logic service.
+    rules: List[Dict[str, Any]] = field(default_factory=lambda: [])
     # Responsive base used for constraints
     base_width: int = 128
     base_height: int = 64

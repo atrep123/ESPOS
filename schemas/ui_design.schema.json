@@ -65,6 +65,13 @@
           "items": {
             "$ref": "#/$defs/widget"
           }
+        },
+        "rules": {
+          "type": "array",
+          "description": "Visual-backend behavior rules for this scene: trigger -> optional conditions -> action(s). Compiled to deterministic C in ui_design.c and executed by the firmware logic service.",
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
         }
       },
       "additionalProperties": true
@@ -338,6 +345,28 @@
           "items": {
             "type": "object"
           }
+        },
+        "events": {
+          "type": "object",
+          "description": "Visual-backend event handlers for this widget. Each handler key maps to a list of actions run when the event fires on the firmware. The widget must have an 'id'/'_widget_id' for its events to be wired.",
+          "properties": {
+            "on_press": {
+              "type": "array",
+              "description": "Actions run when this widget is activated (A button / encoder press / toggle).",
+              "items": {"$ref": "#/$defs/action"}
+            },
+            "on_change": {
+              "type": "array",
+              "description": "Actions run when this widget's value/checked state changes (slider/checkbox/toggle/list).",
+              "items": {"$ref": "#/$defs/action"}
+            },
+            "on_focus": {
+              "type": "array",
+              "description": "Actions run when this widget receives focus.",
+              "items": {"$ref": "#/$defs/action"}
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -353,6 +382,149 @@
           "minLength": 1
         }
       ]
+    },
+    "rule": {
+      "type": "object",
+      "description": "A scene rule: when 'trigger' fires and all 'conditions' hold, run 'actions' in order.",
+      "required": ["trigger", "actions"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human label (for the designer / generated C comment)."
+        },
+        "trigger": {"$ref": "#/$defs/trigger"},
+        "conditions": {
+          "type": "array",
+          "description": "Optional AND/OR list of boolean conditions; all must hold (subject to op) for actions to run.",
+          "items": {"$ref": "#/$defs/condition"}
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/action"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "trigger": {
+      "type": "object",
+      "description": "What starts a rule.",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["boot", "timer", "gpio_in", "ble_recv", "lora_recv", "widget"]
+        },
+        "timer_id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15,
+          "description": "timer: which logic timer slot (0..15) firing this rule."
+        },
+        "pin": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 48,
+          "description": "gpio_in: GPIO number whose level change fires this rule."
+        },
+        "edge": {
+          "type": "string",
+          "enum": ["rising", "falling", "any"],
+          "description": "gpio_in: which edge fires (default 'any')."
+        },
+        "widget": {
+          "type": "string",
+          "description": "widget: id of the widget whose event fires this rule."
+        },
+        "event": {
+          "type": "string",
+          "enum": ["on_press", "on_change", "on_focus"],
+          "description": "widget: which widget event fires this rule."
+        }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "description": "One real, codegen-backed effect. Every type compiles to working firmware C.",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "set_scene",
+            "set_widget",
+            "set_var",
+            "gpio_write",
+            "toast",
+            "start_timer",
+            "stop_timer",
+            "ble_send",
+            "lora_send"
+          ]
+        },
+        "scene": {"type": "string", "description": "set_scene: target scene name."},
+        "widget": {"type": "string", "description": "set_widget: target widget id."},
+        "prop": {
+          "type": "string",
+          "enum": ["value", "text", "checked", "visible", "enabled"],
+          "description": "set_widget: which widget property to set."
+        },
+        "value": {
+          "type": ["integer", "string", "boolean"],
+          "description": "set_widget value, gpio level (0/1), timer ms, or var int expression depending on action."
+        },
+        "text": {"type": "string", "description": "set_widget(text=...) / toast message."},
+        "var": {"type": "string", "description": "set_var: integer variable name (a-z0-9_)."},
+        "expr": {
+          "type": "string",
+          "description": "set_var: bounded integer expression over int vars / literals (e.g. 'counter + 1')."
+        },
+        "pin": {"type": "integer", "minimum": 0, "maximum": 48, "description": "gpio_write pin."},
+        "level": {"type": "integer", "minimum": 0, "maximum": 1, "description": "gpio_write level."},
+        "timer_id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15,
+          "description": "start_timer/stop_timer slot."
+        },
+        "ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600000,
+          "description": "start_timer period in milliseconds."
+        },
+        "bytes": {
+          "type": "string",
+          "description": "ble_send/lora_send: payload as a short ASCII/hex string (board must expose the radio peripheral)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "type": "object",
+      "description": "A boolean test on an int var or a widget value/checked state.",
+      "required": ["lhs", "op", "rhs"],
+      "properties": {
+        "lhs": {
+          "type": "string",
+          "description": "Left side: 'var:<name>' (int var), 'widget:<id>.value', or 'widget:<id>.checked'."
+        },
+        "op": {
+          "type": "string",
+          "enum": ["==", "!=", "<", ">", "<=", ">="]
+        },
+        "rhs": {
+          "type": ["integer", "string"],
+          "description": "Right side: an integer literal, 'var:<name>', or a widget ref like lhs."
+        },
+        "join": {
+          "type": "string",
+          "enum": ["&&", "||"],
+          "description": "How this condition combines with the NEXT one in the list (default '&&')."
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

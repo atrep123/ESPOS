@@ -10,6 +10,7 @@ import pygame
 from .. import windowing
 from ..constants import PALETTE
 from ..icon_palette import draw_icon_palette
+from ..logic_editor import draw_logic_editor
 from ..perf import RenderCache, compute_dirty_rects
 from ..template_manager import draw_template_manager
 from .canvas import draw_canvas
@@ -64,6 +65,7 @@ def optimized_draw_frame(app: CyberpunkEditorApp) -> None:
     draw_shortcuts_panel(app)
     draw_icon_palette(app)
     draw_template_manager(app)
+    draw_logic_editor(app)
     draw_context_menu(app)
     draw_tooltip(app)
 

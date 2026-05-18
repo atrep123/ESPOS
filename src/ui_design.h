@@ -27,6 +27,12 @@ extern const UiScene ui_scenes[];
 /* Backward-compatible alias (first scene) */
 #define UI_SCENE_DEMO ui_scenes[0]
 
+/* Visual-backend logic program registry */
+#include "ui_logic.h"
+extern const UiLogicProgram ui_logic_programs[];
+#define UI_LOGIC_PROGRAM_COUNT 4
+#define UI_LOGIC_VAR_COUNT 1
+
 #ifdef __cplusplus
 }
 #endif

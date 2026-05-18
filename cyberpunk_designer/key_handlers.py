@@ -260,6 +260,12 @@ def on_key_down(app, event: pygame.event.Event) -> None:
     if template_manager.handle_key(app, event):
         return
 
+    # Logic Editor is modal too (events/rules CRUD over the real model).
+    from . import logic_editor
+
+    if logic_editor.handle_key(app, event):
+        return
+
     if bool(getattr(app, "show_help_overlay", False)) and bool(getattr(app, "_help_pinned", False)):
         if event.key == pygame.K_ESCAPE:
             app._set_help_overlay(False)
