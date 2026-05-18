@@ -25,7 +25,7 @@ Covers:
 - scene name validation, animations field type
 - locked field type, state_overrides structure
 - scene dimension limits, textbox min size, panel border recommendation
-- constraints & responsive_rules type, parent_id reference, align-border, widget ID length
+- constraints & responsive_rules type, align-border, widget ID length
 - font_size / corner_radius / border_width type, border_color parseability
 - mostly-outside-scene detection, bold field type, duplicate geometry, disabled+no-runtime
 
@@ -768,11 +768,15 @@ def validate_data(
                 if rr is not None and not isinstance(rr, list):
                     issues.append(Issue("ERROR", f"{wl}: responsive_rules must be a list"))
 
-            # ── Rule 53: parent_id must reference existing widget ID ──
-            pid = w.get("parent_id")
-            if pid is not None and isinstance(pid, str) and pid:
-                if pid not in seen_ids and pid != (w.get("_widget_id") or w.get("id")):
-                    issues.append(Issue("WARN", f"{wl}: parent_id '{pid}' not found in scene"))
+            # ── Rule 53: REMOVED (dead rule) ──
+            # `parent_id` is not part of WidgetConfig, the JSON schema, the
+            # codegen, or the designer. The schema declares
+            # `additionalProperties: false`, so a `parent_id` key can never
+            # legally appear in a schema-valid design and this rule could
+            # never fire. Widget parenting is not a supported feature; the
+            # rule was misleading dead code and has been removed. If parenting
+            # is ever added, reintroduce both the model field and a schema
+            # property alongside any validation rule.
 
             # ── Rule 54: Center-aligned text in very narrow widget ──
             align = str(w.get("align", "left") or "left").lower()
@@ -1695,20 +1699,50 @@ def validate_file(
 
     issues: list[Issue] = []
 
-    # ── JSON Schema structural validation ──
+    # ── JSON Schema structural validation (MANDATORY) ──
+    # This validator gates codegen / demo generation / visual verification /
+    # PlatformIO builds. Schema enforcement must never be silently optional:
+    # a missing dependency or schema file is a hard, actionable ERROR — not a
+    # silent pass and not a soft warning. `jsonschema` is a declared runtime
+    # dependency (see requirements.txt); installing it is the fix, never
+    # suppressing this check.
     try:
         import jsonschema
-
-        if SCHEMA_PATH.exists():
-            schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-            validator = jsonschema.Draft202012Validator(schema)
-            for error in validator.iter_errors(data):
-                loc = ".".join(str(p) for p in error.absolute_path) or "(root)"
-                issues.append(Issue("ERROR", f"{path}: schema: {loc}: {error.message}"))
     except ImportError:
-        pass  # jsonschema not installed — skip structural validation
-    except Exception as exc:
-        issues.append(Issue("WARN", f"{path}: schema validation skipped ({exc})"))
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{path}: schema validation unavailable — the 'jsonschema' package is "
+                "not installed. It is a required runtime dependency; install it with "
+                "'pip install -r requirements.txt' (or 'pip install jsonschema'). "
+                "Schema validation is mandatory and will not be skipped.",
+            )
+        )
+    else:
+        if not SCHEMA_PATH.exists():
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{path}: schema file missing at {SCHEMA_PATH} — cannot perform "
+                    "mandatory structural validation.",
+                )
+            )
+        else:
+            try:
+                schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+                validator = jsonschema.Draft202012Validator(schema)
+            except (OSError, ValueError) as exc:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{path}: schema file at {SCHEMA_PATH} could not be loaded "
+                        f"({exc}); structural validation cannot run.",
+                    )
+                )
+            else:
+                for error in validator.iter_errors(data):
+                    loc = ".".join(str(p) for p in error.absolute_path) or "(root)"
+                    issues.append(Issue("ERROR", f"{path}: schema: {loc}: {error.message}"))
 
     issues.extend(
         validate_data(

@@ -3,5 +3,11 @@
 # Core (required)
 pygame>=2.5.2,<3
 
+# JSON Schema validation (required): tools/validate_design.py enforces
+# schemas/ui_design.schema.json as a hard release gate for codegen, demo
+# generation, visual verification, and PlatformIO builds. Schema validation
+# is mandatory and is NOT silently skipped when this dependency is absent.
+jsonschema>=4.20.0,<5
+
 # Optional (USB/serial live preview)
 pyserial>=3.5,<4
