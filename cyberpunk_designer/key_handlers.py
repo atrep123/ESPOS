@@ -266,6 +266,13 @@ def on_key_down(app, event: pygame.event.Event) -> None:
     if logic_editor.handle_key(app, event):
         return
 
+    # Build/Flash is modal too: while open it owns keys (B/F/scroll) so the
+    # real pio build/flash can be driven without global shortcuts firing.
+    from . import build_flash
+
+    if build_flash.handle_key(app, event):
+        return
+
     if bool(getattr(app, "show_help_overlay", False)) and bool(getattr(app, "_help_pinned", False)):
         if event.key == pygame.K_ESCAPE:
             app._set_help_overlay(False)

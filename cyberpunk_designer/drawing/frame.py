@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from .. import windowing
+from ..build_flash import draw_build_flash
 from ..constants import PALETTE
 from ..icon_palette import draw_icon_palette
 from ..logic_editor import draw_logic_editor
@@ -66,6 +67,7 @@ def optimized_draw_frame(app: CyberpunkEditorApp) -> None:
     draw_icon_palette(app)
     draw_template_manager(app)
     draw_logic_editor(app)
+    draw_build_flash(app)
     draw_context_menu(app)
     draw_tooltip(app)
 

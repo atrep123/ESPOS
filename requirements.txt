@@ -11,3 +11,12 @@ jsonschema>=4.20.0,<5
 
 # Optional (USB/serial live preview)
 pyserial>=3.5,<4
+
+# Embedded toolchain (required for the integrated build/flash workflow):
+# tools/build.py and the designer's Build/Flash modal invoke
+# `python -m platformio run` to compile/upload real firmware. Bundling
+# PlatformIO as a managed dependency makes "the compiler is part of the app"
+# literally true — no separate manual toolchain install. tools/build.py
+# `ensure_platformio()` verifies it is importable and prints an actionable
+# `pip install -r requirements.txt` hint if it is missing.
+platformio>=6.1,<7

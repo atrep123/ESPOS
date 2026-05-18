@@ -26,6 +26,7 @@ from ui_designer import HARDWARE_PROFILES, UIDesigner, WidgetConfig
 from ui_template_manager import Template, TemplateLibrary
 
 from . import (
+    build_flash,
     component_insert,
     context_menu,
     drawing,
@@ -727,6 +728,8 @@ class CyberpunkEditorApp:
             ("SVG", self._export_svg),
             ("Board", self._cycle_board),
             ("Logic", self._open_logic_editor),
+            ("Build", self._open_build_flash),
+            ("Flash", self._flash_firmware),
             ("Warn", self._toggle_overflow_warnings),
         ]
 
@@ -804,6 +807,31 @@ class CyberpunkEditorApp:
         save -> ui_codegen -> firmware logic service and actually executes.
         """
         logic_editor.toggle_logic_editor(self)
+
+    def _open_build_flash(self) -> None:
+        """Open the Build/Flash modal: compile/flash the current design.
+
+        Drives the *real* PlatformIO toolchain via ``tools.build`` (the same
+        ``python -m platformio run`` the CLI/CI use) for the board selected in
+        the designer (``active_board`` -> ``board-<id>`` env, or the reference
+        env). Real pio output streams into the modal; this is not a fake
+        progress bar.
+        """
+        build_flash.open_build_flash(self)
+
+    def _build_firmware(self) -> None:
+        """Build the active board's firmware now (regenerates codegen first)."""
+        build_flash.start_build(self)
+
+    def _flash_firmware(self) -> None:
+        """Build + upload to hardware (real ``pio ... -t upload``).
+
+        UNVERIFIED-ON-HARDWARE when no board is attached: the genuine upload
+        command is constructed and launched and fails gracefully with no
+        device (see tools/build.py).
+        """
+        build_flash.open_build_flash(self)
+        build_flash.start_flash(self)
 
     # ------------------------------------------------------------------ #
     # Status, inspector, and input helpers

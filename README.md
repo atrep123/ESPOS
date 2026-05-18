@@ -20,7 +20,15 @@ python run_designer.py main_scene.json --profile esp32os_256x128_gray4
 # Export to C header
 python tools/ui_export_c_header.py main_scene.json -o ui_scene_generated.h
 
-# PlatformIO build (no hardware)
+# Integrated build/flash (PlatformIO is a bundled dependency — see
+# requirements.txt; no separate toolchain install). Regenerates codegen
+# from the design, then drives the REAL `pio run`:
+python tools/build.py check                 # verify the toolchain
+python tools/build.py build                 # build reference board firmware
+python tools/build.py build m5stickc-plus   # build a specific registry board
+python tools/build.py flash --port COM5     # build + real upload to hardware
+
+# (equivalent low-level PlatformIO build, no hardware)
 pio run -e esp32-s3-devkitm-1-nohw
 
 # Lint & test
@@ -103,6 +111,36 @@ UI runtime pak umí jednoduché editory bez dotyku (A/encoder = edit, Up/Down = 
 pio run -e arduino_nano_esp32-nohw
 pio run -e esp32-s3-devkitm-1-nohw
 ```
+
+### Integrovaný build/flash (jedna aplikace)
+
+PlatformIO je **bundlovaná závislost** projektu (`requirements.txt`,
+`platformio>=6.1,<7`) — žádná samostatná instalace toolchainu. Tím je
+„kompilátor je součást aplikace“ doslova pravda. `tools/build.py` je
+knihovna + CLI, která: (a) přegeneruje `src/ui_design.{c,h}` ze scény
+stejným `tools.ui_codegen` jako pio pre-script, (b) spustí **skutečné**
+`python -m platformio run -e <env>` a vrátí cestu k firmwaru + RAM/Flash
+využití, (c) `flash` = build + reálné `-t upload` (port auto-detekce přes
+`pio device list`).
+
+```powershell
+python tools/build.py check                  # ověří toolchain (pio)
+python tools/build.py boards                 # board id -> pio env mapa
+python tools/build.py build                  # referenční deska
+python tools/build.py build m5stamp-c6lora   # konkrétní deska z boards.json
+python tools/build.py flash --port COM5      # build + reálný upload
+```
+
+Mapování `board id -> pio env` jde přes `board_registry` (každá deska má
+generovaný `[env:board-<id>]`); bez argumentu se použije referenční
+`esp32-s3-devkitm-1-nohw`. Tlačítka **Build** a **Flash** v designeru
+(toolbar) spouští totéž a streamují reálný pio výstup do modálního okna
+(`B` = build, `F` = flash, `Esc` = zavřít).
+
+> **Flash bez hardwaru:** příkaz na upload je reálný a reálně se spustí;
+> bez připojené ESP32 zhavaruje korektně (žádný fake úspěch) a je
+> označen `UNVERIFIED-ON-HARDWARE`. Na připojeném hardwaru provede
+> skutečný flash.
 
 ### Env proměnné pro build hook
 

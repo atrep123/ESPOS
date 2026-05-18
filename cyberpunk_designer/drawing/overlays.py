@@ -24,6 +24,8 @@ TOOLBAR_TOOLTIPS = {
     "fit text": "Fit text to widget (Ctrl+F)",
     "fit widget": "Fit widget to text (Ctrl+Shift+F)",
     "svg": "Export current scene to pixel-faithful .svg (next to JSON)",
+    "build": "Build firmware for the active board (real PlatformIO)",
+    "flash": "Build + upload firmware to hardware (real pio upload)",
     "warn": "Toggle overflow warnings",
     "refresh ports": "Scan serial ports",
 }
@@ -310,6 +312,7 @@ def draw_help_overlay(app) -> None:
         "Ctrl+Alt+Z propagate full look (style+colors+border+align+pad)",
         "0 add textbox | Shift+0 add radiobutton | Ctrl+Shift+0 flatten z",
         "Ctrl+T save as tpl | Ctrl+Shift+T/Tpl btn Template Manager",
+        "Build/Flash btn: real PlatformIO build + upload for active board",
         "/ search widgets | Shift+N/P extend sel",
         "Ctrl+Shift+D duplicate scene | F10/Shift+F10 next/prev scene",
         "F9 clean preview | Ctrl+J go to widget",

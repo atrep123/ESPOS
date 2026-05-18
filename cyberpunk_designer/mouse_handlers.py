@@ -33,6 +33,12 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
     if logic_editor.handle_click(app, pos):
         return
 
+    # Build/Flash is modal: it eats the click (action button or dismiss).
+    from . import build_flash
+
+    if build_flash.handle_click(app, pos):
+        return
+
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))
         app._set_help_overlay(False)
@@ -595,6 +601,12 @@ def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     from . import logic_editor
 
     if logic_editor.handle_wheel(app, dy):
+        return
+
+    # Build/Flash is modal: wheel scrolls the pio output log.
+    from . import build_flash
+
+    if build_flash.handle_wheel(app, dy):
         return
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))
