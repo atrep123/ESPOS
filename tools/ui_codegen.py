@@ -313,6 +313,22 @@ def write_if_changed(path: Path, content: str) -> bool:
     return True
 
 
+def _widgets_in_paint_order(widgets: list[Any]) -> list[Any]:
+    """Stable-sort widgets by ``z_index`` so generated C matches the designer's
+    paint order (equal z_index keeps authoring order). Non-dict entries sort as
+    z_index 0 and are skipped later by the emitters. Mirrors the ordering the
+    multi-scene header path already applies.
+    """
+    ordered = list(widgets)
+    try:
+        ordered.sort(
+            key=lambda ww: as_int(ww.get("z_index", 0), 0) if isinstance(ww, dict) else 0
+        )
+    except (TypeError, ValueError, AttributeError):
+        return list(widgets)
+    return ordered
+
+
 def generate_ui_design_pair(
     json_path: Path, *, scene_name: str, source_label: str
 ) -> tuple[str, str]:
@@ -321,6 +337,7 @@ def generate_ui_design_pair(
     widgets = scene.get("widgets", [])
     if not isinstance(widgets, list):
         widgets = []
+    widgets = _widgets_in_paint_order(widgets)
 
     width = as_uint16(scene.get("width", data.get("width", 128)), 128)
     height = as_uint16(scene.get("height", data.get("height", 64)), 64)
@@ -746,6 +763,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
         widgets = scene_data.get("widgets", [])
         if not isinstance(widgets, list):
             widgets = []
+        widgets = _widgets_in_paint_order(widgets)
         width = as_uint16(scene_data.get("width", 128), 128)
         height = as_uint16(scene_data.get("height", 64), 64)
 

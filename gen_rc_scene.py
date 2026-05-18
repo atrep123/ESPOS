@@ -14,6 +14,15 @@ So for ALL text widgets (label OR button):
 
 import json
 import re
+import sys
+
+# Status output contains non-ASCII glyphs; force UTF-8 so it does not crash
+# on a legacy console codepage (e.g. Windows cp1250).
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, ValueError):
+    pass
 
 W, H = 256, 128
 CHAR_W = 6
