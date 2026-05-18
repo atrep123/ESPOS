@@ -146,8 +146,21 @@ MIN_CONTRAST = 40  # min brightness delta between fg and bg
 MIN_EDGE_MARGIN = 2  # px from screen edge for non-full-span widgets
 
 # Warning text fragments promoted to ERROR when strict_critical=True.
+#
+# NOTE on overlap: a bare "overlap" marker is intentionally NOT listed here.
+# Overlap is not inherently a defect — this UI model composites by widget
+# array / draw order (every widget is z_index=0; there is no separate z plane),
+# so a background/container ``panel``/``box`` drawn behind its own content, and
+# a deliberately hidden (``visible:false``) toast overlay positioned over the
+# hint/status band, are *legitimate, intentional* layering. Promoting every
+# such overlap to a build-failing ERROR under --strict-critical made the gate
+# dishonest: it failed on correct-by-design scenes. Only the genuine broken
+# case — two *visible, non-container* widgets partially colliding — is a real
+# layout defect, and it is flagged with the specific marker below (emitted by
+# Rule 21 / Rule 105 via ``_overlap_is_benign``). See ``_overlap_is_benign``.
+OVERLAP_COLLISION_MARKER = "overlap (visible content collision)"
 CRITICAL_WARNING_MARKERS = (
-    "overlap",
+    OVERLAP_COLLISION_MARKER,
     "too short for text",
     "too short to render text",
     "too narrow for text",
@@ -156,6 +169,11 @@ CRITICAL_WARNING_MARKERS = (
     "fully outside scene",
     "outside scene bounds",
 )
+
+# Widget types that act as backdrop / container frames. When one of these
+# fully contains the other widget in an overlapping pair, the overlap is the
+# intended "panel behind its content" composition, not a collision defect.
+CONTAINER_WIDGET_TYPES = {"panel", "box"}
 
 
 def _parse_color(s: str) -> tuple[int, int, int] | None:
@@ -240,6 +258,51 @@ def _widget_group(w: dict[str, Any]) -> str:
         return ""
     dot = wid.find(".")
     return wid[:dot] if dot > 0 else wid
+
+
+def _rect_contains(
+    outer: tuple[int, int, int, int], inner: tuple[int, int, int, int]
+) -> bool:
+    """True if the ``outer`` (x, y, x2, y2) rect fully encloses ``inner``."""
+    ox, oy, ox2, oy2 = outer
+    ix, iy, ix2, iy2 = inner
+    return ox <= ix and oy <= iy and ox2 >= ix2 and oy2 >= iy2
+
+
+def _overlap_is_benign(
+    a: dict[str, Any],
+    b: dict[str, Any],
+    rect_a: tuple[int, int, int, int],
+    rect_b: tuple[int, int, int, int],
+) -> bool:
+    """Decide whether an overlapping widget pair is *intentional* layering
+    rather than a collision defect.
+
+    This UI model has no real z plane — widgets composite in array / draw
+    order. Two principled, narrowly-scoped exemptions cover every legitimate
+    overlap pattern without disabling collision detection in general:
+
+    1. **Hidden overlay.** If either widget is ``visible: false`` it cannot
+       visually collide with anything; a deliberately hidden toast/notification
+       panel parked over the hint band is correct by design.
+    2. **Background / container layering.** If one widget is a container type
+       (``panel``/``box``) that *fully contains* the other, it is acting as the
+       backdrop/frame the other is drawn on top of (title-bar panel behind its
+       label/badge; content panel behind its child labels/buttons). The
+       containment requirement is what keeps this principled: a panel that only
+       *partially* clips an unrelated widget is still flagged.
+
+    Anything else — two visible, mutually non-containing widgets (e.g. two
+    labels stomping each other) — is a genuine layout defect and is NOT
+    exempted.
+    """
+    if a.get("visible") is False or b.get("visible") is False:
+        return True
+    a_type = a.get("type")
+    b_type = b.get("type")
+    if a_type in CONTAINER_WIDGET_TYPES and _rect_contains(rect_a, rect_b):
+        return True
+    return b_type in CONTAINER_WIDGET_TYPES and _rect_contains(rect_b, rect_a)
 
 
 # ── Main validator ─────────────────────────────────────────────────────────
@@ -1471,12 +1534,32 @@ def validate_data(
                         if _is_int(az) and _is_int(bz) and az == bz:
                             ref_a = _wref(scene_name, a, i)
                             ref_b = _wref(scene_name, b, j)
-                            issues.append(
-                                Issue(
-                                    "WARN",
-                                    f"{pfx}: OVERLAP with same z_index={az}: {ref_a} <> {ref_b}",
+                            if _overlap_is_benign(
+                                a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)
+                            ):
+                                # Same-z_index is the norm here (draw-order
+                                # compositing, all widgets z=0); a hidden
+                                # overlay or container-behind-content pair is
+                                # intentional, not ambiguous. Plain WARN, not a
+                                # critical marker.
+                                issues.append(
+                                    Issue(
+                                        "WARN",
+                                        f"{pfx}: OVERLAP (intentional layering) "
+                                        f"same z_index={az}: {ref_a} <> {ref_b}",
+                                    )
                                 )
-                            )
+                            else:
+                                # Two visible non-container widgets collide with
+                                # identical z_index → genuinely ambiguous draw
+                                # order. Critical marker.
+                                issues.append(
+                                    Issue(
+                                        "WARN",
+                                        f"{pfx}: OVERLAP (visible content collision) "
+                                        f"same z_index={az}: {ref_a} <> {ref_b}",
+                                    )
+                                )
 
         # ── Rule 106: scene dimensions too small ──
         if sw < 8 or sh < 8:
@@ -1569,7 +1652,32 @@ def validate_data(
                     if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
                         ref_a = _wref(scene_name, a, i)
                         ref_b = _wref(scene_name, b, j)
-                        issues.append(Issue("WARN", f"{pfx}: OVERLAP {ref_a} <> {ref_b}"))
+                        if _overlap_is_benign(
+                            a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)
+                        ):
+                            # Intentional layering (hidden overlay or container
+                            # backdrop fully behind its content). Surfaced as a
+                            # plain WARN for visibility; deliberately NOT a
+                            # critical marker, so --strict-critical does not
+                            # fail a correct-by-design scene.
+                            issues.append(
+                                Issue(
+                                    "WARN",
+                                    f"{pfx}: OVERLAP (intentional layering) "
+                                    f"{ref_a} <> {ref_b}",
+                                )
+                            )
+                        else:
+                            # Two visible, mutually non-containing widgets
+                            # collide: a genuine layout defect. Critical marker
+                            # → fails under --strict-critical.
+                            issues.append(
+                                Issue(
+                                    "WARN",
+                                    f"{pfx}: OVERLAP (visible content collision) "
+                                    f"{ref_a} <> {ref_b}",
+                                )
+                            )
 
         # ── Rule 123: Min gap between non-grouped widgets ──
         if len(widgets) <= HARD_WIDGET_LIMIT:
