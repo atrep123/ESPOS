@@ -6,6 +6,14 @@ from typing import Any, Dict, Iterable, List, Optional, TypedDict
 
 from constants import DEFAULT_WIDGET_SIZE
 
+# Canonical-field defaults. Used both as the dataclass field defaults and by the
+# __post_init__ compat-shim normalizers so the "is this still default?" guard
+# (migrate-don't-overwrite) cannot drift from the actual defaults.
+_DEFAULT_STYLE = "default"
+_DEFAULT_COLOR_FG = "white"
+_DEFAULT_COLOR_BG = "black"
+_DEFAULT_BORDER = True
+
 
 def normalize_int_list(values: Iterable[Any]) -> List[int]:
     """Coerce an arbitrary iterable into a list of ints for chart data; ignores bad entries."""
@@ -181,10 +189,10 @@ class WidgetConfig:
     width: Optional[int] = None  # type: ignore[reportRedeclaration]
     height: Optional[int] = None  # type: ignore[reportRedeclaration]
     text: str = ""
-    style: str = "default"  # default, bold, inverse, highlight
-    color_fg: str = "white"
-    color_bg: str = "black"
-    border: bool = True
+    style: str = _DEFAULT_STYLE  # default, bold, inverse, highlight
+    color_fg: str = _DEFAULT_COLOR_FG
+    color_bg: str = _DEFAULT_COLOR_BG
+    border: bool = _DEFAULT_BORDER
     border_style: str = "single"  # single, double, rounded, bold, dashed
     align: str = "left"  # left, center, right
     valign: str = "middle"  # top, middle, bottom
@@ -299,32 +307,60 @@ class WidgetConfig:
             return None
 
     def _apply_color_aliases(self) -> None:
+        """Resolve input-only color compat shims without destroying canonical data.
+
+        ``bg_color`` / ``text_color`` / ``color`` exist so external component
+        libraries can pass richer kwargs; they are *inputs*, not persisted state.
+        Each is migrated into its canonical field ONLY when that canonical field
+        is still at its dataclass default (i.e. the caller did not provide an
+        explicit canonical value) — migrate, never overwrite already-correct
+        data. The consumed shim is then reset to its default so it never
+        re-emits a stale/duplicate value through ``asdict`` (load->save stays
+        idempotent).
+
+        ``border_color`` is intentionally NOT aliased onto ``color_fg``: a
+        border color and a foreground/text color are distinct concepts (the
+        validator and firmware treat them separately). It is preserved verbatim
+        as a first-class field.
+        """
+        # (shim attr, canonical attr, canonical default)
         alias_map = (
-            ("bg_color", "color_bg"),
-            ("text_color", "color_fg"),
-            ("color", "color_fg"),
-            ("border_color", "color_fg"),
+            ("bg_color", "color_bg", _DEFAULT_COLOR_BG),
+            ("text_color", "color_fg", _DEFAULT_COLOR_FG),
+            ("color", "color_fg", _DEFAULT_COLOR_FG),
         )
-        for source, target in alias_map:
+        for source, target, canonical_default in alias_map:
             try:
                 value = getattr(self, source, None)
                 if value is None:
                     continue
                 resolved = self._to_color_str(value)
-                if resolved:
+                # Only migrate when the canonical field was left at its default;
+                # an explicitly-set canonical value always wins.
+                if resolved and getattr(self, target, None) == canonical_default:
                     setattr(self, target, resolved)
+                # Consume the shim so it does not round-trip as a duplicate.
+                setattr(self, source, None)
             except (AttributeError, TypeError):
                 continue
 
     def _apply_style_aliases(self) -> None:
+        # ``border_width`` is a genuine firmware field and must round-trip
+        # unchanged; only let it *inform* the boolean ``border`` when the
+        # caller did not already pin ``border`` away from its default.
         try:
-            if self.border_width is not None:
+            if self.border_width is not None and self.border == _DEFAULT_BORDER:
                 self.border = bool(self.border_width and int(self.border_width) > 0)
         except (ValueError, TypeError):
             pass
+        # ``bold`` is an input-only compat shim. Map it to ``style`` ONLY when
+        # ``style`` is still default, so an explicit style (inverse/highlight)
+        # is never clobbered. Consume the shim afterwards for idempotence.
         try:
             if bool(self.bold):
-                self.style = "bold"
+                if self.style == _DEFAULT_STYLE:
+                    self.style = "bold"
+                self.bold = False
         except (ValueError, TypeError):
             pass
 
