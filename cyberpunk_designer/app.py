@@ -399,6 +399,9 @@ class CyberpunkEditorApp:
         """Phase 2: Designer, hardware profile, env settings, paths."""
         self.json_path = json_path
         self.hardware_profile = profile
+        # Active board registry id (boards.json). None until a board is
+        # selected via the Boards palette / 'Board' toolbar button.
+        self.active_board: Optional[str] = None
         if self.hardware_profile and self.hardware_profile in HARDWARE_PROFILES:
             pinfo = HARDWARE_PROFILES[self.hardware_profile]
             default_size = (pinfo["width"], pinfo["height"])
@@ -674,6 +677,7 @@ class CyberpunkEditorApp:
                     ("TFT 480x320", lambda: self._set_profile("tft_480x320")),
                 ],
             ),
+            ("Boards", self._build_board_actions()),
             ("Presets", self._build_widget_presets_actions()),
         ]
         self.palette_collapsed: set = {
@@ -682,6 +686,7 @@ class CyberpunkEditorApp:
             "Components",
             "Layout",
             "Profiles",
+            "Boards",
             "Presets",
         }
         self.inspector_collapsed: set = {"Layers"}
@@ -711,6 +716,7 @@ class CyberpunkEditorApp:
             ("Fit Text", self._fit_selection_to_text),
             ("Fit Widget", self._fit_selection_to_widget),
             ("SVG", self._export_svg),
+            ("Board", self._cycle_board),
             ("Warn", self._toggle_overflow_warnings),
         ]
 
@@ -873,6 +879,14 @@ class CyberpunkEditorApp:
     def _set_profile(self, key: str):
         scene_ops.set_profile(self, key)
 
+    def _set_board(self, board_id: str):
+        """Select a registry board (drives the display profile for the canvas)."""
+        scene_ops.set_board(self, board_id)
+
+    def _cycle_board(self):
+        """Cycle through registry boards (toolbar 'Board')."""
+        scene_ops.cycle_board(self)
+
     def _apply_color_preset_index(self, index: int):
         """Apply color preset by zero-based index (for keyboard shortcuts)."""
         presets = [
@@ -906,6 +920,27 @@ class CyberpunkEditorApp:
                     lambda slot=slot: self._apply_preset_slot(slot, add_new=True),
                 )
             )
+        return actions
+
+    def _build_board_actions(self):
+        """Palette entries for the board registry (real boards.json entries).
+
+        Display boards switch the canvas via their HARDWARE_PROFILES key;
+        non-display modules are listed (greyed semantics via label) so the
+        registry is fully visible, but selecting one only updates the active
+        board id (the UI designer does not apply to a headless module).
+        """
+        actions = []
+        try:
+            reg = scene_ops.get_board_registry()
+        except Exception as exc:  # pragma: no cover - defensive
+            return [(f"(boards.json error: {exc})", None)]
+        for b in reg.boards:
+            if b.has_display and b.display is not None:
+                label = f"{b.id}  [{b.display.w}x{b.display.h} {b.display.driver}]"
+            else:
+                label = f"{b.id}  [headless / no display]"
+            actions.append((label, lambda bid=b.id: self._set_board(bid)))
         return actions
 
     def _save_preset_slot(self, slot: int):

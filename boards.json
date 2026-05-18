@@ -1,0 +1,145 @@
+{
+  "$schema_version": 1,
+  "$doc": "Board/module registry for the ESP32OS embedded workflow. Source of truth for the designer board selector AND the generated PlatformIO envs. One object per physical board/module. See board_registry.py for the loader + schema enforcement and feat_board_registry.md for the full schema spec. To add a board: append an object to `boards`, keep `id` unique and a valid PlatformIO env identifier (^[a-z0-9][a-z0-9_-]*$), set `platformio_board` to a board id present in `python -m platformio boards`, and (if it has a display) set `display_profile` to a key from ui_designer.HARDWARE_PROFILES so the designer canvas matches the panel. Non-display modules MUST set has_display=false and omit display_profile.",
+  "boards": [
+    {
+      "id": "esp32-s3-devkitm-1",
+      "label": "ESP32-S3-DevKitM-1 (reference, 256x128 Gray4 SSD1363)",
+      "platformio_board": "esp32-s3-devkitm-1",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32s3",
+      "vendor": "Espressif",
+      "has_display": true,
+      "display_profile": "esp32os_256x128_gray4",
+      "display": {
+        "w": 256,
+        "h": 128,
+        "depth": 4,
+        "driver": "SSD1363",
+        "bus": "i2c"
+      },
+      "pins": {
+        "i2c_sda": 8,
+        "i2c_scl": 9,
+        "uart_tx": 43,
+        "uart_rx": 44,
+        "led_status": 48
+      },
+      "peripherals": [
+        "ws2812"
+      ],
+      "build_flags": [],
+      "notes": "Project reference target. Keeps the existing default SSD1363 256x128 Gray4 panel. Pins reflect the firmware's default DISPLAY_I2C_* / UART config; ws2812 is the on-board RGB on GPIO48 (WS2812 on most S3 DevKitM-1)."
+    },
+    {
+      "id": "m5stickc-plus",
+      "label": "M5StickC-Plus (ESP32-PICO, ST7789 135x240, AXP192)",
+      "platformio_board": "m5stick-c",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32",
+      "vendor": "M5Stack",
+      "has_display": true,
+      "display_profile": "tft_240x135_st7789",
+      "display": {
+        "w": 240,
+        "h": 135,
+        "depth": 16,
+        "driver": "ST7789v2",
+        "bus": "spi",
+        "rotation_native": "portrait_135x240",
+        "panel_offset_x": 52,
+        "panel_offset_y": 40
+      },
+      "pins": {
+        "tft_mosi": 15,
+        "tft_clk": 13,
+        "tft_dc": 23,
+        "tft_rst": 18,
+        "tft_cs": 5,
+        "tft_busy": -1,
+        "i2c_sda": 21,
+        "i2c_scl": 22,
+        "btn_a": 37,
+        "btn_b": 39,
+        "ir_tx": 9,
+        "buzzer": 2,
+        "led_red": 10,
+        "grove_sda": 32,
+        "grove_scl": 33,
+        "bat_adc": 38
+      },
+      "peripherals": [
+        "pmic_axp192",
+        "imu",
+        "ir",
+        "buzzer",
+        "button",
+        "rtc",
+        "microphone",
+        "grove"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_M5STICKC_PLUS=1",
+        "-DESPOS_DISPLAY_DRIVER_ST7789=1",
+        "-DDISPLAY_W=240",
+        "-DDISPLAY_H=135",
+        "-DDISPLAY_SPI_MOSI_GPIO=15",
+        "-DDISPLAY_SPI_CLK_GPIO=13",
+        "-DDISPLAY_SPI_DC_GPIO=23",
+        "-DDISPLAY_SPI_RST_GPIO=18",
+        "-DDISPLAY_SPI_CS_GPIO=5",
+        "-DESPOS_PMIC_AXP192=1",
+        "-DESPOS_PMIC_I2C_SDA_GPIO=21",
+        "-DESPOS_PMIC_I2C_SCL_GPIO=22",
+        "-DESPOS_IMU_MPU6886=1"
+      ],
+      "notes": "ESP32-PICO-D4. PlatformIO board id `m5stick-c` covers both StickC and StickC-Plus (same SoC/flash); the Plus differs by its 1.14in ST7789v2 240x135 panel + AXP192 PMIC + MPU6886 IMU + buzzer, all selected via build_flags. AXP192 MUST be brought up over I2C (0x34) before the TFT backlight; without it the screen stays dark. IR LED on GPIO9, passive buzzer on GPIO2, Grove port I2C on 32/33. Source: github.com/m5stack/M5_Hardware (StickC-Plus)."
+    },
+    {
+      "id": "m5stamp-c6lora",
+      "label": "M5Stamp-C6LoRa (ESP32-C6 + SX1262, NO display, RGB LED)",
+      "platformio_board": "esp32-c6-devkitm-1",
+      "platform": "espressif32@6.12.0",
+      "mcu": "esp32c6",
+      "vendor": "M5Stack",
+      "has_display": false,
+      "display_profile": null,
+      "display": null,
+      "pins": {
+        "lora_sck": 19,
+        "lora_miso": 20,
+        "lora_mosi": 21,
+        "lora_nss": 22,
+        "lora_rst": 23,
+        "lora_busy": 0,
+        "lora_dio1": 1,
+        "led_ws2812": 8,
+        "uart_tx": 16,
+        "uart_rx": 17,
+        "btn": 9
+      },
+      "peripherals": [
+        "lora_sx1262",
+        "ws2812",
+        "ble",
+        "wifi",
+        "button"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_M5STAMP_C6LORA=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1",
+        "-DESPOS_LORA_SX1262=1",
+        "-DESPOS_LORA_SPI_SCK_GPIO=19",
+        "-DESPOS_LORA_SPI_MISO_GPIO=20",
+        "-DESPOS_LORA_SPI_MOSI_GPIO=21",
+        "-DESPOS_LORA_SPI_NSS_GPIO=22",
+        "-DESPOS_LORA_RST_GPIO=23",
+        "-DESPOS_LORA_BUSY_GPIO=0",
+        "-DESPOS_LORA_DIO1_GPIO=1",
+        "-DESPOS_WS2812_GPIO=8"
+      ],
+      "notes": "Filip's real \"C6L\" prop module. ESP32-C6 (RISC-V, WiFi6/BLE5/802.15.4) + Semtech SX1262 LoRa transceiver. NO display panel at all -> has_display=false, the UI designer does NOT apply; this entry exists purely to carry pins/peripherals/backend config and a buildable headless firmware env (ESPOS_NO_DISPLAY). PlatformIO has no dedicated M5Stamp-C6 board, so it uses the generic `esp32-c6-devkitm-1` ESP32-C6 board (same SoC, 4MB flash) -- this is the honest, pio-valid choice rather than a fabricated board id. SX1262 wired over SPI; single WS2812 on GPIO8. LoRa pin map is the typical Stamp-C6LoRa layout; confirm against the specific unit's silk before flashing radio firmware. Source: github.com/m5stack/M5_Hardware (Stamp-C6LoRa)."
+    }
+  ]
+}

@@ -236,6 +236,65 @@ def cycle_profile(app: CyberpunkEditorApp) -> None:
 
 
 # ------------------------------------------------------------------ #
+# Board registry (boards.json) — selects a real board/module.
+# For a display-bearing board this drives the existing hardware-profile
+# path (no display data is duplicated); a headless module only records
+# the active board id (the UI designer does not apply to it).
+# ------------------------------------------------------------------ #
+
+_BOARD_REGISTRY_CACHE: Any = None
+
+
+def get_board_registry() -> Any:
+    """Load (and cache) the validated board registry from boards.json."""
+    global _BOARD_REGISTRY_CACHE
+    if _BOARD_REGISTRY_CACHE is None:
+        from board_registry import load_registry
+
+        _BOARD_REGISTRY_CACHE = load_registry()
+    return _BOARD_REGISTRY_CACHE
+
+
+def set_board(app: CyberpunkEditorApp, board_id: str) -> None:
+    """Select a registry board.
+
+    Display board -> applies its HARDWARE_PROFILES key through the existing
+    ``set_profile`` path so the canvas matches the panel. Headless module ->
+    records ``app.active_board`` and reports it (no canvas change; the UI
+    designer legitimately does not apply to a screenless module).
+    """
+    reg = get_board_registry()
+    board = reg.get(board_id)
+    if board is None:
+        app._set_status(f"Unknown board: {board_id}", ttl_sec=2.0)
+        return
+    app.active_board = board_id
+    if board.has_display and board.display_profile:
+        set_profile(app, board.display_profile)
+        app._set_status(
+            f"Board: {board_id} ({board.display_profile})", ttl_sec=2.0
+        )
+    else:
+        app._mark_dirty()
+        app._set_status(
+            f"Board: {board_id} (headless — no display; pins/peripherals only)",
+            ttl_sec=2.5,
+        )
+        print(f"[INFO] Board: {board.label} (headless module, no UI canvas)")
+
+
+def cycle_board(app: CyberpunkEditorApp) -> None:
+    """Cycle through registry boards (toolbar 'Board')."""
+    reg = get_board_registry()
+    order = reg.ids()
+    if not order:
+        return
+    current = getattr(app, "active_board", None)
+    nxt = order[(order.index(current) + 1) % len(order)] if current in order else order[0]
+    set_board(app, nxt)
+
+
+# ------------------------------------------------------------------ #
 # Scene CRUD
 # ------------------------------------------------------------------ #
 
