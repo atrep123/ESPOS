@@ -39,8 +39,10 @@ jobs:
       - name: Mypy (designer — advisory)
         continue-on-error: true
         run: python -m mypy --ignore-missing-imports --no-error-summary ui_designer.py ui_models.py ui_template_manager.py || true
-      - name: Validate design JSON
-        run: python tools/validate_design.py main_scene.json
+      - name: Validate design JSON (strict — fail on critical layout/readability)
+        run: python tools/validate_design.py main_scene.json --strict-critical
+      - name: Audit all design JSON (off-canvas / duplicate-id gate)
+        run: python tools/audit_designs.py --root .
       - name: Codegen freshness check
         run: python scripts/check_codegen_freshness.py
       - name: Guardrail tests (designer refactors)
