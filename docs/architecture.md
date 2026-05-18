@@ -83,7 +83,7 @@ main_scene.json
 
 | Module | Responsibility |
 |--------|---------------|
-| `perf.py` | `RenderCache` (LRU surface cache + `frame_cache_key()`), `SmartEventQueue`, `compute_dirty_rects()` |
+| `perf.py` | `RenderCache` (LRU surface cache + `frame_cache_key()`), `compute_dirty_rects()` |
 | `fit_text.py` | Auto-fit text to widget bounds |
 | `fit_widget.py` | Auto-size widget to content |
 | `text_metrics.py` | Text width/height measurement |
@@ -122,7 +122,7 @@ Then `_build_palette()` and `_build_toolbar()` construct the UI panels.
 ```
 while running:
     clock.tick(FPS)
-    events = SmartEventQueue.process_batch()
+    events = pygame.event.get()     # _handle_events()
     for event in events:
         _handle_events(event)       # → input_handlers.*
     EventManager.dispatch_all()     # fire queued events

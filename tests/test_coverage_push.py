@@ -86,24 +86,6 @@ class TestReportingScreenshotFail:
 
 
 # ===========================================================================
-# perf.py — lines 57-58: SmartEventQueue process_batch exception in future
-# ===========================================================================
-
-
-class TestSmartEventQueueException:
-    def test_future_exception_skipped(self):
-        from cyberpunk_designer.perf import SmartEventQueue
-
-        q = SmartEventQueue()
-        # MOUSEMOTION events are parallelized
-        bad_event = SimpleNamespace(type=pygame.MOUSEMOTION)
-        with patch.object(q, "_process_event", side_effect=RuntimeError("fail")):
-            result = q.process_batch([bad_event])
-        # The failed future should be skipped (continue)
-        assert isinstance(result, list)
-
-
-# ===========================================================================
 # text_metrics.py — line 76: _push returns early when truncated
 # ===========================================================================
 

@@ -1,14 +1,11 @@
-"""Tests for cyberpunk_designer/perf.py — RenderCache LRU eviction and
-SmartEventQueue event processing."""
+"""Tests for cyberpunk_designer/perf.py — RenderCache LRU eviction."""
 
 from __future__ import annotations
-
-from types import SimpleNamespace
 
 import pygame
 import pytest
 
-from cyberpunk_designer.perf import RenderCache, SmartEventQueue
+from cyberpunk_designer.perf import RenderCache
 
 # ---------------------------------------------------------------------------
 # RenderCache
@@ -66,65 +63,6 @@ class TestRenderCache:
         cache.set(2, pygame.Surface((5, 5)))
         assert len(cache.cache) <= 1
         assert cache.get(2) is not None
-
-
-# ---------------------------------------------------------------------------
-# SmartEventQueue
-# ---------------------------------------------------------------------------
-
-
-def _make_event(etype, **attrs):
-    """Create a simple event-like namespace."""
-    return SimpleNamespace(type=etype, **attrs)
-
-
-class TestSmartEventQueue:
-    def test_empty_batch(self):
-        q = SmartEventQueue()
-        assert q.process_batch([]) == []
-
-    def test_non_parallel_events_preserved(self):
-        q = SmartEventQueue()
-        ev1 = _make_event(pygame.KEYDOWN, key=pygame.K_a)
-        ev2 = _make_event(pygame.KEYDOWN, key=pygame.K_b)
-        result = q.process_batch([ev1, ev2])
-        assert len(result) == 2
-
-    def test_parallel_events_processed(self):
-        q = SmartEventQueue()
-        ev = _make_event(pygame.MOUSEMOTION, pos=(10, 20))
-        result = q.process_batch([ev])
-        # Parallel events return through executor → should still appear
-        assert len(result) == 1
-
-    def test_mixed_events(self):
-        q = SmartEventQueue()
-        events = [
-            _make_event(pygame.KEYDOWN, key=pygame.K_a),
-            _make_event(pygame.MOUSEMOTION, pos=(10, 20)),
-            _make_event(pygame.KEYUP, key=pygame.K_a),
-            _make_event(pygame.MOUSEWHEEL, y=1),
-        ]
-        result = q.process_batch(events)
-        assert len(result) == 4
-
-    def test_can_parallelize_mousemotion(self):
-        q = SmartEventQueue()
-        assert q._can_parallelize(_make_event(pygame.MOUSEMOTION))
-
-    def test_can_parallelize_mousewheel(self):
-        q = SmartEventQueue()
-        assert q._can_parallelize(_make_event(pygame.MOUSEWHEEL))
-
-    def test_cannot_parallelize_keydown(self):
-        q = SmartEventQueue()
-        assert not q._can_parallelize(_make_event(pygame.KEYDOWN))
-
-    def test_queue_clears_between_batches(self):
-        q = SmartEventQueue()
-        q.process_batch([_make_event(pygame.KEYDOWN, key=pygame.K_a)])
-        result = q.process_batch([])
-        assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -195,55 +133,6 @@ class TestRenderCacheEdgeCases:
         assert len(cache.access_history) <= 5
 
 
-class TestSmartEventQueueEdgeCases:
-    def test_large_batch(self):
-        q = SmartEventQueue()
-        events = [_make_event(pygame.MOUSEMOTION, pos=(i, i)) for i in range(200)]
-        result = q.process_batch(events)
-        assert len(result) == 200
-
-    def test_all_parallel_events(self):
-        q = SmartEventQueue()
-        events = [_make_event(pygame.MOUSEMOTION, pos=(i, 0)) for i in range(10)] + [
-            _make_event(pygame.MOUSEWHEEL, y=i) for i in range(10)
-        ]
-        result = q.process_batch(events)
-        assert len(result) == 20
-
-    def test_all_sequential_events(self):
-        q = SmartEventQueue()
-        events = [_make_event(pygame.KEYDOWN, key=pygame.K_a + i) for i in range(10)]
-        result = q.process_batch(events)
-        assert len(result) == 10
-
-    def test_process_batch_idempotent(self):
-        q = SmartEventQueue()
-        events = [_make_event(pygame.KEYDOWN, key=pygame.K_a)]
-        r1 = q.process_batch(events)
-        r2 = q.process_batch(events)
-        assert len(r1) == len(r2) == 1
-
-    def test_multiple_batches_independent(self):
-        q = SmartEventQueue()
-        r1 = q.process_batch([_make_event(pygame.KEYDOWN, key=pygame.K_a)])
-        r2 = q.process_batch([_make_event(pygame.KEYDOWN, key=pygame.K_b)])
-        assert len(r1) == 1
-        assert len(r2) == 1
-
-    def test_executor_exists(self):
-        q = SmartEventQueue()
-        assert q.executor is not None
-        assert q.executor._max_workers == 4
-
-    def test_cannot_parallelize_custom_event(self):
-        q = SmartEventQueue()
-        assert not q._can_parallelize(_make_event(pygame.USEREVENT))
-
-    def test_cannot_parallelize_quit(self):
-        q = SmartEventQueue()
-        assert not q._can_parallelize(_make_event(pygame.QUIT))
-
-
 # ---------------------------------------------------------------------------
 # BP — additional edge-case coverage
 # ---------------------------------------------------------------------------
@@ -265,24 +154,3 @@ class TestRenderCacheZeroCapacity:
         """Negative max_size triggers ValueError in deque(maxlen=...)."""
         with pytest.raises(ValueError, match="non-negative"):
             RenderCache(max_size=-1)
-
-
-class TestSmartEventQueueProcessEvent:
-    def test_process_event_returns_same_event(self):
-        q = SmartEventQueue()
-        ev = _make_event(pygame.MOUSEMOTION, pos=(5, 5))
-        result = q._process_event(ev)
-        assert result is ev
-
-    def test_executor_shutdown_safe(self):
-        """Thread pool can be shut down without issue."""
-        q = SmartEventQueue()
-        q.executor.shutdown(wait=False)
-        # Queue should still handle non-parallel events after shutdown
-        events = [_make_event(pygame.KEYDOWN, key=pygame.K_a)]
-        result = q.process_batch(events)
-        assert len(result) == 1
-
-    def test_patterns_dict_starts_empty(self):
-        q = SmartEventQueue()
-        assert q.patterns == {}

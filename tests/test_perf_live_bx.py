@@ -1,12 +1,10 @@
-"""BX: Edge-case tests for perf (RenderCache, SmartEventQueue) and live_preview."""
+"""BX: Edge-case tests for perf (RenderCache) and live_preview."""
 
 from __future__ import annotations
 
-import concurrent.futures
-
 import pygame
 
-from cyberpunk_designer.perf import RenderCache, SmartEventQueue
+from cyberpunk_designer.perf import RenderCache
 
 # ---------------------------------------------------------------------------
 # RenderCache
@@ -66,70 +64,6 @@ class TestRenderCacheEdges:
         cache.set(2, s2)
         assert len(cache.cache) == 1
         assert cache.get(2) is s2
-
-
-# ---------------------------------------------------------------------------
-# SmartEventQueue
-# ---------------------------------------------------------------------------
-
-
-class TestSmartEventQueueEdges:
-    def test_empty_batch(self):
-        """Empty event list returns empty list."""
-        q = SmartEventQueue()
-        assert q.process_batch([]) == []
-
-    def test_non_parallelizable_passthrough(self):
-        """Non-motion events pass through directly."""
-        q = SmartEventQueue()
-        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a)
-        result = q.process_batch([event])
-        assert len(result) == 1
-        assert result[0].type == pygame.KEYDOWN
-
-    def test_motion_parallelized(self):
-        """MOUSEMOTION events are parallelized."""
-        q = SmartEventQueue()
-        event = pygame.event.Event(pygame.MOUSEMOTION, pos=(10, 20), rel=(1, 1), buttons=(0, 0, 0))
-        result = q.process_batch([event])
-        assert len(result) == 1
-
-    def test_mixed_events(self):
-        """Mix of parallel and non-parallel events processed correctly."""
-        q = SmartEventQueue()
-        events = [
-            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a),
-            pygame.event.Event(pygame.MOUSEMOTION, pos=(10, 20), rel=(1, 1), buttons=(0, 0, 0)),
-            pygame.event.Event(pygame.KEYUP, key=pygame.K_a),
-        ]
-        result = q.process_batch(events)
-        assert len(result) == 3
-
-    def test_future_exception_skipped(self):
-        """Futures that raise are silently skipped."""
-        q = SmartEventQueue()
-        # Replace executor to simulate failure
-
-        def failing_submit(fn, *args, **kwargs):
-            fut = concurrent.futures.Future()
-            fut.set_exception(RuntimeError("boom"))
-            return fut
-
-        q.executor.submit = failing_submit
-        event = pygame.event.Event(pygame.MOUSEMOTION, pos=(0, 0), rel=(0, 0), buttons=(0, 0, 0))
-        result = q.process_batch([event])
-        # Motion event failed, so result should be empty (only parallel events submitted)
-        assert isinstance(result, list)
-
-    def test_queue_cleared_between_batches(self):
-        """Queue doesn't accumulate across process_batch calls."""
-        q = SmartEventQueue()
-        e1 = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a)
-        e2 = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_b)
-        r1 = q.process_batch([e1])
-        r2 = q.process_batch([e2])
-        assert len(r1) == 1
-        assert len(r2) == 1
 
 
 # ---------------------------------------------------------------------------
