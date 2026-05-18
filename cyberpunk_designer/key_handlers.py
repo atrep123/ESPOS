@@ -154,7 +154,7 @@ _PLAIN_NOSIM_DISPATCH: dict = {
     pygame.K_o: ("_cycle_text_overflow", "_select_overflow"),
     pygame.K_a: ("_cycle_align", "_cycle_valign"),
     pygame.K_m: (("_mirror_selection", "h"), ("_mirror_selection", "v")),
-    pygame.K_i: (("@edit", "icon_char"), "_widget_info"),
+    pygame.K_i: ("_open_icon_palette", "_widget_info"),
     pygame.K_e: ("_smart_edit", ("@edit", "runtime")),
     pygame.K_h: (("@edit", "_size"), ("@edit", "_position")),
     pygame.K_r: (("@edit", "text"), "_auto_rename"),
@@ -245,6 +245,12 @@ def on_key_down(app, event: pygame.event.Event) -> None:
     if event.key == pygame.K_SLASH and (pygame.key.get_mods() & pygame.KMOD_CTRL):
         app.show_shortcuts_panel = not app.show_shortcuts_panel
         app._mark_dirty()
+        return
+
+    # Icon Palette is modal: while open it consumes all keys (search/nav).
+    from . import icon_palette
+
+    if icon_palette.handle_key(app, event):
         return
 
     if bool(getattr(app, "show_help_overlay", False)) and bool(getattr(app, "_help_pinned", False)):

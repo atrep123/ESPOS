@@ -33,6 +33,7 @@ from . import (
     fit_widget,
     focus_nav,
     groups,
+    icon_palette,
     input_handlers,
     io_ops,
     layout_tools,
@@ -451,6 +452,16 @@ class CyberpunkEditorApp:
         self._help_shown_once: bool = False
         self._help_pinned: bool = False
         self.show_shortcuts_panel: bool = False
+        # Icon Palette modal state (browse + apply real Material icons).
+        self._icon_palette: dict = {
+            "visible": False,
+            "query": "",
+            "cursor": 0,
+            "scroll": 0,
+            "hitboxes": [],
+            "cols": 1,
+            "rows": 1,
+        }
         self._default_palette_w = DEFAULT_PALETTE_W
         self._default_inspector_w = DEFAULT_INSPECTOR_W
         self.panels_collapsed = False
@@ -692,6 +703,7 @@ class CyberpunkEditorApp:
             ("Undo", self._do_undo),
             ("Redo", self._do_redo),
             ("Tpl", self._open_template_menu),
+            ("Icons", self._open_icon_palette),
             ("Live", self._open_live_dialog),
             ("Arrange", self._auto_arrange_grid),
             ("Fit Text", self._fit_selection_to_text),
@@ -735,6 +747,15 @@ class CyberpunkEditorApp:
         # Position below toolbar
         pos = (self.layout.toolbar_rect.x + 200, self.layout.toolbar_rect.bottom + 2)
         self._context_menu = {"visible": True, "pos": pos, "items": items}
+
+    def _open_icon_palette(self) -> None:
+        """Open the Icon Palette: browse real Material icons and apply one.
+
+        Applies to the selected `icon` widget(s) or drops a new icon widget.
+        The chosen base name is written to `icon_char`, which flows
+        JSON -> C codegen -> firmware `icons_find()` unchanged.
+        """
+        icon_palette.open_icon_palette(self)
 
     # ------------------------------------------------------------------ #
     # Status, inspector, and input helpers

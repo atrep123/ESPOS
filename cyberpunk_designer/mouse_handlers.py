@@ -15,6 +15,12 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
     lx, ly = pos
     mods = pygame.key.get_mods()
 
+    # Icon Palette is modal: it eats the click (pick an icon or dismiss).
+    from . import icon_palette
+
+    if icon_palette.handle_click(app, pos):
+        return
+
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))
         app._set_help_overlay(False)
@@ -560,6 +566,11 @@ def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> 
 def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     """Scroll palette/inspector panels, or zoom canvas."""
     if dy == 0:
+        return
+    # Icon Palette is modal: wheel scrolls its grid.
+    from . import icon_palette
+
+    if icon_palette.handle_wheel(app, dy):
         return
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))
