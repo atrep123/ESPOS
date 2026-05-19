@@ -15,7 +15,7 @@ pytest-xdist>=3.5.0,<5
 coverage[toml]>=7.3.0,<8
 pytest-timeout>=2.2.0,<3
 mypy>=1.7.0,<2
-ruff>=0.6.0,<1
+ruff>=0.15.13,<1
 pyinstaller>=6.0.0,<7
 
 mutmut>=2.5.0,<3
