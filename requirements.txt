@@ -20,3 +20,9 @@ pyserial>=3.5,<4
 # `ensure_platformio()` verifies it is importable and prints an actionable
 # `pip install -r requirements.txt` hint if it is missing.
 platformio>=6.1,<7
+# Required by the ESP-IDF build step (esptool/elf2image). PlatformIO's penv
+# carries it, but the IDF build runs under the *invoking* interpreter, which
+# may lack it (newer-platform reprovisioning can drop it) → builds fail with
+# `ModuleNotFoundError: No module named 'intelhex'`. Pin it so every pio
+# interpreter the workflow uses has it.
+intelhex>=2.3,<3

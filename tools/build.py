@@ -397,6 +397,22 @@ def firmware_path_for(env: str) -> Path:
 # --------------------------------------------------------------------------- #
 
 
+def _pio_env() -> dict:
+    """Environment for pio subprocesses.
+
+    Forces UTF-8 so PlatformIO/click never raises ``UnicodeEncodeError``
+    echoing non-ASCII (esptool progress bars, localized serial-device
+    strings) on a Windows cp1250 console — which would otherwise crash the
+    designer Build/Flash modal mid-upload.
+    """
+    env = dict(os.environ)
+    env.setdefault("PLATFORMIO_NO_ANSI", "1")
+    env.setdefault("PYTHONUNBUFFERED", "1")
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    return env
+
+
 def _run_pio(
     pio_args: List[str],
     *,
@@ -412,10 +428,7 @@ def _run_pio(
     cmd = [*pio_base_cmd(), *pio_args]
     emit(f"$ {' '.join(cmd)}")
 
-    env = dict(os.environ)
-    # Stable, parseable pio output; never page.
-    env.setdefault("PLATFORMIO_NO_ANSI", "1")
-    env.setdefault("PYTHONUNBUFFERED", "1")
+    env = _pio_env()
 
     lines: List[str] = []
     try:
@@ -425,6 +438,8 @@ def _run_pio(
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
             env=env,
         )
@@ -526,8 +541,11 @@ def detect_upload_port() -> Optional[str]:
             [*resolved[0], "device", "list", "--json-output"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=60,
             cwd=str(REPO_ROOT),
+            env=_pio_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return None
