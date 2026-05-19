@@ -361,6 +361,36 @@
         "-DESPOS_NO_DISPLAY=1"
       ],
       "notes": "Classic ESP32-WROOM-32E/32UE dev-module target using PlatformIO `esp32dev`, verified in espressif32@6.12.0. GPIO1/GPIO3 are UART0, GPIO21/GPIO22 are the common I2C defaults, and GPIO18/19/23/5 are the common VSPI defaults. GPIO2 LED is common on many ESP32 DevKitC-style modules but not guaranteed across clones. Source: docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html."
+    },
+    {
+      "id": "esp32-c5",
+      "label": "ESP32-C5 BLE LED stage prop (headless, pioarduino toolchain)",
+      "platformio_board": "esp32-c5-devkitc-1",
+      "platform": "https://github.com/pioarduino/platform-espressif32/releases/download/55.03.38-1/platform-espressif32.zip",
+      "mcu": "esp32c5",
+      "vendor": "Espressif",
+      "has_display": false,
+      "display_profile": null,
+      "display": null,
+      "pins": {
+        "led_ws2812": 8,
+        "btn_boot": 28,
+        "uart_tx": 11,
+        "uart_rx": 12
+      },
+      "peripherals": [
+        "ws2812",
+        "ble",
+        "wifi",
+        "button"
+      ],
+      "build_flags": [
+        "-DESPOS_BOARD_ESP32_C5=1",
+        "-DESPOS_HEADLESS=1",
+        "-DESPOS_NO_DISPLAY=1",
+        "-DESPOS_WS2812_GPIO=8"
+      ],
+      "notes": "Filip's physical ESP32-C5 prop board (BLE-driven LED stage prop, on COM5). ISOLATED platform entry: the project-pinned espressif32@6.12.0 has NO ESP32-C5 board (verified: `pio boards --json-output espressif32` returns 0 C5 boards), so this single board pins its OWN newer toolchain -- the community pioarduino platform-espressif32 fork release 55.03.38-1 (frozen release-zip URL, reproducible), whose board DB ships `esp32-c5-devkitc-1` (mcu esp32c5, espidf+arduino, 4MB, no PSRAM). This does NOT change the platform/version of any other board or the global [env]/[esp32_base]; board_registry.render_pio_block only emits a per-board `platform =` line when it differs from BASE_PLATFORM, so every other generated env stays byte-identical and inherits espressif32@6.12.0 unchanged. Headless: no display panel -> has_display=false, the UI designer does not apply; ESPOS_NO_DISPLAY/ESPOS_HEADLESS keep the firmware screenless. Single WS2812 RGB on GPIO8 (DevKitC-1 default RGB LED). ESP32-C5 is RISC-V with WiFi6 + BLE5 + 802.15.4 (dual-band 2.4/5GHz); UART0 default is GPIO11(TX)/GPIO12(RX) and BOOT button GPIO28 on the C5-DevKitC-1 -- confirm GPIO assignments against the specific prop's wiring before driving the WS2812 string. Platform source: github.com/pioarduino/platform-espressif32 (release 55.03.38-1); board source: pioarduino boards/esp32-c5-devkitc-1.json; Espressif ESP32-C5-DevKitC-1 user guide."
     }
   ]
 }

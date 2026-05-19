@@ -60,7 +60,15 @@ static void rpc_task(void *arg)
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_APB,
+        /* Portable default UART source clock. `UART_SCLK_DEFAULT` is the
+         * ESP-IDF-sanctioned, SoC- and IDF-version-agnostic selector for the
+         * chip's default UART clock (it resolves to APB on the ESP32/S3/C6
+         * targets, exactly as the former hardcoded `UART_SCLK_APB` did). The
+         * literal `UART_SCLK_APB` enumerator was removed in newer ESP-IDF
+         * (5.5.x, used by the ESP32-C5 toolchain), so hardcoding it broke that
+         * build; `UART_SCLK_DEFAULT` exists on both the pinned IDF and the
+         * newer one and keeps every existing target byte-for-byte equivalent. */
+        .source_clk = UART_SCLK_DEFAULT,
     };
     esp_err_t err;
     err = uart_param_config(UARTN, &cfg);

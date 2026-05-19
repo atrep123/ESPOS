@@ -47,6 +47,15 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 PIO_BLOCK_BEGIN = "# >>> espos board_registry generated envs (do not edit by hand) >>>"
 PIO_BLOCK_END = "# <<< espos board_registry generated envs <<<"
 
+# The platform pinned by the shared `[esp32_base]` section in platformio.ini.
+# A generated env inherits this via `extends = esp32_base`; the generator only
+# emits an explicit per-board `platform =` line when a board declares a
+# *different* platform (e.g. an ESP32-C5 target needing a newer toolchain that
+# the pinned base does not provide). This keeps every same-platform env
+# byte-identical (no redundant `platform` line) while letting an isolated board
+# override just its toolchain without touching the base or any other env.
+BASE_PLATFORM = "espressif32@6.12.0"
+
 # Recognized peripheral tokens. Extra tokens are *allowed* (warning only) so
 # the registry can grow without code changes, but the common set is checked
 # for typos during validation.
@@ -310,6 +319,12 @@ class BoardRegistry:
             lines.append(f"# {b.label} — {disp}")
             lines.append(f"[env:{b.env_name()}]")
             lines.append("extends = esp32_base")
+            # Only override the inherited platform when this board pins a
+            # different toolchain than `[esp32_base]` (e.g. an ESP32-C5 that
+            # the base `espressif32@6.12.0` has no board for). Same-platform
+            # boards stay byte-identical — they keep inheriting via `extends`.
+            if b.platform and b.platform != BASE_PLATFORM:
+                lines.append(f"platform = {b.platform}")
             lines.append(f"board = {b.platformio_board}")
             flags = list(b.build_flags)
             if not b.has_display:
