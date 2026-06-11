@@ -436,10 +436,12 @@ if __name__ == "__main__":
     # demo() prints non-ASCII glyphs; force UTF-8 so it does not crash on a
     # legacy console codepage (e.g. Windows cp1250). Scoped to script entry
     # so importing this module has no global stdout side effect.
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except (AttributeError, ValueError):
-        pass
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except ValueError:
+                pass
 
     demo()

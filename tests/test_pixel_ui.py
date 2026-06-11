@@ -493,9 +493,9 @@ def test_group_drag_moves_all_widgets(make_app):
     dy = sc.widgets[0].y - before[0][1]
     assert (dx, dy) != (0, 0)
     after = [(w.x, w.y) for w in sc.widgets]
-    assert [(x - bx, y - by) for (x, y), (bx, by) in zip(after, before)] == [(dx, dy)] * len(
-        sc.widgets
-    )
+    assert [(x - bx, y - by) for (x, y), (bx, by) in zip(after, before, strict=True)] == [
+        (dx, dy)
+    ] * len(sc.widgets)
 
 
 def test_ungroup_then_drag_moves_single_widget(make_app):

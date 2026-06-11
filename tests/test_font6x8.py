@@ -161,7 +161,7 @@ def test_row5_large_value():
 
 def test_glyph_lowercase_full_alphabet():
     """Every lowercase letter maps to its uppercase glyph."""
-    for lo, up in zip("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+    for lo, up in zip("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", strict=True):
         assert _glyph_for_char(lo) == _GLYPHS[up], f"{lo!r} != {up!r}"
 
 

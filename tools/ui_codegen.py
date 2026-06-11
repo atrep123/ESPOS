@@ -335,7 +335,7 @@ def write_if_changed(path: Path, content: str) -> bool:
     if existing == content:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8", newline="\n")  # type: ignore[call-arg]
+    path.write_text(content, encoding="utf-8", newline="\n")
     return True
 
 
@@ -1315,7 +1315,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     # Scene array
     c.append("/* Scene registry */")
     c.append("const UiScene ui_scenes[] = {")
-    for safe, key in zip(scene_names, scene_keys):
+    for safe, key in zip(scene_names, scene_keys, strict=True):
         scene_data = scenes[key]
         widgets = scene_data.get("widgets", [])
         if not isinstance(widgets, list):
