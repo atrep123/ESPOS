@@ -18,7 +18,7 @@ pytest-benchmark>=5.2.3,<6
 mypy>=1.7.0,<2
 # Ruff formatting is version-sensitive; keep the minor capped so CI formatting
 # does not drift without an intentional refresh.
-ruff>=0.15.16,<0.16
+ruff>=0.15.17,<0.16
 pyinstaller>=6.0.0,<7
 
 mutmut>=2.5.0,<3
