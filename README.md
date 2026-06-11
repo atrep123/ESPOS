@@ -50,6 +50,7 @@ label, button, panel, box, textbox, checkbox, radiobutton, progressbar, slider, 
 | `src/` | ESP32 firmware (C, PlatformIO) |
 | `schemas/` | JSON schema for design files |
 | `espos_mcp/` | MCP server exposing the toolkit to any MCP client |
+| `integrations/m5-prop-lora/` | Vendored M5 Dial / DinMeter prop-control project and UIFlow2 blocks |
 | `tests/` | Python test suite (pytest) |
 
 ### MCP server (drive espos from an automation/agent layer)

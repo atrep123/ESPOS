@@ -1,0 +1,35 @@
+{
+  "_comment": "Single source of truth for DinMeter UI theme (colours + layout). Consumed by tools/preview_din_rx_render.py and generated into firmware ui_theme_generated.h. Pixels + colours ONLY -- never logic/safety.",
+  "colors": {
+    "COLOR_BG": "0x121820",
+    "COLOR_TEXT": "0xE7E9ED",
+    "COLOR_MUTED": "0x9FC2C8",
+    "COLOR_GOOD": "0x2E9E72",
+    "COLOR_WARN": "0xFF8C00",
+    "COLOR_BAD": "0xCC0000",
+    "COLOR_BLUE": "0x0055FF",
+    "COLOR_KLID": "0x6E7C80",
+    "CHIP_KLID_BG": "0x18271D",
+    "CHIP_KLID_TEXT": "0xCDEAD9",
+    "COLOR_TEAL": "0x4FD1C5"
+  },
+  "layout": {
+    "STATUS_H": 28, "SPINE_W": 4, "PLOT_X": 8, "PLOT_Y": 33, "PLOT_W": 224,
+    "PLOT_H": 47, "EFEKT_TOP": 30, "EFEKT_BOT": 89, "PLOT_TOP": 36,
+    "PLOT_PEAK_PAD": 2, "PALETTE_Y": 82, "ROW_Y": 93, "ROW_H": 18,
+    "ROW_VISIBLE": 2, "PLOT_MAX_CYCLES": 3
+  },
+  "dial": {
+    "P_GREEN": "0x3FB36B",
+    "P_AMBER": "0xFF8C00",
+    "P_RED": "0xCC0000",
+    "WHITE": "0xFFFFFF",
+    "BG_BASE": "0x14171D",
+    "RING_TRK": "0x363D4A",
+    "SOCKET": "0x0B0D11",
+    "TEXT_HI": "0xE7E9ED",
+    "TEXT_DIM": "0x767D89",
+    "ACCENT": "0xF5F7FA",
+    "MODE_SETUP": "0x59C6DC"
+  }
+}

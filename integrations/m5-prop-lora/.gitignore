@@ -1,0 +1,60 @@
+# Python test cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# PlatformIO / embedded build outputs
+.pio/
+.pio_core/
+firmware/**/.pio/
+firmware/**/.pio_core/
+.platformio-core/
+firmware/**/.platformio-core/
+build/
+firmware/**/build/
+managed_components/
+firmware/**/managed_components/
+
+# Vendored per-project PlatformIO core dirs (custom "piotx" name)
+piotx/
+firmware/**/piotx/
+
+# ESP-IDF generated files
+sdkconfig.old
+
+# Firmware binaries and maps
+*.bin
+*.elf
+*.hex
+*.uf2
+
+# Local editor/OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local Claude Code settings (machine-local; a shared .claude/settings.json may still be tracked)
+.claude/settings.local.json
+
+# Build logs and editor backups
+*.log
+*.orig
+
+# Agent/tool scratch files
+.codex_*
+diag_out/
+PREVIEW_DIAG.md
+*_DONE.md
+tools/run_codex25.sh
+.playwright-cli/
+output/
+
+# Secrets / API keys / tokens -- NEVER commit
+.gemini_api_key
+.*_api_key
+.*_token
+*.secret
+
+# Stray backup folder of stale build artifacts
+/Nová složka/

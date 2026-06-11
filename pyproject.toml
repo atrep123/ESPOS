@@ -6,6 +6,7 @@ extend-exclude = '''
     build
   | dist
   | generated
+  | integrations/m5-prop-lora
   | __pycache__
   | \.mypy_cache
   | \.pio
@@ -21,6 +22,7 @@ extend-exclude = [
     "build",
     "dist",
     "generated",
+    "integrations/m5-prop-lora",
     "__pycache__",
     ".mypy_cache",
     ".pio",
@@ -82,7 +84,7 @@ strict_equality = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unreachable = true
-exclude = "(build|dist|generated|\\.pio|\\.platformio-local|\\.venv|__pycache__|output)"
+exclude = "(build|dist|generated|integrations/m5-prop-lora|\\.pio|\\.platformio-local|\\.venv|__pycache__|output)"
 
 [tool.pytest.ini_options]
 markers = [
@@ -133,6 +135,7 @@ omit = [
     "*/build/*",
     "*/dist/*",
     "*/generated/*",
+    "*/integrations/m5-prop-lora/*",
     "*/__pycache__/*",
     ".claude/*",
     "demo_screenshot.py",

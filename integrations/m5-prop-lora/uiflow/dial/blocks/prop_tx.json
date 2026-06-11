@@ -1,0 +1,140 @@
+{
+  "category": "PropTx",
+  "color": "#2E9E72",
+  "blocks": [
+    {
+      "name": "init",
+      "type": "execute",
+      "params": [
+        { "name": "Prop init  TX", "type": "label" },
+        { "name": "tx", "type": "number" },
+        { "name": "RX", "type": "label" },
+        { "name": "rx", "type": "number" }
+      ]
+    },
+    {
+      "name": "send_preview",
+      "type": "execute",
+      "params": [
+        { "name": "Prop PREVIEW colors", "type": "label" },
+        { "name": "colors", "type": "variable" }
+      ]
+    },
+    {
+      "name": "send_fire",
+      "type": "execute",
+      "params": [
+        { "name": "Prop ODPAL colors", "type": "label" },
+        { "name": "colors", "type": "variable" }
+      ]
+    },
+    {
+      "name": "send_stop",
+      "type": "execute",
+      "params": [{ "name": "Prop STOP", "type": "label" }]
+    },
+    {
+      "name": "send_arm",
+      "type": "execute",
+      "params": [{ "name": "Prop ARM", "type": "label" }]
+    },
+    {
+      "name": "remote_led",
+      "type": "execute",
+      "params": [
+        { "name": "Prop remote LED", "type": "label" },
+        { "name": "which", "type": "number" }
+      ]
+    },
+    {
+      "name": "sync_palette",
+      "type": "execute",
+      "params": [
+        { "name": "Prop sync palette", "type": "label" },
+        { "name": "colors", "type": "variable" }
+      ]
+    },
+    {
+      "name": "reply",
+      "type": "value",
+      "params": [{ "name": "Prop reply", "type": "label" }]
+    },
+    {
+      "name": "hue_color",
+      "type": "value",
+      "params": [
+        { "name": "Prop hue", "type": "label" },
+        { "name": "deg", "type": "number" },
+        { "name": "to color", "type": "label" }
+      ]
+    },
+    {
+      "name": "default_hues",
+      "type": "value",
+      "params": [{ "name": "Prop default hues", "type": "label" }]
+    },
+    {
+      "name": "default_colors",
+      "type": "value",
+      "params": [{ "name": "Prop default colors", "type": "label" }]
+    },
+    {
+      "name": "palette_from_hues",
+      "type": "value",
+      "params": [
+        { "name": "Prop colors from hues", "type": "label" },
+        { "name": "hues", "type": "variable" }
+      ]
+    },
+    {
+      "name": "set_color",
+      "type": "value",
+      "params": [
+        { "name": "Prop set color", "type": "label" },
+        { "name": "colors", "type": "variable" },
+        { "name": "LED", "type": "label" },
+        { "name": "index", "type": "number" },
+        { "name": "to", "type": "label" },
+        { "name": "color", "type": "variable" }
+      ]
+    },
+    {
+      "name": "first_four",
+      "type": "value",
+      "params": [
+        { "name": "Prop first four", "type": "label" },
+        { "name": "colors", "type": "variable" }
+      ]
+    },
+    {
+      "name": "rgb_color",
+      "type": "value",
+      "params": [
+        { "name": "Prop RGB", "type": "label" },
+        { "name": "r", "type": "number" },
+        { "name": "G", "type": "label" },
+        { "name": "g", "type": "number" },
+        { "name": "B", "type": "label" },
+        { "name": "b", "type": "number" }
+      ]
+    },
+    {
+      "name": "rgb888",
+      "type": "value",
+      "params": [
+        { "name": "Prop RGB888", "type": "label" },
+        { "name": "color", "type": "variable" }
+      ]
+    },
+    {
+      "name": "remote_led3",
+      "type": "execute",
+      "params": [{ "name": "Prop remote LED3", "type": "label" }]
+    },
+    {
+      "name": "remote_led5",
+      "type": "execute",
+      "params": [{ "name": "Prop remote LED5", "type": "label" }]
+    }
+  ]
+}
