@@ -16,6 +16,9 @@ AUDIT_TOOL_INSTALL_RE = re.compile(
 PIP_AUDIT_REQUIREMENT_RE = re.compile(r"^\s*pip-audit\b", re.MULTILINE)
 DEPENDABOT_UPDATE_RE = re.compile(r"^\s*-\s+package-ecosystem:\s*(?P<ecosystem>.+?)\s*$")
 WRITE_PERMISSION_RE = re.compile(r"^\s*[a-z-]+:\s*write\s*(?:#.*)?$", re.IGNORECASE)
+JOB_HEADER_RE = re.compile(r"^  (?P<job>[A-Za-z0-9_-]+):\s*(?:#.*)?$")
+RUNS_ON_RE = re.compile(r"^    runs-on:\s*.+$")
+JOB_TIMEOUT_RE = re.compile(r"^    timeout-minutes:\s*(?P<value>\S+)\s*(?:#.*)?$")
 CHECKOUT_ACTION_RE = re.compile(r"^actions/checkout@[0-9a-f]{40}$", re.IGNORECASE)
 PERSIST_CREDENTIALS_FALSE_RE = re.compile(
     r"^\s*persist-credentials:\s*false\s*(?:#.*)?$",
@@ -71,12 +74,68 @@ def _step_block_after_uses(lines: list[str], uses_index: int) -> list[str]:
     return block
 
 
+def _job_blocks(lines: list[str]) -> list[tuple[int, str, list[str]]]:
+    blocks: list[tuple[int, str, list[str]]] = []
+    in_jobs = False
+    current_start = 0
+    current_name = ""
+    current_block: list[str] = []
+
+    for line_no, line in enumerate(lines, start=1):
+        if re.match(r"^jobs:\s*(?:#.*)?$", line):
+            in_jobs = True
+            continue
+        if in_jobs and line and not line.startswith((" ", "\t")):
+            break
+        if not in_jobs:
+            continue
+
+        job_match = JOB_HEADER_RE.match(line)
+        if job_match:
+            if current_name:
+                blocks.append((current_start, current_name, current_block))
+            current_start = line_no
+            current_name = job_match.group("job")
+            current_block = [line]
+        elif current_name:
+            current_block.append(line)
+
+    if current_name:
+        blocks.append((current_start, current_name, current_block))
+    return blocks
+
+
+def _validate_job_timeouts(path: Path, lines: list[str]) -> list[str]:
+    issues: list[str] = []
+    for line_no, job_name, block in _job_blocks(lines):
+        if not any(RUNS_ON_RE.match(line) for line in block):
+            continue
+
+        timeout_values = [
+            timeout_match.group("value")
+            for line in block
+            if (timeout_match := JOB_TIMEOUT_RE.match(line))
+        ]
+        if not timeout_values:
+            issues.append(f"{path}:{line_no}: job {job_name!r} must set timeout-minutes")
+            continue
+
+        timeout_value = _clean_yaml_scalar(timeout_values[-1])
+        if not timeout_value.isdecimal() or int(timeout_value) <= 0:
+            issues.append(
+                f"{path}:{line_no}: job {job_name!r} timeout-minutes must be a positive integer"
+            )
+    return issues
+
+
 def validate_workflow_text(path: Path, text: str) -> list[str]:
     issues: list[str] = []
     if not _has_top_level_contents_read_permission(text):
         issues.append(f"{path}: workflow must declare top-level permissions: contents: read")
 
     lines = text.splitlines()
+    issues.extend(_validate_job_timeouts(path, lines))
+
     for line_no, line in enumerate(lines, start=1):
         if WRITE_PERMISSION_RE.match(line):
             issues.append(f"{path}:{line_no}: workflow must not grant write permission")

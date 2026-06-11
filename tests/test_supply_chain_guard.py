@@ -122,6 +122,78 @@ jobs:
     assert any("permissions: contents: read" in issue for issue in issues)
 
 
+def test_workflow_requires_job_timeout_minutes():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("timeout-minutes" in issue for issue in issues)
+
+
+def test_workflow_rejects_non_positive_job_timeout_minutes():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 0
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("timeout-minutes" in issue for issue in issues)
+
+
+def test_workflow_step_timeout_does_not_satisfy_job_timeout():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: slow
+        timeout-minutes: 5
+        run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("job 'test' must set timeout-minutes" in issue for issue in issues)
+
+
+def test_workflow_accepts_job_timeout_minutes():
+    workflow = """
+name: good
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
+
+    assert issues == []
+
+
 def test_workflow_rejects_write_permissions():
     workflow = """
 name: bad
