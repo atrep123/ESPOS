@@ -347,14 +347,30 @@ class TestBuildPalette:
 class TestBuildToolbar:
     def test_toolbar_actions(self, make_app):
         app = make_app()
-        assert len(app.toolbar_actions) == 11
         names = [name for name, _action in app.toolbar_actions]
-        assert "New" in names
-        assert "Save" in names
-        assert "Live" in names
-        assert "Undo" in names
-        assert "Redo" in names
-        assert "Tpl" in names
+        expected = {
+            "New",
+            "Load",
+            "Save",
+            "Undo",
+            "Redo",
+            "Tpl",
+            "Icons",
+            "Live",
+            "Arrange",
+            "Fit Text",
+            "Fit Widget",
+            "SVG",
+            "Board",
+            "Logic",
+            "Build",
+            "Flash",
+            "Warn",
+        }
+        assert expected.issubset(names)
+        assert len(names) == len(set(names))
+        for _name, action in app.toolbar_actions:
+            assert callable(action)
 
     def test_overflow_warnings_env(self, make_app, monkeypatch):
         monkeypatch.setenv("ESP32OS_OVERFLOW_WARN", "1")

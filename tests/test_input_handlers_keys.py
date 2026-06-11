@@ -302,13 +302,13 @@ class TestCtrlShortcuts:
         on_key_down(app, _key_event(pygame.K_t, mod=CTRL))
         assert "save_tmpl" in called
 
-    def test_ctrl_shift_t_list_templates(self, make_app, monkeypatch):
+    def test_ctrl_shift_t_opens_template_manager(self, make_app, monkeypatch):
         app = make_app()
         called = []
-        app._list_templates = lambda: called.append("list_tmpl")
+        app._open_template_manager = lambda: called.append("template_manager")
         monkeypatch.setattr(pygame.key, "get_mods", lambda: CTRL | SHIFT)
         on_key_down(app, _key_event(pygame.K_t, mod=CTRL | SHIFT))
-        assert "list_tmpl" in called
+        assert "template_manager" in called
 
     def test_ctrl_j_goto(self, make_app, monkeypatch):
         app = make_app()

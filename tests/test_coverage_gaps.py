@@ -27,7 +27,8 @@ class TestOpenTemplateMenu:
         app.template_library = MagicMock()
         app.template_library.templates = []
         app._open_template_menu()
-        assert "No templates" in app.dialog_message
+        assert getattr(app, "_template_manager", {}).get("visible") is True
+        assert "Template Manager: 0 template(s)" in app.dialog_message
 
     def test_with_templates(self, make_app):
         app = make_app()
@@ -37,12 +38,10 @@ class TestOpenTemplateMenu:
         app.template_library = MagicMock()
         app.template_library.templates = [tpl]
         app._open_template_menu()
-        menu = getattr(app, "_context_menu", {})
-        assert menu.get("visible")
-        items = menu.get("items", [])
-        assert any("TestTpl" in str(it) for it in items)
+        assert getattr(app, "_template_manager", {}).get("visible") is True
+        assert "Template Manager: 1 template(s)" in app.dialog_message
 
-    def test_with_selection_adds_save(self, make_app):
+    def test_with_selection_shows_save_hint(self, make_app):
         app = make_app(widgets=[_w()])
         app.state.selected = [0]
         tpl = MagicMock()
@@ -51,9 +50,8 @@ class TestOpenTemplateMenu:
         app.template_library = MagicMock()
         app.template_library.templates = [tpl]
         app._open_template_menu()
-        menu = getattr(app, "_context_menu", {})
-        items = menu.get("items", [])
-        assert any("save_as_template" in str(it) for it in items)
+        assert getattr(app, "_template_manager", {}).get("visible") is True
+        assert "S=save scene" in app.dialog_message
 
 
 # ===========================================================================

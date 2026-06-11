@@ -90,11 +90,12 @@ def escape_c_string(text: object) -> str:
         .replace("\r", "\\r")
         .replace("\t", "\\t")
     )
-    return _re.sub(
+    s = _re.sub(
         r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]",
         lambda m: f"\\x{ord(m.group()):02x}",
         s,
     )
+    return s.replace("/*", "\\057*").replace("*/", "*\\057")
 
 
 def escape_c_comment(text: object) -> str:
@@ -1041,8 +1042,8 @@ def generate_scenes_header(
     lines: list[str] = []
     lines.append("/*")
     lines.append(" * Auto-generated UI scenes header (ESP32OS)")
-    lines.append(f" * Source: {source_name}")
-    lines.append(f" * Generated: {generated_ts}")
+    lines.append(f" * Source: {escape_c_comment(source_name)}")
+    lines.append(f" * Generated: {escape_c_comment(generated_ts)}")
     lines.append(" * DO NOT EDIT MANUALLY")
     lines.append(" */")
     lines.append("")
@@ -1069,7 +1070,7 @@ def generate_scenes_header(
         except (TypeError, ValueError, AttributeError):
             pass
 
-        lines.append(f"/* Scene: {scene_name} ({width}x{height}) */")
+        lines.append(f"/* Scene: {escape_c_comment(scene_name)} ({width}x{height}) */")
         dp_decls, dp_by_id = build_data_point_arrays(
             widgets, symbol_prefix=f"{safe}_dp_"
         )

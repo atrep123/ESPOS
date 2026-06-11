@@ -1,7 +1,7 @@
 """End-to-end tests for multi-scene codegen using the real main_scene.json.
 
 Verifies that generate_ui_design_multi_pair() produces correct C source
-and header for all 3 scenes (main, settings, metrics) with accurate
+and header for all 4 scenes (main, menu, settings, metrics) with accurate
 widget counts, scene indices, defines, and structural integrity.
 """
 
@@ -48,21 +48,25 @@ class TestMultiSceneHeaderReal:
             pytest.skip("main_scene.json not found")
         return generate_ui_design_multi_pair(MAIN_SCENE_JSON, source_label="test")
 
-    def test_scene_count_is_3(self, pair):
+    def test_scene_count_is_4(self, pair):
         _, hdr = pair
-        assert "#define UI_SCENE_COUNT 3" in hdr
+        assert "#define UI_SCENE_COUNT 4" in hdr
 
     def test_scene_index_main(self, pair):
         _, hdr = pair
         assert "#define UI_SCENE_IDX_MAIN 0" in hdr
 
+    def test_scene_index_menu(self, pair):
+        _, hdr = pair
+        assert "#define UI_SCENE_IDX_MENU 1" in hdr
+
     def test_scene_index_settings(self, pair):
         _, hdr = pair
-        assert "#define UI_SCENE_IDX_SETTINGS 1" in hdr
+        assert "#define UI_SCENE_IDX_SETTINGS 2" in hdr
 
     def test_scene_index_metrics(self, pair):
         _, hdr = pair
-        assert "#define UI_SCENE_IDX_METRICS 2" in hdr
+        assert "#define UI_SCENE_IDX_METRICS 3" in hdr
 
     def test_backward_compat_alias(self, pair):
         _, hdr = pair
@@ -119,6 +123,10 @@ class TestMultiSceneSourceReal:
         src, _ = pair
         assert "static const UiWidget main_widgets[]" in src
 
+    def test_menu_widgets_array(self, pair):
+        src, _ = pair
+        assert "static const UiWidget menu_widgets[]" in src
+
     def test_settings_widgets_array(self, pair):
         src, _ = pair
         assert "static const UiWidget settings_widgets[]" in src
@@ -133,7 +141,7 @@ class TestMultiSceneSourceReal:
         src, _ = pair
         assert "const UiScene ui_scenes[]" in src
 
-    def test_scene_registry_has_3_entries(self, pair):
+    def test_scene_registry_has_4_entries(self, pair):
         src, _ = pair
         # Each scene adds one '.name = "..."' in the registry
         _names = re.findall(r'\.name\s*=\s*"(\w+)"', src)
@@ -141,8 +149,8 @@ class TestMultiSceneSourceReal:
         reg_start = src.index("Scene registry")
         reg_src = src[reg_start:]
         reg_names = re.findall(r'\.name\s*=\s*"(\w+)"', reg_src)
-        assert len(reg_names) == 3
-        assert reg_names == ["main", "settings", "metrics"]
+        assert len(reg_names) == 4
+        assert reg_names == ["main", "menu", "settings", "metrics"]
 
     # --- Widget counts match JSON ---
 
@@ -151,6 +159,13 @@ class TestMultiSceneSourceReal:
         scenes = load_scenes(MAIN_SCENE_JSON)
         expected = len(scenes["main"]["widgets"])
         comment = f"Scene: main ({expected} widgets)"
+        assert comment in src
+
+    def test_menu_widget_count_matches(self, pair):
+        src, _ = pair
+        scenes = load_scenes(MAIN_SCENE_JSON)
+        expected = len(scenes["menu"]["widgets"])
+        comment = f"Scene: menu ({expected} widgets)"
         assert comment in src
 
     def test_settings_widget_count_matches(self, pair):
@@ -378,7 +393,8 @@ class TestLoadScenesFormat:
         if not MAIN_SCENE_JSON.exists():
             pytest.skip("main_scene.json not found")
         scenes = load_scenes(MAIN_SCENE_JSON)
-        assert len(scenes) == 3
+        assert len(scenes) == 4
         assert "main" in scenes
+        assert "menu" in scenes
         assert "settings" in scenes
         assert "metrics" in scenes

@@ -85,7 +85,7 @@
 | L | Lock / unlock |
 | V | Show / hide |
 | R | Rename |
-| I | Edit icon |
+| I | Icon Palette |
 | E | Smart edit |
 | Shift+E | Edit runtime binding |
 | Shift+T | Text overflow mode |
@@ -235,7 +235,7 @@
 | Ctrl+L | Load JSON |
 | Ctrl+E | Export C header |
 | Ctrl+T | Save as template |
-| Ctrl+Shift+T | List templates |
+| Ctrl+Shift+T | Template Manager |
 | Ctrl+F11 | Export selection as JSON |
 | F12 | Screenshot |
 

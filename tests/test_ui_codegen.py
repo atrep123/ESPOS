@@ -17,7 +17,8 @@ def test_generate_ui_design_pair_smoke():
     )
     assert "const UiScene ui_design" in c_text
     assert "extern const UiScene ui_design" in h_text
-    assert "UIW_BUTTON" in c_text
+    assert "UIW_PANEL" in c_text
+    assert "UIW_LABEL" in c_text
     assert ".border_style = UI_BORDER_NONE" in c_text
 
 

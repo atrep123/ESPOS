@@ -1,6 +1,8 @@
 """Tests for validation rules 51-58 in tools/validate_design.py."""
 
-from tools.validate_design import validate_data
+import json
+
+from tools.validate_design import validate_data, validate_file
 
 FL = "test"
 
@@ -91,10 +93,10 @@ def test_rule52_responsive_rules_none_ok():
     assert not any("responsive_rules" in e.message for e in errs)
 
 
-# ── Rule 53: parent_id references existing widget ──
+# ── Rule 53: removed; parent_id is unsupported and schema-invalid ──
 
 
-def test_rule53_parent_id_missing_ref():
+def test_rule53_parent_id_schema_invalid(tmp_path):
     w = [
         {
             "type": "label",
@@ -106,11 +108,13 @@ def test_rule53_parent_id_missing_ref():
             "parent_id": "panel99",
         },
     ]
-    warns = _warns(_make(w))
-    assert any("parent_id" in i.message and "not found" in i.message for i in warns)
+    path = tmp_path / "design.json"
+    path.write_text(json.dumps(_make(w)), encoding="utf-8")
+    errors = [i for i in validate_file(path, warnings_as_errors=False) if i.level == "ERROR"]
+    assert any("schema" in i.message for i in errors)
 
 
-def test_rule53_parent_id_valid_ref():
+def test_rule53_validate_data_has_no_semantic_parenting_warning():
     w = [
         {"type": "panel", "x": 0, "y": 0, "width": 60, "height": 50, "_widget_id": "pnl1"},
         {
@@ -124,7 +128,7 @@ def test_rule53_parent_id_valid_ref():
         },
     ]
     warns = _warns(_make(w))
-    assert not any("parent_id" in i.message and "not found" in i.message for i in warns)
+    assert not any("parent_id" in i.message for i in warns)
 
 
 def test_rule53_no_parent_id_ok():

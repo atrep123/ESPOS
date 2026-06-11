@@ -356,17 +356,17 @@ class TestLetterShiftEditorStart:
         on_key_down(app, _key(pygame.K_i, mod=SHIFT))
         assert "wi" in called
 
-    def test_i_icon_char(self, make_app, monkeypatch):
-        """L489-490: I key opens icon_char editor."""
+    def test_i_opens_icon_palette(self, make_app, monkeypatch):
+        """I key opens the Icon Palette."""
         app = make_app()
         sc = app.state.current_scene()
         sc.widgets.append(_w(type="icon"))
         _sel(app, 0)
         called = []
-        app._inspector_start_edit = lambda f: called.append(f)
+        app._open_icon_palette = lambda: called.append("icons")
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         on_key_down(app, _key(pygame.K_i))
-        assert "icon_char" in called
+        assert "icons" in called
 
     def test_shift_e_runtime(self, make_app, monkeypatch):
         """L492-493: Shift+E opens runtime editor."""
