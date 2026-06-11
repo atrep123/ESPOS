@@ -40,6 +40,8 @@ jobs:
           python -m pip_audit -r requirements-dev.txt --strict --desc --ignore-vuln PYSEC-2026-161
       - name: MCP dependency security audit
         run: python -m pip_audit -r requirements-mcp.txt --strict --desc
+      - name: Supply-chain guard
+        run: python tools/check_supply_chain.py
       - name: Ruff lint
         run: python -m ruff check .
       - name: Ruff format check
