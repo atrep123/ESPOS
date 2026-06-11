@@ -15,11 +15,33 @@ AUDIT_TOOL_INSTALL_RE = re.compile(
 )
 PIP_AUDIT_REQUIREMENT_RE = re.compile(r"^\s*pip-audit\b", re.MULTILINE)
 DEPENDABOT_UPDATE_RE = re.compile(r"^\s*-\s+package-ecosystem:\s*(?P<ecosystem>.+?)\s*$")
+WRITE_PERMISSION_RE = re.compile(r"^\s*[a-z-]+:\s*write\s*(?:#.*)?$", re.IGNORECASE)
+
+
+def _has_top_level_contents_read_permission(text: str) -> bool:
+    in_permissions = False
+    for line in text.splitlines():
+        if re.match(r"^permissions:\s*(?:#.*)?$", line):
+            in_permissions = True
+            continue
+        if not in_permissions:
+            continue
+        if line and not line.startswith((" ", "\t")):
+            return False
+        if re.match(r"^\s+contents:\s*read\s*(?:#.*)?$", line):
+            return True
+    return False
 
 
 def validate_workflow_text(path: Path, text: str) -> list[str]:
     issues: list[str] = []
+    if not _has_top_level_contents_read_permission(text):
+        issues.append(f"{path}: workflow must declare top-level permissions: contents: read")
+
     for line_no, line in enumerate(text.splitlines(), start=1):
+        if WRITE_PERMISSION_RE.match(line):
+            issues.append(f"{path}:{line_no}: workflow must not grant write permission")
+
         uses_match = USE_RE.match(line)
         if uses_match:
             ref = uses_match.group("ref")

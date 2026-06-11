@@ -56,6 +56,36 @@ jobs:
     assert any("install audit tooling from requirements-dev.txt" in issue for issue in issues)
 
 
+def test_workflow_requires_read_only_contents_permission():
+    workflow = """
+name: bad
+jobs:
+  test:
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("permissions: contents: read" in issue for issue in issues)
+
+
+def test_workflow_rejects_write_permissions():
+    workflow = """
+name: bad
+permissions:
+  contents: write
+jobs:
+  test:
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("write permission" in issue for issue in issues)
+
+
 def test_requirements_requires_manifested_pip_audit():
     issues = validate_requirements("pytest>=9.0.3,<10\n")
 
