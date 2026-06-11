@@ -380,8 +380,7 @@ def _validate_action(
             out.append(
                 Issue(
                     "ERROR",
-                    f"{where}: {t} not allowed - board '{board_label}' lacks '{need}' "
-                    f"peripheral",
+                    f"{where}: {t} not allowed - board '{board_label}' lacks '{need}' peripheral",
                 )
             )
     return out
@@ -424,14 +423,10 @@ def _validate_logic(
             wid = w.get("_widget_id") or w.get("id")
             for ek, acts in ev.items():
                 if ek not in _LOGIC_WIDGET_EVENTS:
-                    issues.append(
-                        Issue("ERROR", f"{pfx}: {ref}: unknown event handler {ek!r}")
-                    )
+                    issues.append(Issue("ERROR", f"{pfx}: {ref}: unknown event handler {ek!r}"))
                     continue
                 if not isinstance(acts, list) or not acts:
-                    issues.append(
-                        Issue("WARN", f"{pfx}: {ref}: events.{ek} is empty")
-                    )
+                    issues.append(Issue("WARN", f"{pfx}: {ref}: events.{ek} is empty"))
                     continue
                 if not (isinstance(wid, str) and wid):
                     issues.append(
@@ -568,9 +563,7 @@ def _widget_group(w: dict[str, Any]) -> str:
     return wid[:dot] if dot > 0 else wid
 
 
-def _rect_contains(
-    outer: tuple[int, int, int, int], inner: tuple[int, int, int, int]
-) -> bool:
+def _rect_contains(outer: tuple[int, int, int, int], inner: tuple[int, int, int, int]) -> bool:
     """True if the ``outer`` (x, y, x2, y2) rect fully encloses ``inner``."""
     ox, oy, ox2, oy2 = outer
     ix, iy, ix2, iy2 = inner
@@ -1842,9 +1835,7 @@ def validate_data(
                         if _is_int(az) and _is_int(bz) and az == bz:
                             ref_a = _wref(scene_name, a, i)
                             ref_b = _wref(scene_name, b, j)
-                            if _overlap_is_benign(
-                                a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)
-                            ):
+                            if _overlap_is_benign(a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)):
                                 # Same-z_index is the norm here (draw-order
                                 # compositing, all widgets z=0); a hidden
                                 # overlay or container-behind-content pair is
@@ -1960,9 +1951,7 @@ def validate_data(
                     if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
                         ref_a = _wref(scene_name, a, i)
                         ref_b = _wref(scene_name, b, j)
-                        if _overlap_is_benign(
-                            a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)
-                        ):
+                        if _overlap_is_benign(a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)):
                             # Intentional layering (hidden overlay or container
                             # backdrop fully behind its content). Surfaced as a
                             # plain WARN for visibility; deliberately NOT a
@@ -1971,8 +1960,7 @@ def validate_data(
                             issues.append(
                                 Issue(
                                     "WARN",
-                                    f"{pfx}: OVERLAP (intentional layering) "
-                                    f"{ref_a} <> {ref_b}",
+                                    f"{pfx}: OVERLAP (intentional layering) {ref_a} <> {ref_b}",
                                 )
                             )
                         else:

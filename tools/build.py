@@ -226,11 +226,11 @@ def resolve_env(board_or_env: Optional[str]) -> str:
             return env
         raise BuildError(
             f"board {val!r} has no generated env {env!r} in platformio.ini. "
-            f"Run: \"{sys.executable}\" -m board_registry --write-pio"
+            f'Run: "{sys.executable}" -m board_registry --write-pio'
         )
 
     # board-<id> passed but registry lookup by bare id failed: try stripping.
-    if val.startswith("board-") and reg.get(val[len("board-"):]) is not None:
+    if val.startswith("board-") and reg.get(val[len("board-") :]) is not None:
         if val in known_literals:
             return val
 
@@ -246,7 +246,7 @@ def _known_pio_envs() -> set:
         for line in ini.read_text(encoding="utf-8").splitlines():
             s = line.strip()
             if s.startswith("[env:") and s.endswith("]"):
-                envs.add(s[len("[env:"): -1].strip())
+                envs.add(s[len("[env:") : -1].strip())
     except OSError:
         pass
     return envs
@@ -513,10 +513,7 @@ def build_board(
     )
     if ok and res.firmware_path is None:
         # pio reported success but the artifact is missing — be honest.
-        emit(
-            f"[build] WARNING: pio returned 0 but {fw} not found; "
-            "treating as failure."
-        )
+        emit(f"[build] WARNING: pio returned 0 but {fw} not found; treating as failure.")
         res.ok = False
     emit(res.summary())
     return res
@@ -683,7 +680,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p_check.set_defaults(_h=_cmd_check)
 
     p_codegen = sub.add_parser("codegen", help="regenerate src/ui_design.{c,h} only")
-    p_codegen.add_argument("json", nargs="?", type=Path, help="design JSON (default main_scene.json)")
+    p_codegen.add_argument(
+        "json", nargs="?", type=Path, help="design JSON (default main_scene.json)"
+    )
     p_codegen.set_defaults(_h=_cmd_codegen)
 
     p_build = sub.add_parser("build", help="regenerate codegen + real pio build")
@@ -713,7 +712,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 def _cmd_check(_args: argparse.Namespace) -> int:
     ver = platformio_version()
     if ver:
-        print(f"[OK] PlatformIO Core {ver} is available ({shutil.which('pio') or 'via -m platformio'}).")
+        print(
+            f"[OK] PlatformIO Core {ver} is available ({shutil.which('pio') or 'via -m platformio'})."
+        )
         return 0
     try:
         ensure_platformio()
@@ -774,9 +775,7 @@ def _cmd_boards(_args: argparse.Namespace) -> int:
     print(f"reference env (default): {REFERENCE_ENV}")
     for b in reg.boards:
         kind = (
-            f"display {b.display.w}x{b.display.h}"
-            if (b.has_display and b.display)
-            else "headless"
+            f"display {b.display.w}x{b.display.h}" if (b.has_display and b.display) else "headless"
         )
         print(f"  {b.id:24s} -> env {b.env_name():28s} [{kind}]")
     return 0

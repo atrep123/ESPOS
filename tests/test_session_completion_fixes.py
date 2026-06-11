@@ -122,9 +122,7 @@ def test_audit_designs_flags_off_canvas_widget(tmp_path):
             "main": {
                 "width": 128,
                 "height": 64,
-                "widgets": [
-                    {"type": "box", "x": 120, "y": 0, "width": 40, "height": 10}
-                ],
+                "widgets": [{"type": "box", "x": 120, "y": 0, "width": 40, "height": 10}],
             }
         },
     }
@@ -143,10 +141,15 @@ def test_audit_designs_flags_duplicate_widget_id(tmp_path):
                 "width": 128,
                 "height": 64,
                 "widgets": [
-                    {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10,
-                     "_widget_id": "dup"},
-                    {"type": "box", "x": 20, "y": 0, "width": 10, "height": 10,
-                     "_widget_id": "dup"},
+                    {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10, "_widget_id": "dup"},
+                    {
+                        "type": "box",
+                        "x": 20,
+                        "y": 0,
+                        "width": 10,
+                        "height": 10,
+                        "_widget_id": "dup",
+                    },
                 ],
             }
         },
@@ -166,8 +169,7 @@ def test_audit_designs_passes_clean_scene(tmp_path):
                 "width": 128,
                 "height": 64,
                 "widgets": [
-                    {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10,
-                     "_widget_id": "w1"}
+                    {"type": "box", "x": 0, "y": 0, "width": 10, "height": 10, "_widget_id": "w1"}
                 ],
             }
         },
@@ -286,8 +288,10 @@ def test_icon_char_and_chart_data_survive_codegen(tmp_path):
     # NULL icon_char (the data-loss regression nulled both).
     assert ".data_points = dp_" in c_src
     assert "5," in c_src  # last data point present in the int16 array
-    assert ".icon_char = NULL" not in c_src.split("UIW_ICON")[-1].split("}")[0] \
+    assert (
+        ".icon_char = NULL" not in c_src.split("UIW_ICON")[-1].split("}")[0]
         or ".icon_char =" in c_src
+    )
 
 
 # ── validate_design benign-overlap rule ─────────────────────────────────────
@@ -393,9 +397,7 @@ def test_svg_export_produces_valid_document(tmp_path):
             "main": {
                 "width": 128,
                 "height": 64,
-                "widgets": [
-                    {"type": "box", "x": 4, "y": 4, "width": 40, "height": 20}
-                ],
+                "widgets": [{"type": "box", "x": 4, "y": 4, "width": 40, "height": 20}],
             }
         },
     }

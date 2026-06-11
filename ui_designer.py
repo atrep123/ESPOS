@@ -1556,9 +1556,7 @@ class UIDesigner:
                     "height": scene.height,
                     "bg_color": scene.bg_color,
                     "widgets": [asdict(w) for w in scene.widgets],
-                    "rules": [
-                        dict(r) for r in getattr(scene, "rules", []) if isinstance(r, dict)
-                    ],
+                    "rules": [dict(r) for r in getattr(scene, "rules", []) if isinstance(r, dict)],
                 }
                 for name, scene in self.scenes.items()
             },

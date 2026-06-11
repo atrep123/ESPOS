@@ -69,8 +69,7 @@ def _default_action(atype: str, app) -> Dict[str, Any]:
     if atype == "set_scene":
         return {"type": "set_scene", "scene": a_scene}
     if atype == "set_widget":
-        return {"type": "set_widget", "widget": a_wid or "widget_id",
-                "prop": "value", "value": 0}
+        return {"type": "set_widget", "widget": a_wid or "widget_id", "prop": "value", "value": 0}
     if atype == "set_var":
         return {"type": "set_var", "var": "counter", "expr": "counter + 1"}
     if atype == "gpio_write":
@@ -274,8 +273,11 @@ def _cycle_action(app) -> None:
     if not acts:
         return
     cur_t = str(acts[-1].get("type", "toast"))
-    nxt = _ACTION_TYPES[(_ACTION_TYPES.index(cur_t) + 1) % len(_ACTION_TYPES)] \
-        if cur_t in _ACTION_TYPES else _ACTION_TYPES[0]
+    nxt = (
+        _ACTION_TYPES[(_ACTION_TYPES.index(cur_t) + 1) % len(_ACTION_TYPES)]
+        if cur_t in _ACTION_TYPES
+        else _ACTION_TYPES[0]
+    )
     safe_save_state(app.designer)
     acts[-1].clear()
     acts[-1].update(_default_action(nxt, app))
@@ -293,8 +295,11 @@ def _cycle_trigger(app) -> None:
         return
     trig = rules[key].setdefault("trigger", {"type": "boot"})
     cur = str(trig.get("type", "boot"))
-    nxt = _TRIGGER_TYPES[(_TRIGGER_TYPES.index(cur) + 1) % len(_TRIGGER_TYPES)] \
-        if cur in _TRIGGER_TYPES else _TRIGGER_TYPES[0]
+    nxt = (
+        _TRIGGER_TYPES[(_TRIGGER_TYPES.index(cur) + 1) % len(_TRIGGER_TYPES)]
+        if cur in _TRIGGER_TYPES
+        else _TRIGGER_TYPES[0]
+    )
     safe_save_state(app.designer)
     new_trig: Dict[str, Any] = {"type": nxt}
     if nxt == "timer":
@@ -445,14 +450,28 @@ def draw_logic_editor(app) -> None:
 
     title_rect = pygame.Rect(x + pad, y + pad, panel_w - 2 * pad, row_h)
     draw_text_clipped(
-        app, surface=surface, text="Logic Editor (events / rules)",
-        rect=title_rect, fg=PALETTE["accent_yellow"], padding=0,
-        align="left", valign="middle", max_lines=1, use_device_font=False,
+        app,
+        surface=surface,
+        text="Logic Editor (events / rules)",
+        rect=title_rect,
+        fg=PALETTE["accent_yellow"],
+        padding=0,
+        align="left",
+        valign="middle",
+        max_lines=1,
+        use_device_font=False,
     )
     draw_text_clipped(
-        app, surface=surface, text="A add  E cycle  H +handler  T trig  R +rule  Del",
-        rect=title_rect, fg=PALETTE["muted"], padding=0,
-        align="right", valign="middle", max_lines=1, use_device_font=False,
+        app,
+        surface=surface,
+        text="A add  E cycle  H +handler  T trig  R +rule  Del",
+        rect=title_rect,
+        fg=PALETTE["muted"],
+        padding=0,
+        align="right",
+        valign="middle",
+        max_lines=1,
+        use_device_font=False,
     )
 
     rows = _rows(app)
@@ -483,10 +502,16 @@ def draw_logic_editor(app) -> None:
             else:
                 fg = PALETTE["muted"]
             draw_text_clipped(
-                app, surface=surface, text=label, rect=pygame.Rect(
-                    rr.x + pad, rr.y, rr.width - 2 * pad, row_h
-                ), fg=fg, padding=0, align="left", valign="middle",
-                max_lines=1, use_device_font=False,
+                app,
+                surface=surface,
+                text=label,
+                rect=pygame.Rect(rr.x + pad, rr.y, rr.width - 2 * pad, row_h),
+                fg=fg,
+                padding=0,
+                align="left",
+                valign="middle",
+                max_lines=1,
+                use_device_font=False,
             )
             if kind in ("event", "rule"):
                 hitboxes.append((rr, sel.index(ri)))
@@ -496,8 +521,14 @@ def draw_logic_editor(app) -> None:
     n_rule = sum(1 for r in rows if r[0] == "rule")
     foot_rect = pygame.Rect(x + pad, y + panel_h - row_h, panel_w - 2 * pad, row_h)
     draw_text_clipped(
-        app, surface=surface,
+        app,
+        surface=surface,
         text=f"{n_ev} handler(s), {n_rule} rule(s)  -  compiles to firmware C",
-        rect=foot_rect, fg=PALETTE["muted"], padding=0,
-        align="left", valign="middle", max_lines=1, use_device_font=False,
+        rect=foot_rect,
+        fg=PALETTE["muted"],
+        padding=0,
+        align="left",
+        valign="middle",
+        max_lines=1,
+        use_device_font=False,
     )

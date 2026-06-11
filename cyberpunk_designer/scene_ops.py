@@ -271,9 +271,7 @@ def set_board(app: CyberpunkEditorApp, board_id: str) -> None:
     app.active_board = board_id
     if board.has_display and board.display_profile:
         set_profile(app, board.display_profile)
-        app._set_status(
-            f"Board: {board_id} ({board.display_profile})", ttl_sec=2.0
-        )
+        app._set_status(f"Board: {board_id} ({board.display_profile})", ttl_sec=2.0)
     else:
         app._mark_dirty()
         app._set_status(
@@ -591,9 +589,7 @@ def export_svg(app: CyberpunkEditorApp) -> None:
         safe_scene = "".join(c if c.isalnum() or c in "-_" else "_" for c in resolved)
         out_path = json_path.with_name(f"{json_path.stem}__{safe_scene}.svg")
         out_path.write_text(svg, encoding="utf-8", newline="\n")
-        app._set_status(
-            f"Exported SVG: {out_path.name} ({width}x{height})", ttl_sec=3.0
-        )
+        app._set_status(f"Exported SVG: {out_path.name} ({width}x{height})", ttl_sec=3.0)
     except (OSError, ValueError, TypeError, SystemExit) as exc:
         app._set_status(f"SVG export failed: {exc}", ttl_sec=4.0)
 

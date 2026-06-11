@@ -85,9 +85,7 @@ class TemplateLibrary:
             return False
         if template not in self.templates:
             return False
-        if any(
-            t is not template and t.metadata.name == new_name for t in self.templates
-        ):
+        if any(t is not template and t.metadata.name == new_name for t in self.templates):
             return False
         template.metadata.name = new_name
         self._save()

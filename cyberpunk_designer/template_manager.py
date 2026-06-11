@@ -229,9 +229,7 @@ def _begin_rename(app) -> None:
         pygame.key.start_text_input()
     except (pygame.error, AttributeError):
         pass
-    app._set_status(
-        f"Rename '{tpl.metadata.name}' (Enter=save Esc=cancel)", ttl_sec=4.0
-    )
+    app._set_status(f"Rename '{tpl.metadata.name}' (Enter=save Esc=cancel)", ttl_sec=4.0)
     app._mark_dirty()
 
 
@@ -273,8 +271,7 @@ def _save_scene_as_template(app) -> None:
     except (pygame.error, AttributeError):
         pass
     app._set_status(
-        f"New template from {scope} ({len(widgets)} widget(s)) — "
-        "name then Enter (Esc=cancel)",
+        f"New template from {scope} ({len(widgets)} widget(s)) — name then Enter (Esc=cancel)",
         ttl_sec=4.0,
     )
     # Close the modal so the inspector name prompt is usable; the new
@@ -471,12 +468,8 @@ def _draw_preview(app, surface, rect: pygame.Rect, template) -> None:
         dev_h = int(getattr(sc, "height", 0) or 0)
     except (AttributeError, TypeError, KeyError):
         dev_w = dev_h = 0
-    max_x = max(
-        (int(getattr(w, "x", 0) or 0) + int(getattr(w, "width", 0) or 0)) for w in widgets
-    )
-    max_y = max(
-        (int(getattr(w, "y", 0) or 0) + int(getattr(w, "height", 0) or 0)) for w in widgets
-    )
+    max_x = max((int(getattr(w, "x", 0) or 0) + int(getattr(w, "width", 0) or 0)) for w in widgets)
+    max_y = max((int(getattr(w, "y", 0) or 0) + int(getattr(w, "height", 0) or 0)) for w in widgets)
     dev_w = max(dev_w, max_x, 1)
     dev_h = max(dev_h, max_y, 1)
 
@@ -609,9 +602,7 @@ def draw_template_manager(app) -> None:
         app,
         surface=surface,
         text=("Search: " + query + "_") if query else "Search: (type to filter)",
-        rect=pygame.Rect(
-            search_rect.x + pad, search_rect.y, search_rect.width - 2 * pad, row_h
-        ),
+        rect=pygame.Rect(search_rect.x + pad, search_rect.y, search_rect.width - 2 * pad, row_h),
         fg=PALETTE["text"] if query else PALETTE["muted"],
         padding=0,
         align="left",
@@ -687,9 +678,7 @@ def draw_template_manager(app) -> None:
                 app,
                 surface=surface,
                 text=f"{meta.name}",
-                rect=pygame.Rect(
-                    row_rect.x + pad, row_rect.y, row_rect.width - 2 * pad, row_h
-                ),
+                rect=pygame.Rect(row_rect.x + pad, row_rect.y, row_rect.width - 2 * pad, row_h),
                 fg=PALETTE["bg"] if is_cur else PALETTE["text"],
                 padding=0,
                 align="left",
@@ -701,9 +690,7 @@ def draw_template_manager(app) -> None:
                 app,
                 surface=surface,
                 text=f"{meta.category} - {n_w}w",
-                rect=pygame.Rect(
-                    row_rect.x + pad, row_rect.y, row_rect.width - 2 * pad, row_h
-                ),
+                rect=pygame.Rect(row_rect.x + pad, row_rect.y, row_rect.width - 2 * pad, row_h),
                 fg=PALETTE["bg"] if is_cur else PALETTE["muted"],
                 padding=0,
                 align="right",

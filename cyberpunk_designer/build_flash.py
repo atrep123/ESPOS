@@ -43,12 +43,12 @@ def _state(app) -> dict:
         st = {
             "visible": False,
             "running": False,
-            "action": "",          # "build" | "flash"
+            "action": "",  # "build" | "flash"
             "lines": deque(maxlen=_MAX_LOG_LINES),  # ring buffer of pio output
-            "scroll": 0,           # rows scrolled up from the bottom
-            "follow": True,        # auto-stick to tail while running
+            "scroll": 0,  # rows scrolled up from the bottom
+            "follow": True,  # auto-stick to tail while running
             "thread": None,
-            "result": None,        # str summary once finished
+            "result": None,  # str summary once finished
             "lock": threading.Lock(),
             "rows": 1,
         }
@@ -159,9 +159,7 @@ def start(app, action: str) -> None:
         st["lines"].clear()
         board = _active_board(app) or "esp32-s3-devkitm-1-nohw (reference)"
         st["lines"].append(f"=== {action.upper()} :: board {board} ===")
-    th = threading.Thread(
-        target=_worker, args=(app, action), name=f"espos-{action}", daemon=True
-    )
+    th = threading.Thread(target=_worker, args=(app, action), name=f"espos-{action}", daemon=True)
     st["thread"] = th
     th.start()
     app._set_status(f"{action.capitalize()} started…", ttl_sec=2.5)
@@ -319,11 +317,7 @@ def draw_build_flash(app) -> None:
     board = _active_board(app) or "esp32-s3-devkitm-1-nohw (reference)"
     running = bool(st.get("running"))
     action = str(st.get("action") or "")
-    status = (
-        f"running {action}…"
-        if running
-        else (str(st.get("result") or "idle"))
-    )
+    status = f"running {action}…" if running else (str(st.get("result") or "idle"))
 
     # Title row.
     title_rect = pygame.Rect(x + pad, y + pad, panel_w - 2 * pad, row_h)

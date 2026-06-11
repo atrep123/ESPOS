@@ -150,10 +150,7 @@ def list_templates(app) -> None:
         return
     # TemplateLibrary.templates is a List[Template] (not a dict): read the
     # metadata name off each entry. (The old `.keys()` call crashed here.)
-    names = [
-        str(getattr(getattr(t, "metadata", None), "name", "?"))
-        for t in (lib.templates or [])
-    ]
+    names = [str(getattr(getattr(t, "metadata", None), "name", "?")) for t in (lib.templates or [])]
     if not names:
         app._set_status("No saved templates.", ttl_sec=2.0)
         return

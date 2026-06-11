@@ -332,9 +332,7 @@ class TestListTemplates:
 
     def test_truncates_long_list(self, tmp_path, monkeypatch):
         app = _make_app(tmp_path, monkeypatch)
-        templates = [
-            SimpleNamespace(metadata=SimpleNamespace(name=f"tmpl_{i}")) for i in range(15)
-        ]
+        templates = [SimpleNamespace(metadata=SimpleNamespace(name=f"tmpl_{i}")) for i in range(15)]
         app.template_library = SimpleNamespace(templates=templates)
         list_templates(app)
         assert "more" in app.dialog_message.lower()

@@ -104,9 +104,7 @@ def render_scene_to_gray4(
     if scene_name:
         if scene_name not in designer.scenes:
             available = ", ".join(sorted(designer.scenes.keys()))
-            raise SystemExit(
-                f"[FAIL] Scene {scene_name!r} not found. Available: {available}"
-            )
+            raise SystemExit(f"[FAIL] Scene {scene_name!r} not found. Available: {available}")
         designer.current_scene = scene_name
         # Rebuild editor state so app.state.current_scene() tracks the switch.
         try:
@@ -203,8 +201,7 @@ def pixels_to_svg(
 
     # Full-canvas background (covers all skipped bg-level runs).
     out.append(
-        f'  <rect x="0" y="0" width="{width}" height="{height}" '
-        f'fill="{_rgb_hex(bg_level)}"/>'
+        f'  <rect x="0" y="0" width="{width}" height="{height}" fill="{_rgb_hex(bg_level)}"/>'
     )
 
     # Group foreground runs by color so the file stays compact and tools can
@@ -220,8 +217,7 @@ def pixels_to_svg(
                 run += 1
             if level != bg_level:
                 out.append(
-                    f'    <rect x="{x}" y="{y}" width="{run}" height="1" '
-                    f'fill="{_rgb_hex(level)}"/>'
+                    f'    <rect x="{x}" y="{y}" width="{run}" height="1" fill="{_rgb_hex(level)}"/>'
                 )
             x += run
     out.append("  </g>")

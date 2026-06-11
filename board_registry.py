@@ -162,15 +162,13 @@ def _coerce_board(raw: Any, idx: int) -> Board:
 
     peripherals = raw.get("peripherals", [])
     _require(
-        isinstance(peripherals, list)
-        and all(isinstance(p, str) and p for p in peripherals),
+        isinstance(peripherals, list) and all(isinstance(p, str) and p for p in peripherals),
         f"{where}.peripherals must be a list of non-empty strings",
     )
 
     build_flags = raw.get("build_flags", [])
     _require(
-        isinstance(build_flags, list)
-        and all(isinstance(f, str) and f for f in build_flags),
+        isinstance(build_flags, list) and all(isinstance(f, str) and f for f in build_flags),
         f"{where}.build_flags must be a list of non-empty strings",
     )
 
@@ -214,16 +212,13 @@ def _coerce_board(raw: Any, idx: int) -> Board:
         if HARDWARE_PROFILES and display_profile in HARDWARE_PROFILES:
             prof = HARDWARE_PROFILES[display_profile]
             _require(
-                int(prof["width"]) == raw_display["w"]
-                and int(prof["height"]) == raw_display["h"],
+                int(prof["width"]) == raw_display["w"] and int(prof["height"]) == raw_display["h"],
                 f"{where}.display {raw_display['w']}x{raw_display['h']} disagrees "
                 f"with profile {display_profile!r} "
                 f"{prof['width']}x{prof['height']}",
             )
         extra = {
-            k: v
-            for k, v in raw_display.items()
-            if k not in ("w", "h", "depth", "driver", "bus")
+            k: v for k, v in raw_display.items() if k not in ("w", "h", "depth", "driver", "bus")
         }
         display = DisplaySpec(
             w=raw_display["w"],
@@ -311,8 +306,7 @@ class BoardRegistry:
         for b in self.boards:
             lines.append("")
             disp = (
-                f"{b.display.w}x{b.display.h}@{b.display.depth}bpp "
-                f"{b.display.driver}"
+                f"{b.display.w}x{b.display.h}@{b.display.depth}bpp {b.display.driver}"
                 if b.display
                 else "headless (no display)"
             )
@@ -348,18 +342,14 @@ class BoardRegistry:
         """
         ini_path = ini_path or (REGISTRY_PATH.parent / "platformio.ini")
         original = ini_path.read_text(encoding="utf-8")
-        block = (
-            f"\n{PIO_BLOCK_BEGIN}\n"
-            f"{self.render_pio_block()}"
-            f"{PIO_BLOCK_END}\n"
-        )
+        block = f"\n{PIO_BLOCK_BEGIN}\n{self.render_pio_block()}{PIO_BLOCK_END}\n"
 
         begin = original.find(PIO_BLOCK_BEGIN)
         end = original.find(PIO_BLOCK_END)
         if begin != -1 and end != -1:
             # Replace existing block (incl. the leading blank line we added).
             pre = original[:begin].rstrip("\n")
-            post = original[end + len(PIO_BLOCK_END):].lstrip("\n")
+            post = original[end + len(PIO_BLOCK_END) :].lstrip("\n")
             new_text = pre + "\n" + block.lstrip("\n")
             if post:
                 new_text += "\n" + post
@@ -422,17 +412,13 @@ def _main(argv: Optional[List[str]] = None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="ESP32OS board registry tool")
-    parser.add_argument(
-        "--validate", action="store_true", help="validate boards.json and exit"
-    )
+    parser.add_argument("--validate", action="store_true", help="validate boards.json and exit")
     parser.add_argument(
         "--write-pio",
         action="store_true",
         help="append/refresh the generated [env:board-*] block in platformio.ini",
     )
-    parser.add_argument(
-        "--list", action="store_true", help="list registered boards"
-    )
+    parser.add_argument("--list", action="store_true", help="list registered boards")
     args = parser.parse_args(argv)
 
     reg = load_registry()
@@ -451,10 +437,7 @@ def _main(argv: Optional[List[str]] = None) -> int:
         print(f"[OK] {len(reg.boards)} board(s) valid")
     if args.write_pio:
         changed = reg.write_pio_envs()
-        print(
-            "[OK] platformio.ini "
-            + ("updated" if changed else "already up to date")
-        )
+        print("[OK] platformio.ini " + ("updated" if changed else "already up to date"))
     return 0
 
 

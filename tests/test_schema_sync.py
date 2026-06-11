@@ -97,8 +97,7 @@ def test_schema_properties_match_widget_config_bidirectionally():
     # model field (that would mean it is not actually schema-only).
     stale_aliases = SCHEMA_ONLY_ALIASES & model_fields
     assert not stale_aliases, (
-        f"SCHEMA_ONLY_ALIASES lists real WidgetConfig fields (remove them): "
-        f"{sorted(stale_aliases)}"
+        f"SCHEMA_ONLY_ALIASES lists real WidgetConfig fields (remove them): {sorted(stale_aliases)}"
     )
 
 

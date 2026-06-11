@@ -209,9 +209,7 @@ def _handle_template_rename(app) -> bool:
         app._set_status("No template library.", ttl_sec=3.0)
         return False
     if not lib.rename_template(target, name):
-        app._set_status(
-            f"Rename failed (empty or duplicate name '{name}').", ttl_sec=3.0
-        )
+        app._set_status(f"Rename failed (empty or duplicate name '{name}').", ttl_sec=3.0)
         return False
     try:
         app.template_actions = app._build_template_actions()

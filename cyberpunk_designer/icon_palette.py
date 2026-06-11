@@ -145,9 +145,7 @@ def _render_thumb(name: str, fg: Tuple[int, int, int]) -> Optional[pygame.Surfac
             else:
                 assert bg is not None
                 on = (
-                    abs(int(px[0]) - bg[0])
-                    + abs(int(px[1]) - bg[1])
-                    + abs(int(px[2]) - bg[2])
+                    abs(int(px[0]) - bg[0]) + abs(int(px[1]) - bg[1]) + abs(int(px[2]) - bg[2])
                 ) >= 30
             if on:
                 out.set_at((x, y), col)
@@ -240,8 +238,7 @@ def _apply_icon(app, name: str) -> None:
     icon_targets = [
         i
         for i in selected
-        if 0 <= i < len(sc.widgets)
-        and str(getattr(sc.widgets[i], "type", "")).lower() == "icon"
+        if 0 <= i < len(sc.widgets) and str(getattr(sc.widgets[i], "type", "")).lower() == "icon"
     ]
 
     if icon_targets:
@@ -472,9 +469,7 @@ def draw_icon_palette(app) -> None:
         app,
         surface=surface,
         text=("Search: " + query + "_") if query else "Search: (type to filter)",
-        rect=pygame.Rect(
-            search_rect.x + pad, search_rect.y, search_rect.width - 2 * pad, row_h
-        ),
+        rect=pygame.Rect(search_rect.x + pad, search_rect.y, search_rect.width - 2 * pad, row_h),
         fg=PALETTE["text"] if query else PALETTE["muted"],
         padding=0,
         align="left",
@@ -587,9 +582,7 @@ def draw_icon_palette(app) -> None:
     st["hitboxes"] = hitboxes
 
     # Footer: name of the focused icon + scroll position.
-    foot_rect = pygame.Rect(
-        x + pad, y + panel_h - row_h, panel_w - 2 * pad, row_h
-    )
+    foot_rect = pygame.Rect(x + pad, y + panel_h - row_h, panel_w - 2 * pad, row_h)
     page = scroll // max(1, rows) + 1
     pages = max(1, ((len(names) + cols - 1) // cols + rows - 1) // rows)
     draw_text_clipped(

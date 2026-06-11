@@ -347,9 +347,7 @@ def _widgets_in_paint_order(widgets: list[Any]) -> list[Any]:
     """
     ordered = list(widgets)
     try:
-        ordered.sort(
-            key=lambda ww: as_int(ww.get("z_index", 0), 0) if isinstance(ww, dict) else 0
-        )
+        ordered.sort(key=lambda ww: as_int(ww.get("z_index", 0), 0) if isinstance(ww, dict) else 0)
     except (TypeError, ValueError, AttributeError):
         return list(widgets)
     return ordered
@@ -379,9 +377,7 @@ def build_data_point_arrays(
         name = f"{symbol_prefix}{seq}"
         seq += 1
         by_id[id(w)] = name
-        decls.append(
-            f"static const int16_t {name}[] = {{ {', '.join(str(v) for v in pts)} }};"
-        )
+        decls.append(f"static const int16_t {name}[] = {{ {', '.join(str(v) for v in pts)} }};")
     return decls, by_id
 
 
@@ -604,13 +600,8 @@ def _emit_expr(expr: Any, vt: _VarTable) -> str:
     if len(toks) == 3 and toks[1] in _ARITH_MAP:
         lhs = _emit_operand_from_token(toks[0], vt)
         rhs = _emit_operand_from_token(toks[2], vt)
-        return (
-            f"{{ .lhs = {lhs}, .arith = {_ARITH_MAP[toks[1]]}, "
-            f".has_rhs = 1, .rhs = {rhs} }}"
-        )
-    raise LogicCodegenError(
-        f"expr {s!r} too complex (only 'A' or 'A op B' with +,-,*,/ supported)"
-    )
+        return f"{{ .lhs = {lhs}, .arith = {_ARITH_MAP[toks[1]]}, .has_rhs = 1, .rhs = {rhs} }}"
+    raise LogicCodegenError(f"expr {s!r} too complex (only 'A' or 'A op B' with +,-,*,/ supported)")
 
 
 _EMPTY_EXPR = (
@@ -682,9 +673,7 @@ def _emit_cond(c: dict[str, Any], vt: _VarTable, pool: StringPool) -> str:
     lhs = _emit_operand_ref(c.get("lhs"), vt, pool)
     rhs = _emit_operand_ref(c.get("rhs"), vt, pool)
     join = _JOIN_MAP.get(str(c.get("join", "&&")).strip(), "UI_JOIN_AND")
-    return (
-        f"{{ .lhs = {lhs}, .op = {_CMP_MAP[op]}, .rhs = {rhs}, .join = {join} }}"
-    )
+    return f"{{ .lhs = {lhs}, .op = {_CMP_MAP[op]}, .rhs = {rhs}, .join = {join} }}"
 
 
 def build_logic_tables(
@@ -761,12 +750,8 @@ def build_logic_tables(
                     str(trig.get("event", "on_press")).strip().lower(), "UI_WEV_PRESS"
                 )
 
-            conds = [
-                c2 for c2 in list(rule.get("conditions", []) or []) if isinstance(c2, dict)
-            ]
-            acts = [
-                a for a in list(rule.get("actions", []) or []) if isinstance(a, dict)
-            ]
+            conds = [c2 for c2 in list(rule.get("conditions", []) or []) if isinstance(c2, dict)]
+            acts = [a for a in list(rule.get("actions", []) or []) if isinstance(a, dict)]
             if not acts:
                 raise LogicCodegenError(f"{key}: rule {r_i} has no actions")
 
@@ -805,8 +790,7 @@ def build_logic_tables(
             )
         else:
             prog_inits.append(
-                f'    {{ .scene_name = "{escape_c_string(key)}", '
-                ".rules = NULL, .rule_count = 0 },"
+                f'    {{ .scene_name = "{escape_c_string(key)}", .rules = NULL, .rule_count = 0 }},'
             )
         _ = s_i  # ordering only
 
@@ -848,9 +832,7 @@ def generate_ui_design_pair(
     pool = build_string_pool(pool_values, symbol_prefix="str_")
 
     # Visual-backend logic tables for this single scene.
-    logic_c, logic_h, _vc = build_logic_tables(
-        _single, [selected_name], pool, symbol_prefix="lg_"
-    )
+    logic_c, logic_h, _vc = build_logic_tables(_single, [selected_name], pool, symbol_prefix="lg_")
 
     # Header
     h_lines: list[str] = []
@@ -1071,9 +1053,7 @@ def generate_scenes_header(
             pass
 
         lines.append(f"/* Scene: {escape_c_comment(scene_name)} ({width}x{height}) */")
-        dp_decls, dp_by_id = build_data_point_arrays(
-            widgets, symbol_prefix=f"{safe}_dp_"
-        )
+        dp_decls, dp_by_id = build_data_point_arrays(widgets, symbol_prefix=f"{safe}_dp_")
         if dp_decls:
             lines.extend(dp_decls)
         lines.append(f"static const UiWidget {safe}_widgets[] = {{")
@@ -1319,9 +1299,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
         height = as_uint16(scene_data.get("height", 64), 64)
 
         c.append(f"/* Scene: {escape_c_comment(scene_name)} ({len(widgets)} widgets) */")
-        dp_decls, dp_by_id = build_data_point_arrays(
-            widgets, symbol_prefix=f"{safe}_dp_"
-        )
+        dp_decls, dp_by_id = build_data_point_arrays(widgets, symbol_prefix=f"{safe}_dp_")
         if dp_decls:
             c.extend(dp_decls)
         c.append(f"static const UiWidget {safe}_widgets[] = {{")
@@ -1361,9 +1339,7 @@ def generate_ui_design_multi_pair(json_path: Path, *, source_label: str) -> tupl
     c.append("")
 
     # Visual-backend logic tables (events + rules) -> deterministic C.
-    logic_c, logic_h, _var_count = build_logic_tables(
-        scenes, scene_keys, pool, symbol_prefix="lg_"
-    )
+    logic_c, logic_h, _var_count = build_logic_tables(scenes, scene_keys, pool, symbol_prefix="lg_")
     c.append("/* ─────────── Visual-backend logic (events / rules) ─────────── */")
     c.extend(logic_c)
 
