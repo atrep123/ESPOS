@@ -20,11 +20,14 @@ from pathlib import Path
 from typing import Iterable, Tuple
 
 DEFAULT_SKIP = {
+    "boards.json",
     "pyrightconfig.json",
     ".sim_config.json",
     "profiler_enhanced.json",
     "templates.json",
+    "designer_prefs.json",
     "undo_history.json",  # runtime undo/redo state, not a design
+    "user_widget_presets.json",
 }
 
 
@@ -48,6 +51,7 @@ def audit_file(path: Path, max_w: int, max_h: int) -> Tuple[bool, str]:
             details.append("invalid size")
         if w > max_w or h > max_h:
             details.append(f"oversize {w}x{h}")
+
         def _i(v: object, default: int = 0) -> int:
             try:
                 return int(v)  # type: ignore[arg-type]

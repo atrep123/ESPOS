@@ -30,4 +30,11 @@ This repo is a lightweight embedded UI toolkit + designer. Security is handled i
 
 - **Input validation** — design JSON validated against schema (`schemas/ui_design.schema.json`) before export; `validate_design.py` checks field types, ranges, and cross-references.
 - **Path handling** — no `eval`/`exec` on user input; file paths sanitized through `pathlib`.
-- **Dependency pinning** — `requirements.txt` pins exact versions; `ruff` lint rules include `S` (flake8-bandit) for security anti-patterns.
+- **Dependency pinning** — Python requirement files use bounded version ranges; `ruff` lint rules include `S` (flake8-bandit) for security anti-patterns.
+
+### Known dependency advisory exceptions
+
+- **Starlette advisory via PlatformIO** — `pip-audit` currently reports `starlette 0.52.1` from the core/dev dependency set because `platformio>=6.1,<7` depends on Starlette below the fixed `1.0.1` line for `PYSEC-2026-161` / `CVE-2026-48710` / `GHSA-86qp-5c8j-p5mr`.
+- **Why it is not upgraded here** — Starlette is transitive through PlatformIO, not a direct ESPOS runtime dependency. Forcing `starlette>=1.0.1` conflicts with every published `platformio 6.1.x` release and would break the managed build/flash dependency resolver.
+- **Current mitigation** — ESPOS does not expose a Starlette/FastAPI HTTP surface. PlatformIO is invoked as local CLI tooling for firmware build/upload (`python -m platformio` or `pio`), while the optional MCP server uses stdio transport.
+- **Tracking rule** — do not silently ignore this advisory. Re-check when PlatformIO publishes a compatible Starlette range, then remove this exception and upgrade normally.

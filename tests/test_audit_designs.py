@@ -18,12 +18,18 @@ def test_find_design_files(tmp_path):
 
 
 def test_find_design_files_skips_defaults(tmp_path):
+    (tmp_path / "boards.json").write_text("{}")
+    (tmp_path / "designer_prefs.json").write_text("{}")
     (tmp_path / "templates.json").write_text("{}")
     (tmp_path / "pyrightconfig.json").write_text("{}")
+    (tmp_path / "user_widget_presets.json").write_text("[]")
     (tmp_path / "real.json").write_text("{}")
     files = [p.name for p in find_design_files(tmp_path)]
+    assert "boards.json" not in files
+    assert "designer_prefs.json" not in files
     assert "templates.json" not in files
     assert "pyrightconfig.json" not in files
+    assert "user_widget_presets.json" not in files
     assert "real.json" in files
 
 

@@ -11,6 +11,11 @@ Vendored snapshot of `atrep123/m5-prop-lora`.
 - Imported from: `https://github.com/atrep123/m5-prop-lora.git`
 - Purpose: M5 Dial / DinMeter prop-control firmware, shared protocol code,
   UIFlow2 custom blocks, and offline deployment tooling.
+- Vendored LVGL firmware sources are kept for the Dial build, but the upstream
+  LVGL docs-only Python environment manifest is intentionally stripped from
+  this snapshot. ESPOS does not build LVGL documentation, and keeping that old
+  docs manifest creates misleading dependency security alerts unrelated to the
+  firmware path.
 
 Validate the integration from its own directory:
 

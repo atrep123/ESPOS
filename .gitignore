@@ -17,6 +17,11 @@ __pycache__/
 .mypy_cache/
 .venv/
 .env/
+.env
+.env.*
+.gemini_api_key
+.openai_api_key
+.*_api_key
 
 # PyInstaller build artifacts
 build/

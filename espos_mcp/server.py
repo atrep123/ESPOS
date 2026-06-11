@@ -44,7 +44,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - exercised via __main__
         f'    "{sys.executable}" -m pip install -r '
         f"{REPO_ROOT / 'requirements-mcp.txt'}\n"
         "or, minimally:\n"
-        f'    "{sys.executable}" -m pip install "mcp>=1.2,<2"'
+        f'    "{sys.executable}" -m pip install "mcp>=1.27.2,<2"'
     ) from exc
 
 # Real espos library surfaces (imported once; thin wrappers below).
@@ -95,8 +95,7 @@ def _resolve_design_path(design_path: Optional[str], *, must_exist: bool) -> Pat
         resolved.relative_to(REPO_ROOT)
     except ValueError as exc:
         raise ToolError(
-            f"design_path must stay inside the espos repo ({REPO_ROOT}); "
-            f"got {resolved}"
+            f"design_path must stay inside the espos repo ({REPO_ROOT}); got {resolved}"
         ) from exc
     if must_exist and not resolved.exists():
         raise ToolError(f"design JSON not found: {resolved}")
@@ -108,9 +107,7 @@ def _load_designer(path: Path) -> UIDesigner:
     d = UIDesigner()
     d.load_from_json(str(path))
     if not d.scenes:
-        raise ToolError(
-            f"{path.name}: no scenes loaded (invalid or empty design)."
-        )
+        raise ToolError(f"{path.name}: no scenes loaded (invalid or empty design).")
     return d
 
 
@@ -165,9 +162,7 @@ def _schema_check(data: Dict[str, Any], path: Path) -> None:
         fd, tmp_path = tempfile.mkstemp(suffix=".json", dir=str(path.parent))
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2)
-        issues = validate_file(
-            Path(tmp_path), warnings_as_errors=False, strict_critical=False
-        )
+        issues = validate_file(Path(tmp_path), warnings_as_errors=False, strict_critical=False)
     finally:
         if tmp_path is not None:
             try:
@@ -177,8 +172,7 @@ def _schema_check(data: Dict[str, Any], path: Path) -> None:
     errors = [i.message for i in issues if i.level == "ERROR"]
     if errors:
         raise ToolError(
-            "edit rejected: it would make the design invalid:\n- "
-            + "\n- ".join(errors[:8])
+            "edit rejected: it would make the design invalid:\n- " + "\n- ".join(errors[:8])
         )
 
 
@@ -213,10 +207,7 @@ def _scene_or_first(data: Dict[str, Any], scene: Optional[str]) -> str:
     scenes = _scenes_of(data)
     if scene:
         if scene not in scenes:
-            raise ToolError(
-                f"scene {scene!r} not found. Available: "
-                f"{', '.join(sorted(scenes))}"
-            )
+            raise ToolError(f"scene {scene!r} not found. Available: {', '.join(sorted(scenes))}")
         return scene
     return next(iter(scenes))
 
@@ -235,9 +226,7 @@ def _widget_index(
     if index is None:
         raise ToolError("provide either 'index' or 'widget_id'.")
     if not (0 <= index < len(widgets)):
-        raise ToolError(
-            f"widget index {index} out of range (scene has {len(widgets)})."
-        )
+        raise ToolError(f"widget index {index} out of range (scene has {len(widgets)}).")
     return index
 
 
@@ -318,9 +307,7 @@ def build_server() -> FastMCP:
         )
 
     @mcp.tool()
-    def get_scene(
-        scene: Optional[str] = None, design_path: str = DEFAULT_DESIGN
-    ) -> Dict[str, Any]:
+    def get_scene(scene: Optional[str] = None, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
         """Return one scene fully: every widget (with its index + fields) and
         the scene's logic rules.
 
@@ -331,10 +318,7 @@ def build_server() -> FastMCP:
         d = _load_designer(path)
         name = scene or next(iter(d.scenes))
         if name not in d.scenes:
-            raise ToolError(
-                f"scene {name!r} not found. Available: "
-                f"{', '.join(sorted(d.scenes))}"
-            )
+            raise ToolError(f"scene {name!r} not found. Available: {', '.join(sorted(d.scenes))}")
         sc = d.scenes[name]
         widgets = []
         for i, w in enumerate(sc.widgets):
@@ -364,9 +348,7 @@ def build_server() -> FastMCP:
         )
 
     @mcp.tool()
-    def add_scene(
-        name: str, design_path: str = DEFAULT_DESIGN
-    ) -> Dict[str, Any]:
+    def add_scene(name: str, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
         """Create a new (empty) scene and save the design.
 
         Wraps ``ui_designer.UIDesigner.create_scene`` + atomic save.
@@ -380,14 +362,10 @@ def build_server() -> FastMCP:
             raise ToolError(f"scene {name!r} already exists.")
         d.create_scene(name)
         _atomic_save(d, path)
-        return _result(
-            design=str(path), scene=name, scene_count=len(d.scenes)
-        )
+        return _result(design=str(path), scene=name, scene_count=len(d.scenes))
 
     @mcp.tool()
-    def delete_scene(
-        name: str, design_path: str = DEFAULT_DESIGN
-    ) -> Dict[str, Any]:
+    def delete_scene(name: str, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
         """Delete a scene and save the design (the design must keep >=1 scene).
 
         Operates on the real ``UIDesigner`` model + atomic save.
@@ -395,10 +373,7 @@ def build_server() -> FastMCP:
         path = _resolve_design_path(design_path, must_exist=True)
         d = _load_designer(path)
         if name not in d.scenes:
-            raise ToolError(
-                f"scene {name!r} not found. Available: "
-                f"{', '.join(sorted(d.scenes))}"
-            )
+            raise ToolError(f"scene {name!r} not found. Available: {', '.join(sorted(d.scenes))}")
         if len(d.scenes) <= 1:
             raise ToolError("cannot delete the only scene in the design.")
         del d.scenes[name]
@@ -440,10 +415,7 @@ def build_server() -> FastMCP:
         d = _load_designer(path)
         name = scene or d.current_scene or next(iter(d.scenes))
         if name not in d.scenes:
-            raise ToolError(
-                f"scene {name!r} not found. Available: "
-                f"{', '.join(sorted(d.scenes))}"
-            )
+            raise ToolError(f"scene {name!r} not found. Available: {', '.join(sorted(d.scenes))}")
         kwargs: Dict[str, Any] = {
             "x": int(x),
             "y": int(y),
@@ -503,16 +475,12 @@ def build_server() -> FastMCP:
         applied = {}
         for key, value in properties.items():
             if key in protected:
-                raise ToolError(
-                    f"'{key}' is managed via set_widget_event, not set_widget."
-                )
+                raise ToolError(f"'{key}' is managed via set_widget_event, not set_widget.")
             widgets[idx][key] = value
             applied[key] = value
         _schema_check(data, path)
         _write_dict(data, path)
-        return _result(
-            design=str(path), scene=name, index=idx, applied=applied
-        )
+        return _result(design=str(path), scene=name, index=idx, applied=applied)
 
     @mcp.tool()
     def delete_widget(
@@ -530,10 +498,7 @@ def build_server() -> FastMCP:
         d = _load_designer(path)
         name = scene or d.current_scene or next(iter(d.scenes))
         if name not in d.scenes:
-            raise ToolError(
-                f"scene {name!r} not found. Available: "
-                f"{', '.join(sorted(d.scenes))}"
-            )
+            raise ToolError(f"scene {name!r} not found. Available: {', '.join(sorted(d.scenes))}")
         sc = d.scenes[name]
         wdicts = [asdict(w) for w in sc.widgets]
         idx = _widget_index(wdicts, index, widget_id)
@@ -569,12 +534,8 @@ def build_server() -> FastMCP:
         """
         valid = {"on_press", "on_change", "on_focus"}
         if handler not in valid:
-            raise ToolError(
-                f"handler must be one of {sorted(valid)}; got {handler!r}."
-            )
-        if not isinstance(actions, list) or not all(
-            isinstance(a, dict) for a in actions
-        ):
+            raise ToolError(f"handler must be one of {sorted(valid)}; got {handler!r}.")
+        if not isinstance(actions, list) or not all(isinstance(a, dict) for a in actions):
             raise ToolError("'actions' must be a list of action objects.")
         path = _resolve_design_path(design_path, must_exist=True)
         data = _design_dict(path)
@@ -586,7 +547,7 @@ def build_server() -> FastMCP:
         if not (w.get("id") or w.get("_widget_id")):
             raise ToolError(
                 "widget needs an 'id' before events can be wired "
-                "(set one via set_widget {\"id\": \"...\"})."
+                '(set one via set_widget {"id": "..."}).'
             )
         ev = w.get("events")
         if not isinstance(ev, dict):
@@ -695,9 +656,7 @@ def build_server() -> FastMCP:
         return _result(board_count=len(boards), boards=boards)
 
     @mcp.tool()
-    def set_board(
-        board: str, design_path: str = DEFAULT_DESIGN
-    ) -> Dict[str, Any]:
+    def set_board(board: str, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
         """Record the target board on the design's root ``runtime`` metadata
         and resize display-bearing scenes to the board's panel.
 
@@ -716,9 +675,7 @@ def build_server() -> FastMCP:
             raise ToolError(f"could not load board registry: {exc}") from exc
         b = reg.get(board)
         if b is None:
-            raise ToolError(
-                f"unknown board {board!r}. Valid: {', '.join(reg.ids())}"
-            )
+            raise ToolError(f"unknown board {board!r}. Valid: {', '.join(reg.ids())}")
         data = _design_dict(path)
         # Persist the board selection in a way that round-trips and that the
         # validator's board-peripheral gating (Rule 130) reads.
@@ -820,9 +777,7 @@ def build_server() -> FastMCP:
         else:
             out = src.with_suffix(".svg")
         try:
-            width, height, resolved = export_svg(
-                src, out, scene_name=scene or None
-            )
+            width, height, resolved = export_svg(src, out, scene_name=scene or None)
         except (OSError, ValueError, RuntimeError, SystemExit) as exc:
             raise ToolError(f"SVG export failed: {exc}") from exc
         return _result(
