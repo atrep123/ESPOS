@@ -4,6 +4,7 @@ from pathlib import Path
 
 from tools.check_supply_chain import (
     collect_issues,
+    validate_dependabot_text,
     validate_requirements,
     validate_workflow_text,
 )
@@ -59,3 +60,36 @@ def test_requirements_requires_manifested_pip_audit():
     issues = validate_requirements("pytest>=9.0.3,<10\n")
 
     assert any("pip-audit" in issue for issue in issues)
+
+
+def test_dependabot_requires_github_actions_group():
+    dependabot = """
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:30"
+      timezone: "Europe/Prague"
+"""
+
+    issues = validate_dependabot_text(Path(".github/dependabot.yml"), dependabot)
+
+    assert any("groups.github-actions" in issue for issue in issues)
+
+
+def test_dependabot_requires_pip_prague_schedule():
+    dependabot = """
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+"""
+
+    issues = validate_dependabot_text(Path(".github/dependabot.yml"), dependabot)
+
+    assert any("pip schedule" in issue for issue in issues)

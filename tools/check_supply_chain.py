@@ -14,6 +14,7 @@ AUDIT_TOOL_INSTALL_RE = re.compile(
     re.IGNORECASE,
 )
 PIP_AUDIT_REQUIREMENT_RE = re.compile(r"^\s*pip-audit\b", re.MULTILINE)
+DEPENDABOT_UPDATE_RE = re.compile(r"^\s*-\s+package-ecosystem:\s*(?P<ecosystem>.+?)\s*$")
 
 
 def validate_workflow_text(path: Path, text: str) -> list[str]:
@@ -48,6 +49,98 @@ def validate_requirements(text: str) -> list[str]:
     return ["requirements-dev.txt: pip-audit must be declared in the dev dependency manifest"]
 
 
+def _clean_yaml_scalar(value: str) -> str:
+    return value.strip().strip("\"'")
+
+
+def _dependabot_update_blocks(text: str) -> dict[str, str]:
+    blocks: dict[str, list[str]] = {}
+    current_ecosystem: str | None = None
+    for line in text.splitlines():
+        update_match = DEPENDABOT_UPDATE_RE.match(line)
+        if update_match:
+            current_ecosystem = _clean_yaml_scalar(update_match.group("ecosystem"))
+            blocks[current_ecosystem] = [line]
+        elif current_ecosystem is not None:
+            blocks[current_ecosystem].append(line)
+    return {ecosystem: "\n".join(lines) for ecosystem, lines in blocks.items()}
+
+
+def _has_yaml_value(text: str, key: str, value: str) -> bool:
+    return bool(
+        re.search(
+            rf"(?m)^\s*(?:-\s*)?{re.escape(key)}:\s*[\"']?{re.escape(value)}[\"']?\s*$",
+            text,
+        )
+    )
+
+
+def _validate_dependabot_update(
+    path: Path,
+    ecosystem: str,
+    block: str | None,
+    *,
+    expected_time: str,
+    expected_limit: str,
+    expected_prefix: str,
+) -> list[str]:
+    if block is None:
+        return [f"{path}: missing {ecosystem} Dependabot update block"]
+
+    checks = [
+        ("directory", "/"),
+        ("interval", "weekly"),
+        ("day", "monday"),
+        ("time", expected_time),
+        ("timezone", "Europe/Prague"),
+        ("open-pull-requests-limit", expected_limit),
+        ("prefix", expected_prefix),
+        ("include", "scope"),
+    ]
+    issues = [
+        f"{path}: {ecosystem} schedule/metadata must include {key}: {value}"
+        for key, value in checks
+        if not _has_yaml_value(block, key, value)
+    ]
+    if ecosystem == "pip" and not _has_yaml_value(block, "dependency-type", "direct"):
+        issues.append(f"{path}: pip updates must be limited to direct dependencies")
+    if ecosystem == "github-actions" and not re.search(
+        r"(?ms)^\s*groups:\s*$.*^\s*github-actions:\s*$.*^\s*-\s*[\"']?\*[\"']?\s*$",
+        block,
+    ):
+        issues.append(f"{path}: github-actions updates must define groups.github-actions")
+    return issues
+
+
+def validate_dependabot_text(path: Path, text: str) -> list[str]:
+    issues: list[str] = []
+    if not _has_yaml_value(text, "version", "2"):
+        issues.append(f"{path}: Dependabot config must use version: 2")
+
+    blocks = _dependabot_update_blocks(text)
+    issues.extend(
+        _validate_dependabot_update(
+            path,
+            "pip",
+            blocks.get("pip"),
+            expected_time="06:00",
+            expected_limit="5",
+            expected_prefix="deps",
+        )
+    )
+    issues.extend(
+        _validate_dependabot_update(
+            path,
+            "github-actions",
+            blocks.get("github-actions"),
+            expected_time="06:30",
+            expected_limit="3",
+            expected_prefix="ci",
+        )
+    )
+    return issues
+
+
 def collect_issues(root: Path) -> list[str]:
     issues: list[str] = []
     workflows_dir = root / ".github" / "workflows"
@@ -60,6 +153,12 @@ def collect_issues(root: Path) -> list[str]:
         issues.extend(validate_requirements(requirements_dev.read_text(encoding="utf-8")))
     else:
         issues.append("requirements-dev.txt: missing dev dependency manifest")
+
+    dependabot = root / ".github" / "dependabot.yml"
+    if dependabot.exists():
+        issues.extend(validate_dependabot_text(dependabot, dependabot.read_text(encoding="utf-8")))
+    else:
+        issues.append(".github/dependabot.yml: missing Dependabot configuration")
     return issues
 
 
