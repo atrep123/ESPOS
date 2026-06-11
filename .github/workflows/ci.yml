@@ -28,11 +28,10 @@ jobs:
             requirements-mcp.txt
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade "pip>=26.1.2,<27"
           python -m pip install -r requirements.txt -r requirements-dev.txt
       - name: Dependency security audit
         run: |
-          python -m pip install pip-audit
           # PlatformIO 6.1.x currently pins Starlette below the fixed 1.0.1
           # line for PYSEC-2026-161 / CVE-2026-48710. The reachability and
           # tracking rationale is documented in SECURITY.md; keep this ignore
@@ -118,8 +117,8 @@ jobs:
           python-version: '3.12'
       - name: Install PlatformIO
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install "platformio<7,>=6.1"
+          python -m pip install --upgrade "pip>=26.1.2,<27"
+          python -m pip install -r requirements.txt
       - name: Cache PlatformIO
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:

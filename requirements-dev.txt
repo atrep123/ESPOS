@@ -23,4 +23,6 @@ pyinstaller>=6.0.0,<7
 
 mutmut>=2.5.0,<3
 
-# Security tooling is installed ad-hoc in workflows (pip-audit, bandit, cyclonedx-bom, safety, pip-licenses).
+# Security audit tooling used by CI; keep it in the manifest so Dependabot and
+# pip-audit can reason about the toolchain instead of installing it ad hoc.
+pip-audit>=2.10.1,<3
