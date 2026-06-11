@@ -16,6 +16,11 @@ AUDIT_TOOL_INSTALL_RE = re.compile(
 PIP_AUDIT_REQUIREMENT_RE = re.compile(r"^\s*pip-audit\b", re.MULTILINE)
 DEPENDABOT_UPDATE_RE = re.compile(r"^\s*-\s+package-ecosystem:\s*(?P<ecosystem>.+?)\s*$")
 WRITE_PERMISSION_RE = re.compile(r"^\s*[a-z-]+:\s*write\s*(?:#.*)?$", re.IGNORECASE)
+CHECKOUT_ACTION_RE = re.compile(r"^actions/checkout@[0-9a-f]{40}$", re.IGNORECASE)
+PERSIST_CREDENTIALS_FALSE_RE = re.compile(
+    r"^\s*persist-credentials:\s*false\s*(?:#.*)?$",
+    re.IGNORECASE,
+)
 DOWNLOAD_EXECUTE_RE = re.compile(
     r"\b(?:curl|wget)\b[^\n|]*\|\s*(?:sh|bash)\b"
     r"|\b(?:irm|iwr|invoke-restmethod|invoke-webrequest)\b[^\n|]*\|\s*(?:iex|invoke-expression)\b",
@@ -39,12 +44,40 @@ def _has_top_level_contents_read_permission(text: str) -> bool:
     return False
 
 
+def _leading_spaces(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _step_indent_for_uses(lines: list[str], uses_index: int) -> int:
+    uses_line = lines[uses_index]
+    uses_indent = _leading_spaces(uses_line)
+    if uses_line.lstrip().startswith("- "):
+        return uses_indent
+
+    for previous in reversed(lines[:uses_index]):
+        previous_indent = _leading_spaces(previous)
+        if previous_indent < uses_indent and previous.lstrip().startswith("- "):
+            return previous_indent
+    return max(0, uses_indent - 2)
+
+
+def _step_block_after_uses(lines: list[str], uses_index: int) -> list[str]:
+    step_indent = _step_indent_for_uses(lines, uses_index)
+    block: list[str] = []
+    for line in lines[uses_index + 1 :]:
+        if line.strip() and _leading_spaces(line) <= step_indent:
+            break
+        block.append(line)
+    return block
+
+
 def validate_workflow_text(path: Path, text: str) -> list[str]:
     issues: list[str] = []
     if not _has_top_level_contents_read_permission(text):
         issues.append(f"{path}: workflow must declare top-level permissions: contents: read")
 
-    for line_no, line in enumerate(text.splitlines(), start=1):
+    lines = text.splitlines()
+    for line_no, line in enumerate(lines, start=1):
         if WRITE_PERMISSION_RE.match(line):
             issues.append(f"{path}:{line_no}: workflow must not grant write permission")
         if DOWNLOAD_EXECUTE_RE.search(line):
@@ -66,6 +99,14 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
             elif not VERSION_COMMENT_RE.search(uses_match.group("rest")):
                 issues.append(
                     f"{path}:{line_no}: action reference {ref!r} is missing inline version comment"
+                )
+
+            if CHECKOUT_ACTION_RE.match(ref) and not any(
+                PERSIST_CREDENTIALS_FALSE_RE.match(block_line)
+                for block_line in _step_block_after_uses(lines, line_no - 1)
+            ):
+                issues.append(
+                    f"{path}:{line_no}: actions/checkout must set persist-credentials: false"
                 )
 
         install_match = AUDIT_TOOL_INSTALL_RE.search(line)

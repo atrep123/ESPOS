@@ -42,6 +42,58 @@ jobs:
     assert any("missing inline version comment" in issue for issue in issues)
 
 
+def test_workflow_requires_checkout_persist_credentials_false():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("persist-credentials: false" in issue for issue in issues)
+
+
+def test_workflow_rejects_checkout_persist_credentials_true():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: true
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("persist-credentials: false" in issue for issue in issues)
+
+
+def test_workflow_accepts_checkout_persist_credentials_false():
+    workflow = """
+name: good
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
+
+    assert not any("persist-credentials" in issue for issue in issues)
+
+
 def test_workflow_rejects_ad_hoc_audit_tool_installs():
     workflow = """
 name: bad
