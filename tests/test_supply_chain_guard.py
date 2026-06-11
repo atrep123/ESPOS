@@ -118,6 +118,41 @@ jobs:
     assert any("downloaded scripts directly to a shell" in issue for issue in issues)
 
 
+def test_workflow_rejects_pull_request_target_event():
+    workflow = """
+name: bad
+on:
+  pull_request_target:
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("pull_request_target" in issue for issue in issues)
+
+
+def test_workflow_rejects_pull_request_target_inline_event():
+    workflow = """
+name: bad
+on: [push, pull_request_target]
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("pull_request_target" in issue for issue in issues)
+
+
 def test_requirements_requires_manifested_pip_audit():
     issues = validate_requirements("pytest>=9.0.3,<10\n")
 
