@@ -25,6 +25,7 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
+            requirements-mcp.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -38,6 +39,8 @@ jobs:
           # explicit so it can be removed when PlatformIO publishes a
           # compatible Starlette range.
           python -m pip_audit -r requirements-dev.txt --strict --desc --ignore-vuln PYSEC-2026-161
+      - name: MCP dependency security audit
+        run: python -m pip_audit -r requirements-mcp.txt --strict --desc
       - name: Ruff lint
         run: python -m ruff check .
       - name: Ruff format check
