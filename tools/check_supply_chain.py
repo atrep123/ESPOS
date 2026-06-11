@@ -16,6 +16,11 @@ AUDIT_TOOL_INSTALL_RE = re.compile(
 PIP_AUDIT_REQUIREMENT_RE = re.compile(r"^\s*pip-audit\b", re.MULTILINE)
 DEPENDABOT_UPDATE_RE = re.compile(r"^\s*-\s+package-ecosystem:\s*(?P<ecosystem>.+?)\s*$")
 WRITE_PERMISSION_RE = re.compile(r"^\s*[a-z-]+:\s*write\s*(?:#.*)?$", re.IGNORECASE)
+DOWNLOAD_EXECUTE_RE = re.compile(
+    r"\b(?:curl|wget)\b[^\n|]*\|\s*(?:sh|bash)\b"
+    r"|\b(?:irm|iwr|invoke-restmethod|invoke-webrequest)\b[^\n|]*\|\s*(?:iex|invoke-expression)\b",
+    re.IGNORECASE,
+)
 
 
 def _has_top_level_contents_read_permission(text: str) -> bool:
@@ -41,6 +46,10 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
     for line_no, line in enumerate(text.splitlines(), start=1):
         if WRITE_PERMISSION_RE.match(line):
             issues.append(f"{path}:{line_no}: workflow must not grant write permission")
+        if DOWNLOAD_EXECUTE_RE.search(line):
+            issues.append(
+                f"{path}:{line_no}: workflow must not pipe downloaded scripts directly to a shell"
+            )
 
         uses_match = USE_RE.match(line)
         if uses_match:

