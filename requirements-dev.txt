@@ -14,6 +14,7 @@ pytest-cov>=4.1.0,<6
 pytest-xdist>=3.5.0,<5
 coverage[toml]>=7.3.0,<8
 pytest-timeout>=2.2.0,<3
+pytest-benchmark>=5.2.3,<6
 mypy>=1.7.0,<2
 # Ruff formatting is version-sensitive; keep the minor capped so CI formatting
 # does not drift without an intentional refresh.

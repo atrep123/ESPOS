@@ -30,6 +30,7 @@ typedef enum {
 } uart_hw_flowcontrol_t;
 
 typedef enum {
+    UART_SCLK_DEFAULT = 0,
     UART_SCLK_APB = 1,
 } uart_sclk_t;
 
