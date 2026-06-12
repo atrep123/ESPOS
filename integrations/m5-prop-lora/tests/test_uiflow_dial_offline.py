@@ -286,6 +286,32 @@ def test_build_deploy_commands_rejects_device_path_mismatch(tmp_path):
         tool.build_deploy_commands("COM6", bundle=out)
 
 
+def test_build_deploy_commands_rejects_partial_manifest(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"] = manifest["device_files"][:1]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="missing manifest entry: device/prop_ui.py"):
+        tool.build_deploy_commands("COM6", bundle=out)
+
+
+def test_build_deploy_commands_rejects_duplicate_manifest_entry(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"].append(dict(manifest["device_files"][0]))
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate manifest entry: device/prop_frame.py"):
+        tool.build_deploy_commands("COM6", bundle=out)
+
+
 def test_offline_deploy_requires_mpremote_for_real_upload(monkeypatch, tmp_path):
     tool = load_offline_tool()
     out = tmp_path / "offline"

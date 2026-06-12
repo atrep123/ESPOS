@@ -292,6 +292,9 @@ def build_deploy_commands(
             device_name = Path(device_path).name
             dst = f":{target_dir.rstrip('/')}/{device_name}"
             commands.append(mpremote_command_prefix(port) + ["fs", "cp", str(src_path), dst])
+        errors = verify_bundle(bundle)
+        if errors:
+            raise ValueError("; ".join(errors))
         return commands
 
     for item in DEVICE_FILES:
