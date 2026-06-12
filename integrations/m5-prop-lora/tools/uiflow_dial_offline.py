@@ -272,6 +272,7 @@ def build_deploy_commands(
         items = manifest.get("device_files")
         if not isinstance(items, list):
             raise ValueError("device_files must be a list")
+        expected_device_paths = _expected_device_paths()
         for index, entry in enumerate(items):
             if not isinstance(entry, dict):
                 raise ValueError(f"device_files[{index}] must be an object")
@@ -284,6 +285,10 @@ def build_deploy_commands(
             src_path = _bundle_file_path(bundle, bundle_path)
             if src_path is None:
                 raise ValueError(f"bundle_path escapes bundle: {bundle_path}")
+            if not src_path.exists():
+                raise ValueError(f"missing bundle file: {bundle_path}")
+            if device_path != expected_device_paths.get(bundle_path):
+                raise ValueError(f"device_path mismatch: {bundle_path}")
             device_name = Path(device_path).name
             dst = f":{target_dir.rstrip('/')}/{device_name}"
             commands.append(mpremote_command_prefix(port) + ["fs", "cp", str(src_path), dst])

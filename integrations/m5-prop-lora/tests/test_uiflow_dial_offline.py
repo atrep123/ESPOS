@@ -263,6 +263,29 @@ def test_build_deploy_commands_rejects_non_object_device_file_entry(tmp_path):
         tool.build_deploy_commands("COM6", bundle=out)
 
 
+def test_build_deploy_commands_rejects_missing_bundle_file(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    (out / "device" / "PropTx.py").unlink()
+
+    with pytest.raises(ValueError, match="missing bundle file: device/PropTx.py"):
+        tool.build_deploy_commands("COM6", bundle=out)
+
+
+def test_build_deploy_commands_rejects_device_path_mismatch(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"][0]["device_path"] = "/flash/boot.py"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="device_path mismatch: device/prop_frame.py"):
+        tool.build_deploy_commands("COM6", bundle=out)
+
+
 def test_offline_deploy_requires_mpremote_for_real_upload(monkeypatch, tmp_path):
     tool = load_offline_tool()
     out = tmp_path / "offline"
