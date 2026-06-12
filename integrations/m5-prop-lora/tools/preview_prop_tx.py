@@ -348,7 +348,7 @@ def state_color(v: View) -> int:
     if is_locked_fire_choice(v):
         return P_AMBER
     if v.awaiting_ack or s.startswith("sent "):
-        return P_AMBER
+        return MODE_SETUP
     if s in ("no ack", "timeout"):
         return P_AMBER
     if s.startswith("ERR "):
@@ -539,11 +539,24 @@ def draw_check_glyph(c: Canvas, cx, cy, color):
     draw_polyline_round(c, pts, 3, WHITE, role="ack_check_highlight")  # bright core stripe
 
 
-def draw_chevron(c: Canvas, tip_x, tip_y, arm_dx, half_h, color, w=5):
+def draw_chevron(c: Canvas, tip_x, tip_y, arm_dx, half_h, color, w=5, role="command_chevron"):
     # One connected polyline with a rounded joint -> the tip is a clean point,
     # not the bitten-off notch you get from two separate butt-capped segments.
     pts = [(tip_x + arm_dx, tip_y - half_h), (tip_x, tip_y), (tip_x + arm_dx, tip_y + half_h)]
     c.d.line([(px * S, py * S) for px, py in pts], fill=rgb(color), width=int(w * S), joint="curve")
+    xs = [float(x) for x, _ in pts]
+    ys = [float(y) for _, y in pts]
+    pad = w / 2.0
+    c._record(
+        DrawOp(
+            "line",
+            role,
+            color=color,
+            bbox=(min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad),
+            width=float(w),
+            points=((float(pts[0][0]), float(pts[0][1])), (float(pts[-1][0]), float(pts[-1][1]))),
+        )
+    )
 
 
 def draw_wait_sweep(c: Canvas, cx, cy, color):
@@ -559,17 +572,16 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
     if variant == "wait":
         draw_wait_sweep(c, cx, cy, sc)
         c.fill_round_rect(
-            cx - 58,
-            cy - 33,
-            116,
-            88,
+            cx - 94,
+            cy - 28,
+            188,
+            76,
             18,
-            mix(P_AMBER, WHITE, 0.10),
+            mix(MODE_SETUP, WHITE, 0.16),
             role="command_state_badge",
         )
-        c.text_center("FIRE", cx, cy - 27, 17, 0x0E1116, tracking=2.0, role="command_sent_text")
-        c.text_center("SENT", cx, cy - 9, 34, 0x0E1116, role="command_state_text")
-        c.text_center("WAIT ACK", cx, cy + 31, 17, 0x0E1116, role="command_state_subtext")
+        c.text_center("TX SENT", cx, cy - 22, 15, 0x0E1116, tracking=1.2, role="command_sent_text")
+        c.text_center("WAIT ACK", cx, cy - 3, 32, 0x0E1116, role="command_state_text")
         return
     if variant == "ack":
         draw_check_glyph(c, cx, cy, sc)
@@ -583,36 +595,36 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
             114,
             34,
             14,
-            mix(P_AMBER, WHITE, 0.10),
+            mix(BG_BASE, P_AMBER, 0.35),
             role="command_state_badge",
         )
-        c.text_center("NO ACK", cx, cy + 24, 28, 0x0E1116, role="command_state_text")
+        c.text_center("NO ACK", cx, cy + 24, 28, TEXT_HI, role="command_state_text")
         return
     if variant == "locked_fire":
-        c.text_center(label, cx, cy - 22, command_label_size(label), TEXT_HI, role="command_text")
+        c.text_center("LOCKED", cx, cy - 28, 30, TEXT_HI, role="command_text")
         c.fill_round_rect(
-            cx - 50,
+            cx - 82,
             cy + 20,
-            100,
-            24,
+            164,
+            26,
             12,
             mix(P_AMBER, WHITE, 0.10),
             role="fire_locked_badge",
         )
-        c.text_center("LOCKED", cx, cy + 20, 22, 0x0E1116, role="fire_locked_text")
+        c.text_center("NOT ARMED", cx, cy + 19, 22, 0x0E1116, role="fire_locked_text")
         return
     if variant == "preview":
         c.text_center(label, cx, cy - 24, command_label_size(label), TEXT_HI, role="command_text")
         c.fill_round_rect(
-            cx - 42,
-            cy + 20,
-            84,
-            22,
-            11,
+            cx - 58,
+            cy + 18,
+            116,
+            30,
+            15,
             mix(MODE_SETUP, WHITE, 0.16),
             role="command_preview_badge_plate",
         )
-        c.text_center("NO FIRE", cx, cy + 22, 15, 0x0E1116, role="command_preview_badge")
+        c.text_center("NO FIRE", cx, cy + 19, 26, 0x0E1116, role="command_preview_badge")
         return
 
     ls = command_label_size(label)
@@ -745,7 +757,7 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         # Safety: once ARMED the only on-screen choice is ODPAL (fire) / cancel.
         # Hide the action-scroll chevrons so a stressed user can't dial to a
         # different action while the controller is live.
-        if not v.awaiting_ack and not v.armed:
+        if not v.awaiting_ack and not v.armed and not is_locked_fire_choice(v):
             cyc = ORB_CY
             chev = COMMAND_RING_R + 14  # sit just outside the command ring
             draw_chevron(c, 120 - chev, cyc, 9, 9, sc, 5)  # left  "<"
@@ -786,13 +798,16 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         y = 120 + LED_R * math.sin(a)
         col = led_rgb(v, i)
         sel = i == v.selected_led
-        if sel:
+        if sel and not v.awaiting_ack:
             if not command:
                 draw_leader(c, ang, col)  # pointer from selected dot -> orb (setup)
             c.fill_circle(x, y, sock_r + 3, mix(BG_BASE, col, 0.30), role="led_glow", index=i)
             c.fill_circle(x, y, sock_r, SOCKET, role="led_socket", index=i)
             c.fill_circle(x, y, dot_r, col, role="led_lens", index=i)
-            c.ring_band(x, y, sock_r + 2, sock_r, 0, 360, WHITE, role="led_selection", index=i)
+            selection_color = WHITE if command else MODE_SETUP
+            c.ring_band(
+                x, y, sock_r + 2, sock_r, 0, 360, selection_color, role="led_selection", index=i
+            )
         else:
             c.fill_circle(x, y, sock_r, SOCKET, role="led_socket", index=i)
             c.ring_band(

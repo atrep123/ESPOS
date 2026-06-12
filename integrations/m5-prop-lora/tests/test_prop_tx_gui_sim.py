@@ -204,9 +204,24 @@ def assert_rects_disjoint(a: gui.DrawOp, b: gui.DrawOp) -> None:
     assert ar <= bl or br <= al or ab <= bt or bb <= at, (a, b)
 
 
+def assert_bbox_contains(container: gui.DrawOp, child: gui.DrawOp, pad: float = 0.0) -> None:
+    assert container.bbox is not None and child.bbox is not None
+    cl, ct, cr, cb = container.bbox
+    il, it, ir, ib = child.bbox
+    assert cl + pad <= il and ct + pad <= it and ir <= cr - pad and ib <= cb - pad, (
+        container,
+        child,
+    )
+
+
 def bbox_height(op: gui.DrawOp) -> float:
     assert op.bbox is not None
     return op.bbox[3] - op.bbox[1]
+
+
+def bbox_width(op: gui.DrawOp) -> float:
+    assert op.bbox is not None
+    return op.bbox[2] - op.bbox[0]
 
 
 def expected_palette_for(view: gui.View) -> set[int]:
@@ -298,29 +313,44 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
         assert len(ops(frame, "command_ring")) == 4
         assert {op.color for op in ops(frame, "command_ring")} == {gui.state_color(view)}
         assert not ops(frame, "orb_lens")
-        assert len(ops(frame, "led_selection")) == 1
+        assert len(ops(frame, "led_selection")) == (0 if view.awaiting_ack else 1)
         if view.awaiting_ack:
+            assert gui.state_color(view) == gui.MODE_SETUP
             assert one(frame, "wait_track")
             assert one(frame, "wait_sweep").color == gui.state_color(view)
-            assert one(frame, "command_sent_text").text == "FIRE"
-            assert one(frame, "command_state_text").text == "SENT"
-            assert one(frame, "command_state_subtext").text == "WAIT ACK"
+            assert one(frame, "command_sent_text").text == "TX SENT"
+            assert one(frame, "command_state_text").text == "WAIT ACK"
+            assert one(frame, "command_state_badge").color == gui.mix(gui.MODE_SETUP, gui.WHITE, 0.16)
+            assert bbox_height(one(frame, "command_state_text")) >= 22.0
+            assert_bbox_contains(
+                one(frame, "command_state_badge"), one(frame, "command_state_text"), pad=4.0
+            )
+            assert "FIRE" not in {op.text for op in frame.ops if op.text}
             assert not ops(frame, "command_text")
         elif ack:
             assert one(frame, "command_state_text").text == "ACK"
             assert not ops(frame, "command_text")
         elif (view.status or "") in ("no ack", "timeout"):
             assert one(frame, "command_state_text").text == "NO ACK"
+            assert one(frame, "command_state_text").color == gui.TEXT_HI
+            assert one(frame, "command_state_badge").color == gui.mix(gui.BG_BASE, gui.P_AMBER, 0.35)
             assert not ops(frame, "command_text")
         else:
-            assert one(frame, "command_text").text == view.action_label
+            expected_command_text = "LOCKED" if view.action_label == "ODPAL" else view.action_label
+            assert one(frame, "command_text").text == expected_command_text
             if view.action_label == "PREVIEW":
                 assert one(frame, "command_preview_badge").text == "NO FIRE"
+                assert bbox_height(one(frame, "command_preview_badge")) >= 18.0
+                assert bbox_width(one(frame, "command_preview_badge_plate")) >= 106.0
             if view.action_label == "ODPAL":
                 assert one(frame, "fire_locked_badge").color == gui.mix(gui.P_AMBER, gui.WHITE, 0.10)
-                assert one(frame, "fire_locked_text").text == "LOCKED"
+                assert one(frame, "fire_locked_text").text == "NOT ARMED"
                 assert bbox_height(one(frame, "fire_locked_text")) >= 15.0
+                assert_bbox_contains(
+                    one(frame, "fire_locked_badge"), one(frame, "fire_locked_text"), pad=4.0
+                )
                 assert {op.color for op in ops(frame, "command_ring")} == {gui.P_AMBER}
+                assert not ops(frame, "command_chevron")
     else:
         expected_orb = gui.setup_orb_color(view)
         assert one(frame, "orb_lens").color == expected_orb
@@ -333,6 +363,7 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
         if gui.is_palette_count(view):
             assert one(frame, "orb_text").text == str(view.palette_count)
         assert len(ops(frame, "led_selection")) == 1
+        assert {op.color for op in ops(frame, "led_selection")} == {gui.MODE_SETUP}
         assert len(ops(frame, "setup_grid")) > 0
         assert not ops(frame, "command_ring")
 
