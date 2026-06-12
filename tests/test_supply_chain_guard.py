@@ -253,6 +253,47 @@ jobs:
     assert issues == []
 
 
+def test_workflow_rejects_secret_references():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      API_TOKEN: ${{ secrets.PYPI_TOKEN }}
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("must not reference secrets" in issue for issue in issues)
+
+
+def test_workflow_allows_non_secret_expressions():
+    workflow = """
+name: good
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - run: echo "${{ matrix.python-version }}"
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
+
+    assert issues == []
+
+
 def test_workflow_rejects_write_permissions():
     workflow = """
 name: bad

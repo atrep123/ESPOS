@@ -26,6 +26,7 @@ CONTINUE_ON_ERROR_TRUE_RE = re.compile(
 )
 IGNORED_FAILURE_RE = re.compile(r"\|\|\s*true(?:\s*(?:#.*)?)?$")
 SECURITY_STEP_NAME_RE = re.compile(r"\bsecurity audit\b|\bsupply-chain guard\b", re.IGNORECASE)
+SECRET_REFERENCE_RE = re.compile(r"\${{\s*secrets\.", re.IGNORECASE)
 CHECKOUT_ACTION_RE = re.compile(r"^actions/checkout@[0-9a-f]{40}$", re.IGNORECASE)
 PERSIST_CREDENTIALS_FALSE_RE = re.compile(
     r"^\s*persist-credentials:\s*false\s*(?:#.*)?$",
@@ -174,6 +175,8 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
             )
         if PULL_REQUEST_TARGET_RE.search(line.split("#", 1)[0]):
             issues.append(f"{path}:{line_no}: workflow must not use pull_request_target")
+        if SECRET_REFERENCE_RE.search(line):
+            issues.append(f"{path}:{line_no}: workflow must not reference secrets")
 
         uses_match = USE_RE.match(line)
         if uses_match:
