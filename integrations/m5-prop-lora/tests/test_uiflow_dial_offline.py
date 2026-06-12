@@ -37,6 +37,7 @@ def test_offline_bundle_contains_runtime_files_and_block_artifact(tmp_path):
     assert result.returncode == 0, result.stderr
     assert (out / "device" / "main.py").exists()
     assert (out / "device" / "prop_frame.py").exists()
+    assert (out / "device" / "prop_state.py").exists()
     assert (out / "device" / "prop_ui.py").exists()
     assert (out / "device" / "PropTx.py").exists()
     assert (out / "blocks" / "PropTx.m5b2").exists()
@@ -44,6 +45,7 @@ def test_offline_bundle_contains_runtime_files_and_block_artifact(tmp_path):
     manifest = json.loads((out / "offline_manifest.json").read_text(encoding="utf-8"))
     assert [item["device_path"] for item in manifest["device_files"]] == [
         "/flash/prop_frame.py",
+        "/flash/prop_state.py",
         "/flash/prop_ui.py",
         "/flash/PropTx.py",
         "/flash/main.py",
@@ -68,6 +70,7 @@ def test_offline_deploy_dry_run_prints_mpremote_upload_commands():
     assert "python -m mpremote connect COM6 fs mkdir /flash" in result.stdout
     assert "python -m mpremote connect COM6 fs cp" in result.stdout
     assert ":/flash/prop_frame.py" in result.stdout
+    assert ":/flash/prop_state.py" in result.stdout
     assert ":/flash/prop_ui.py" in result.stdout
     assert ":/flash/PropTx.py" in result.stdout
     assert ":/flash/main.py" in result.stdout
@@ -261,6 +264,7 @@ def test_offline_deploy_dry_run_uploads_from_bundle_paths(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert str(out / "device" / "prop_frame.py") in result.stdout
+    assert str(out / "device" / "prop_state.py") in result.stdout
     assert str(out / "device" / "prop_ui.py") in result.stdout
     assert str(out / "device" / "PropTx.py") in result.stdout
     assert str(out / "device" / "main.py") in result.stdout
@@ -364,6 +368,7 @@ def test_uiflow_readme_documents_no_internet_deploy_path():
         "build/uiflow_dial_offline/",
         "uiflow/dial/blocks/dist/PropTx.m5b2",
         "device/PropTx.py",
+        "device/prop_state.py",
         "UIFlow2 canvas still needs UIFlow2 Web",
         "GEMINI_API_KEY",
         "python tools/gemini_jury.py --dir build/preview",

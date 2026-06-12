@@ -118,7 +118,7 @@ polishing the layout to the round 240×240.
 
 ### Run on the M5Dial
 1. Flash UIFlow2 MicroPython to the Dial (M5Burner), or use the UIFlow2 web IDE.
-2. Upload all three modules — `prop_frame.py`, `prop_state.py`, and `main.py` — to the device (UIFlow2 file manager or `mpremote`).
+2. Upload the runtime modules — `prop_frame.py`, `prop_state.py`, `prop_ui.py`, and `main.py` — to the device (UIFlow2 file manager or `mpremote`).
 3. Wire the Dial's Grove **Port A** to the LoRa modem: TX=GPIO13 → modem RX, RX=GPIO15 ← modem TX, plus GND/5V.
 4. Run `main.py`. Rotate to pick an action, **press** to send; **long-press** to enter NASTAVENI (per-LED hue), press to step LEDs, long-press to sync the palette and return.
 5. Confirm reactions on the modem OLED / the DinMeter, and the status line for `OK`/`ERR`/`RX`.
@@ -152,7 +152,7 @@ python tools/uiflow_dial_offline.py deploy --port COM6 --bundle build/uiflow_dia
 
 `bundle` writes an offline package to `build/uiflow_dial_offline/`:
 
-- `device/prop_frame.py`, `device/prop_ui.py`, `device/PropTx.py`, `device/main.py` for the Dial filesystem.
+- `device/prop_frame.py`, `device/prop_state.py`, `device/prop_ui.py`, `device/PropTx.py`, `device/main.py` for the Dial filesystem.
 - `blocks/PropTx.m5b2` for UIFlow2 **Custom -> Open** when you do want the block canvas.
 - `offline_manifest.json` with SHA-256 hashes of every copied file.
 

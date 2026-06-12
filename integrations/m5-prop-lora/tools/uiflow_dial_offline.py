@@ -32,6 +32,7 @@ class BlockArtifact:
 
 DEVICE_FILES = (
     DeviceFile("uiflow/dial/prop_frame.py", "device/prop_frame.py", "prop_frame.py"),
+    DeviceFile("uiflow/dial/prop_state.py", "device/prop_state.py", "prop_state.py"),
     DeviceFile("uiflow/dial/prop_ui.py", "device/prop_ui.py", "prop_ui.py"),
     DeviceFile("uiflow/dial/blocks/alpha2/PropTx.py", "device/PropTx.py", "PropTx.py"),
     DeviceFile("uiflow/dial/main.py", "device/main.py", "main.py"),
@@ -135,6 +136,7 @@ def _write_bundle(out: Path) -> dict:
                 "",
                 "Device upload files:",
                 "  device/prop_frame.py -> /flash/prop_frame.py",
+                "  device/prop_state.py -> /flash/prop_state.py",
                 "  device/prop_ui.py    -> /flash/prop_ui.py",
                 "  device/PropTx.py     -> /flash/PropTx.py",
                 "  device/main.py       -> /flash/main.py",
