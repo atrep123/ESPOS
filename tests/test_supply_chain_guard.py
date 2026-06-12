@@ -108,6 +108,43 @@ jobs:
     assert any("install audit tooling from requirements-dev.txt" in issue for issue in issues)
 
 
+def test_workflow_rejects_direct_pip_package_installs():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - run: python -m pip install platformio
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("dependency manifest" in issue for issue in issues)
+
+
+def test_workflow_allows_manifested_pip_installs_and_pip_upgrade():
+    workflow = """
+name: good
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - run: python -m pip install --upgrade "pip>=26.1.2,<27"
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
+
+    assert not any("dependency manifest" in issue for issue in issues)
+
+
 def test_workflow_requires_read_only_contents_permission():
     workflow = """
 name: bad

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 import re
+import shlex
 from pathlib import Path
 
 USE_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*(?P<ref>[^\s#]+)(?P<rest>.*)$")
 FULL_SHA_RE = re.compile(r"@[0-9a-f]{40}$")
 VERSION_COMMENT_RE = re.compile(r"#\s*v\d+(?:\.\d+){0,2}\b")
+PIP_INSTALL_RE = re.compile(r"\b(?:python\s+-m\s+)?pip\s+install\b(?P<args>[^\n#]*)", re.IGNORECASE)
 AUDIT_TOOL_INSTALL_RE = re.compile(
     r"\b(?:python\s+-m\s+)?pip\s+install\b(?![^\n]*\s-r\b)[^\n#]*"
     r"(?:^|[\s\"'])(pip-audit|bandit|safety|cyclonedx-bom|pip-licenses)"
@@ -39,6 +41,29 @@ DOWNLOAD_EXECUTE_RE = re.compile(
 )
 PULL_REQUEST_TARGET_RE = re.compile(r"\bpull_request_target\b")
 WORKFLOW_RUN_RE = re.compile(r"\bworkflow_run\b")
+PIP_REQUIREMENT_OPTIONS = {"-r", "--requirement"}
+PIP_OPTIONS_WITH_VALUE = PIP_REQUIREMENT_OPTIONS | {
+    "-c",
+    "-C",
+    "--abi",
+    "--cache-dir",
+    "--cert",
+    "--client-cert",
+    "--config-settings",
+    "--constraint",
+    "--extra-index-url",
+    "--find-links",
+    "--implementation",
+    "--index-url",
+    "--platform",
+    "--prefix",
+    "--python-version",
+    "--root",
+    "--src",
+    "--target",
+    "--trusted-host",
+    "--upgrade-strategy",
+}
 
 
 def _has_top_level_contents_read_permission(text: str) -> bool:
@@ -158,6 +183,40 @@ def _validate_security_steps(path: Path, lines: list[str]) -> list[str]:
     return issues
 
 
+def _direct_pip_install_package(line: str) -> str | None:
+    install_match = PIP_INSTALL_RE.search(line.split("#", 1)[0])
+    if not install_match:
+        return None
+
+    try:
+        tokens = shlex.split(install_match.group("args"))
+    except ValueError:
+        return "<unparseable>"
+
+    package_tokens: list[str] = []
+    skip_next = False
+    for token in tokens:
+        if skip_next:
+            skip_next = False
+            continue
+        if token in PIP_OPTIONS_WITH_VALUE:
+            skip_next = True
+            continue
+        if token.startswith("--requirement=") or token.startswith("--constraint="):
+            continue
+        if token.startswith(("-r", "-c", "-C")) and token not in {"-r", "-c", "-C"}:
+            continue
+        if token.startswith("-"):
+            continue
+        package_tokens.append(token)
+
+    for package in package_tokens:
+        normalized = package.strip("\"'").lower()
+        if not re.match(r"^pip(?:$|[<>=!~\[])", normalized):
+            return package
+    return None
+
+
 def validate_workflow_text(path: Path, text: str) -> list[str]:
     issues: list[str] = []
     if not _has_top_level_contents_read_permission(text):
@@ -208,6 +267,12 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
             tool = install_match.group(1)
             issues.append(
                 f"{path}:{line_no}: install audit tooling from requirements-dev.txt, not ad hoc ({tool})"
+            )
+        direct_package = _direct_pip_install_package(line)
+        if direct_package is not None:
+            issues.append(
+                f"{path}:{line_no}: install dependencies from a dependency manifest, "
+                f"not ad hoc ({direct_package})"
             )
     return issues
 
