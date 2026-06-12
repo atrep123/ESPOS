@@ -166,9 +166,10 @@ Designer.
 
 ### Gemini visual review gate
 
-Gemini is not required for deterministic local validation. No Gemini secret is committed;
-set `GEMINI_API_KEY` or create a local gitignored `.gemini_api_key` only when you want the
-visual design review gate:
+Gemini is not required for deterministic local validation. No Gemini secret is committed.
+For the visual design review gate, set `GEMINI_API_KEY`, set `GEMINI_API_KEY_FILE`
+to a local secret file, or create a gitignored `.gemini_api_key` in this repo or at
+`~/.gemini_api_key`:
 
 ```sh
 python tools/preview_prop_tx.py

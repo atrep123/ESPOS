@@ -127,7 +127,9 @@ class Canvas:
         self.d.rounded_rectangle([sx, sy, sx + sw, sy + sh], radius=sr, fill=rgb(color))
         self._record(DrawOp("rect", role, color=color, bbox=(x, y, x + w, y + h)))
 
-    def polygon(self, points, fill: int, outline: int | None = None, width=1, role="polygon", index=None):
+    def polygon(
+        self, points, fill: int, outline: int | None = None, width=1, role="polygon", index=None
+    ):
         scaled = [(x * S, y * S) for x, y in points]
         self.d.polygon(scaled, fill=rgb(fill))
         if outline is not None and width > 0:
@@ -169,7 +171,9 @@ class Canvas:
 
     def ring(self, cx, cy, r, width, a0, a1, color: int, rounded=True, role="ring", index=None):
         """Annular arc from a0 to a1 (degrees, clockwise) at radius r."""
-        self.ring_band(cx, cy, r + width / 2.0, r - width / 2.0, a0, a1, color, role=role, index=index)
+        self.ring_band(
+            cx, cy, r + width / 2.0, r - width / 2.0, a0, a1, color, role=role, index=index
+        )
         cx, cy = cx * S, cy * S
         rr, w = r * S, width * S
         if rounded:
@@ -194,7 +198,9 @@ class Canvas:
             )
         )
 
-    def text_center(self, text, x, y_top, size, color: int, bold=True, tracking=0.0, role="text", index=None):
+    def text_center(
+        self, text, x, y_top, size, color: int, bold=True, tracking=0.0, role="text", index=None
+    ):
         f = _font(size, bold)
         bboxes = []
         if tracking:
@@ -220,7 +226,16 @@ class Canvas:
                 max(b[2] for b in bboxes),
                 max(b[3] for b in bboxes),
             )
-            self._record(DrawOp("text", role, color=color, bbox=self._scaled_bbox(bbox), text=str(text), index=index))
+            self._record(
+                DrawOp(
+                    "text",
+                    role,
+                    color=color,
+                    bbox=self._scaled_bbox(bbox),
+                    text=str(text),
+                    index=index,
+                )
+            )
 
     def text_width(self, text, size, bold=True):
         f = _font(size, bold)
@@ -252,18 +267,25 @@ class Canvas:
 @dataclass
 class View:
     action_label: str = "PREVIEW"
-    field_label: str = "akce"          # akce / jas / LED / HUE
+    field_label: str = "akce"  # akce / jas / LED / HUE
     status: str = "ready"
     field_value: str = "PREVIEW"
     armed: bool = False
     awaiting_ack: bool = False
     brightness_percent: int = 59
     selected_led: int = 0
-    palette_count: int = 4   # B4b: active palette length 1..8 (mirrors firmware)
+    palette_count: int = 4  # B4b: active palette length 1..8 (mirrors firmware)
     selected_hue_degrees: int = 0
     shot_count: int = 0
-    colors: list = field(default_factory=lambda: [
-        (255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 128, 255), (255, 255, 0)])
+    colors: list = field(
+        default_factory=lambda: [
+            (255, 0, 0),
+            (0, 255, 0),
+            (0, 0, 255),
+            (0, 128, 255),
+            (255, 255, 0),
+        ]
+    )
     # 5 LED dots, mirroring firmware gui_prop_tx.h View::colors = DEFAULT_COLORS[0..4]
     # (4->5 LEDs this session). The lower-ring renderer is count-driven off len(colors).
 
@@ -284,16 +306,16 @@ _DIAL_THEME = json.loads(
     (Path(__file__).resolve().parent / "m5_theme.json").read_text(encoding="utf-8")
 )["dial"]
 _D = {k: int(v, 16) for k, v in _DIAL_THEME.items()}
-P_GREEN = _D["P_GREEN"]        # ready / ok
-P_AMBER = _D["P_AMBER"]        # waiting / no-ack, intentionally not red
-P_RED = _D["P_RED"]            # armed / error
+P_GREEN = _D["P_GREEN"]  # ready / ok
+P_AMBER = _D["P_AMBER"]  # waiting / no-ack, intentionally not red
+P_RED = _D["P_RED"]  # armed / error
 WHITE = _D["WHITE"]
-BG_BASE = _D["BG_BASE"]        # deep anthracite
-RING_TRK = _D["RING_TRK"]      # ring track (reads as a gauge)
-SOCKET = _D["SOCKET"]          # recessed indicator socket
+BG_BASE = _D["BG_BASE"]  # deep anthracite
+RING_TRK = _D["RING_TRK"]  # ring track (reads as a gauge)
+SOCKET = _D["SOCKET"]  # recessed indicator socket
 TEXT_HI = _D["TEXT_HI"]
 TEXT_DIM = _D["TEXT_DIM"]
-ACCENT = _D["ACCENT"]          # near-white selection accent (never reads as red)
+ACCENT = _D["ACCENT"]  # near-white selection accent (never reads as red)
 MODE_SETUP = _D["MODE_SETUP"]  # cool cyan: SETUP (tuning) mode accent
 TOP = 270.0  # top of the dial
 
@@ -315,9 +337,7 @@ def mix(a: int, b: int, t: float) -> int:
     ar, ag, ab = rgb(a)
     br, bg, bb = rgb(b)
     return (
-        (int(ar + (br - ar) * t) << 16)
-        | (int(ag + (bg - ag) * t) << 8)
-        | int(ab + (bb - ab) * t)
+        (int(ar + (br - ar) * t) << 16) | (int(ag + (bg - ag) * t) << 8) | int(ab + (bb - ab) * t)
     )
 
 
@@ -325,6 +345,8 @@ def state_color(v: View) -> int:
     s = v.status or ""
     if v.armed:
         return P_RED
+    if is_locked_fire_choice(v):
+        return P_AMBER
     if v.awaiting_ack or s.startswith("sent "):
         return P_AMBER
     if s in ("no ack", "timeout"):
@@ -387,8 +409,27 @@ def is_command_mode(v: View) -> bool:
     return is_editing(v, "akce") or v.awaiting_ack
 
 
+def is_palette_count(v: View) -> bool:
+    return (v.field_label or "").upper() == "BARVY"
+
+
+def is_locked_fire_choice(v: View) -> bool:
+    return (
+        not v.armed
+        and not v.awaiting_ack
+        and (v.status or "") == "ready"
+        and (v.action_label or "").upper() == "ODPAL"
+    )
+
+
 def led_rgb(v: View, i: int) -> int:
     return (v.colors[i][0] << 16) | (v.colors[i][1] << 8) | v.colors[i][2]
+
+
+def setup_orb_color(v: View) -> int:
+    if is_editing(v, "jas") or is_palette_count(v):
+        return mix(MODE_SETUP, WHITE, 0.18)
+    return led_rgb(v, v.selected_led)
 
 
 def luminance(col: int) -> float:
@@ -408,11 +449,11 @@ RING_OUT = 116
 RING_IN = 110
 RING_CAP = 113
 RING_R = RING_CAP
-ORB_CX, ORB_CY, ORB_R = 120, 120, 43        # setup orb diameter stays in the 80-90px range
-COMMAND_RING_R = 54                         # hollow command target (~108px); small enough that the dot band clears it
+ORB_CX, ORB_CY, ORB_R = 120, 120, 43  # setup orb diameter stays in the 80-90px range
+COMMAND_RING_R = 54  # hollow command target (~108px); small enough that the dot band clears it
 COMMAND_RING_W = 10
-LED_R = 80                                  # dots centred in their band: orb edge (r~51) .. brightness ring (inner r110) -> mid ~80
-LED_ANGLES = [126.0, 102.0, 78.0, 54.0]     # legacy 4-slot angles (kept for reference)
+LED_R = 80  # dots centred in their band: orb edge (r~51) .. brightness ring (inner r110) -> mid ~80
+LED_ANGLES = [126.0, 102.0, 78.0, 54.0]  # legacy 4-slot angles (kept for reference)
 
 
 def led_angle(i: int, count: int) -> float:
@@ -446,7 +487,7 @@ def draw_orb(c: Canvas, cx, cy, r, color, accent, label):
     c.ring_band(cx, cy, r + 8, r + 5, 0, 360, accent, role="orb_selection")
     if label:
         n = len(label)
-        size = 42 if n <= 1 else (34 if n <= 3 else 28)       # edited value lives in the orb
+        size = 42 if n <= 1 else (34 if n <= 3 else 28)  # edited value lives in the orb
         c.text_center(label, cx, cy - size * 0.46, size, on_color(color), role="orb_text")
 
 
@@ -458,7 +499,9 @@ def command_label_size(label: str) -> int:
 
 def draw_segmented_target(c: Canvas, cx, cy, r, width, color):
     for start in (285, 15, 105, 195):
-        c.ring_band(cx, cy, r + width / 2, r - width / 2, start, start + 58, color, role="command_ring")
+        c.ring_band(
+            cx, cy, r + width / 2, r - width / 2, start, start + 58, color, role="command_ring"
+        )
 
 
 def draw_polyline_round(c: Canvas, pts, width, color, role="line"):
@@ -479,7 +522,7 @@ def draw_x_glyph(c: Canvas, cx, cy, color):
 
 def draw_check_glyph(c: Canvas, cx, cy, color):
     pts = ((cx - 22, cy + 2), (cx - 7, cy + 17), (cx + 26, cy - 18))
-    draw_polyline_round(c, pts, 9, color, role="ack_check")            # solid, continuous body
+    draw_polyline_round(c, pts, 9, color, role="ack_check")  # solid, continuous body
     draw_polyline_round(c, pts, 3, WHITE, role="ack_check_highlight")  # bright core stripe
 
 
@@ -502,12 +545,20 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
 
     if variant == "wait":
         draw_wait_sweep(c, cx, cy, sc)
+        c.text_center("WAIT", cx, cy - 12, 28, TEXT_HI, role="command_state_text")
+        c.text_center("ACK", cx, cy + 24, 15, P_AMBER, role="command_state_subtext")
         return
     if variant == "ack":
         draw_check_glyph(c, cx, cy, sc)
+        c.text_center("ACK", cx, cy + 32, 16, TEXT_HI, role="command_state_text")
         return
     if variant == "no_ack":
         draw_x_glyph(c, cx, cy, sc)
+        c.text_center("NO ACK", cx, cy + 31, 15, TEXT_HI, role="command_state_text")
+        return
+    if variant == "locked_fire":
+        c.text_center(label, cx, cy - 22, command_label_size(label), TEXT_HI, role="command_text")
+        c.text_center("LOCK", cx, cy + 24, 15, P_AMBER, role="fire_locked_text")
         return
 
     ls = command_label_size(label)
@@ -529,19 +580,21 @@ def render_armed_frame(v: View) -> RenderedFrame:
     c.fill_screen(P_RED, role="screen")
     c.ring_band(120, 120, 119, 111, 0, 360, WHITE, role="armed_outer_ring")
     c.ring_band(120, 120, 109, 106, 0, 360, mix(P_RED, WHITE, 0.42), role="armed_pulse_ring")
-    # minimal hazard cue at the top (not a big generic centre triangle + bangs)
-    draw_warning_glyph(c, 120, 48, 14, WHITE)
-    # hero action word
-    c.text_center("ODPAL", 120, 84, 44, WHITE, role="armed_fire_text")
+    # Gemini review: the earlier warning triangle looked like a fault icon. The red
+    # flood plus explicit ARMED/READY wording carries the live safety state.
+    c.text_center("ARMED", 120, 62, 44, WHITE, role="armed_state_text")
     # ARMED as a clean tracked label (no flanking rules -- they read as a broken
     # line across the screen)
-    c.text_center("ARMED", 120, 142, 24, mix(P_RED, WHITE, 0.92), tracking=5.0, role="armed_state_text")
+    c.text_center(
+        "READY", 120, 122, 24, mix(P_RED, WHITE, 0.92), tracking=4.0, role="armed_live_text"
+    )
+    c.text_center("ODPAL", 120, 158, 20, WHITE, tracking=2.0, role="armed_fire_text")
     # loaded channel colours -> shows WHAT will fire (specific to this prop, not generic)
     for i in range(4):
         chx = 96 + i * 16
         col = led_rgb(v, i)
-        c.fill_circle(chx, 188, 7, mix(P_RED, WHITE, 0.85), role="armed_chip_rim")
-        c.fill_circle(chx, 188, 5, col, role="armed_chip")
+        c.fill_circle(chx, 202, 7, mix(P_RED, WHITE, 0.85), role="armed_chip_rim")
+        c.fill_circle(chx, 202, 5, col, role="armed_chip")
     return RenderedFrame(image=c.raw(), ops=c.ops)
 
 
@@ -551,12 +604,18 @@ def draw_leader(c: Canvas, angle_deg: float, color: int):
     a = math.radians(angle_deg)
     px, py = math.cos(a), math.sin(a)
     qx, qy = -py, px
-    bx, by = 120 + px * (LED_R - 12), 120 + py * (LED_R - 12)   # base: tucked under the dot
-    ax, ay = 120 + px * (ORB_R + 9), 120 + py * (ORB_R + 9)     # apex: touches the orb edge
-    c.polygon(((bx + qx * 7.5, by + qy * 7.5), (bx - qx * 7.5, by - qy * 7.5), (ax, ay)),
-              SOCKET, role="led_leader_outline")
-    c.polygon(((bx + qx * 5.0, by + qy * 5.0), (bx - qx * 5.0, by - qy * 5.0), (ax, ay)),
-              color, role="led_leader")
+    bx, by = 120 + px * (LED_R - 12), 120 + py * (LED_R - 12)  # base: tucked under the dot
+    ax, ay = 120 + px * (ORB_R + 9), 120 + py * (ORB_R + 9)  # apex: touches the orb edge
+    c.polygon(
+        ((bx + qx * 7.5, by + qy * 7.5), (bx - qx * 7.5, by - qy * 7.5), (ax, ay)),
+        SOCKET,
+        role="led_leader_outline",
+    )
+    c.polygon(
+        ((bx + qx * 5.0, by + qy * 5.0), (bx - qx * 5.0, by - qy * 5.0), (ax, ay)),
+        color,
+        role="led_leader",
+    )
 
 
 def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
@@ -586,7 +645,7 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         sweep = bp / 100.0 * 352.0
         if sweep < 8.0:
             sweep = 8.0
-        a0 = TOP          # start cap sits exactly at top-centre (12 o'clock)
+        a0 = TOP  # start cap sits exactly at top-centre (12 o'clock)
         a1 = a0 + sweep
         c.ring_band(120, 120, RING_OUT, RING_IN, a0, a1, sc, role="brightness_value")
         for a in (a0, a1):
@@ -624,17 +683,19 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
             variant = "ack"
         elif no_ack:
             variant = "no_ack"
+        elif is_locked_fire_choice(v):
+            variant = "locked_fire"
         draw_command_token(c, 120, ORB_CY, sc, label, variant)
         # Safety: once ARMED the only on-screen choice is ODPAL (fire) / cancel.
         # Hide the action-scroll chevrons so a stressed user can't dial to a
         # different action while the controller is live.
         if not v.awaiting_ack and not v.armed:
             cyc = ORB_CY
-            chev = COMMAND_RING_R + 14               # sit just outside the command ring
-            draw_chevron(c, 120 - chev, cyc, 9, 9, sc, 5)    # left  "<"
-            draw_chevron(c, 120 + chev, cyc, -9, 9, sc, 5)   # right ">"
+            chev = COMMAND_RING_R + 14  # sit just outside the command ring
+            draw_chevron(c, 120 - chev, cyc, 9, 9, sc, 5)  # left  "<"
+            draw_chevron(c, 120 + chev, cyc, -9, 9, sc, 5)  # right ">"
     else:
-        col = 0xDDE2E8 if is_editing(v, "jas") else led_rgb(v, v.selected_led)
+        col = setup_orb_color(v)
         if is_editing(v, "HUE"):
             oval = f"{v.selected_hue_degrees}°"
         elif is_editing(v, "jas"):
@@ -660,14 +721,24 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         sel = i == v.selected_led
         if sel:
             if not command:
-                draw_leader(c, ang, col)   # pointer from selected dot -> orb (setup)
+                draw_leader(c, ang, col)  # pointer from selected dot -> orb (setup)
             c.fill_circle(x, y, sock_r + 3, mix(BG_BASE, col, 0.30), role="led_glow", index=i)
             c.fill_circle(x, y, sock_r, SOCKET, role="led_socket", index=i)
             c.fill_circle(x, y, dot_r, col, role="led_lens", index=i)
             c.ring_band(x, y, sock_r + 2, sock_r, 0, 360, WHITE, role="led_selection", index=i)
         else:
             c.fill_circle(x, y, sock_r, SOCKET, role="led_socket", index=i)
-            c.ring_band(x, y, sock_r, sock_r - 1, 0, 360, mix(BG_BASE, WHITE, 0.12), role="led_outer_rim", index=i)
+            c.ring_band(
+                x,
+                y,
+                sock_r,
+                sock_r - 1,
+                0,
+                360,
+                mix(BG_BASE, WHITE, 0.12),
+                role="led_outer_rim",
+                index=i,
+            )
             tint = mix(col, BG_BASE, 0.30) if command else mix(col, BG_BASE, 0.62)
             c.fill_circle(x, y, dot_r, tint, role="led_lens", index=i)
     # (bottom chevron removed — the system already draws a back/down arrow)
@@ -694,34 +765,106 @@ def render(v: View, accent: int = ACCENT) -> Image.Image:
 
 def scenes():
     cols = [(255, 30, 30), (30, 220, 90), (40, 120, 255), (255, 180, 0)]
-    cols8 = [(255, 30, 30), (30, 220, 90), (40, 120, 255), (255, 180, 0),
-             (200, 40, 255), (0, 220, 220), (255, 80, 160), (150, 255, 40)]
+    cols8 = [
+        (255, 30, 30),
+        (30, 220, 90),
+        (40, 120, 255),
+        (255, 180, 0),
+        (200, 40, 255),
+        (0, 220, 220),
+        (255, 80, 160),
+        (150, 255, 40),
+    ]
     return {
-        "01_ready_action": View(action_label="PREVIEW", field_label="akce", status="ready",
-                                 field_value="PREVIEW", colors=cols),
-        "02_action_fire": View(action_label="ODPAL", field_label="akce", status="ready",
-                               field_value="ODPAL", colors=cols),
-        "03_armed": View(action_label="ODPAL", field_label="akce", status="ARM ready",
-                         field_value="ODPAL", armed=True, colors=cols),
-        "04_wait_ack": View(action_label="ODPAL", field_label="akce", status="sent FIRE wait",
-                            field_value="ODPAL", awaiting_ack=True, colors=cols),
-        "05_ack": View(action_label="PREVIEW", field_label="akce", status="ACK 42",
-                       field_value="PREVIEW", colors=cols),
-        "06_no_ack": View(action_label="PING", field_label="akce", status="no ack",
-                          field_value="PING", colors=cols),
-        "07_edit_jas": View(field_label="jas", status="ready", field_value="59%",
-                            brightness_percent=59, colors=cols),
-        "08_edit_led": View(field_label="LED", status="LED 3 BARVA", field_value="3",
-                            selected_led=2, selected_hue_degrees=240, colors=cols),
-        "09_edit_hue": View(field_label="HUE", status="ready", field_value="120°",
-                            selected_led=1, selected_hue_degrees=120, brightness_percent=80, colors=cols),
+        "01_ready_action": View(
+            action_label="PREVIEW",
+            field_label="akce",
+            status="ready",
+            field_value="PREVIEW",
+            colors=cols,
+        ),
+        "02_action_fire": View(
+            action_label="ODPAL",
+            field_label="akce",
+            status="ready",
+            field_value="ODPAL",
+            colors=cols,
+        ),
+        "03_armed": View(
+            action_label="ODPAL",
+            field_label="akce",
+            status="ARM ready",
+            field_value="ODPAL",
+            armed=True,
+            colors=cols,
+        ),
+        "04_wait_ack": View(
+            action_label="ODPAL",
+            field_label="akce",
+            status="sent FIRE wait",
+            field_value="ODPAL",
+            awaiting_ack=True,
+            colors=cols,
+        ),
+        "05_ack": View(
+            action_label="PREVIEW",
+            field_label="akce",
+            status="ACK 42",
+            field_value="PREVIEW",
+            colors=cols,
+        ),
+        "06_no_ack": View(
+            action_label="PING",
+            field_label="akce",
+            status="no ack",
+            field_value="PING",
+            colors=cols,
+        ),
+        "07_edit_jas": View(
+            field_label="jas", status="ready", field_value="59%", brightness_percent=59, colors=cols
+        ),
+        "08_edit_led": View(
+            field_label="LED",
+            status="LED 3 BARVA",
+            field_value="3",
+            selected_led=2,
+            selected_hue_degrees=240,
+            colors=cols,
+        ),
+        "09_edit_hue": View(
+            field_label="HUE",
+            status="ready",
+            field_value="120°",
+            selected_led=1,
+            selected_hue_degrees=120,
+            brightness_percent=80,
+            colors=cols,
+        ),
         # B4b: variable palette length (1..8) on the dot ring.
-        "10_palette1": View(field_label="BARVY", status="1 barva", field_value="1",
-                            palette_count=1, selected_led=0, colors=cols8),
-        "11_palette6": View(field_label="BARVY", status="6 barev", field_value="6",
-                            palette_count=6, selected_led=4, colors=cols8),
-        "12_palette8": View(field_label="BARVY", status="8 barev", field_value="8",
-                            palette_count=8, selected_led=6, colors=cols8),
+        "10_palette1": View(
+            field_label="BARVY",
+            status="1 barva",
+            field_value="1",
+            palette_count=1,
+            selected_led=0,
+            colors=cols8,
+        ),
+        "11_palette6": View(
+            field_label="BARVY",
+            status="6 barev",
+            field_value="6",
+            palette_count=6,
+            selected_led=4,
+            colors=cols8,
+        ),
+        "12_palette8": View(
+            field_label="BARVY",
+            status="8 barev",
+            field_value="8",
+            palette_count=8,
+            selected_led=6,
+            colors=cols8,
+        ),
     }
 
 
@@ -741,7 +884,9 @@ def main():
     rows = (len(imgs) + cols - 1) // cols
     w, h = imgs[0][1].size
     pad = 10
-    sheet = Image.new("RGB", (cols * w + (cols + 1) * pad, rows * h + (rows + 1) * pad), (20, 22, 26))
+    sheet = Image.new(
+        "RGB", (cols * w + (cols + 1) * pad, rows * h + (rows + 1) * pad), (20, 22, 26)
+    )
     for idx, (_, im) in enumerate(imgs):
         r, cidx = divmod(idx, cols)
         sheet.paste(im, (pad + cidx * (w + pad), pad + r * (h + pad)))

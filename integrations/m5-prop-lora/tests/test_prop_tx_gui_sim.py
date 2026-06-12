@@ -21,7 +21,18 @@ APP_CPP = ROOT / "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp"
 
 SAFE_CENTER = (120.0, 120.0)
 SAFE_RADIUS = 120.0
-BASE_COLOR_NAMES = ("BG_BASE", "RING_TRK", "SOCKET", "TEXT_HI", "TEXT_DIM", "P_GREEN", "P_AMBER", "P_RED", "ACCENT", "WHITE")
+BASE_COLOR_NAMES = (
+    "BG_BASE",
+    "RING_TRK",
+    "SOCKET",
+    "TEXT_HI",
+    "TEXT_DIM",
+    "P_GREEN",
+    "P_AMBER",
+    "P_RED",
+    "ACCENT",
+    "WHITE",
+)
 
 
 def _fixture_colors() -> list[tuple[int, int, int]]:
@@ -36,16 +47,36 @@ def real_state_views() -> dict[str, gui.View]:
     colors = _fixture_colors()
     return {
         "idle_action_preview": gui.View(
-            action_label="PREVIEW", field_label="akce", status="ready", field_value="PREVIEW", colors=colors
+            action_label="PREVIEW",
+            field_label="akce",
+            status="ready",
+            field_value="PREVIEW",
+            colors=colors,
         ),
         "idle_action_arm": gui.View(
             action_label="ARM", field_label="akce", status="ready", field_value="ARM", colors=colors
         ),
+        "idle_action_fire": gui.View(
+            action_label="ODPAL",
+            field_label="akce",
+            status="ready",
+            field_value="ODPAL",
+            colors=colors,
+        ),
         "armed_fire": gui.View(
-            action_label="ODPAL", field_label="akce", status="ARM ready", field_value="ODPAL", armed=True, colors=colors
+            action_label="ODPAL",
+            field_label="akce",
+            status="ARM ready",
+            field_value="ODPAL",
+            armed=True,
+            colors=colors,
         ),
         "idle_action_stop": gui.View(
-            action_label="STOP", field_label="akce", status="ready", field_value="STOP", colors=colors
+            action_label="STOP",
+            field_label="akce",
+            status="ready",
+            field_value="STOP",
+            colors=colors,
         ),
         "waiting_for_contact": gui.View(
             action_label="ODPAL",
@@ -56,13 +87,25 @@ def real_state_views() -> dict[str, gui.View]:
             colors=colors,
         ),
         "ack_contact": gui.View(
-            action_label="PREVIEW", field_label="akce", status="ACK 42", field_value="PREVIEW", colors=colors
+            action_label="PREVIEW",
+            field_label="akce",
+            status="ACK 42",
+            field_value="PREVIEW",
+            colors=colors,
         ),
         "fault_no_ack": gui.View(
-            action_label="PING", field_label="akce", status="no ack", field_value="PING", colors=colors
+            action_label="PING",
+            field_label="akce",
+            status="no ack",
+            field_value="PING",
+            colors=colors,
         ),
         "fault_error": gui.View(
-            action_label="PING", field_label="akce", status="ERR BAD_FRAME", field_value="PING", colors=colors
+            action_label="PING",
+            field_label="akce",
+            status="ERR BAD_FRAME",
+            field_value="PING",
+            colors=colors,
         ),
         "brightness_zero": gui.View(
             field_label="jas", status="ready", field_value="0%", brightness_percent=0, colors=colors
@@ -71,7 +114,11 @@ def real_state_views() -> dict[str, gui.View]:
             field_label="jas", status="ready", field_value="1%", brightness_percent=1, colors=colors
         ),
         "brightness_full": gui.View(
-            field_label="jas", status="ready", field_value="100%", brightness_percent=100, colors=colors
+            field_label="jas",
+            status="ready",
+            field_value="100%",
+            brightness_percent=100,
+            colors=colors,
         ),
         "led_select": gui.View(
             field_label="LED",
@@ -96,6 +143,14 @@ def real_state_views() -> dict[str, gui.View]:
             selected_led=3,
             selected_hue_degrees=359,
             brightness_percent=80,
+            colors=colors,
+        ),
+        "palette_count_one": gui.View(
+            field_label="BARVY",
+            status="1 barva",
+            field_value="1",
+            palette_count=1,
+            selected_led=0,
             colors=colors,
         ),
     }
@@ -157,12 +212,16 @@ def expected_palette_for(view: gui.View) -> set[int]:
     palette.add(gui.mix(gui.P_RED, gui.WHITE, 0.42))
     palette.add(gui.mix(gui.P_RED, gui.WHITE, 0.85))
     palette.add(gui.mix(gui.P_RED, gui.WHITE, 0.92))
-    bg_tint = 0.25 if (view.status or "").startswith("ACK ") else (0.10 if gui.is_command_mode(view) else 0.06)
+    bg_tint = (
+        0.25
+        if (view.status or "").startswith("ACK ")
+        else (0.10 if gui.is_command_mode(view) else 0.06)
+    )
     bg_src = sc if gui.is_command_mode(view) else gui.MODE_SETUP
     palette.add(gui.P_RED if view.armed else gui.mix(gui.BG_BASE, bg_src, bg_tint))
     palette.add(gui.mix(gui.BG_BASE, gui.MODE_SETUP, 0.26))
     palette.add(gui.mix(gui.BG_BASE, sc, 0.35))
-    setup_orb_color = 0xDDE2E8 if gui.is_editing(view, "jas") else gui.led_rgb(view, view.selected_led)
+    setup_orb_color = gui.setup_orb_color(view)
     for color in [gui.led_rgb(view, i) for i in range(4)]:
         palette.update(
             {
@@ -194,7 +253,9 @@ def expected_palette_for(view: gui.View) -> set[int]:
 
 
 @pytest.mark.parametrize("name,view", real_state_views().items())
-def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(name: str, view: gui.View) -> None:
+def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
+    name: str, view: gui.View
+) -> None:
     frame = gui.render_frame(view)
 
     assert frame.image.size == (240, 240)
@@ -202,10 +263,9 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(name: 
         assert one(frame, "screen").color == gui.P_RED
         assert one(frame, "armed_outer_ring").color == gui.WHITE
         assert one(frame, "armed_pulse_ring").color == gui.mix(gui.P_RED, gui.WHITE, 0.42)
-        assert one(frame, "armed_hazard_triangle")
-        assert one(frame, "armed_hazard_bang").text == "!"
-        assert one(frame, "armed_fire_text").text == "ODPAL"
         assert one(frame, "armed_state_text").text == "ARMED"
+        assert one(frame, "armed_live_text").text == "READY"
+        assert one(frame, "armed_fire_text").text == "ODPAL"
         assert len(ops(frame, "armed_chip")) == 4
         assert not ops(frame, "brightness_track")
         assert not ops(frame, "mode_caption")
@@ -218,10 +278,13 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(name: 
     bg_src = sc if gui.is_command_mode(view) else gui.MODE_SETUP
     assert one(frame, "screen").color == gui.mix(gui.BG_BASE, bg_src, bg_tint)
     assert one(frame, "brightness_track")
-    assert one(frame, "mode_caption").text == ("PRIKAZ" if gui.is_command_mode(view) else "NASTAVENI")
+    assert one(frame, "mode_caption").text == (
+        "PRIKAZ" if gui.is_command_mode(view) else "NASTAVENI"
+    )
     assert not ops(frame, "status_text")
-    assert len(ops(frame, "led_socket")) == 4
-    assert len(ops(frame, "led_lens")) == 4
+    slot_count = max(1, min(8, view.palette_count))
+    assert len(ops(frame, "led_socket")) == slot_count
+    assert len(ops(frame, "led_lens")) == slot_count
 
     if gui.is_command_mode(view):
         assert len(ops(frame, "command_ring")) == 4
@@ -231,18 +294,29 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(name: 
         if view.awaiting_ack:
             assert one(frame, "wait_track")
             assert one(frame, "wait_sweep").color == gui.state_color(view)
+            assert one(frame, "command_state_text").text == "WAIT"
+            assert one(frame, "command_state_subtext").text == "ACK"
             assert not ops(frame, "command_text")
         elif ack:
+            assert one(frame, "command_state_text").text == "ACK"
             assert not ops(frame, "command_text")
         elif (view.status or "") in ("no ack", "timeout"):
+            assert one(frame, "command_state_text").text == "NO ACK"
             assert not ops(frame, "command_text")
         else:
             assert one(frame, "command_text").text == view.action_label
+            if view.action_label == "ODPAL":
+                assert one(frame, "fire_locked_text").text == "LOCK"
+                assert {op.color for op in ops(frame, "command_ring")} == {gui.P_AMBER}
     else:
-        expected_orb = 0xDDE2E8 if gui.is_editing(view, "jas") else gui.led_rgb(view, view.selected_led)
+        expected_orb = gui.setup_orb_color(view)
         assert one(frame, "orb_lens").color == expected_orb
         assert one(frame, "orb_selection").color == gui.MODE_SETUP
-        assert one(frame, "orb_text").text in {str(view.selected_led + 1), f"{view.brightness_percent}%", f"{view.selected_hue_degrees}\N{DEGREE SIGN}"}
+        assert one(frame, "orb_text").text in {
+            str(view.selected_led + 1),
+            f"{view.brightness_percent}%",
+            f"{view.selected_hue_degrees}\N{DEGREE SIGN}",
+        }
         assert len(ops(frame, "led_selection")) == 1
         assert len(ops(frame, "setup_grid")) > 0
         assert not ops(frame, "command_ring")
@@ -268,10 +342,14 @@ def test_draws_stay_inside_canvas_and_round_safe_area(name: str, view: gui.View)
 
 
 @pytest.mark.parametrize("name,view", real_state_views().items())
-def test_render_uses_only_declared_palette_and_deterministic_led_colors(name: str, view: gui.View) -> None:
+def test_render_uses_only_declared_palette_and_deterministic_led_colors(
+    name: str, view: gui.View
+) -> None:
     frame = gui.render_frame(view)
     allowed = expected_palette_for(view)
-    unexpected = [(op.role, op.color) for op in frame.ops if op.color is not None and op.color not in allowed]
+    unexpected = [
+        (op.role, op.color) for op in frame.ops if op.color is not None and op.color not in allowed
+    ]
     assert unexpected == []
 
 
@@ -285,7 +363,9 @@ def test_render_uses_only_declared_palette_and_deterministic_led_colors(name: st
         (255, 352.0, True),
     ],
 )
-def test_brightness_arc_angle_matches_encoded_percent(brightness: int, expected_sweep: float, expect_indicator: bool) -> None:
+def test_brightness_arc_angle_matches_encoded_percent(
+    brightness: int, expected_sweep: float, expect_indicator: bool
+) -> None:
     view = gui.View(field_label="jas", brightness_percent=brightness, colors=_fixture_colors())
     frame = gui.render_frame(view)
     indicators = ops(frame, "brightness_value")
@@ -321,9 +401,17 @@ def test_led_arc_uses_lovyangfx_clockwise_angle_convention() -> None:
 @pytest.mark.parametrize("name,view", real_state_views().items())
 def test_critical_text_does_not_overlap_leds_or_centerpiece(name: str, view: gui.View) -> None:
     frame = gui.render_frame(view)
-    text_roles = ["armed_hazard_bang", "armed_fire_text", "armed_state_text"] if view.armed else ["mode_caption"]
+    text_roles = (
+        ["armed_state_text", "armed_live_text", "armed_fire_text"]
+        if view.armed
+        else ["mode_caption"]
+    )
     if not view.armed:
-        text_roles.append("command_text" if gui.is_command_mode(view) and ops(frame, "command_text") else "orb_text")
+        text_roles.append(
+            "command_text"
+            if gui.is_command_mode(view) and ops(frame, "command_text")
+            else "orb_text"
+        )
 
     text_ops = [one(frame, role) for role in text_roles if ops(frame, role)]
     for first, second in zip(text_ops, text_ops[1:]):
@@ -356,7 +444,16 @@ def test_preview_constants_match_firmware_gui_source() -> None:
     # the geometry (CX/RING_OUT/...) stays in gui_prop_tx.cpp. Cross-check against both.
     cpp = GUI_CPP.read_text(encoding="utf-8") + "\n" + GUI_THEME_H.read_text(encoding="utf-8")
 
-    for name in ("BG_BASE", "RING_TRK", "SOCKET", "TEXT_HI", "TEXT_DIM", "P_GREEN", "P_AMBER", "P_RED"):
+    for name in (
+        "BG_BASE",
+        "RING_TRK",
+        "SOCKET",
+        "TEXT_HI",
+        "TEXT_DIM",
+        "P_GREEN",
+        "P_AMBER",
+        "P_RED",
+    ):
         assert getattr(gui, name) == _cpp_hex_constant(cpp, name)
     assert gui.ACCENT == _cpp_hex_constant(cpp, "SEL_ACCENT")
     assert gui.WHITE == _cpp_hex_constant(cpp, "COL_WHITE")
@@ -370,11 +467,16 @@ def test_preview_constants_match_firmware_gui_source() -> None:
     cpp_angles = [float(item.replace("f", "")) for item in angle_match.group(1).split(",")]
     assert gui.LED_ANGLES == cpp_angles
 
-    header = (ROOT / "firmware/dial-tx/main/apps/app_prop_tx/gui/gui_prop_tx.h").read_text(encoding="utf-8")
+    header = (ROOT / "firmware/dial-tx/main/apps/app_prop_tx/gui/gui_prop_tx.h").read_text(
+        encoding="utf-8"
+    )
     # View::colors initializer spans multiple lines: `colors = {{ {r,g,b}, ... }};`
     init = re.search(r"colors\s*=\s*\{\{(.+?)\}\}\s*;", header, re.DOTALL)
     assert init, "View::colors initializer not found in gui_prop_tx.h"
-    default_colors = [tuple(map(int, triplet)) for triplet in re.findall(r"\{(\d+),\s*(\d+),\s*(\d+)\}", init.group(1))]
+    default_colors = [
+        tuple(map(int, triplet))
+        for triplet in re.findall(r"\{(\d+),\s*(\d+),\s*(\d+)\}", init.group(1))
+    ]
     assert gui.View().colors == default_colors
 
 
@@ -384,9 +486,12 @@ def test_simulation_states_cover_app_actions_fields_statuses_and_protocol_led_pa
 
     for action in ("PREVIEW", "ARM", "FIRE", "STOP", "PING"):
         assert f"ACTION_{action}" in app
-        assert any(view.action_label == ("ODPAL" if action == "FIRE" else action) for view in views.values())
+        assert any(
+            view.action_label == ("ODPAL" if action == "FIRE" else action)
+            for view in views.values()
+        )
 
-    assert {view.field_label for view in views.values()} >= {"akce", "jas", "LED", "HUE"}
+    assert {view.field_label for view in views.values()} >= {"akce", "jas", "LED", "HUE", "BARVY"}
     assert {"ready", "ARM ready", "sent FIRE wait", "ACK 42", "no ack", "ERR BAD_FRAME"} <= {
         view.status for view in views.values()
     }

@@ -2,7 +2,8 @@
 
 Renders every scene at the full supersampled buffer (SCREEN*S = 960x540, not the
 240x135 device downscale), saves them to build/preview_dinrx_hires/, then asks
-Gemini (REST, paid key in .gemini_api_key) for:
+Gemini (REST, paid key in GEMINI_API_KEY, GEMINI_API_KEY_FILE, or
+.gemini_api_key) for:
   1) a holistic critique of the whole contact sheet (hierarchy / safety / declutter),
   2) a per-state SCORE + top ISSUE + best GOOD.
 
@@ -21,6 +22,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from gemini_key import load_api_key
 import preview_din_rx_render as P
 from PIL import Image, ImageDraw, ImageFont
 
@@ -30,14 +32,7 @@ GEMINI_ENDPOINT_PREFIX = "https://generativelanguage.googleapis.com/v1beta/model
 
 
 def _load_api_key() -> str:
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key:
-        kf = ROOT / ".gemini_api_key"
-        if kf.exists():
-            key = kf.read_text(encoding="utf-8").strip()
-    if not key:
-        raise SystemExit("No Gemini API key: set GEMINI_API_KEY or create .gemini_api_key")
-    return key
+    return load_api_key(ROOT)
 
 
 DEVICE = "M5 DinMeter (240x135 landscape LCD) RECEIVER of a wireless LoRa THEATRICAL/PYRO prop controller"

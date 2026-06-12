@@ -371,6 +371,8 @@ def test_uiflow_readme_documents_no_internet_deploy_path():
         "device/prop_state.py",
         "UIFlow2 canvas still needs UIFlow2 Web",
         "GEMINI_API_KEY",
+        "GEMINI_API_KEY_FILE",
+        "~/.gemini_api_key",
         "python tools/gemini_jury.py --dir build/preview",
         "mpremote",
     ]:

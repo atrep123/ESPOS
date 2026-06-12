@@ -1,9 +1,10 @@
 """Send preview images to a Gemini model for a design critique.
 
-The API key is read from the GEMINI_API_KEY environment variable so it never
-lands in the repo. Usage:
+The API key is read through tools/gemini_key.py so it never lands in the repo.
+Usage:
 
     GEMINI_API_KEY=... python tools/ask_gemini.py img1.png img2.png ...
+    GEMINI_API_KEY_FILE=... python tools/ask_gemini.py img1.png img2.png ...
 """
 
 from __future__ import annotations
@@ -13,6 +14,8 @@ import json
 import os
 import sys
 import urllib.request
+
+from gemini_key import load_api_key
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
@@ -41,10 +44,7 @@ PROMPT = (
 
 
 def main() -> int:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        print("ERROR: set GEMINI_API_KEY", file=sys.stderr)
-        return 2
+    key = load_api_key()
     paths = sys.argv[1:]
     if not paths:
         print("ERROR: pass image paths", file=sys.stderr)
@@ -58,8 +58,7 @@ def main() -> int:
 
     body = json.dumps({"contents": [{"parts": parts}]}).encode("utf-8")
     url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
-        f"?key={key}"
+        f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={key}"
     )
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
     try:
@@ -74,7 +73,9 @@ def main() -> int:
     except (KeyError, IndexError):
         print(json.dumps(payload, indent=2))
         return 1
-    out_path = os.path.join(os.path.dirname(__file__), "..", "build", "preview", "gemini_review.txt")
+    out_path = os.path.join(
+        os.path.dirname(__file__), "..", "build", "preview", "gemini_review.txt"
+    )
     out_path = os.path.abspath(out_path)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(f"=== {MODEL} verdict ===\n\n{text}\n")
