@@ -19,7 +19,7 @@ PIP_AUDIT_REQUIREMENT_RE = re.compile(r"^\s*pip-audit\b", re.MULTILINE)
 DEPENDABOT_UPDATE_RE = re.compile(r"^\s*-\s+package-ecosystem:\s*(?P<ecosystem>.+?)\s*$")
 WRITE_PERMISSION_RE = re.compile(r"^\s*[a-z-]+:\s*write\s*(?:#.*)?$", re.IGNORECASE)
 JOB_HEADER_RE = re.compile(r"^  (?P<job>[A-Za-z0-9_-]+):\s*(?:#.*)?$")
-RUNS_ON_RE = re.compile(r"^    runs-on:\s*.+$")
+RUNS_ON_RE = re.compile(r"^    runs-on:\s*(?P<value>.+?)\s*(?:#.*)?$")
 JOB_TIMEOUT_RE = re.compile(r"^    timeout-minutes:\s*(?P<value>\S+)\s*(?:#.*)?$")
 STEP_NAME_RE = re.compile(r"^\s*-\s+name:\s*(?P<name>.+?)\s*(?:#.*)?$")
 CONTINUE_ON_ERROR_TRUE_RE = re.compile(
@@ -41,6 +41,7 @@ DOWNLOAD_EXECUTE_RE = re.compile(
 )
 PULL_REQUEST_TARGET_RE = re.compile(r"\bpull_request_target\b")
 WORKFLOW_RUN_RE = re.compile(r"\bworkflow_run\b")
+MUTABLE_RUNNER_RE = re.compile(r"^(?:ubuntu|windows|macos)-latest$", re.IGNORECASE)
 PIP_REQUIREMENT_OPTIONS = {"-r", "--requirement"}
 PIP_OPTIONS_WITH_VALUE = PIP_REQUIREMENT_OPTIONS | {
     "-c",
@@ -162,6 +163,21 @@ def _validate_job_timeouts(path: Path, lines: list[str]) -> list[str]:
     return issues
 
 
+def _validate_runner_labels(path: Path, lines: list[str]) -> list[str]:
+    issues: list[str] = []
+    for line_no, line in enumerate(lines, start=1):
+        runs_on_match = RUNS_ON_RE.match(line)
+        if not runs_on_match:
+            continue
+
+        runner_label = _clean_yaml_scalar(runs_on_match.group("value"))
+        if MUTABLE_RUNNER_RE.match(runner_label):
+            issues.append(
+                f"{path}:{line_no}: runner label {runner_label!r} must use a versioned runner label"
+            )
+    return issues
+
+
 def _validate_security_steps(path: Path, lines: list[str]) -> list[str]:
     issues: list[str] = []
     for line_no, line in enumerate(lines, start=1):
@@ -224,6 +240,7 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
 
     lines = text.splitlines()
     issues.extend(_validate_job_timeouts(path, lines))
+    issues.extend(_validate_runner_labels(path, lines))
     issues.extend(_validate_security_steps(path, lines))
 
     for line_no, line in enumerate(lines, start=1):

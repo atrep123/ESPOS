@@ -133,7 +133,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - run: python -m pip install --upgrade "pip>=26.1.2,<27"
@@ -143,6 +143,42 @@ jobs:
     issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
 
     assert not any("dependency manifest" in issue for issue in issues)
+
+
+def test_workflow_rejects_mutable_runner_label():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("ubuntu-latest" in issue and "versioned runner label" in issue for issue in issues)
+
+
+def test_workflow_accepts_versioned_runner_label():
+    workflow = """
+name: good
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
+
+    assert not any("runner label" in issue for issue in issues)
 
 
 def test_workflow_requires_read_only_contents_permission():
@@ -220,7 +256,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - run: echo ok
@@ -277,7 +313,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Mypy (designer - advisory)
@@ -317,7 +353,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       matrix:
