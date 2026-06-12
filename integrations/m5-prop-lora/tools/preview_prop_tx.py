@@ -422,6 +422,15 @@ def is_locked_fire_choice(v: View) -> bool:
     )
 
 
+def is_preview_choice(v: View) -> bool:
+    return (
+        not v.armed
+        and not v.awaiting_ack
+        and (v.action_label or "").upper() == "PREVIEW"
+        and is_command_mode(v)
+    )
+
+
 def led_rgb(v: View, i: int) -> int:
     return (v.colors[i][0] << 16) | (v.colors[i][1] << 8) | v.colors[i][2]
 
@@ -439,6 +448,10 @@ def luminance(col: int) -> float:
 
 def on_color(col: int) -> int:
     return 0x0E1116 if luminance(col) > 150 else WHITE
+
+
+def setup_caption_color() -> int:
+    return mix(MODE_SETUP, WHITE, 0.20)
 
 
 # ----------------------------------------------------------------------------
@@ -534,8 +547,8 @@ def draw_chevron(c: Canvas, tip_x, tip_y, arm_dx, half_h, color, w=5):
 
 
 def draw_wait_sweep(c: Canvas, cx, cy, color):
-    c.ring_band(cx, cy, 38, 30, 0, 360, mix(BG_BASE, color, 0.35), role="wait_track")
-    c.ring_band(cx, cy, 42, 30, 294, 36 + 360, color, role="wait_sweep")
+    c.ring_band(cx, cy, 31, 26, 0, 360, mix(BG_BASE, color, 0.35), role="wait_track")
+    c.ring_band(cx, cy, 34, 26, 300, 28 + 360, color, role="wait_sweep")
     c.fill_circle(cx, cy, 4, color, role="wait_pivot")
 
 
@@ -545,20 +558,61 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
 
     if variant == "wait":
         draw_wait_sweep(c, cx, cy, sc)
-        c.text_center("WAIT", cx, cy - 12, 28, TEXT_HI, role="command_state_text")
-        c.text_center("ACK", cx, cy + 24, 15, P_AMBER, role="command_state_subtext")
+        c.fill_round_rect(
+            cx - 58,
+            cy - 33,
+            116,
+            88,
+            18,
+            mix(P_AMBER, WHITE, 0.10),
+            role="command_state_badge",
+        )
+        c.text_center("FIRE", cx, cy - 27, 17, 0x0E1116, tracking=2.0, role="command_sent_text")
+        c.text_center("SENT", cx, cy - 9, 34, 0x0E1116, role="command_state_text")
+        c.text_center("WAIT ACK", cx, cy + 31, 17, 0x0E1116, role="command_state_subtext")
         return
     if variant == "ack":
         draw_check_glyph(c, cx, cy, sc)
-        c.text_center("ACK", cx, cy + 32, 16, TEXT_HI, role="command_state_text")
+        c.text_center("ACK", cx, cy + 30, 21, TEXT_HI, role="command_state_text")
         return
     if variant == "no_ack":
         draw_x_glyph(c, cx, cy, sc)
-        c.text_center("NO ACK", cx, cy + 31, 15, TEXT_HI, role="command_state_text")
+        c.fill_round_rect(
+            cx - 57,
+            cy + 22,
+            114,
+            34,
+            14,
+            mix(P_AMBER, WHITE, 0.10),
+            role="command_state_badge",
+        )
+        c.text_center("NO ACK", cx, cy + 24, 28, 0x0E1116, role="command_state_text")
         return
     if variant == "locked_fire":
         c.text_center(label, cx, cy - 22, command_label_size(label), TEXT_HI, role="command_text")
-        c.text_center("LOCK", cx, cy + 24, 15, P_AMBER, role="fire_locked_text")
+        c.fill_round_rect(
+            cx - 50,
+            cy + 20,
+            100,
+            24,
+            12,
+            mix(P_AMBER, WHITE, 0.10),
+            role="fire_locked_badge",
+        )
+        c.text_center("LOCKED", cx, cy + 20, 22, 0x0E1116, role="fire_locked_text")
+        return
+    if variant == "preview":
+        c.text_center(label, cx, cy - 24, command_label_size(label), TEXT_HI, role="command_text")
+        c.fill_round_rect(
+            cx - 42,
+            cy + 20,
+            84,
+            22,
+            11,
+            mix(MODE_SETUP, WHITE, 0.16),
+            role="command_preview_badge_plate",
+        )
+        c.text_center("NO FIRE", cx, cy + 22, 15, 0x0E1116, role="command_preview_badge")
         return
 
     ls = command_label_size(label)
@@ -662,9 +716,9 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
     # colour-coded so SETUP vs COMMAND read at a glance even before the text:
     # cool cyan = NASTAVENI (tuning), neutral near-white = PRIKAZ (transmit).
     mode_caption = "PRIKAZ" if command else "NASTAVENI"
-    mode_color = ACCENT if command else MODE_SETUP
+    mode_color = ACCENT if command else setup_caption_color()
     # padded clear of the brightness ring so the caption doesn't collide with it
-    c.text_center(mode_caption, 120, 36, 14, mode_color, tracking=4.0, role="mode_caption")
+    c.text_center(mode_caption, 120, 35, 16, mode_color, tracking=3.2, role="mode_caption")
 
     # --- status word REMOVED ---------------------------------------------
     # The big status word collided with the brightness ring and the command
@@ -685,6 +739,8 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
             variant = "no_ack"
         elif is_locked_fire_choice(v):
             variant = "locked_fire"
+        elif is_preview_choice(v):
+            variant = "preview"
         draw_command_token(c, 120, ORB_CY, sc, label, variant)
         # Safety: once ARMED the only on-screen choice is ODPAL (fire) / cancel.
         # Hide the action-scroll chevrons so a stressed user can't dial to a
@@ -700,9 +756,20 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
             oval = f"{v.selected_hue_degrees}°"
         elif is_editing(v, "jas"):
             oval = f"{v.brightness_percent}%"
+        elif is_palette_count(v):
+            oval = str(max(1, min(8, v.palette_count)))
         else:
             oval = f"{v.selected_led + 1}"
         draw_orb(c, ORB_CX, ORB_CY, ORB_R, col, accent, oval)
+        c.text_center(
+            field_caption(v),
+            ORB_CX,
+            ORB_CY + 24,
+            12,
+            on_color(col),
+            tracking=1.2,
+            role="orb_subtext",
+        )
     # setup value lives inside the orb; command state is shown by the status word
 
     # --- palette dots on a concentric bottom arc (echoes the round shape) --
