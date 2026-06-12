@@ -75,10 +75,18 @@ def _validate_output_path(out: Path) -> None:
         raise ValueError("refusing to use repository root as bundle output")
     if resolved.parent == resolved:
         raise ValueError("refusing to use filesystem root as bundle output")
+    build_root = (REPO_ROOT / "build").resolve()
+    if _is_relative_to(resolved, REPO_ROOT) and not _is_relative_to(resolved, build_root):
+        raise ValueError("refusing to write bundle inside repository source tree")
     for protected in ("firmware", "shared", "tests", "tools", "uiflow"):
         protected_path = (REPO_ROOT / protected).resolve()
         if _is_relative_to(resolved, protected_path):
             raise ValueError(f"refusing to write bundle inside source tree: {protected}")
+
+
+def _validate_replace_target(out: Path) -> None:
+    if out.exists() and not (out / "offline_manifest.json").is_file():
+        raise ValueError("refusing to replace existing non-bundle output")
 
 
 def _preflight_sources() -> None:
@@ -158,6 +166,7 @@ def _write_bundle(out: Path) -> dict:
 def create_bundle(out: Path) -> dict:
     out = out.resolve()
     _validate_output_path(out)
+    _validate_replace_target(out)
     _preflight_sources()
 
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -192,8 +201,16 @@ def _expected_device_paths() -> dict[str, str]:
     return {item.bundle_path: f"{DEFAULT_TARGET_DIR}/{item.device_name}" for item in DEVICE_FILES}
 
 
+def _expected_device_sources() -> dict[str, str]:
+    return {item.bundle_path: item.source for item in DEVICE_FILES}
+
+
 def _expected_artifact_paths() -> set[str]:
     return {item.bundle_path for item in BLOCK_ARTIFACTS}
+
+
+def _expected_artifact_sources() -> dict[str, str]:
+    return {item.bundle_path: item.source for item in BLOCK_ARTIFACTS}
 
 
 def _bundle_file_path(bundle: Path, bundle_path: str) -> Path | None:
@@ -217,11 +234,12 @@ def verify_bundle(bundle: Path) -> list[str]:
         return ["manifest must be a JSON object"]
 
     expected_sections = {
-        "device_files": set(_expected_device_paths()),
-        "block_artifacts": _expected_artifact_paths(),
+        "device_files": (set(_expected_device_paths()), _expected_device_sources()),
+        "block_artifacts": (_expected_artifact_paths(), _expected_artifact_sources()),
     }
 
-    for section, expected_paths in expected_sections.items():
+    manifest_paths: set[str] = set()
+    for section, (expected_paths, expected_sources) in expected_sections.items():
         entries = manifest.get(section, [])
         if not isinstance(entries, list):
             errors.append(f"{section} must be a list")
@@ -242,6 +260,9 @@ def verify_bundle(bundle: Path) -> list[str]:
             seen_paths.add(bundle_path)
             if bundle_path not in expected_paths:
                 errors.append(f"unexpected manifest entry: {bundle_path}")
+            manifest_paths.add(bundle_path)
+            if entry.get("source") != expected_sources.get(bundle_path):
+                errors.append(f"source mismatch: {bundle_path}")
             path = _bundle_file_path(bundle, bundle_path)
             if path is None:
                 errors.append(f"bundle_path escapes bundle: {bundle_path}")
@@ -262,6 +283,14 @@ def verify_bundle(bundle: Path) -> list[str]:
         for missing in sorted(expected_paths - seen_paths):
             errors.append(f"missing manifest entry: {missing}")
 
+    expected_bundle_files = manifest_paths | {"offline_manifest.json", "README_OFFLINE.txt"}
+    for path in bundle.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(bundle).as_posix()
+        if rel not in expected_bundle_files:
+            errors.append(f"unexpected bundle file: {rel}")
+
     return errors
 
 
@@ -279,6 +308,11 @@ def build_deploy_commands(
         manifest = _load_bundle_manifest(bundle)
         if not isinstance(manifest, dict):
             raise ValueError("manifest must be a JSON object")
+        manifest_target_dir = manifest.get("device_target_dir", DEFAULT_TARGET_DIR)
+        if target_dir != manifest_target_dir:
+            raise ValueError(
+                f"target-dir mismatch: bundle expects {manifest_target_dir}, got {target_dir}"
+            )
         items = manifest.get("device_files")
         if not isinstance(items, list):
             raise ValueError("device_files must be a list")
@@ -315,8 +349,7 @@ def build_deploy_commands(
 
 
 def format_command(command: list[str]) -> str:
-    display = ["python" if part == sys.executable else part for part in command]
-    return subprocess.list2cmdline(display)
+    return subprocess.list2cmdline(command)
 
 
 def deploy(port: str, target_dir: str, dry_run: bool, bundle: Path | None = None) -> int:

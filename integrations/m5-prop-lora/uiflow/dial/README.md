@@ -164,9 +164,24 @@ package is never uploaded to the device. The tracked copy of that offline block 
 lives at `uiflow/dial/blocks/dist/PropTx.m5b2`, so it is available without visiting Block
 Designer.
 
-### Gemini visual review gate
+### Gemini code/workflow review gate
 
 Gemini is not required for deterministic local validation. No Gemini secret is committed.
+For text review of the block/offline/protocol workflow, set `GEMINI_API_KEY`,
+set `GEMINI_API_KEY_FILE` to a local secret file, or create a gitignored
+`.gemini_api_key` in this repo or at `~/.gemini_api_key`:
+
+```sh
+python tools/gemini_code_review.py --dry-run --out build/reviews/gemini_code_review_prompt.md
+python tools/gemini_code_review.py --out build/reviews/gemini_code_review.md
+```
+
+Use the dry-run prompt when sharing the review package manually. Accept the
+code/workflow side only when Gemini has no hardware-acceptance blockers, and
+local validation below still passes.
+
+### Gemini visual review gate
+
 For the visual design review gate, set `GEMINI_API_KEY`, set `GEMINI_API_KEY_FILE`
 to a local secret file, or create a gitignored `.gemini_api_key` in this repo or at
 `~/.gemini_api_key`:

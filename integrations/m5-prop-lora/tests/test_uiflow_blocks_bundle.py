@@ -12,6 +12,8 @@ import types
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 BLOCKS = ROOT / "uiflow" / "dial" / "blocks"
@@ -69,7 +71,9 @@ def test_uiflow_block_validator_cli_passes_and_reports_manual_bundle():
     assert "uiflow/dial/blocks/prop_tx.json" in result.stdout
     assert "uiflow/dial/blocks/code" in result.stdout
     assert "uiflow/dial/prop_frame.py" in result.stdout
+    assert "uiflow/dial/prop_state.py" in result.stdout
     assert "uiflow/dial/prop_ui.py" in result.stdout
+    assert "uiflow/dial/blocks/alpha2/PropTx.py" in result.stdout
 
 
 def test_uiflow_block_manifest_templates_are_consistent():
@@ -161,7 +165,9 @@ def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
         "prop_tx.json",
         "code/<name>.py",
         "prop_frame.py",
+        "prop_state.py",
         "prop_ui.py",
+        "PropTx.py",
         "Custom -> Open",
         "uiflow/dial/blocks/examples/prop_tx_smoke.py",
         "UIFlow2 canvas still needs UIFlow2 Web",
@@ -363,6 +369,8 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     tx.arm()
     tx.remote_led(3)
     tx.remote_led(5)
+    with pytest.raises(ValueError, match="remote LED must be 3 or 5"):
+        tx.remote_led(4)
     tx.remote_led3()
     tx.remote_led5()
     tx.sync_palette(default_colors)
@@ -396,16 +404,20 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     ]
     assert proto.parse_led_payload(bytes(decoded[0].payload))["colors"] == colors
     assert (
-        proto.parse_remote_led(bytes(decoded[4].payload)) == module.prop_frame.REMOTE_LED_BIT_LED3
+        proto.parse_remote_led(bytes(decoded[4].payload))
+        == tx._prop_frame.REMOTE_LED_BIT_LED3
     )
     assert (
-        proto.parse_remote_led(bytes(decoded[5].payload)) == module.prop_frame.REMOTE_LED_BIT_LED5
+        proto.parse_remote_led(bytes(decoded[5].payload))
+        == tx._prop_frame.REMOTE_LED_BIT_LED5
     )
     assert (
-        proto.parse_remote_led(bytes(decoded[6].payload)) == module.prop_frame.REMOTE_LED_BIT_LED3
+        proto.parse_remote_led(bytes(decoded[6].payload))
+        == tx._prop_frame.REMOTE_LED_BIT_LED3
     )
     assert (
-        proto.parse_remote_led(bytes(decoded[7].payload)) == module.prop_frame.REMOTE_LED_BIT_LED5
+        proto.parse_remote_led(bytes(decoded[7].payload))
+        == tx._prop_frame.REMOTE_LED_BIT_LED5
     )
 
 

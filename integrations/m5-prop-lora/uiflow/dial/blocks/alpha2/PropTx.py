@@ -39,15 +39,15 @@ class PropTx:
                 min: '0'
                 max: '48'
         """
-        global prop_frame, prop_ui
         import prop_frame
         import prop_ui
         from hardware import UART
+
         self._uart = UART(1, baudrate=115200, bits=8, parity=None, stop=1, tx=tx, rx=rx)
         self._tx = prop_frame.PropSender()
         self._prop_frame = prop_frame
         self._prop_ui = prop_ui
-        self._uart.write('\n')
+        self._uart.write("\n")
 
     def preview(self, colors):
         """
@@ -98,7 +98,12 @@ class PropTx:
                 min: '3'
                 max: '5'
         """
-        bit = self._prop_frame.REMOTE_LED_BIT_LED3 if which == 3 else self._prop_frame.REMOTE_LED_BIT_LED5
+        if which == 3:
+            bit = self._prop_frame.REMOTE_LED_BIT_LED3
+        elif which == 5:
+            bit = self._prop_frame.REMOTE_LED_BIT_LED5
+        else:
+            raise ValueError("remote LED must be 3 or 5")
         self._uart.write(self._tx.remote_led_line(bit))
 
     def sync_palette(self, colors):
@@ -118,14 +123,14 @@ class PropTx:
             en: 'Prop reply %1'
         """
         if not self._uart.any():
-            return ''
-        data = self._uart.read() or b''
+            return ""
+        data = self._uart.read() or b""
         if isinstance(data, str):
             return data
         try:
             return data.decode()
         except Exception:
-            return ''
+            return ""
 
     def hue_color(self, deg: int = 0) -> tuple:
         """
@@ -235,6 +240,7 @@ class PropTx:
                 min: '0'
                 max: '255'
         """
+
         def clamp(value):
             return max(0, min(255, int(value)))
 

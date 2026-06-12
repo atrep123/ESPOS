@@ -57,10 +57,12 @@ def main() -> int:
         parts.append({"inline_data": {"mime_type": "image/png", "data": data}})
 
     body = json.dumps({"contents": [{"parts": parts}]}).encode("utf-8")
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json", "x-goog-api-key": key},
     )
-    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             payload = json.loads(resp.read().decode("utf-8"))

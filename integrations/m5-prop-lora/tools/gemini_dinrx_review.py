@@ -56,13 +56,19 @@ def _b64(img: Image.Image) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _endpoint(api_key: str) -> str:
-    return f"{GEMINI_ENDPOINT_PREFIX}{GEMINI_MODEL}:generateContent?key={api_key}"
+def _endpoint(api_key: str) -> dict[str, object]:
+    return {
+        "url": f"{GEMINI_ENDPOINT_PREFIX}{GEMINI_MODEL}:generateContent",
+        "headers": {"x-goog-api-key": api_key},
+    }
 
 
-def _ask(endpoint: str, parts: list[dict], max_tokens: int = 1400) -> str:
-    if not endpoint.startswith(GEMINI_ENDPOINT_PREFIX):
+def _ask(endpoint: dict[str, object], parts: list[dict], max_tokens: int = 1400) -> str:
+    url = str(endpoint.get("url", ""))
+    if not url.startswith(GEMINI_ENDPOINT_PREFIX):
         return "ERROR: invalid Gemini endpoint"
+    headers = {"Content-Type": "application/json"}
+    headers.update(endpoint.get("headers", {}))
 
     body = json.dumps(
         {
@@ -75,9 +81,9 @@ def _ask(endpoint: str, parts: list[dict], max_tokens: int = 1400) -> str:
         }
     ).encode("utf-8")
     req = urllib.request.Request(  # noqa: S310
-        endpoint,
+        url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
     )
     try:
         resp = urllib.request.urlopen(req, timeout=180)  # noqa: S310

@@ -25,15 +25,17 @@
 
 try:
     import hashlib  # CPython + most MicroPython builds
-except ImportError:                       # pragma: no cover - MP fallback
-    import uhashlib as hashlib            # older MicroPython alias
+except ImportError:  # pragma: no cover - MP fallback
+    import uhashlib as hashlib  # older MicroPython alias
 
 try:
-    import urandom as _urandom            # MicroPython
+    import urandom as _urandom  # MicroPython
+
     def _default_rand32():
         return _urandom.getrandbits(32) & 0xFFFFFFFF
-except ImportError:                       # pragma: no cover - CPython fallback
+except ImportError:  # pragma: no cover - CPython fallback
     import os as _os
+
     def _default_rand32():
         b = _os.urandom(4)
         return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]
@@ -43,9 +45,9 @@ except ImportError:                       # pragma: no cover - CPython fallback
 # [1] WIRE CONSTANTS  (mirror prop_protocol.h)
 # ---------------------------------------------------------------------------
 MAGIC = 0x504C
-VERSION = 2                 # v2: 32-bit epoch in the top 32 bits of the nonce
+VERSION = 2  # v2: 32-bit epoch in the top 32 bits of the nonce
 HEADER_LENGTH = 20
-MAC_LENGTH = 12             # HMAC-SHA256 truncated to 12 bytes (LoRa airtime)
+MAC_LENGTH = 12  # HMAC-SHA256 truncated to 12 bytes (LoRa airtime)
 MAX_PAYLOAD_LENGTH = 64
 SHA256_BLOCK = 64
 
@@ -66,6 +68,20 @@ REMOTE_LED = 11
 REMOTE_LED_BIT_LED3 = 0x01
 REMOTE_LED_BIT_LED5 = 0x02
 
+VALID_FRAME_TYPES = (
+    PING,
+    STATUS,
+    PREVIEW,
+    FIRE,
+    STOP,
+    ACK,
+    ERROR,
+    PALETTE_SET,
+    ARM,
+    LED_COLOR_SET,
+    REMOTE_LED,
+)
+
 LED_PAYLOAD_LENGTH = 13
 REMOTE_LED_PAYLOAD_LENGTH = 2
 PALETTE_HEADER_LENGTH = 3
@@ -75,10 +91,26 @@ MAX_PALETTE_COLORS = 8
 # Kept here ONLY so the PoC is self-contained + testable. A real deployment would
 # load this from secure storage, exactly like the firmware keeps it out of headers.
 PROTOTYPE_SHARED_KEY = True
-SHARED_KEY = bytes((
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-))
+SHARED_KEY = bytes(
+    (
+        0x00,
+        0x11,
+        0x22,
+        0x33,
+        0x44,
+        0x55,
+        0x66,
+        0x77,
+        0x88,
+        0x99,
+        0xAA,
+        0xBB,
+        0xCC,
+        0xDD,
+        0xEE,
+        0xFF,
+    )
+)
 
 # Default frame addressing (prop_tx_config.h: PROP_KEY_ID / PROP_SOURCE / PROP_DESTINATION)
 DEFAULT_KEY_ID = 1
@@ -121,37 +153,64 @@ def _mac(body, key):
 # ---------------------------------------------------------------------------
 # [3] BIG-ENDIAN PACKING  -- mirror putU16/putU32/putU64
 # ---------------------------------------------------------------------------
+def _uint(v, max_value, name):
+    v = int(v)
+    if v < 0 or v > max_value:
+        raise ValueError(f"{name} must be between 0 and {max_value}")
+    return v
+
+
+def _byte(v, name):
+    return _uint(v, 0xFF, name)
+
+
 def _u16(v):
-    v &= 0xFFFF
+    v = _uint(v, 0xFFFF, "uint16")
     return bytes(((v >> 8) & 0xFF, v & 0xFF))
 
 
 def _u32(v):
-    v &= 0xFFFFFFFF
+    v = _uint(v, 0xFFFFFFFF, "uint32")
     return bytes(((v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF))
 
 
 def _u64(v):
-    v &= 0xFFFFFFFFFFFFFFFF
-    return bytes((
-        (v >> 56) & 0xFF, (v >> 48) & 0xFF, (v >> 40) & 0xFF, (v >> 32) & 0xFF,
-        (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF,
-    ))
+    v = _uint(v, 0xFFFFFFFFFFFFFFFF, "uint64")
+    return bytes(
+        (
+            (v >> 56) & 0xFF,
+            (v >> 48) & 0xFF,
+            (v >> 40) & 0xFF,
+            (v >> 32) & 0xFF,
+            (v >> 24) & 0xFF,
+            (v >> 16) & 0xFF,
+            (v >> 8) & 0xFF,
+            v & 0xFF,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
 # [4] FRAME ENCODE  -- mirror encodeFrame()
 # ---------------------------------------------------------------------------
-def encode_frame(frame_type, key_id, source, destination, sequence, nonce,
-                 payload=b"", key=SHARED_KEY):
+def encode_frame(
+    frame_type, key_id, source, destination, sequence, nonce, payload=b"", key=SHARED_KEY
+):
     """Return the full on-air frame bytes: 20-byte header + payload + 12-byte MAC."""
     payload = bytes(payload)
     if len(payload) > MAX_PAYLOAD_LENGTH:
         raise ValueError("payload too long")
+    frame_type = int(frame_type)
+    if frame_type not in VALID_FRAME_TYPES:
+        raise ValueError("bad frame type")
+    key_id = _byte(key_id, "key id")
+    source = _byte(source, "source")
+    destination = _byte(destination, "destination")
+    sequence = _uint(sequence, 0xFFFFFFFF, "sequence")
+    nonce = _uint(nonce, 0xFFFFFFFFFFFFFFFF, "nonce")
     body = (
         _u16(MAGIC)
-        + bytes((VERSION, frame_type & 0xFF, key_id & 0xFF,
-                 source & 0xFF, destination & 0xFF))
+        + bytes((VERSION, frame_type, key_id, source, destination))
         + _u32(sequence)
         + _u64(nonce)
         + bytes((len(payload),))
@@ -167,14 +226,23 @@ def encode_led_payload(brightness, colors):
     """13 bytes: brightness + 4x RGB. `colors` must be exactly four (r,g,b)."""
     if len(colors) != 4:
         raise ValueError("exactly four LED colors required")
-    out = bytearray((brightness & 0xFF,))
-    for c in colors:
-        out += bytes((c[0] & 0xFF, c[1] & 0xFF, c[2] & 0xFF))
+    out = bytearray((_byte(brightness, "brightness"),))
+    for index, c in enumerate(colors, 1):
+        if len(c) != 3:
+            raise ValueError(f"LED {index} color must be RGB")
+        out += bytes(
+            (
+                _byte(c[0], "LED color"),
+                _byte(c[1], "LED color"),
+                _byte(c[2], "LED color"),
+            )
+        )
     return bytes(out)
 
 
 def encode_remote_led(mask):
     """2 bytes: [mask (LED3/LED5 bits only), reserved 0]. Reserved bits stripped."""
+    mask = _byte(mask, "remote LED mask")
     return bytes((mask & (REMOTE_LED_BIT_LED3 | REMOTE_LED_BIT_LED5), 0x00))
 
 
@@ -183,9 +251,17 @@ def encode_palette_payload(palette_rev, fade, colors):
     n = len(colors)
     if n < 1 or n > MAX_PALETTE_COLORS:
         raise ValueError("palette must have 1..8 colors")
-    out = bytearray((palette_rev & 0xFF, 1 if fade else 0, n))
-    for c in colors:
-        out += bytes((c[0] & 0xFF, c[1] & 0xFF, c[2] & 0xFF))
+    out = bytearray((_byte(palette_rev, "palette rev"), 1 if fade else 0, n))
+    for index, c in enumerate(colors, 1):
+        if len(c) != 3:
+            raise ValueError(f"palette color {index} must be RGB")
+        out += bytes(
+            (
+                _byte(c[0], "palette color"),
+                _byte(c[1], "palette color"),
+                _byte(c[2], "palette color"),
+            )
+        )
     return bytes(out)
 
 
@@ -218,9 +294,16 @@ class PropSender:
     (app_prop_tx.cpp make_session_nonce + the per-boot RANDOM epoch).
     """
 
-    def __init__(self, key=SHARED_KEY, key_id=DEFAULT_KEY_ID,
-                 source=DEFAULT_SOURCE, destination=DEFAULT_DESTINATION,
-                 sequence=1, epoch=None, rand32=_default_rand32):
+    def __init__(
+        self,
+        key=SHARED_KEY,
+        key_id=DEFAULT_KEY_ID,
+        source=DEFAULT_SOURCE,
+        destination=DEFAULT_DESTINATION,
+        sequence=1,
+        epoch=None,
+        rand32=_default_rand32,
+    ):
         self.key = bytes(key)
         self.key_id = key_id
         self.source = source
@@ -228,7 +311,7 @@ class PropSender:
         self.sequence = sequence
         self._rand32 = rand32
         if epoch is None:
-            epoch = rand32() or 1     # nonzero: RX treats 0 as "no session yet"
+            epoch = rand32() or 1  # nonzero: RX treats 0 as "no session yet"
         self.epoch = epoch & 0xFFFFFFFF
 
     def _next_nonce(self):
@@ -238,9 +321,16 @@ class PropSender:
         """Encode one frame, consuming a sequence number + a fresh nonce."""
         seq = self.sequence
         self.sequence = (self.sequence + 1) & 0xFFFFFFFF
-        return encode_frame(frame_type, self.key_id, self.source,
-                            self.destination, seq, self._next_nonce(),
-                            payload, self.key)
+        return encode_frame(
+            frame_type,
+            self.key_id,
+            self.source,
+            self.destination,
+            seq,
+            self._next_nonce(),
+            payload,
+            self.key,
+        )
 
     # Convenience builders returning a ready-to-write UART line ------------
     def preview_line(self, colors, brightness=LED_PAYLOAD_BRIGHTNESS):

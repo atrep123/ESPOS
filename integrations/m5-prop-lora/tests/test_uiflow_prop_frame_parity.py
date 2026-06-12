@@ -28,9 +28,17 @@ KEY = bytes.fromhex("00112233445566778899aabbccddeeff")
 KEYS = {1: KEY}
 
 ALL_TYPES = [
-    prop_frame.PING, prop_frame.STATUS, prop_frame.PREVIEW, prop_frame.FIRE,
-    prop_frame.STOP, prop_frame.ACK, prop_frame.ERROR, prop_frame.PALETTE_SET,
-    prop_frame.ARM, prop_frame.LED_COLOR_SET, prop_frame.REMOTE_LED,
+    prop_frame.PING,
+    prop_frame.STATUS,
+    prop_frame.PREVIEW,
+    prop_frame.FIRE,
+    prop_frame.STOP,
+    prop_frame.ACK,
+    prop_frame.ERROR,
+    prop_frame.PALETTE_SET,
+    prop_frame.ARM,
+    prop_frame.LED_COLOR_SET,
+    prop_frame.REMOTE_LED,
 ]
 
 LED_COLORS = [(0, 0, 0), (1, 2, 3), (254, 255, 128), (17, 34, 51)]
@@ -41,7 +49,9 @@ def _vectors():
     led = proto.encode_led_payload(0xFF, LED_COLORS)
     remote = proto.encode_remote_led(prop_frame.REMOTE_LED_BIT_LED3)
     pal1 = proto.encode_palette_payload(7, True, [(10, 20, 30)])
-    pal8 = proto.encode_palette_payload(255, False, [(i, (i * 2) & 0xFF, (i * 3) & 0xFF) for i in range(8)])
+    pal8 = proto.encode_palette_payload(
+        255, False, [(i, (i * 2) & 0xFF, (i * 3) & 0xFF) for i in range(8)]
+    )
     vecs = []
     # every frame type, empty payload, mid-range addressing
     for t in ALL_TYPES:
@@ -62,8 +72,13 @@ def _vectors():
 def _ref(v):
     t, key_id, src, dst, seq, nonce, payload = v
     frame = proto.PropFrame(
-        frame_type=proto.FrameType(t), key_id=key_id, source=src,
-        destination=dst, sequence=seq, nonce=nonce, payload=payload,
+        frame_type=proto.FrameType(t),
+        key_id=key_id,
+        source=src,
+        destination=dst,
+        sequence=seq,
+        nonce=nonce,
+        payload=payload,
     )
     return proto.encode_frame(frame, KEYS)
 
@@ -98,10 +113,49 @@ class FrameParity(unittest.TestCase):
         with self.assertRaises(ValueError):
             prop_frame.encode_frame(prop_frame.STATUS, 1, 0x11, 0x22, 1, 1, bytes(65), KEY)
 
+    def test_encode_frame_rejects_out_of_range_header_fields(self):
+        cases = [
+            ("frame_type", dict(frame_type=0)),
+            ("frame_type", dict(frame_type=255)),
+            ("key_id", dict(key_id=-1)),
+            ("key_id", dict(key_id=256)),
+            ("source", dict(source=-1)),
+            ("source", dict(source=256)),
+            ("destination", dict(destination=-1)),
+            ("destination", dict(destination=256)),
+            ("sequence", dict(sequence=-1)),
+            ("sequence", dict(sequence=0x1_0000_0000)),
+            ("nonce", dict(nonce=-1)),
+            ("nonce", dict(nonce=0x1_0000_0000_0000_0000)),
+        ]
+        base = {
+            "frame_type": prop_frame.PING,
+            "key_id": 1,
+            "source": 0x11,
+            "destination": 0x22,
+            "sequence": 1,
+            "nonce": 1,
+            "payload": b"",
+            "key": KEY,
+        }
+        for name, override in cases:
+            with self.subTest(name=name, override=override):
+                values = dict(base, **override)
+                with self.assertRaises(ValueError):
+                    prop_frame.encode_frame(**values)
+
 
 class HmacParity(unittest.TestCase):
     def test_handrolled_hmac_matches_stdlib(self):
-        for msg in [b"", b"\x00", b"abc", bytes(range(64)), bytes(range(200)), b"x" * 64, b"y" * 65]:
+        for msg in [
+            b"",
+            b"\x00",
+            b"abc",
+            bytes(range(64)),
+            bytes(range(200)),
+            b"x" * 64,
+            b"y" * 65,
+        ]:
             with self.subTest(n=len(msg)):
                 self.assertEqual(
                     prop_frame.hmac_sha256(KEY, msg),
@@ -122,10 +176,29 @@ class PayloadParity(unittest.TestCase):
             proto.encode_led_payload(0xFF, LED_COLORS),
         )
 
+    def test_led_payload_rejects_bad_byte_ranges_and_shapes(self):
+        bad_cases = [
+            dict(brightness=-1, colors=LED_COLORS),
+            dict(brightness=256, colors=LED_COLORS),
+            dict(brightness=0, colors=[(1, 2, 3), (4, 5, 6), (7, 8, 9), (10, 11)]),
+            dict(brightness=0, colors=[(1, 2, 3), (4, 5, 6), (7, 8, 9), (-1, 0, 0)]),
+            dict(brightness=0, colors=[(1, 2, 3), (4, 5, 6), (7, 8, 9), (256, 0, 0)]),
+        ]
+        for case in bad_cases:
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    prop_frame.encode_led_payload(**case)
+
     def test_remote_led_strips_reserved_bits(self):
         for m in [0x00, 0x01, 0x02, 0x03, 0x04, 0x80, 0xFF]:
             with self.subTest(mask=m):
                 self.assertEqual(prop_frame.encode_remote_led(m), proto.encode_remote_led(m))
+
+    def test_remote_led_rejects_out_of_byte_range_mask(self):
+        for mask in (-1, 256):
+            with self.subTest(mask=mask):
+                with self.assertRaises(ValueError):
+                    prop_frame.encode_remote_led(mask)
 
     def test_palette_payload(self):
         for n in (1, 2, 8):
@@ -137,6 +210,19 @@ class PayloadParity(unittest.TestCase):
                             prop_frame.encode_palette_payload(rev, fade, colors),
                             proto.encode_palette_payload(rev, fade, colors),
                         )
+
+    def test_palette_payload_rejects_bad_byte_ranges_and_shapes(self):
+        bad_cases = [
+            dict(palette_rev=-1, fade=False, colors=[(1, 2, 3)]),
+            dict(palette_rev=256, fade=False, colors=[(1, 2, 3)]),
+            dict(palette_rev=1, fade=False, colors=[(1, 2)]),
+            dict(palette_rev=1, fade=False, colors=[(-1, 2, 3)]),
+            dict(palette_rev=1, fade=False, colors=[(256, 2, 3)]),
+        ]
+        for case in bad_cases:
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    prop_frame.encode_palette_payload(**case)
 
 
 class HexAndLineParity(unittest.TestCase):
@@ -151,8 +237,9 @@ class HexAndLineParity(unittest.TestCase):
         self.assertEqual(prop_frame.send_line(frame), "SEND " + expect_hex + "\n")
         # round-trip the hex straight off the wire line back through the verifier
         hex_on_wire = prop_frame.ff_line(frame)[3:-1]
-        self.assertEqual(proto.decode_frame(bytes.fromhex(hex_on_wire), KEYS).frame_type,
-                         proto.FrameType.PREVIEW)
+        self.assertEqual(
+            proto.decode_frame(bytes.fromhex(hex_on_wire), KEYS).frame_type, proto.FrameType.PREVIEW
+        )
 
 
 class SenderParity(unittest.TestCase):
@@ -167,8 +254,9 @@ class SenderParity(unittest.TestCase):
         return _next
 
     def test_nonce_composition_and_sequence(self):
-        s = prop_frame.PropSender(epoch=0xABCD0001, sequence=5,
-                                  rand32=self._rng([0x11111111, 0x22222222]))
+        s = prop_frame.PropSender(
+            epoch=0xABCD0001, sequence=5, rand32=self._rng([0x11111111, 0x22222222])
+        )
         dec = proto.decode_frame(s.encode(prop_frame.STOP), KEYS)
         self.assertEqual(dec.sequence, 5)
         self.assertEqual(dec.nonce, (0xABCD0001 << 32) | 0x11111111)
@@ -184,8 +272,7 @@ class SenderParity(unittest.TestCase):
 
     def test_preview_line_decodes_to_real_colors(self):
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
-        s = prop_frame.PropSender(epoch=0x00000001, sequence=1,
-                                  rand32=self._rng([0xDEADBEEF]))
+        s = prop_frame.PropSender(epoch=0x00000001, sequence=1, rand32=self._rng([0xDEADBEEF]))
         line = s.preview_line(colors)
         self.assertTrue(line.startswith("FF ") and line.endswith("\n"))
         dec = proto.decode_frame(bytes.fromhex(line[3:-1]), KEYS)

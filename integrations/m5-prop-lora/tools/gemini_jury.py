@@ -50,22 +50,32 @@ RUBRIC = (
 
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_ENDPOINT_PREFIX = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 
 def _load_api_key() -> str:
     return load_api_key(ROOT)
 
 
-def _endpoint(api_key: str) -> str:
-    return (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent?key={api_key}"
-    )
+def _endpoint(api_key: str) -> dict[str, object]:
+    return {
+        "url": f"{GEMINI_ENDPOINT_PREFIX}{GEMINI_MODEL}:generateContent",
+        "headers": {"x-goog-api-key": api_key},
+    }
 
 
-def run_one(img: Path, device: str, idx: int, endpoint: str) -> dict:
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be >= 1")
+    return parsed
+
+
+def run_one(img: Path, device: str, idx: int, endpoint: dict[str, object]) -> dict:
     prompt = RUBRIC.format(device=device)
     try:
+        headers = {"Content-Type": "application/json"}
+        headers.update(endpoint.get("headers", {}))
         b64 = base64.b64encode(img.read_bytes()).decode("ascii")
         body = json.dumps(
             {
@@ -84,9 +94,7 @@ def run_one(img: Path, device: str, idx: int, endpoint: str) -> dict:
                 },
             }
         ).encode("utf-8")
-        req = urllib.request.Request(
-            endpoint, data=body, headers={"Content-Type": "application/json"}
-        )
+        req = urllib.request.Request(str(endpoint["url"]), data=body, headers=headers)
         resp = urllib.request.urlopen(req, timeout=120)
         data = json.loads(resp.read())
         out = (
@@ -125,14 +133,19 @@ def run_one(img: Path, device: str, idx: int, endpoint: str) -> dict:
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True, help="dir of PNGs (relative to repo root)")
     ap.add_argument("--device", required=True, help="device label for the rubric")
-    ap.add_argument("--per", type=int, default=3, help="votes per image")
-    ap.add_argument("--workers", type=int, default=5, help="max concurrent Gemini calls")
+    ap.add_argument("--per", type=_positive_int, default=3, help="votes per image")
+    ap.add_argument("--workers", type=_positive_int, default=5, help="max concurrent Gemini calls")
     ap.add_argument("--exclude", default="contact", help="substring of filenames to skip")
-    args = ap.parse_args()
+    ap.add_argument(
+        "--allow-errors",
+        action="store_true",
+        help="exit 0 even when one or more Gemini votes fail or cannot be parsed",
+    )
+    args = ap.parse_args(argv)
 
     img_dir = (ROOT / args.dir).resolve()
     pngs = sorted(p for p in img_dir.glob("*.png") if args.exclude not in p.stem)
@@ -166,6 +179,13 @@ def main() -> int:
         by_img.setdefault(r["img"], []).append(r)
 
     overall = []
+    error_votes = [
+        r
+        for r in results
+        if r.get("score") is None
+        or r.get("safe") is None
+        or str(r.get("issue", "")).startswith("ERROR:")
+    ]
     for name in sorted(by_img):
         votes = by_img[name]
         scores = [v["score"] for v in votes if v["score"] is not None]
@@ -183,6 +203,14 @@ def main() -> int:
 
     grand = sum(overall) / len(overall) if overall else float("nan")
     out_lines.insert(3, f"**Overall mean score: {grand:.1f}/10**\n")
+    if error_votes:
+        out_lines.append("## Errors")
+        out_lines.append("")
+        for vote in sorted(error_votes, key=lambda item: (item["img"], item["idx"])):
+            out_lines.append(
+                f"- {vote['img']} vote {vote['idx']}: {vote.get('issue', '(unparsed)')}"
+            )
+        out_lines.append("")
 
     out_dir = ROOT / "build" / "reviews"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -190,7 +218,7 @@ def main() -> int:
     out_path.write_text("\n".join(out_lines), encoding="utf-8")
     print("\n".join(out_lines))
     print(f"\n[saved to {out_path}]", file=sys.stderr)
-    return 0
+    return 0 if args.allow_errors or not error_votes else 1
 
 
 if __name__ == "__main__":

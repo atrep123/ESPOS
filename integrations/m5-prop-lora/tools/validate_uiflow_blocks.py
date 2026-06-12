@@ -150,7 +150,9 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
 
     for library in (
         repo / "uiflow" / "dial" / "prop_frame.py",
+        repo / "uiflow" / "dial" / "prop_state.py",
         repo / "uiflow" / "dial" / "prop_ui.py",
+        repo / "uiflow" / "dial" / "blocks" / "alpha2" / "PropTx.py",
     ):
         if not library.exists():
             errors.append(f"missing upload library: {_rel(repo, library)}")
@@ -330,7 +332,10 @@ def main(argv: list[str] | None = None) -> int:
         f"({report.alpha2_artifact_method_count} methods, "
         f"{report.alpha2_artifact_block_count} blocks)"
     )
-    print("Upload libraries: uiflow/dial/prop_frame.py, uiflow/dial/prop_ui.py")
+    print(
+        "Upload libraries: uiflow/dial/prop_frame.py, uiflow/dial/prop_state.py, "
+        "uiflow/dial/prop_ui.py, uiflow/dial/blocks/alpha2/PropTx.py"
+    )
     print("Manual import: copy each code/<name>.py template into M5Stack Block Designer")
     return 0
 

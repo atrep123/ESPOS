@@ -67,8 +67,8 @@ def test_offline_deploy_dry_run_prints_mpremote_upload_commands():
 
     assert result.returncode == 0, result.stderr
     assert "DRY RUN" in result.stdout
-    assert "python -m mpremote connect COM6 fs mkdir /flash" in result.stdout
-    assert "python -m mpremote connect COM6 fs cp" in result.stdout
+    assert f"{sys.executable} -m mpremote connect COM6 fs mkdir /flash" in result.stdout
+    assert f"{sys.executable} -m mpremote connect COM6 fs cp" in result.stdout
     assert ":/flash/prop_frame.py" in result.stdout
     assert ":/flash/prop_state.py" in result.stdout
     assert ":/flash/prop_ui.py" in result.stdout
@@ -223,14 +223,44 @@ def test_create_bundle_preserves_existing_output_when_source_preflight_fails(tmp
         (tool.BlockArtifact("uiflow/dial/blocks/dist/does-not-exist.m5b2", "blocks/missing.m5b2"),),
     )
 
-    try:
+    with pytest.raises(ValueError, match="refusing to replace existing non-bundle output"):
         tool.create_bundle(out)
-    except FileNotFoundError as exc:
-        assert "does-not-exist.m5b2" in str(exc)
-    else:
-        raise AssertionError("create_bundle unexpectedly succeeded")
 
     assert marker.read_text(encoding="utf-8") == "old bundle"
+
+
+def test_create_bundle_refuses_existing_non_bundle_output(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "important-dir"
+    out.mkdir()
+    marker = out / "keep.txt"
+    marker.write_text("do not delete", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="refusing to replace existing non-bundle output"):
+        tool.create_bundle(out)
+
+    assert marker.read_text(encoding="utf-8") == "do not delete"
+
+
+def test_create_bundle_refuses_repo_source_subdirectory():
+    tool = load_offline_tool()
+
+    with pytest.raises(ValueError, match="refusing to write bundle inside repository source tree"):
+        tool.create_bundle(ROOT / "docs" / "offline")
+
+
+def test_create_bundle_can_replace_previous_verified_bundle(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+
+    tool.create_bundle(out)
+    stale = out / "stale.txt"
+    stale.write_text("old", encoding="utf-8")
+
+    tool.create_bundle(out)
+
+    assert not stale.exists()
+    assert (out / "offline_manifest.json").exists()
 
 
 def test_offline_deploy_dry_run_uploads_from_bundle_paths(tmp_path):
@@ -319,6 +349,40 @@ def test_build_deploy_commands_rejects_device_path_mismatch(tmp_path):
         tool.build_deploy_commands("COM6", bundle=out)
 
 
+def test_offline_verify_rejects_source_mismatch(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"][0]["source"] = "uiflow/dial/main.py"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = tool.verify_bundle(out)
+
+    assert "source mismatch: device/prop_frame.py" in errors
+
+
+def test_offline_verify_rejects_unmanifested_bundle_file(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    (out / "device" / "extra.py").write_text("# extra\n", encoding="utf-8")
+
+    errors = tool.verify_bundle(out)
+
+    assert "unexpected bundle file: device/extra.py" in errors
+
+
+def test_build_deploy_commands_rejects_bundle_target_dir_override(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+
+    with pytest.raises(ValueError, match="target-dir mismatch"):
+        tool.build_deploy_commands("COM6", target_dir="/sd", bundle=out)
+
+
 def test_build_deploy_commands_rejects_partial_manifest(tmp_path):
     tool = load_offline_tool()
     out = tmp_path / "offline"
@@ -373,6 +437,9 @@ def test_uiflow_readme_documents_no_internet_deploy_path():
         "GEMINI_API_KEY",
         "GEMINI_API_KEY_FILE",
         "~/.gemini_api_key",
+        "Gemini code/workflow review gate",
+        "python tools/gemini_code_review.py --dry-run --out build/reviews/gemini_code_review_prompt.md",
+        "python tools/gemini_code_review.py --out build/reviews/gemini_code_review.md",
         "python tools/gemini_jury.py --dir build/preview",
         "mpremote",
     ]:

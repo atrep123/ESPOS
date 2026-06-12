@@ -71,7 +71,9 @@ Manual import source of truth:
 - Offline Alpha-2 import artefact: `uiflow/dial/blocks/dist/PropTx.m5b2`
 - Alpha-2 artefact builder: `tools/build_uiflow_alpha2_artifact.py`
 - Generated-code smoke example: `uiflow/dial/blocks/examples/prop_tx_smoke.py`
-- Device libraries to upload: `uiflow/dial/prop_frame.py`, `uiflow/dial/prop_ui.py`
+- Device libraries to upload: `uiflow/dial/prop_frame.py`, `uiflow/dial/prop_state.py`,
+  `uiflow/dial/prop_ui.py`, and the Alpha-2 runtime wrapper
+  `uiflow/dial/blocks/alpha2/PropTx.py` as `/flash/PropTx.py`.
 
 ## Alpha-2 .m5b2 path (current Block Designer)
 
@@ -135,8 +137,9 @@ python -m uiflow_custom_block_generator uiflow/dial/blocks/prop_tx.json
 ```
 
 ## Install on the Dial
-1. Upload **`prop_frame.py`** + **`prop_ui.py`** to the device `/flash` (UIFlow2 file
-   manager / `mpremote` / `ampy`). The blocks `import` them.
+1. Upload **`prop_frame.py`**, **`prop_state.py`**, **`prop_ui.py`**, and
+   **`PropTx.py`** to the device `/flash` (UIFlow2 file manager / `mpremote` /
+   `ampy`). The blocks import `PropTx`, which imports the helper modules.
 2. In the UIFlow2 web IDE: **Custom → Open** → `PropTx.m5b2` for the current Alpha-2 flow.
    The blocks appear under the **PropTx** category.
 
