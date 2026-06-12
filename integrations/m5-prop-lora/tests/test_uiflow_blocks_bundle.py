@@ -117,10 +117,11 @@ def test_manual_reply_template_uses_non_throwing_decode():
     assert ".decode()" not in source
 
 
-def test_manual_send_fire_template_requires_sleep_ms():
+def test_manual_send_fire_template_requires_delay_function():
     source = (BLOCKS / "code" / "send_fire.py").read_text(encoding="utf-8")
 
-    assert "time.sleep_ms is required for Prop FIRE burst timing" in source
+    assert "time.sleep_ms or time.sleep is required for Prop FIRE burst timing" in source
+    assert "time.sleep(prop_frame.FIRE_BURST_GAP_MS / 1000)" in source
     assert "raise RuntimeError" in source
 
 
@@ -182,6 +183,9 @@ def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
         "python tools/validate_uiflow_blocks.py",
         "Validated manual bundle",
         "Alpha-2 .m5b2",
+        "UIFlow2 Block Designer Alpha-2",
+        "jscode_sha256",
+        "toolbox_sha256",
         "uiflow/dial/blocks/alpha2/PropTx.py",
         "uiflow/dial/blocks/dist/PropTx.m5b2",
         "tools/build_uiflow_alpha2_artifact.py",
@@ -509,7 +513,41 @@ def test_alpha2_prop_tx_fire_sleeps_between_burst_frames(monkeypatch):
     ]
 
 
-def test_alpha2_prop_tx_fire_requires_sleep_ms(monkeypatch):
+def test_alpha2_prop_tx_fire_falls_back_to_time_sleep(monkeypatch):
+    class FakeUART:
+        instances = []
+
+        def __init__(self, *args, **kwargs):
+            self.writes = []
+            FakeUART.instances.append(self)
+
+        def write(self, data):
+            self.writes.append(data)
+            return len(data)
+
+    sleep_calls = []
+
+    monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
+    monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
+    monkeypatch.setitem(sys.modules, "time", types.SimpleNamespace(sleep=sleep_calls.append))
+
+    spec = importlib.util.spec_from_file_location(
+        "alpha2_prop_tx_fire_sleep_fallback", ALPHA2_SOURCE
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    tx = module.PropTx(13, 15)
+    tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
+
+    assert sleep_calls == [
+        tx._prop_frame.FIRE_BURST_GAP_MS / 1000,
+        tx._prop_frame.FIRE_BURST_GAP_MS / 1000,
+    ]
+
+
+def test_alpha2_prop_tx_fire_requires_delay_function(monkeypatch):
     class FakeUART:
         instances = []
 
@@ -531,7 +569,7 @@ def test_alpha2_prop_tx_fire_requires_sleep_ms(monkeypatch):
     spec.loader.exec_module(module)
 
     tx = module.PropTx(13, 15)
-    with pytest.raises(RuntimeError, match="time.sleep_ms is required"):
+    with pytest.raises(RuntimeError, match="time.sleep_ms or time.sleep is required"):
         tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
 
 

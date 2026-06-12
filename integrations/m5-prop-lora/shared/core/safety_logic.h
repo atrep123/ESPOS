@@ -135,23 +135,62 @@ struct FireAuthority {
     bool armed = false;            // set ONLY by an Arm frame (never by Preview)
     std::uint32_t armStartMs = 0;  // ms timestamp of the latching Arm; basis for the TTL
     std::uint32_t armExpiryMs = 0; // absolute ms deadline (= armStartMs + ARM_TTL_MS)
+    std::uint32_t armEpoch = 0;    // epoch of the ARM currently authorising one FIRE
+    std::uint32_t armSeq = 0;      // FIRE must post-date this ARM sequence
     bool lockout = false;          // latched by STOP until the next deliberate Arm
+    std::uint32_t lockoutSeq = 0;  // sequence of the STOP fence; lower replay cannot clear it
 
-    // Arm frame: arm with a fresh TTL and clear any prior STOP latch (~1255-1257).
-    void onArm(std::uint32_t nowMs)
+    void clearArm()
+    {
+        armed = false;
+        armExpiryMs = 0;
+        armEpoch = 0;
+        armSeq = 0;
+    }
+
+    void acceptArm(std::uint32_t nowMs, std::uint32_t sequence, std::uint32_t epoch)
     {
         armed = true;
         armStartMs = nowMs;
         armExpiryMs = nowMs + ARM_TTL_MS;
+        armEpoch = epoch;
+        armSeq = sequence;
         lockout = false;
+    }
+
+    // Legacy pure state helper: arm with a fresh TTL and clear any prior STOP latch.
+    void onArm(std::uint32_t nowMs)
+    {
+        acceptArm(nowMs, 0, 0);
+    }
+
+    // Frame-aware ARM gate: a STOP lockout may only be cleared by an ARM whose
+    // sequence post-dates the STOP fence, regardless of epoch.
+    bool onArmFrame(std::uint32_t nowMs, std::uint32_t sequence, std::uint32_t epoch)
+    {
+        if (lockout && sequence <= lockoutSeq) {
+            return false;
+        }
+        acceptArm(nowMs, sequence, epoch);
+        return true;
     }
 
     // STOP frame: disarm and LATCH a lockout so a delayed/stray Fire afterwards
     // cannot re-fire until a fresh Arm (~1304-1306).
     void onStop()
     {
-        armed = false;
-        armExpiryMs = 0;
+        clearArm();
+        lockout = true;
+    }
+
+    // Frame-aware STOP records a monotonic sequence fence. Epoch changes must not
+    // lower this fence because epochs are random, not freshness proof.
+    void onStopFrame(std::uint32_t sequence)
+    {
+        clearArm();
+        if (!lockout || sequence > lockoutSeq) {
+            lockoutSeq = sequence;
+        }
         lockout = true;
     }
 
@@ -159,7 +198,7 @@ struct FireAuthority {
     // when a Fire is accepted so the next Fire needs a new Arm.
     void onFireConsumed()
     {
-        armed = false;
+        clearArm();
     }
 
     // Bounded elapsed-since-arm so the predicate is self-sufficient even if serviceTtl is
@@ -176,7 +215,7 @@ struct FireAuthority {
     void serviceTtl(std::uint32_t nowMs)
     {
         if (armed && ttlExpired(nowMs)) {
-            armed = false;
+            clearArm();
         }
     }
 
@@ -186,6 +225,13 @@ struct FireAuthority {
     bool fireAllowed(std::uint32_t nowMs) const
     {
         return armed && !lockout && !ttlExpired(nowMs);
+    }
+
+    bool fireAllowedForFrame(std::uint32_t nowMs, std::uint32_t sequence,
+                             std::uint32_t epoch) const
+    {
+        return fireAllowed(nowMs) && epoch == armEpoch && sequence > armSeq &&
+               sequence > lockoutSeq;
     }
 };
 

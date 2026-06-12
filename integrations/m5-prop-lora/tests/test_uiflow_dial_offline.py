@@ -444,8 +444,19 @@ def test_build_deploy_commands_rejects_bundle_target_dir_override(tmp_path):
     out = tmp_path / "offline"
     tool.create_bundle(out)
 
-    with pytest.raises(ValueError, match="target-dir mismatch"):
+    with pytest.raises(ValueError, match="invalid target-dir"):
         tool.build_deploy_commands("COM6", target_dir="/sd", bundle=out)
+
+
+@pytest.mark.parametrize(
+    "target_dir",
+    ["flash", "/", "../flash", "/flash//nested", "/flash/../boot", r"\flash", "/flash:0"],
+)
+def test_build_deploy_commands_rejects_unsafe_direct_target_dir(target_dir):
+    tool = load_offline_tool()
+
+    with pytest.raises(ValueError, match="invalid target-dir"):
+        tool.build_deploy_commands("COM6", target_dir=target_dir)
 
 
 def test_offline_verify_rejects_bundle_target_dir_mismatch(tmp_path):
@@ -538,6 +549,10 @@ def test_uiflow_readme_documents_no_internet_deploy_path():
 
     for needle in [
         "Offline runtime deploy",
+        "Runtime-only offline path",
+        "Block Designer / canvas path",
+        "Choose this when you want the Dial to run without opening UIFlow2",
+        "Choose this when you want visual block editing",
         "python tools/uiflow_dial_offline.py bundle",
         "python tools/uiflow_dial_offline.py verify --bundle build/uiflow_dial_offline",
         "python tools/uiflow_dial_offline.py deploy --port COM6 --bundle build/uiflow_dial_offline",
@@ -547,6 +562,8 @@ def test_uiflow_readme_documents_no_internet_deploy_path():
         "device/PropTx.py",
         "device/prop_state.py",
         "UIFlow2 canvas still needs UIFlow2 Web",
+        "Dry smoke is not a production release",
+        "The production-release gate stays closed while the prototype HMAC key is compiled in",
         "GEMINI_API_KEY",
         "GEMINI_API_KEY_FILE",
         "~/.gemini_api_key",
@@ -557,3 +574,24 @@ def test_uiflow_readme_documents_no_internet_deploy_path():
         "mpremote",
     ]:
         assert needle in readme
+
+
+def test_build_readme_separates_dry_smoke_from_release_acceptance():
+    build = (ROOT / "BUILD.md").read_text(encoding="utf-8")
+
+    for needle in [
+        "Acceptance levels",
+        "Dry smoke",
+        "Production release",
+        "prototype HMAC key",
+        "PROP_ALLOW_PROTOTYPE_SHARED_KEY=0",
+        "PROP_TX_ALLOW_SELFTEST_FIRE=0",
+        "SELFTEST_FIRE=0",
+        "Do not connect live pyro or actuator outputs",
+        "reply must show ARMED",
+        "STOP must clear output within one operator-visible cycle",
+        "COM6 is only an example",
+        "uiflow/dial/README.md",
+        "UIFlow2 Dial offline workflow",
+    ]:
+        assert needle in build

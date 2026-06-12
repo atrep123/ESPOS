@@ -1,5 +1,7 @@
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import unittest
 
 
@@ -126,7 +128,7 @@ class ProjectSourceTests(unittest.TestCase):
                 "static_cast<uart_port_t>(prop_tx_config::PROP_UART_PORT_NUM)",
                 "static_cast<gpio_num_t>(prop_tx_config::PROP_UART_TX_GPIO)",
                 "selected_field",
-                "FIELD_LED",   # was FIELD_BRIGHTNESS (removed); FIELD_LED/HUE/MODE are the live edit fields
+                "FIELD_LED",  # was FIELD_BRIGHTNESS (removed); FIELD_LED/HUE/MODE are the live edit fields
                 "FIELD_HUE",
                 "FrameType::Ack",
                 "_poll_uart",
@@ -153,7 +155,13 @@ class ProjectSourceTests(unittest.TestCase):
     def test_dial_launcher_opens_prop_tx_as_first_demo_bubble(self):
         self.assert_contains_all(
             "firmware/dial-tx/main/apps/launcher/launcher_render_callback.hpp",
-            ['"PROP", "TX"', "ICON_NUM", "icon_color_list", "icon_pic_list", "image_data_icon_prop_tx"],
+            [
+                '"PROP", "TX"',
+                "ICON_NUM",
+                "icon_color_list",
+                "icon_pic_list",
+                "image_data_icon_prop_tx",
+            ],
         )
         self.assert_contains_all(
             "firmware/dial-tx/main/apps/launcher/launcher_icons/launcher_icons.h",
@@ -168,7 +176,7 @@ class ProjectSourceTests(unittest.TestCase):
         self.assert_contains_all(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h",
             [
-                'gui/gui_prop_tx.h',
+                "gui/gui_prop_tx.h",
                 "GUI_PropTx _gui",
                 "GUI_Base* getGui() override { return &_gui; }",
             ],
@@ -243,12 +251,16 @@ class ProjectSourceTests(unittest.TestCase):
 
     def led_dot_centres(self, gui_text):
         import math
+
         r = self.constant(gui_text, "LED_R")
-        return [(120 + r * math.cos(math.radians(a)), 120 + r * math.sin(math.radians(a)))
-                for a in self.LED_ARC_ANGLES]
+        return [
+            (120 + r * math.cos(math.radians(a)), 120 + r * math.sin(math.radians(a)))
+            for a in self.LED_ARC_ANGLES
+        ]
 
     def test_dial_prop_tx_round_layout_fits_inside_the_dial(self):
         import math
+
         text = self.read("firmware/dial-tx/main/apps/app_prop_tx/gui/gui_prop_tx.cpp")
         ring_out = self.constant(text, "RING_OUT")
         orb_cy = self.constant(text, "ORB_CY")
@@ -303,9 +315,9 @@ class ProjectSourceTests(unittest.TestCase):
                 "set_color_from_hue",
                 "hue_from_rgb",
                 "_sync_colors_from_hues",
-                "nvs_get_blob(nvs, \"hueDeg\"",
-                "nvs_set_blob(nvs, \"hueDeg\"",
-                "nvs_get_blob(nvs, \"hues\"",
+                'nvs_get_blob(nvs, "hueDeg"',
+                'nvs_set_blob(nvs, "hueDeg"',
+                'nvs_get_blob(nvs, "hues"',
                 "FIELD_HUE",
                 '"BARVA"',
                 '"LED %u BARVA"',
@@ -324,7 +336,7 @@ class ProjectSourceTests(unittest.TestCase):
                 'return "B"',
                 "hue_degrees_from_legacy_percent",
                 "looks_like_legacy_percent",
-                "nvs_set_blob(nvs, \"hues\"",
+                'nvs_set_blob(nvs, "hues"',
             ],
         )
 
@@ -335,7 +347,7 @@ class ProjectSourceTests(unittest.TestCase):
                 "uint32_t state_color(const View_t& view)",
                 # the armed/ERR danger branch now also folds in FAIL/MISSING/BAD ACK/etc,
                 # so the condition continues on the same line with a trailing `||`.
-                "if (view.armed || strncmp(s, \"ERR \", 4) == 0 ||",
+                'if (view.armed || strncmp(s, "ERR ", 4) == 0 ||',
                 "return P_RED;",
                 "view.awaiting_ack",
                 'strcmp(s, "ODESILAM") == 0',
@@ -505,7 +517,9 @@ class ProjectSourceTests(unittest.TestCase):
         )
         self.assertEqual(len(header_values), 42 * 42)
 
-        img = Image.open(ROOT / "firmware/dial-tx/main/apps/launcher/launcher_icons/icon_prop_tx.png").convert("RGBA")
+        img = Image.open(
+            ROOT / "firmware/dial-tx/main/apps/launcher/launcher_icons/icon_prop_tx.png"
+        ).convert("RGBA")
 
         def rgb565(pixel):
             red, green, blue, alpha = pixel
@@ -579,8 +593,11 @@ class ProjectSourceTests(unittest.TestCase):
 
     def test_dial_prop_tx_touch_zones_match_rendered_geometry(self):
         gui = self.read("firmware/dial-tx/main/apps/app_prop_tx/gui/gui_prop_tx.cpp")
-        app = (self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
-               + "\n" + self.read("firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h"))
+        app = (
+            self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
+            + "\n"
+            + self.read("firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h")
+        )
 
         action_top = self.constant(app, "PROP_TX_ACTION_TOUCH_TOP")
         action_bottom = self.constant(app, "PROP_TX_ACTION_TOUCH_BOTTOM")
@@ -606,8 +623,11 @@ class ProjectSourceTests(unittest.TestCase):
 
     def test_dial_prop_tx_led_arc_channel_mapping_spans_the_dots(self):
         gui = self.read("firmware/dial-tx/main/apps/app_prop_tx/gui/gui_prop_tx.cpp")
-        app = (self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
-               + "\n" + self.read("firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h"))
+        app = (
+            self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
+            + "\n"
+            + self.read("firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h")
+        )
         start = self.constant(app, "PROP_TX_LED_START_X")
         spacing = self.constant(app, "PROP_TX_LED_SPACING")
         dots = self.led_dot_centres(gui)
@@ -640,7 +660,7 @@ class ProjectSourceTests(unittest.TestCase):
         self.assert_contains_all(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
             [
-                "nvs_erase_key(nvs, \"armed\")",
+                'nvs_erase_key(nvs, "armed")',
                 "_data.armed = false",
                 "_data.pending_nonce = frame.nonce",
                 "_data.pending_type = frame.type",
@@ -680,7 +700,9 @@ class ProjectSourceTests(unittest.TestCase):
 
     def test_dial_prop_tx_bad_mac_does_not_cancel_pending_ack(self):
         text = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
-        bad_mac_branch = text.split("if (!prop_protocol::hexToBytes", 1)[1].split("if (_data.awaiting_ack &&", 1)[0]
+        bad_mac_branch = text.split("if (!prop_protocol::hexToBytes", 1)[1].split(
+            "if (_data.awaiting_ack &&", 1
+        )[0]
         self.assertIn('"RX IGNORED"', bad_mac_branch)
         self.assertNotIn("_data.awaiting_ack = false", bad_mac_branch)
         self.assertNotIn("_data.armed = false", bad_mac_branch)
@@ -717,12 +739,16 @@ class ProjectSourceTests(unittest.TestCase):
 
     def test_dial_prop_tx_input_waits_keep_link_service_alive(self):
         text = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
-        running = text.split("void PropTx::onRunning()", 1)[1].split("void PropTx::onDestroy()", 1)[0]
+        running = text.split("void PropTx::onRunning()", 1)[1].split("void PropTx::onDestroy()", 1)[
+            0
+        ]
         self.assertIn("bool PropTx::_service_link_during_input_wait()", text)
         self.assertIn("_poll_uart();", text)
         self.assertIn("_handle_ack_timeout();", text)
         self.assertIn("_data.armed && millis() - _data.armed_hb_ms >= ARM_HEARTBEAT_MS", text)
-        held_button = running.split("while (!_data.hal->encoder.btn.read())", 1)[1].split("if (!fired_long)", 1)[0]
+        held_button = running.split("while (!_data.hal->encoder.btn.read())", 1)[1].split(
+            "if (!fired_long)", 1
+        )[0]
         stable_release = running.split("while (millis() - stable_since < 50)", 1)[1].split(
             "_data.encoder_button_released_after_move", 1
         )[0]
@@ -750,7 +776,7 @@ class ProjectSourceTests(unittest.TestCase):
         self.assert_text_contains_all(
             text,
             [
-                "LED_COUNT = 5",           # was 4, now in prop_config.h
+                "LED_COUNT = 5",  # was 4, now in prop_config.h
                 "seesaw_NeoPixel pixels",  # was Adafruit_NeoPixel + LED_PIN=2 (removed)
                 "PREVIEW",
                 "FIRE",
@@ -767,7 +793,7 @@ class ProjectSourceTests(unittest.TestCase):
                 "rampMs",
                 "holdMs",
                 "fadeMs",
-                "curveShape",   # the ramp/fade SHAPE curve (was the old shape/shapeParam)
+                "curveShape",  # the ramp/fade SHAPE curve (was the old shape/shapeParam)
             ],
             "din-rx module (prop_rx.cpp + prop_config.h)",
         )
@@ -817,7 +843,7 @@ class ProjectSourceTests(unittest.TestCase):
                 "LED_CURRENT_BUDGET_MA",
                 "showBudgetedFrame",
                 "SETTINGS_SAVE_DEBOUNCE_MS",
-                "preferences.putUInt(\"lastSeq\"",
+                'preferences.putUInt("lastSeq"',
             ],
         )
 
@@ -833,9 +859,9 @@ class ProjectSourceTests(unittest.TestCase):
             or "if (frame.sequence > _lockoutSeq)" in stop_branch
         )
 
-        colorset_branch = text.split("if (frame.type == prop_protocol::FrameType::LedColorSet)", 1)[1].split(
-            "if (frame.type == prop_protocol::FrameType::RemoteLed)", 1
-        )[0]
+        colorset_branch = text.split("if (frame.type == prop_protocol::FrameType::LedColorSet)", 1)[
+            1
+        ].split("if (frame.type == prop_protocol::FrameType::RemoteLed)", 1)[0]
         self.assertIn("droppedByStopOrder(frame)", colorset_branch)
         self.assertLess(
             colorset_branch.index("droppedByStopOrder(frame)"),
@@ -872,7 +898,17 @@ class ProjectSourceTests(unittest.TestCase):
     def test_docs_and_tools_cover_hardware_and_builds(self):
         self.assert_contains_all(
             "docs/hardware.md",
-            ["Port A", "G13", "G15", "Unit C6L", "Port B", "G2", "WS2812", "LED-only"],
+            [
+                "Port A",
+                "G13",
+                "G15",
+                "Unit C6L",
+                "Port B",
+                "G1/G2",
+                "NeoDriver",
+                "ByteButton",
+                "LED-only",
+            ],
         )
         self.assert_contains_all("tools/build.ps1", ["dial-tx", "din-rx", "c6l-modem"])
         self.assert_contains_all("tools/flash.ps1", ["dial-tx", "din-rx", "c6l-modem"])
@@ -890,13 +926,27 @@ class ProjectSourceTests(unittest.TestCase):
                 "PlatformIO command 'pio' was not found",
                 "ESP-IDF command 'idf.py' was not found",
                 "Invoke-ReleaseGates",
+                "Get-ReleaseBuildDefineArgs",
+                "PROP_ALLOW_PROTOTYPE_SHARED_KEY=0",
+                "PROP_TX_ALLOW_SELFTEST_FIRE=0",
+                "SELFTEST_FIRE=0",
                 "Prototype HMAC key is still compiled in",
-                'uiflow/dial/prop_frame.py',
-                'PROTOTYPE_SHARED_KEY\\s*=\\s*True',
+                "uiflow/dial/prop_frame.py",
+                "PROTOTYPE_SHARED_KEY\\s*=\\s*True",
                 '$Release -or ($env:CI -eq "true")',
             ],
         )
         self.assert_not_contains_any("tools/build.ps1", ["-m unittest", "unittest discover"])
+
+    def test_release_build_flags_are_consumed_by_firmware_build_systems(self):
+        self.assert_contains_all(
+            "firmware/din-rx/gen_theme_pre.py",
+            ["PROP_RELEASE_BUILD_FLAGS", "shlex.split", "env.Append", "BUILD_FLAGS"],
+        )
+        self.assert_contains_all(
+            "firmware/dial-tx/CMakeLists.txt",
+            ["PROP_RELEASE_BUILD_FLAGS", "separate_arguments", "add_compile_options"],
+        )
 
     def test_prototype_hmac_key_is_marked_and_release_blocked(self):
         tx = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
@@ -909,6 +959,32 @@ class ProjectSourceTests(unittest.TestCase):
         self.assertIn("PROTOTYPE_SHARED_KEY = True", ui)
         self.assertIn("PROP_TX_ALLOW_SELFTEST_FIRE", tx)
         self.assertIn("SELFTEST_FIRE requires explicit bench-only", tx)
+
+    def test_release_build_fails_closed_while_prototype_hmac_key_is_present(self):
+        shell = shutil.which("powershell") or shutil.which("pwsh")
+        if shell is None:
+            self.skipTest("PowerShell is not available")
+
+        command = [shell, "-NoProfile"]
+        if Path(shell).name.lower().startswith("powershell"):
+            command += ["-ExecutionPolicy", "Bypass"]
+        command += ["-File", str(ROOT / "tools" / "build.ps1"), "-Release"]
+
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Prototype HMAC key is still compiled in", combined)
+        self.assertIn("Release gates failed", combined)
+        self.assertNotIn("PlatformIO command 'pio' was not found", combined)
+        self.assertNotIn("ESP-IDF command 'idf.py' was not found", combined)
 
 
 if __name__ == "__main__":

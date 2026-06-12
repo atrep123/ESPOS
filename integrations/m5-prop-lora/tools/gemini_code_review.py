@@ -39,6 +39,7 @@ DEFAULT_TARGETS = (
     "uiflow/dial/blocks/examples/prop_tx_smoke.py",
     "uiflow/dial/prop_frame.py",
     "uiflow/dial/main.py",
+    "shared/core/safety_logic.h",
     "shared/protocol/prop_protocol.h",
     "shared/protocol/protocol.py",
     "firmware/din-rx/src/prop_rx.cpp",
@@ -52,6 +53,7 @@ DEFAULT_TARGETS = (
     "tools/gemini_code_review.py",
     "tools/gemini_jury.py",
     "tools/ask_gemini.py",
+    "tools/sim_link.py",
     "tests/test_project_sources.py",
     "tests/test_gemini_key.py",
     "tests/test_gemini_jury.py",
@@ -60,8 +62,10 @@ DEFAULT_TARGETS = (
     "tests/test_uiflow_dial_offline.py",
     "tests/test_uiflow_main_app.py",
     "tests/test_uiflow_prop_frame_parity.py",
+    "tests/test_sim_link_safety.py",
     "README.md",
     "BUILD.md",
+    "docs/hardware.md",
     "uiflow/dial/README.md",
     "uiflow/dial/blocks/README.md",
     "tools/gemini_dinrx_review.py",
@@ -84,6 +88,8 @@ and release workflow. Evaluate:
 Reviewing source code for the key loader or its tests is expected and is not
 itself a secret exposure; only concrete secret values, persisted key files,
 unredacted runtime payloads, or logs containing key values are blockers.
+Treat <redacted> inside source excerpts as a sanitization artifact, not source
+evidence, unless confirmed by unredacted tests or coverage.
 
 The prototype HMAC key is acceptable only for PoC/dry-smoke work when release
 gates explicitly block it from Release/CI builds; treat it as a production/field
@@ -460,14 +466,17 @@ def ask_gemini(prompt: str) -> str:
         resp = urllib.request.urlopen(req, timeout=180)  # noqa: S310
         data = json.loads(resp.read())
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:600]
+        detail = redact_secrets(exc.read().decode("utf-8", "replace"))[:600]
         return f"ERROR HTTP {exc.code}: {detail}"
     except Exception as exc:  # noqa: BLE001
-        return f"ERROR: {exc}"
+        return redact_secrets(f"ERROR: {exc}")
 
     return (
-        data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-    ) or "(empty)"
+        redact_secrets(
+            data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+        )
+        or "(empty)"
+    )
 
 
 def _write(path: Path, text: str) -> None:
@@ -509,7 +518,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"No Gemini API call was made; prompt written to {out_path}")
         return 0
 
-    review = ask_gemini(prompt)
+    review = redact_secrets(ask_gemini(prompt))
     _write(
         out_path,
         "# Gemini code/workflow review\n\n"

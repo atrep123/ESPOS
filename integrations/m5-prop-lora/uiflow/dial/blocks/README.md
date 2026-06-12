@@ -80,6 +80,12 @@ Manual import source of truth:
 The current M5Stack Block Designer is **Alpha-2** and exports `.m5b2`, not the older `.m5b`
 format. Use this path first:
 
+Verified reference: UIFlow2 Block Designer Alpha-2 flow, revalidated on 2026-06-12.
+The tracked artifact records `jscode_sha256`, `toolbox_sha256`, and `pyCode_sha256`;
+if a future designer changes the generated `jscode` or `toolbox` structure, update
+`tools/build_uiflow_alpha2_artifact.py` and regenerate `PropTx.m5b2` instead of
+hand-editing the artifact.
+
 1. Open **[block-designer.m5stack.com](https://block-designer.m5stack.com/)**.
 2. Click **Load .py** and select `uiflow/dial/blocks/alpha2/PropTx.py`.
 3. Confirm the preview shows the `PropTx` class and blocks such as `Prop init TX`.

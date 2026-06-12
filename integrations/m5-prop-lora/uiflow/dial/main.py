@@ -259,6 +259,8 @@ def send_current_action():
             for index, line in enumerate(fire_lines):
                 uart.write(line)
                 if index + 1 < len(fire_lines):
+                    # Keep redundant FIRE copies spaced by the protocol constant;
+                    # the receiver dedups them, but the modem still needs air gap.
                     time.sleep_ms(pf.FIRE_BURST_GAP_MS)
             set_status("ODPAL ->", P_AMBER)
         elif a == A_STOP:

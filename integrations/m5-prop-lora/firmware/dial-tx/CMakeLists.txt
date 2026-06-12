@@ -5,6 +5,12 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
+if(DEFINED ENV{PROP_RELEASE_BUILD_FLAGS} AND NOT "$ENV{PROP_RELEASE_BUILD_FLAGS}" STREQUAL "")
+    separate_arguments(_prop_release_build_flags NATIVE_COMMAND "$ENV{PROP_RELEASE_BUILD_FLAGS}")
+    add_compile_options(${_prop_release_build_flags})
+    message(STATUS "Applied PROP_RELEASE_BUILD_FLAGS release guard defines")
+endif()
+
 
 
 # -------------------------------------------------------------------------

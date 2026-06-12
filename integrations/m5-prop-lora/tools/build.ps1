@@ -61,6 +61,41 @@ function Invoke-PythonTests {
     }
 }
 
+function Get-ReleaseBuildDefineArgs {
+    if (-not ($Release -or ($env:CI -eq "true"))) {
+        return @()
+    }
+
+    return @(
+        "-DPROP_ALLOW_PROTOTYPE_SHARED_KEY=0",
+        "-DPROP_TX_ALLOW_SELFTEST_FIRE=0",
+        "-DSELFTEST_FIRE=0"
+    )
+}
+
+function Set-ReleaseBuildFlagsEnv {
+    $releaseDefines = Get-ReleaseBuildDefineArgs
+    if ($releaseDefines.Count -eq 0) {
+        return $null
+    }
+
+    $previous = $env:PROP_RELEASE_BUILD_FLAGS
+    $env:PROP_RELEASE_BUILD_FLAGS = ($releaseDefines -join " ")
+    Write-Host "Release C/C++ defines: $env:PROP_RELEASE_BUILD_FLAGS"
+    return $previous
+}
+
+function Restore-ReleaseBuildFlagsEnv {
+    param([AllowNull()][string]$Previous)
+
+    if ($null -eq $Previous) {
+        Remove-Item Env:\PROP_RELEASE_BUILD_FLAGS -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:PROP_RELEASE_BUILD_FLAGS = $Previous
+    }
+}
+
 function Invoke-ReleaseGates {
     if (-not ($Release -or ($env:CI -eq "true"))) {
         return
@@ -111,11 +146,13 @@ function Invoke-PlatformIOBuild {
 
     Invoke-Step "PlatformIO build: $Target" {
         $oldCoreDir = $env:PLATFORMIO_CORE_DIR
+        $oldReleaseFlags = Set-ReleaseBuildFlagsEnv
         $env:PLATFORMIO_CORE_DIR = Join-Path $PioCoreRoot $Target
         try {
             & $pio.Source run --project-dir $ProjectPath
         }
         finally {
+            Restore-ReleaseBuildFlagsEnv $oldReleaseFlags
             if ($null -eq $oldCoreDir) {
                 Remove-Item Env:\PLATFORMIO_CORE_DIR -ErrorAction SilentlyContinue
             }
@@ -151,10 +188,12 @@ function Invoke-EspIdfBuild {
 
     Invoke-Step "ESP-IDF build: $Target" {
         Push-Location $ProjectPath
+        $oldReleaseFlags = Set-ReleaseBuildFlagsEnv
         try {
             & $idf.Source build
         }
         finally {
+            Restore-ReleaseBuildFlagsEnv $oldReleaseFlags
             Pop-Location
         }
     }

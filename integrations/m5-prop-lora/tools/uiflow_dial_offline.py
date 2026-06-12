@@ -309,11 +309,28 @@ def mpremote_command_prefix(port: str) -> list[str]:
     return [sys.executable, "-m", "mpremote", "connect", port]
 
 
+def _validate_device_target_dir(target_dir: str) -> None:
+    if (
+        not isinstance(target_dir, str)
+        or not target_dir.startswith("/")
+        or target_dir == "/"
+        or "\\" in target_dir
+        or ":" in target_dir
+        or "//" in target_dir
+    ):
+        raise ValueError(f"invalid target-dir: {target_dir}")
+
+    parts = target_dir.strip("/").split("/")
+    if not parts or parts[0] != "flash" or any(part in ("", ".", "..") for part in parts):
+        raise ValueError(f"invalid target-dir: {target_dir}")
+
+
 def build_deploy_commands(
     port: str,
     target_dir: str = DEFAULT_TARGET_DIR,
     bundle: Path | None = None,
 ) -> list[list[str]]:
+    _validate_device_target_dir(target_dir)
     commands = [mpremote_command_prefix(port) + ["fs", "mkdir", target_dir]]
     if bundle is not None:
         manifest = _load_bundle_manifest(bundle)

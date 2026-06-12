@@ -43,6 +43,31 @@ idf.py -C firmware/dial-tx -p COMz flash
 ```
 M5 Dial = ESP32-S3. `SELFTEST_FIRE=0` (produkce — vysílač se sám neodpaluje).
 
+## Acceptance levels
+
+**Dry smoke:** bench-only validation with dummy LEDs or another non-actuator load.
+Do not connect live pyro or actuator outputs. It is acceptable for dry smoke that
+the prototype HMAC key is still compiled in, but only when release gates are known
+to fail closed and `SELFTEST_FIRE=0`.
+
+**Production release:** blocked until the prototype HMAC key is replaced by a
+non-source secret/provisioning path and release builds compile with:
+`PROP_ALLOW_PROTOTYPE_SHARED_KEY=0`, `PROP_TX_ALLOW_SELFTEST_FIRE=0`, and
+`SELFTEST_FIRE=0`. The release helper exports those defines for PlatformIO and
+ESP-IDF; a production release must prove both firmware toolchains consumed them.
+
+Hardware smoke pass criteria: FIRE before ARM must show `NOT_ARMED` or have no
+effect; ARM reply must show ARMED; FIRE must require that fresh ARM; STOP must clear output within one operator-visible cycle and require another fresh ARM
+before later FIRE. `COM6` is only an example port in commands and docs; use the
+actual Dial/DinMeter/modem port found on the PC. COM6 is only an example.
+
+## UIFlow2 Dial offline workflow
+
+For the M5 Dial MicroPython/block path, use `uiflow/dial/README.md`. That document
+is the source of truth for the `mpremote` runtime-only bundle, the `.m5b2` block
+canvas import, and the Gemini code/visual gates. Keep C++ firmware build/flash
+work in this file and UIFlow2 runtime/block deployment in `uiflow/dial/README.md`.
+
 ## Identifikace portů
 Více ESP32 na USB → urči, co je co, přes MAC/chip:
 ```bash

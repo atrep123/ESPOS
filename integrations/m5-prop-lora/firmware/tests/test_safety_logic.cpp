@@ -84,6 +84,28 @@ bool stopLatchesLockout() {
     return ok;
 }
 
+bool stopFenceBlocksLowerSequenceNewEpochReplay() {
+    FireAuthority fa;
+    const std::uint32_t liveEpoch = 0x22222222u;
+    const std::uint32_t replayedEpoch = 0x11111111u;
+
+    bool ok = fa.onArmFrame(1000, 999, liveEpoch) == true;
+    fa.onStopFrame(1000);
+    ok &= fa.armed == false;
+    ok &= fa.lockout == true;
+    ok &= fa.lockoutSeq == 1000u;
+
+    ok &= fa.onArmFrame(1001, 100, replayedEpoch) == false;
+    ok &= fa.armed == false;
+    ok &= fa.lockout == true;
+    ok &= fa.fireAllowedForFrame(1001, 101, replayedEpoch) == false;
+
+    ok &= fa.onArmFrame(2000, 1001, liveEpoch) == true;
+    ok &= fa.lockout == false;
+    ok &= fa.fireAllowedForFrame(2001, 1002, liveEpoch) == true;
+    return ok;
+}
+
 bool fireIsOneShot() {
     FireAuthority fa;
     fa.onArm(1000);
@@ -279,6 +301,7 @@ int main() {
     failures += runCase("fire blocked when never armed", fireBlockedWhenNeverArmed) ? 0 : 1;
     failures += runCase("arm enables fire within TTL", armEnablesFireWithinTtl) ? 0 : 1;
     failures += runCase("stop latches lockout until re-arm", stopLatchesLockout) ? 0 : 1;
+    failures += runCase("STOP fence blocks lower-seq new-epoch replay", stopFenceBlocksLowerSequenceNewEpochReplay) ? 0 : 1;
     failures += runCase("fire is one-shot", fireIsOneShot) ? 0 : 1;
     failures += runCase("serviceTtl drops to SAFE", serviceTtlDropsToSafe) ? 0 : 1;
     failures += runCase("TTL survives millis() wraparound", ttlSurvivesMillisWraparound) ? 0 : 1;

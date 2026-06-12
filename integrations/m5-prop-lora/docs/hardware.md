@@ -18,11 +18,12 @@ Port A carries power, ground, and the UART pair for the Unit C6L. Keep TX/RX cro
 
 - Target name: `din-rx`
 - Expansion header: Port B
-- LED output: G2
-- Indicator type: WS2812
-- Role: LED-only receiver feedback
+- I2C: G1/G2 at 100 kHz
+- LED driver: M5 Unit NeoDriver at 0x60, driving 4x SK6812 RGBW
+- Local inputs: M5 Unit ByteButton at 0x47
+- Role: LED-only receiver feedback plus local button/switch inputs
 
-Port B exposes the LED data signal on G2 for the WS2812 chain. The receiver slice is LED-only: it reports accepted controller state through the addressable LED path and does not drive any actuator output.
+Port B carries the I2C bus for the NeoDriver and ByteButton. The receiver slice is LED-only: it reports accepted controller state through the addressable LED path and does not drive any actuator output.
 
 ## LoRa modem
 

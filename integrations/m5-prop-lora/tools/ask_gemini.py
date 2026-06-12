@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 
 from gemini_key import load_api_key
@@ -83,7 +84,8 @@ def main() -> int:
         with urllib.request.urlopen(req, timeout=120) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        print(f"HTTP {exc.code}: {exc.read().decode('utf-8', 'replace')}", file=sys.stderr)
+        detail = redact_secrets(exc.read().decode("utf-8", "replace"))
+        print(f"HTTP {exc.code}: {detail}", file=sys.stderr)
         return 1
 
     try:

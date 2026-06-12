@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -128,3 +130,55 @@ def test_ask_gemini_redacts_secret_like_response_text(monkeypatch, tmp_path, cap
     assert secret not in written
     assert "AIza<redacted>" in captured.out
     assert "AIza<redacted>" in written
+
+
+def test_ask_gemini_redacts_http_error_body(monkeypatch, tmp_path, capsys):
+    secret = "AIza" + ("C" * 35)
+    image = tmp_path / "preview.png"
+    image.write_bytes(b"not-a-real-png")
+    monkeypatch.syspath_prepend(str(TOOLS))
+    monkeypatch.setattr(sys, "argv", [str(ASK_SCRIPT), str(image)])
+
+    module = load_module(ASK_SCRIPT, "ask_gemini_http_error_redaction_under_test")
+    monkeypatch.setattr(module, "load_api_key", lambda: secret)
+
+    body = "\n".join(
+        [
+            f"api key echoed: {secret}",
+            "https://example.test/path?key=query-secret-value&x=1",
+            "GEMINI_API_KEY=plain-secret-value",
+            "Authorization: Bearer bearer-secret-value",
+            "x-goog-api-key: header-secret-value",
+        ]
+    )
+
+    def fake_urlopen(req, timeout):
+        assert req.headers["X-goog-api-key"] == secret
+        assert timeout == 120
+        raise urllib.error.HTTPError(
+            req.full_url,
+            400,
+            "Bad Request",
+            hdrs=None,
+            fp=io.BytesIO(body.encode("utf-8")),
+        )
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", fake_urlopen)
+
+    assert module.main() == 1
+
+    captured = capsys.readouterr()
+    for leaked in [
+        secret,
+        "query-secret-value",
+        "plain-secret-value",
+        "bearer-secret-value",
+        "header-secret-value",
+    ]:
+        assert leaked not in captured.err
+    assert "HTTP 400:" in captured.err
+    assert "AIza<redacted>" in captured.err
+    assert "key=<redacted>" in captured.err
+    assert "GEMINI_API_KEY=<redacted>" in captured.err
+    assert "Authorization: Bearer <redacted>" in captured.err
+    assert "x-goog-api-key: <redacted>" in captured.err

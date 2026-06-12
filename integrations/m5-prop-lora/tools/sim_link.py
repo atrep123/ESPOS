@@ -45,6 +45,7 @@ def _get_modem_lib():
         if sim_native_dir not in sys.path:
             sys.path.insert(0, sim_native_dir)
         import check_modem_core as cmc  # noqa: E402
+
         _modem_lib = cmc.load_dll()
     return _modem_lib
 
@@ -260,17 +261,9 @@ class DualBandChannel:
         implicit_header = 0
         low_data_rate = 1 if sf >= 11 and bw_hz <= 125000.0 else 0
         tsym_ms = (2**sf) / bw_hz * 1000.0
-        numerator = (
-            8 * int(payload_len)
-            - 4 * sf
-            + 28
-            + 16 * crc
-            - 20 * implicit_header
-        )
+        numerator = 8 * int(payload_len) - 4 * sf + 28 + 16 * crc - 20 * implicit_header
         denominator = 4 * (sf - 2 * low_data_rate)
-        payload_symbols = 8 + max(
-            math.ceil(numerator / denominator) * (coding_rate + 4), 0
-        )
+        payload_symbols = 8 + max(math.ceil(numerator / denominator) * (coding_rate + 4), 0)
         preamble_symbols = preamble + 4.25
         return (preamble_symbols + payload_symbols) * tsym_ms
 
@@ -365,8 +358,7 @@ class Modem:
         if self.cfg.use_firmware_ack:
             lib = _get_modem_lib()
             for seq, req_raw in list(self.wait_ack_raw.items()):
-                if lib.mc_looks_like_matching_ack(req_raw, len(req_raw),
-                                                  raw_ack, len(raw_ack)):
+                if lib.mc_looks_like_matching_ack(req_raw, len(req_raw), raw_ack, len(raw_ack)):
                     self.wait_ack.pop(seq, None)
                     self.wait_ack_raw.pop(seq, None)
                     return
@@ -442,9 +434,7 @@ class Sender:
     def send_fire(self):
         seq = self._next_sequence()
         frame = self._frame(FrameType.FIRE, seq)
-        self.records[seq] = FireRecord(
-            sequence=seq, nonce=frame.nonce, start_ms=self.loop.time_ms
-        )
+        self.records[seq] = FireRecord(sequence=seq, nonce=frame.nonce, start_ms=self.loop.time_ms)
         for copy_index in range(self.cfg.fire_burst_count):
             self.loop.schedule(
                 copy_index * self.cfg.fire_burst_gap_ms,
@@ -498,32 +488,58 @@ class Receiver:
         self.replay = FrameReplayWindow()
         self.armed = False
         self.last_arm_ms = -1e18  # time of the most recent accepted ARM (for the TTL)
+        self.current_epoch = None
+        self.arm_epoch = None
+        self.arm_seq = 0
         self.stop_latched = False
+        self.lockout_seq = 0
         self.fire_records = None
 
     def on_modem_frame(self, frame, band):
+        epoch = (int(frame.nonce) >> 32) & 0xFFFFFFFF
+        accepted_new_session = epoch != self.current_epoch
         verdict = self.replay.classify(frame.nonce, frame.sequence)
         if verdict != "new":
             return
+        if accepted_new_session:
+            self.current_epoch = epoch
+            self.armed = False
+            self.arm_epoch = None
+            self.arm_seq = 0
         if frame.frame_type == FrameType.ARM:
+            if self.stop_latched and frame.sequence <= self.lockout_seq:
+                return
             self.armed = True
             self.last_arm_ms = self.loop.time_ms
+            self.stop_latched = False
+            self.arm_epoch = epoch
+            self.arm_seq = frame.sequence
             return
         if frame.frame_type == FrameType.STOP:
+            self.armed = False
+            self.arm_epoch = None
+            self.arm_seq = 0
             self.stop_latched = True
+            if frame.sequence > self.lockout_seq:
+                self.lockout_seq = frame.sequence
             return
         if frame.frame_type != FrameType.FIRE:
             return
         # FIRE only fires if armed AND the ARM is still fresh (receiver ARM TTL),
         # mirroring the real receiver whose ARM lapses to SAFE without a heartbeat.
-        if not self.armed or (self.loop.time_ms - self.last_arm_ms) > self.cfg.arm_ttl_ms:
+        if (
+            not self.armed
+            or self.stop_latched
+            or epoch != self.arm_epoch
+            or frame.sequence <= self.arm_seq
+            or frame.sequence <= self.lockout_seq
+            or (self.loop.time_ms - self.last_arm_ms) > self.cfg.arm_ttl_ms
+        ):
             return
         record = self.fire_records.get(frame.sequence) if self.fire_records else None
         if record is not None:
             record.delivered_count += 1
-        delay = self.cfg.fire_ack_delay_ms + self.rng.uniform(
-            0.0, self.cfg.fire_ack_jitter_ms
-        )
+        delay = self.cfg.fire_ack_delay_ms + self.rng.uniform(0.0, self.cfg.fire_ack_jitter_ms)
         # Echo the FIRE nonce in the ACK so the ACK is firmware-faithful:
         # modem_core::looksLikeMatchingAck compares request.nonce[8B] == candidate.nonce[8B]
         # (the sim's own payload-based ACK match only used `sequence`, so nonce was
@@ -596,9 +612,7 @@ def run_campaign(cfg):
     delivered = sum(1 for record in records if record.delivered_count > 0)
     double_fires = sum(1 for record in records if record.delivered_count > 1)
     silent_drops = sum(
-        1
-        for record in records
-        if record.delivered_count == 0 and record.observable_failures == 0
+        1 for record in records if record.delivered_count == 0 and record.observable_failures == 0
     )
     rtts = [
         record.ack_ms - record.start_ms
@@ -738,9 +752,7 @@ def selftest():
     second = run_campaign(cfg)
     failures += check("determinism", first == second, "same seed produced same metrics")
 
-    lossy_dual = run_campaign(
-        SimConfig(seed=4, fire_count=200, lora_loss=0.45, espnow_loss=0.45)
-    )
+    lossy_dual = run_campaign(SimConfig(seed=4, fire_count=200, lora_loss=0.45, espnow_loss=0.45))
     lossy_lora = run_campaign(
         SimConfig(
             seed=4,
@@ -762,8 +774,7 @@ def selftest():
     worse_single = min(lossy_lora["delivery_rate"], lossy_esp["delivery_rate"])
     failures += check(
         "lossy dual-band sanity",
-        lossy_dual["delivery_rate"] < 1.0
-        and lossy_dual["delivery_rate"] >= worse_single + 0.10,
+        lossy_dual["delivery_rate"] < 1.0 and lossy_dual["delivery_rate"] >= worse_single + 0.10,
         "dual="
         f"{lossy_dual['delivery_rate']:.4f} "
         f"lora={lossy_lora['delivery_rate']:.4f} "
@@ -771,7 +782,9 @@ def selftest():
     )
 
     seed_rates = [
-        run_campaign(SimConfig(seed=s, fire_count=150, lora_loss=0.1, espnow_loss=0.1))["delivery_rate"]
+        run_campaign(SimConfig(seed=s, fire_count=150, lora_loss=0.1, espnow_loss=0.1))[
+            "delivery_rate"
+        ]
         for s in range(12)
     ]
     failures += check(
@@ -806,8 +819,7 @@ def selftest():
     # number (statistical, but they share the same RNG-driven channel + same accepted-
     # frame logic; only the ACK-clear path differs, which doesn't affect delivery).
     fw_lossy = run_campaign(
-        SimConfig(seed=4, fire_count=200, lora_loss=0.45, espnow_loss=0.45,
-                  use_firmware_ack=True)
+        SimConfig(seed=4, fire_count=200, lora_loss=0.45, espnow_loss=0.45, use_firmware_ack=True)
     )
     failures += check(
         "firmware-ack bridge: lossy dual-band parity with Python path",

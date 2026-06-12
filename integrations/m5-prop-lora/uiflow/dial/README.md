@@ -136,6 +136,14 @@ Safety smoke for any FIRE-capable UIFlow build:
 The safety-critical ARM/Fire/STOP **enforcement stays on the C++ DinMeter** — the Dial
 only ever *sends*; it never decides whether to fire.
 
+### Acceptance level
+
+Dry smoke is not a production release. UIFlow2/MicroPython work may be dry-smoked
+only on a dummy/LED-only load while local deterministic checks and Gemini gates are
+green. The production-release gate stays closed while the prototype HMAC key is compiled in; release builds must instead prove `PROP_ALLOW_PROTOTYPE_SHARED_KEY=0`,
+`PROP_TX_ALLOW_SELFTEST_FIRE=0`, and `SELFTEST_FIRE=0` are consumed by the firmware
+build systems.
+
 ### Offline runtime deploy
 
 The fully offline field path is the Python runtime upload through `mpremote`. The `.m5b2`
@@ -143,6 +151,15 @@ file avoids Block Designer export, but the UIFlow2 canvas still needs UIFlow2 We
 already cached/available UIFlow2 app to edit blocks visually. Prepare `mpremote` before
 going offline, for example with `python -m pip install mpremote` on the same Python used
 for deploy, or pre-download a wheelhouse.
+
+**Runtime-only offline path:** Choose this when you want the Dial to run without opening UIFlow2.
+Upload the `.py` files from the bundle to `/flash` with
+`mpremote`, then run `/flash/main.py`.
+
+**Block Designer / canvas path:** Choose this when you want visual block editing.
+Import `blocks/PropTx.m5b2` with **Custom -> Open** in UIFlow2, build the canvas,
+and let UIFlow2 generate/upload the resulting Python. The `.m5b2` is for the
+editor; it is not uploaded by `mpremote`.
 
 For bench work without internet after that prep, use the local bundle/deploy helper:
 

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import os
 import subprocess
 import sys
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -74,6 +76,7 @@ def test_gemini_code_review_prompt_covers_non_visual_domains():
     assert "only concrete secret values" in prompt
     assert "prototype HMAC key is acceptable only for PoC/dry-smoke" in prompt
     assert "Release/CI builds" in prompt
+    assert "Treat <redacted> inside source excerpts as a sanitization artifact" in prompt
 
 
 def test_gemini_code_review_default_snapshot_includes_core_files():
@@ -112,6 +115,51 @@ def test_gemini_code_review_redacts_google_api_keys():
     assert "x-goog-api-key: <redacted>" in redacted
 
 
+def test_gemini_code_review_redacts_http_error_body(monkeypatch):
+    module = load_module()
+    secret = "AIza" + ("B" * 35)
+    body = "\n".join(
+        [
+            f"api key echoed: {secret}",
+            "https://example.test/path?key=query-secret-value&x=1",
+            "GEMINI_API_KEY=plain-secret-value",
+            "Authorization: Bearer bearer-secret-value",
+            "x-goog-api-key: header-secret-value",
+        ]
+    )
+
+    def fake_urlopen(req, timeout):
+        assert req.headers["X-goog-api-key"] == secret
+        assert timeout == 180
+        raise urllib.error.HTTPError(
+            req.full_url,
+            403,
+            "Forbidden",
+            hdrs=None,
+            fp=io.BytesIO(body.encode("utf-8")),
+        )
+
+    monkeypatch.setattr(module, "load_api_key", lambda root: secret)
+    monkeypatch.setattr(module.urllib.request, "urlopen", fake_urlopen)
+
+    result = module.ask_gemini("review me")
+
+    assert result.startswith("ERROR HTTP 403:")
+    for leaked in [
+        secret,
+        "query-secret-value",
+        "plain-secret-value",
+        "bearer-secret-value",
+        "header-secret-value",
+    ]:
+        assert leaked not in result
+    assert "AIza<redacted>" in result
+    assert "key=<redacted>" in result
+    assert "GEMINI_API_KEY=<redacted>" in result
+    assert "Authorization: Bearer <redacted>" in result
+    assert "x-goog-api-key: <redacted>" in result
+
+
 def test_gemini_code_review_rejects_secret_like_targets(tmp_path):
     module = load_module()
     secret = tmp_path / ".gemini_api_key"
@@ -142,6 +190,27 @@ def test_gemini_code_review_dry_run_writes_prompt_without_api_key(tmp_path):
     written = out.read_text(encoding="utf-8")
     assert "# Gemini code/workflow review prompt" in written
     assert "No Gemini API call was made" in result.stdout
+
+
+def test_gemini_code_review_main_redacts_review_before_print_and_write(
+    monkeypatch, tmp_path, capsys
+):
+    module = load_module()
+    secret = "AIza" + ("D" * 35)
+    out = tmp_path / "gemini_report.md"
+    monkeypatch.setattr(
+        module, "build_review_prompt", lambda targets=None, max_chars=140_000: "prompt"
+    )
+    monkeypatch.setattr(module, "ask_gemini", lambda prompt: f"model echoed {secret}")
+
+    assert module.main(["--out", str(out)]) == 0
+
+    captured = capsys.readouterr()
+    written = out.read_text(encoding="utf-8")
+    assert secret not in captured.out
+    assert secret not in written
+    assert "AIza<redacted>" in captured.out
+    assert "AIza<redacted>" in written
 
 
 def test_gemini_code_review_default_snapshot_includes_protocol_and_generator_files():
@@ -216,17 +285,21 @@ def test_gemini_code_review_default_budget_includes_non_visual_gate_files_untrun
         "tools/gemini_code_review.py",
         "tools/gemini_jury.py",
         "tools/ask_gemini.py",
+        "tools/sim_link.py",
         "uiflow/dial/main.py",
         "tests/test_gemini_key.py",
         "tests/test_gemini_jury.py",
         "tests/test_gemini_code_review.py",
+        "tests/test_sim_link_safety.py",
         "tests/test_uiflow_blocks_bundle.py",
         "tests/test_uiflow_dial_offline.py",
         "tests/test_uiflow_main_app.py",
         "firmware/din-rx/src/prop_rx.cpp",
         "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
         "firmware/c6l-modem/src/modem_core.h",
+        "shared/core/safety_logic.h",
         "tools/build.ps1",
+        "docs/hardware.md",
         "uiflow/dial/README.md",
         "uiflow/dial/blocks/README.md",
     ]:
