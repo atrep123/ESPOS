@@ -48,6 +48,14 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _is_sha256_hex(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(char in "0123456789abcdefABCDEF" for char in value)
+    )
+
+
 def _repo_path(rel: str) -> Path:
     return REPO_ROOT / rel
 
@@ -243,7 +251,7 @@ def verify_bundle(bundle: Path) -> list[str]:
                 expected_device_path = _expected_device_paths().get(bundle_path)
                 if entry.get("device_path") != expected_device_path:
                     errors.append(f"device_path mismatch: {bundle_path}")
-            if not isinstance(expected_hash, str) or len(expected_hash) != 64:
+            if not _is_sha256_hex(expected_hash):
                 errors.append(f"invalid sha256 in manifest: {bundle_path}")
                 continue
             actual_hash = _sha256(path)

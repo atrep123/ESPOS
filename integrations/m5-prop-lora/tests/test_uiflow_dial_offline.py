@@ -123,6 +123,35 @@ def test_offline_verify_rejects_tampered_device_file(tmp_path):
     assert "sha256 mismatch: device/PropTx.py" in result.stderr
 
 
+def test_offline_verify_rejects_non_hex_sha256(tmp_path):
+    out = tmp_path / "offline"
+    subprocess.run(
+        [sys.executable, str(SCRIPT), "bundle", "--out", str(out)],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"][0]["sha256"] = "z" * 64
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "verify", "--bundle", str(out)],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "invalid sha256 in manifest: device/prop_frame.py" in result.stderr
+    assert "sha256 mismatch: device/prop_frame.py" not in result.stderr
+
+
 def test_offline_verify_rejects_partial_manifest(tmp_path):
     out = tmp_path / "offline"
     subprocess.run(
