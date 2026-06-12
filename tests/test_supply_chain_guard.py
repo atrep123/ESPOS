@@ -377,6 +377,45 @@ jobs:
     assert any("pull_request_target" in issue for issue in issues)
 
 
+def test_workflow_rejects_workflow_run_event():
+    workflow = """
+name: bad
+on:
+  workflow_run:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("workflow_run" in issue for issue in issues)
+
+
+def test_workflow_rejects_workflow_run_inline_event():
+    workflow = """
+name: bad
+on: [push, workflow_run]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - run: echo ok
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("workflow_run" in issue for issue in issues)
+
+
 def test_requirements_requires_manifested_pip_audit():
     issues = validate_requirements("pytest>=9.0.3,<10\n")
 

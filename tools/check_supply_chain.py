@@ -38,6 +38,7 @@ DOWNLOAD_EXECUTE_RE = re.compile(
     re.IGNORECASE,
 )
 PULL_REQUEST_TARGET_RE = re.compile(r"\bpull_request_target\b")
+WORKFLOW_RUN_RE = re.compile(r"\bworkflow_run\b")
 
 
 def _has_top_level_contents_read_permission(text: str) -> bool:
@@ -175,6 +176,8 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
             )
         if PULL_REQUEST_TARGET_RE.search(line.split("#", 1)[0]):
             issues.append(f"{path}:{line_no}: workflow must not use pull_request_target")
+        if WORKFLOW_RUN_RE.search(line.split("#", 1)[0]):
+            issues.append(f"{path}:{line_no}: workflow must not use workflow_run")
         if SECRET_REFERENCE_RE.search(line):
             issues.append(f"{path}:{line_no}: workflow must not reference secrets")
 
