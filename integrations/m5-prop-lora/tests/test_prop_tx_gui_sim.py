@@ -336,20 +336,28 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
             assert one(frame, "command_state_badge").color == gui.mix(gui.BG_BASE, gui.P_AMBER, 0.35)
             assert not ops(frame, "command_text")
         else:
-            expected_command_text = "LOCKED" if view.action_label == "ODPAL" else view.action_label
+            expected_command_text = (
+                "NOT ARMED"
+                if view.action_label == "ODPAL"
+                else ("NO FIRE" if view.action_label == "PREVIEW" else view.action_label)
+            )
             assert one(frame, "command_text").text == expected_command_text
             if view.action_label == "PREVIEW":
-                assert one(frame, "command_preview_badge").text == "NO FIRE"
-                assert bbox_height(one(frame, "command_preview_badge")) >= 18.0
+                assert one(frame, "command_preview_badge").text == "PREVIEW"
+                assert bbox_height(one(frame, "command_text")) >= 24.0
+                assert bbox_height(one(frame, "command_preview_badge")) >= 12.0
                 assert bbox_width(one(frame, "command_preview_badge_plate")) >= 106.0
+                assert not ops(frame, "command_chevron")
             if view.action_label == "ODPAL":
-                assert one(frame, "fire_locked_badge").color == gui.mix(gui.P_AMBER, gui.WHITE, 0.10)
-                assert one(frame, "fire_locked_text").text == "NOT ARMED"
-                assert bbox_height(one(frame, "fire_locked_text")) >= 15.0
+                assert gui.state_color(view) == gui.MODE_SETUP
+                assert one(frame, "fire_locked_badge").color == gui.mix(gui.MODE_SETUP, gui.WHITE, 0.16)
+                assert one(frame, "fire_locked_text").text == "LOCKED"
+                assert bbox_height(one(frame, "command_text")) >= 24.0
+                assert bbox_height(one(frame, "fire_locked_text")) >= 12.0
                 assert_bbox_contains(
                     one(frame, "fire_locked_badge"), one(frame, "fire_locked_text"), pad=4.0
                 )
-                assert {op.color for op in ops(frame, "command_ring")} == {gui.P_AMBER}
+                assert {op.color for op in ops(frame, "command_ring")} == {gui.MODE_SETUP}
                 assert not ops(frame, "command_chevron")
     else:
         expected_orb = gui.setup_orb_color(view)
@@ -392,6 +400,22 @@ def test_palette_count_screen_displays_count_not_selected_led_index() -> None:
 
     assert one(frame, "orb_text").text == "6"
     assert one(frame, "orb_text").text != str(view.selected_led + 1)
+
+
+@pytest.mark.parametrize("field_label", ["jas", "LED", "HUE", "BARVY"])
+def test_setup_orb_uses_neutral_tuning_color_instead_of_selected_led_color(field_label: str) -> None:
+    view = gui.View(
+        field_label=field_label,
+        selected_led=1,
+        selected_hue_degrees=120,
+        palette_count=4,
+        colors=_fixture_colors(),
+    )
+
+    frame = gui.render_frame(view)
+
+    assert one(frame, "orb_lens").color == gui.mix(gui.MODE_SETUP, gui.WHITE, 0.18)
+    assert one(frame, "orb_lens").color != gui.led_rgb(view, view.selected_led)
 
 
 @pytest.mark.parametrize("name,view", real_state_views().items())

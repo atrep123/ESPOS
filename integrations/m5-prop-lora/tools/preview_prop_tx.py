@@ -346,7 +346,7 @@ def state_color(v: View) -> int:
     if v.armed:
         return P_RED
     if is_locked_fire_choice(v):
-        return P_AMBER
+        return MODE_SETUP
     if v.awaiting_ack or s.startswith("sent "):
         return MODE_SETUP
     if s in ("no ack", "timeout"):
@@ -436,9 +436,7 @@ def led_rgb(v: View, i: int) -> int:
 
 
 def setup_orb_color(v: View) -> int:
-    if is_editing(v, "jas") or is_palette_count(v):
-        return mix(MODE_SETUP, WHITE, 0.18)
-    return led_rgb(v, v.selected_led)
+    return mix(MODE_SETUP, WHITE, 0.18)
 
 
 def luminance(col: int) -> float:
@@ -601,20 +599,20 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
         c.text_center("NO ACK", cx, cy + 24, 28, TEXT_HI, role="command_state_text")
         return
     if variant == "locked_fire":
-        c.text_center("LOCKED", cx, cy - 28, 30, TEXT_HI, role="command_text")
+        c.text_center("NOT ARMED", cx, cy - 32, 34, TEXT_HI, role="command_text")
         c.fill_round_rect(
             cx - 82,
             cy + 20,
             164,
             26,
             12,
-            mix(P_AMBER, WHITE, 0.10),
+            mix(MODE_SETUP, WHITE, 0.16),
             role="fire_locked_badge",
         )
-        c.text_center("NOT ARMED", cx, cy + 19, 22, 0x0E1116, role="fire_locked_text")
+        c.text_center("LOCKED", cx, cy + 20, 18, 0x0E1116, role="fire_locked_text")
         return
     if variant == "preview":
-        c.text_center(label, cx, cy - 24, command_label_size(label), TEXT_HI, role="command_text")
+        c.text_center("NO FIRE", cx, cy - 32, 34, TEXT_HI, role="command_text")
         c.fill_round_rect(
             cx - 58,
             cy + 18,
@@ -624,7 +622,7 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
             mix(MODE_SETUP, WHITE, 0.16),
             role="command_preview_badge_plate",
         )
-        c.text_center("NO FIRE", cx, cy + 19, 26, 0x0E1116, role="command_preview_badge")
+        c.text_center("PREVIEW", cx, cy + 21, 18, 0x0E1116, role="command_preview_badge")
         return
 
     ls = command_label_size(label)
@@ -757,7 +755,7 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         # Safety: once ARMED the only on-screen choice is ODPAL (fire) / cancel.
         # Hide the action-scroll chevrons so a stressed user can't dial to a
         # different action while the controller is live.
-        if not v.awaiting_ack and not v.armed and not is_locked_fire_choice(v):
+        if not v.awaiting_ack and not v.armed and not is_locked_fire_choice(v) and not is_preview_choice(v):
             cyc = ORB_CY
             chev = COMMAND_RING_R + 14  # sit just outside the command ring
             draw_chevron(c, 120 - chev, cyc, 9, 9, sc, 5)  # left  "<"
