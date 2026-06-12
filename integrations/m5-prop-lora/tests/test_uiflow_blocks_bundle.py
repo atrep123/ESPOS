@@ -5,6 +5,7 @@ import ast
 import json
 import re
 import runpy
+import shutil
 import subprocess
 import sys
 import types
@@ -46,6 +47,11 @@ def load_validator():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def copy_uiflow_tree(tmp_path: Path) -> Path:
+    shutil.copytree(ROOT / "uiflow", tmp_path / "uiflow")
+    return tmp_path
 
 
 def test_uiflow_block_validator_cli_passes_and_reports_manual_bundle():
@@ -91,6 +97,32 @@ def test_uiflow_block_manifest_templates_are_consistent():
     assert not report.errors
 
 
+def test_uiflow_block_validator_reports_non_object_block(tmp_path):
+    repo = copy_uiflow_tree(tmp_path)
+    manifest_path = repo / "uiflow" / "dial" / "blocks" / "prop_tx.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["blocks"][0] = "bad"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    validator = load_validator()
+
+    report = validator.validate_bundle(repo)
+
+    assert any("blocks[0] must be an object" in error for error in report.errors)
+
+
+def test_uiflow_block_validator_reports_non_object_param(tmp_path):
+    repo = copy_uiflow_tree(tmp_path)
+    manifest_path = repo / "uiflow" / "dial" / "blocks" / "prop_tx.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["blocks"][0]["params"][0] = "bad"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    validator = load_validator()
+
+    report = validator.validate_bundle(repo)
+
+    assert any("blocks[0].params[0] must be an object" in error for error in report.errors)
+
+
 def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
     readme = (BLOCKS / "README.md").read_text(encoding="utf-8")
 
@@ -115,7 +147,9 @@ def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
 def test_alpha2_prop_tx_source_covers_every_prop_block_method():
     source = ALPHA2_SOURCE.read_text(encoding="utf-8")
     tree = ast.parse(source)
-    classes = [node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx"]
+    classes = [
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx"
+    ]
     assert len(classes) == 1
     methods = {
         node.name: ast.get_docstring(node) or ""
@@ -167,7 +201,9 @@ def test_alpha2_prop_tx_source_covers_every_prop_block_method():
 def test_alpha2_method_labels_include_designer_instance_placeholder():
     source = ALPHA2_SOURCE.read_text(encoding="utf-8")
     tree = ast.parse(source)
-    prop_tx = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx")
+    prop_tx = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx"
+    )
     expected_counts = {
         "__init__": 3,
         "preview": 2,
@@ -191,7 +227,9 @@ def test_alpha2_method_labels_include_designer_instance_placeholder():
 
     for method in [node for node in prop_tx.body if isinstance(node, ast.FunctionDef)]:
         doc = ast.get_docstring(method) or ""
-        label_line = next(line.strip() for line in doc.splitlines() if line.strip().startswith("en:"))
+        label_line = next(
+            line.strip() for line in doc.splitlines() if line.strip().startswith("en:")
+        )
         assert label_line.count("%") == expected_counts[method.name], method.name
 
 
@@ -267,6 +305,7 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
             return self.reads.pop(0) if self.reads else b""
 
     monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
+    monkeypatch.syspath_prepend(str(ROOT))
     monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
 
     spec = importlib.util.spec_from_file_location("alpha2_prop_tx_under_test", ALPHA2_SOURCE)
@@ -331,10 +370,18 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
         proto.FrameType.PALETTE_SET,
     ]
     assert proto.parse_led_payload(bytes(decoded[0].payload))["colors"] == colors
-    assert proto.parse_remote_led(bytes(decoded[4].payload)) == module.prop_frame.REMOTE_LED_BIT_LED3
-    assert proto.parse_remote_led(bytes(decoded[5].payload)) == module.prop_frame.REMOTE_LED_BIT_LED5
-    assert proto.parse_remote_led(bytes(decoded[6].payload)) == module.prop_frame.REMOTE_LED_BIT_LED3
-    assert proto.parse_remote_led(bytes(decoded[7].payload)) == module.prop_frame.REMOTE_LED_BIT_LED5
+    assert (
+        proto.parse_remote_led(bytes(decoded[4].payload)) == module.prop_frame.REMOTE_LED_BIT_LED3
+    )
+    assert (
+        proto.parse_remote_led(bytes(decoded[5].payload)) == module.prop_frame.REMOTE_LED_BIT_LED5
+    )
+    assert (
+        proto.parse_remote_led(bytes(decoded[6].payload)) == module.prop_frame.REMOTE_LED_BIT_LED3
+    )
+    assert (
+        proto.parse_remote_led(bytes(decoded[7].payload)) == module.prop_frame.REMOTE_LED_BIT_LED5
+    )
 
 
 def test_alpha2_prop_tx_instances_keep_independent_uart_state(monkeypatch):
@@ -454,6 +501,7 @@ def test_block_generated_smoke_example_executes_and_emits_valid_frames(monkeypat
 
     monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
     monkeypatch.syspath_prepend(str(BLOCKS / "alpha2"))
+    monkeypatch.syspath_prepend(str(ROOT))
     monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
     monkeypatch.delitem(sys.modules, "PropTx", raising=False)
 
@@ -468,11 +516,7 @@ def test_block_generated_smoke_example_executes_and_emits_valid_frames(monkeypat
     from shared.protocol import protocol as proto
 
     keys = {1: bytes.fromhex("00112233445566778899aabbccddeeff")}
-    frame_lines = [
-        item
-        for item in uart.writes
-        if isinstance(item, str) and item.startswith("FF ")
-    ]
+    frame_lines = [item for item in uart.writes if isinstance(item, str) and item.startswith("FF ")]
     decoded = [
         proto.decode_frame(bytes.fromhex(line.split(" ", 1)[1].strip()), keys)
         for line in frame_lines

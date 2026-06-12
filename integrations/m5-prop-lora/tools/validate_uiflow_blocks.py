@@ -62,9 +62,13 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return BundleReport("", "", 0, [], "", 0, "", 0, 0, [f"missing manifest: {_rel(repo, manifest_path)}"])
+        return BundleReport(
+            "", "", 0, [], "", 0, "", 0, 0, [f"missing manifest: {_rel(repo, manifest_path)}"]
+        )
     except json.JSONDecodeError as exc:
-        return BundleReport("", "", 0, [], "", 0, "", 0, 0, [f"invalid JSON in {_rel(repo, manifest_path)}: {exc}"])
+        return BundleReport(
+            "", "", 0, [], "", 0, "", 0, 0, [f"invalid JSON in {_rel(repo, manifest_path)}: {exc}"]
+        )
 
     category = manifest.get("category", "")
     color = manifest.get("color", "")
@@ -80,10 +84,14 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
     template_names: list[str] = []
     seen_names: set[str] = set()
     for index, block in enumerate(blocks):
+        label = f"blocks[{index}]"
+        if not isinstance(block, dict):
+            errors.append(f"{label} must be an object")
+            continue
+
         name = block.get("name")
         block_type = block.get("type")
         params = block.get("params", [])
-        label = f"blocks[{index}]"
         if not isinstance(name, str) or not name:
             errors.append(f"{label} has no name")
             continue
@@ -100,6 +108,11 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
 
         input_names: set[str] = set()
         for param_index, param in enumerate(params):
+            param_label = f"{label}.params[{param_index}]"
+            if not isinstance(param, dict):
+                errors.append(f"{param_label} must be an object")
+                continue
+
             param_name = param.get("name")
             param_type = param.get("type")
             if not isinstance(param_name, str) or not param_name:
@@ -133,7 +146,10 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
     if extra_templates:
         errors.append(f"templates without manifest blocks: {sorted(extra_templates)}")
 
-    for library in (repo / "uiflow" / "dial" / "prop_frame.py", repo / "uiflow" / "dial" / "prop_ui.py"):
+    for library in (
+        repo / "uiflow" / "dial" / "prop_frame.py",
+        repo / "uiflow" / "dial" / "prop_ui.py",
+    ):
         if not library.exists():
             errors.append(f"missing upload library: {_rel(repo, library)}")
 
@@ -148,11 +164,17 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
         except SyntaxError as exc:
             errors.append(f"invalid Python in {alpha2_source}: {exc}")
         else:
-            classes = [node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx"]
+            classes = [
+                node
+                for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "PropTx"
+            ]
             if len(classes) != 1:
                 errors.append(f"{alpha2_source} must define exactly one PropTx class")
             else:
-                methods = {node.name for node in classes[0].body if isinstance(node, ast.FunctionDef)}
+                methods = {
+                    node.name for node in classes[0].body if isinstance(node, ast.FunctionDef)
+                }
                 alpha2_method_count = len(methods)
                 missing = expected_alpha2_methods - methods
                 extra = methods - expected_alpha2_methods
@@ -208,14 +230,21 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
                 errors.append(f"{alpha2_artifact}: invalid toolbox XML: {exc}")
             else:
                 toolbox_category = toolbox_root.find("category")
-                toolbox_name = toolbox_category.get("name") if toolbox_category is not None else None
+                toolbox_name = (
+                    toolbox_category.get("name") if toolbox_category is not None else None
+                )
                 if toolbox_name != category:
-                    errors.append(f"{alpha2_artifact}: toolbox category must match manifest category")
+                    errors.append(
+                        f"{alpha2_artifact}: toolbox category must match manifest category"
+                    )
 
             artifact_py = artifact.get("pyCode")
             if artifact_py is None:
                 errors.append(f"{alpha2_artifact}: missing pyCode")
-            elif alpha2_path.exists() and artifact_py.strip() != alpha2_path.read_text(encoding="utf-8").strip():
+            elif (
+                alpha2_path.exists()
+                and artifact_py.strip() != alpha2_path.read_text(encoding="utf-8").strip()
+            ):
                 errors.append(f"{alpha2_artifact}: pyCode must match {alpha2_source}")
 
             members = data.get("members", []) if isinstance(data, dict) else []
@@ -289,9 +318,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Manifest: uiflow/dial/blocks/prop_tx.json ({report.category}, {report.color})")
     print("Templates: uiflow/dial/blocks/code")
     print(f"Alpha-2 source: {report.alpha2_source} ({report.alpha2_method_count} methods)")
-    print(f"Alpha-2 artifact: {report.alpha2_artifact} "
-          f"({report.alpha2_artifact_method_count} methods, "
-          f"{report.alpha2_artifact_block_count} blocks)")
+    print(
+        f"Alpha-2 artifact: {report.alpha2_artifact} "
+        f"({report.alpha2_artifact_method_count} methods, "
+        f"{report.alpha2_artifact_block_count} blocks)"
+    )
     print("Upload libraries: uiflow/dial/prop_frame.py, uiflow/dial/prop_ui.py")
     print("Manual import: copy each code/<name>.py template into M5Stack Block Designer")
     return 0
