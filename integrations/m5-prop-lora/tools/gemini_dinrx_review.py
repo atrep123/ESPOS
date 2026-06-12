@@ -10,6 +10,7 @@ Usage:
     python tools/gemini_dinrx_review.py
 Out: build/reviews/gemini_dinrx_hires.md  (+ printed)
 """
+
 from __future__ import annotations
 
 import base64
@@ -20,12 +21,12 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
-
 import preview_din_rx_render as P
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_ENDPOINT_PREFIX = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 
 def _load_api_key() -> str:
@@ -38,9 +39,6 @@ def _load_api_key() -> str:
         raise SystemExit("No Gemini API key: set GEMINI_API_KEY or create .gemini_api_key")
     return key
 
-
-ENDPOINT = ("https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{GEMINI_MODEL}:generateContent?key={_load_api_key()}")
 
 DEVICE = "M5 DinMeter (240x135 landscape LCD) RECEIVER of a wireless LoRa THEATRICAL/PYRO prop controller"
 
@@ -63,22 +61,38 @@ def _b64(img: Image.Image) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _ask(parts: list[dict], max_tokens: int = 1400) -> str:
-    body = json.dumps({
-        "contents": [{"parts": parts}],
-        "generationConfig": {"temperature": 0.5, "maxOutputTokens": max_tokens,
-                             "thinkingConfig": {"thinkingBudget": 0}},
-    }).encode("utf-8")
-    req = urllib.request.Request(ENDPOINT, data=body,
-                                 headers={"Content-Type": "application/json"})
+def _endpoint(api_key: str) -> str:
+    return f"{GEMINI_ENDPOINT_PREFIX}{GEMINI_MODEL}:generateContent?key={api_key}"
+
+
+def _ask(endpoint: str, parts: list[dict], max_tokens: int = 1400) -> str:
+    if not endpoint.startswith(GEMINI_ENDPOINT_PREFIX):
+        return "ERROR: invalid Gemini endpoint"
+
+    body = json.dumps(
+        {
+            "contents": [{"parts": parts}],
+            "generationConfig": {
+                "temperature": 0.5,
+                "maxOutputTokens": max_tokens,
+                "thinkingConfig": {"thinkingBudget": 0},
+            },
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(  # noqa: S310
+        endpoint,
+        data=body,
+        headers={"Content-Type": "application/json"},
+    )
     try:
-        resp = urllib.request.urlopen(req, timeout=180)
+        resp = urllib.request.urlopen(req, timeout=180)  # noqa: S310
         data = json.loads(resp.read())
-        return (data.get("candidates", [{}])[0]
-                    .get("content", {}).get("parts", [{}])[0].get("text", "")) or "(empty)"
+        return (
+            data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+        ) or "(empty)"
     except urllib.error.HTTPError as exc:
         return f"ERROR HTTP {exc.code}: {exc.read().decode('utf-8', 'replace')[:400]}"
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return f"ERROR: {exc}"
 
 
@@ -88,8 +102,11 @@ def hires_contact(named: list[tuple[str, Image.Image]]) -> Image.Image:
     label_h = 34
     cw, ch = named[0][1].size
     rows = (len(named) + cols - 1) // cols
-    sheet = Image.new("RGB", (cols * cw + (cols + 1) * pad,
-                              rows * (ch + label_h) + (rows + 1) * pad), (20, 22, 26))
+    sheet = Image.new(
+        "RGB",
+        (cols * cw + (cols + 1) * pad, rows * (ch + label_h) + (rows + 1) * pad),
+        (20, 22, 26),
+    )
     d = ImageDraw.Draw(sheet)
     try:
         font = ImageFont.truetype(str(P.FONT_BOLD), 26)
@@ -105,6 +122,7 @@ def hires_contact(named: list[tuple[str, Image.Image]]) -> Image.Image:
 
 
 def main() -> int:
+    endpoint = _endpoint(_load_api_key())
     out = ROOT / "build" / "preview_dinrx_hires"
     out.mkdir(parents=True, exist_ok=True)
 
@@ -116,12 +134,18 @@ def main() -> int:
     sheet = hires_contact(named)
     sheet_path = out / "contact_hires.png"
     sheet.save(sheet_path)
-    print(f"hires renders -> {out}  ({named[0][1].size[0]}x{named[0][1].size[1]} each, "
-          f"sheet {sheet.size[0]}x{sheet.size[1]})")
+    print(
+        f"hires renders -> {out}  ({named[0][1].size[0]}x{named[0][1].size[1]} each, "
+        f"sheet {sheet.size[0]}x{sheet.size[1]})"
+    )
 
-    lines = [f"# Gemini critique (MAX-RES) — DinMeter decluttered hybrid", "",
-             f"model: {GEMINI_MODEL}; per-state renders at {named[0][1].size[0]}x"
-             f"{named[0][1].size[1]} (4x supersample).", ""]
+    lines = [
+        "# Gemini critique (MAX-RES) — DinMeter decluttered hybrid",
+        "",
+        f"model: {GEMINI_MODEL}; per-state renders at {named[0][1].size[0]}x"
+        f"{named[0][1].size[1]} (4x supersample).",
+        "",
+    ]
 
     # 1) Holistic critique on the full contact sheet.
     holistic_prompt = (
@@ -137,7 +161,13 @@ def main() -> int:
         "Be opinionated and concrete. ~300 words."
     )
     print("  [1/2] holistic critique on contact sheet ...")
-    holistic = _ask([{"text": holistic_prompt}, {"inline_data": {"mime_type": "image/png", "data": _b64(sheet)}}])
+    holistic = _ask(
+        endpoint,
+        [
+            {"text": holistic_prompt},
+            {"inline_data": {"mime_type": "image/png", "data": _b64(sheet)}},
+        ],
+    )
     lines += ["## Holistic critique (all states)", "", holistic, ""]
 
     # 2) Per-state structured verdict.
@@ -152,9 +182,11 @@ def main() -> int:
         if name == "led_delays":
             continue
         print(f"  [2/2] scoring {name} ...")
-        verdict = _ask([{"text": per_prompt},
-                        {"inline_data": {"mime_type": "image/png", "data": _b64(im)}}],
-                       max_tokens=300)
+        verdict = _ask(
+            endpoint,
+            [{"text": per_prompt}, {"inline_data": {"mime_type": "image/png", "data": _b64(im)}}],
+            max_tokens=300,
+        )
         lines += [f"### {name}", "```", verdict.strip(), "```", ""]
 
     rev = ROOT / "build" / "reviews"
