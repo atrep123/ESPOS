@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools" / "uiflow_dial_offline.py"
@@ -211,7 +213,16 @@ def test_offline_deploy_dry_run_uploads_from_bundle_paths(tmp_path):
     )
 
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "deploy", "--port", "COM6", "--bundle", str(out), "--dry-run"],
+        [
+            sys.executable,
+            str(SCRIPT),
+            "deploy",
+            "--port",
+            "COM6",
+            "--bundle",
+            str(out),
+            "--dry-run",
+        ],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
@@ -224,6 +235,32 @@ def test_offline_deploy_dry_run_uploads_from_bundle_paths(tmp_path):
     assert str(out / "device" / "prop_ui.py") in result.stdout
     assert str(out / "device" / "PropTx.py") in result.stdout
     assert str(out / "device" / "main.py") in result.stdout
+
+
+def test_build_deploy_commands_rejects_non_list_device_files(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"] = "bad"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="device_files must be a list"):
+        tool.build_deploy_commands("COM6", bundle=out)
+
+
+def test_build_deploy_commands_rejects_non_object_device_file_entry(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_files"][0] = "bad"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"device_files\[0\] must be an object"):
+        tool.build_deploy_commands("COM6", bundle=out)
 
 
 def test_offline_deploy_requires_mpremote_for_real_upload(monkeypatch, tmp_path):

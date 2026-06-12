@@ -37,9 +37,7 @@ DEVICE_FILES = (
     DeviceFile("uiflow/dial/main.py", "device/main.py", "main.py"),
 )
 
-BLOCK_ARTIFACTS = (
-    BlockArtifact("uiflow/dial/blocks/dist/PropTx.m5b2", "blocks/PropTx.m5b2"),
-)
+BLOCK_ARTIFACTS = (BlockArtifact("uiflow/dial/blocks/dist/PropTx.m5b2", "blocks/PropTx.m5b2"),)
 
 
 def _sha256(path: Path) -> str:
@@ -181,10 +179,7 @@ def _load_bundle_manifest(bundle: Path) -> dict:
 
 
 def _expected_device_paths() -> dict[str, str]:
-    return {
-        item.bundle_path: f"{DEFAULT_TARGET_DIR}/{item.device_name}"
-        for item in DEVICE_FILES
-    }
+    return {item.bundle_path: f"{DEFAULT_TARGET_DIR}/{item.device_name}" for item in DEVICE_FILES}
 
 
 def _expected_artifact_paths() -> set[str]:
@@ -272,12 +267,24 @@ def build_deploy_commands(
     commands = [mpremote_command_prefix(port) + ["fs", "mkdir", target_dir]]
     if bundle is not None:
         manifest = _load_bundle_manifest(bundle)
-        items = manifest["device_files"]
-        for entry in items:
-            src_path = _bundle_file_path(bundle, entry["bundle_path"])
+        if not isinstance(manifest, dict):
+            raise ValueError("manifest must be a JSON object")
+        items = manifest.get("device_files")
+        if not isinstance(items, list):
+            raise ValueError("device_files must be a list")
+        for index, entry in enumerate(items):
+            if not isinstance(entry, dict):
+                raise ValueError(f"device_files[{index}] must be an object")
+            bundle_path = entry.get("bundle_path")
+            device_path = entry.get("device_path")
+            if not isinstance(bundle_path, str) or not bundle_path:
+                raise ValueError(f"device_files[{index}] has no bundle_path")
+            if not isinstance(device_path, str) or not device_path:
+                raise ValueError(f"device_files[{index}] has no device_path")
+            src_path = _bundle_file_path(bundle, bundle_path)
             if src_path is None:
-                raise ValueError(f"bundle_path escapes bundle: {entry['bundle_path']}")
-            device_name = Path(entry["device_path"]).name
+                raise ValueError(f"bundle_path escapes bundle: {bundle_path}")
+            device_name = Path(device_path).name
             dst = f":{target_dir.rstrip('/')}/{device_name}"
             commands.append(mpremote_command_prefix(port) + ["fs", "cp", str(src_path), dst])
         return commands
@@ -304,7 +311,10 @@ def deploy(port: str, target_dir: str, dry_run: bool, bundle: Path | None = None
             return 1
 
     if not dry_run and importlib.util.find_spec("mpremote") is None:
-        print("mpremote is not installed for this Python; install it before real deploy", file=sys.stderr)
+        print(
+            "mpremote is not installed for this Python; install it before real deploy",
+            file=sys.stderr,
+        )
         return 1
 
     commands = build_deploy_commands(port, target_dir, bundle_path)
@@ -319,7 +329,10 @@ def deploy(port: str, target_dir: str, dry_run: bool, bundle: Path | None = None
         print(format_command(command))
         result = subprocess.run(command, cwd=REPO_ROOT, check=False)
         if result.returncode != 0 and index == 0:
-            print(f"warning: could not create {target_dir}; continuing in case it already exists", file=sys.stderr)
+            print(
+                f"warning: could not create {target_dir}; continuing in case it already exists",
+                file=sys.stderr,
+            )
             continue
         if result.returncode != 0:
             return result.returncode
@@ -329,16 +342,22 @@ def deploy(port: str, target_dir: str, dry_run: bool, bundle: Path | None = None
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Prepare or upload the offline UIFlow Dial bundle.")
+    parser = argparse.ArgumentParser(
+        description="Prepare or upload the offline UIFlow Dial bundle."
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    bundle_parser = sub.add_parser("bundle", help="copy runtime files and block artifacts into a local bundle")
+    bundle_parser = sub.add_parser(
+        "bundle", help="copy runtime files and block artifacts into a local bundle"
+    )
     bundle_parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
 
     verify_parser = sub.add_parser("verify", help="verify bundle manifest files and SHA-256 hashes")
     verify_parser.add_argument("--bundle", type=Path, default=DEFAULT_OUT)
 
-    deploy_parser = sub.add_parser("deploy", help="upload runtime files to a USB-connected M5 Dial via mpremote")
+    deploy_parser = sub.add_parser(
+        "deploy", help="upload runtime files to a USB-connected M5 Dial via mpremote"
+    )
     deploy_parser.add_argument("--port", required=True, help="serial port, for example COM6")
     deploy_parser.add_argument("--bundle", type=Path, default=None)
     deploy_parser.add_argument("--target-dir", default=DEFAULT_TARGET_DIR)
