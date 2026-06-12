@@ -19,6 +19,13 @@ WRITE_PERMISSION_RE = re.compile(r"^\s*[a-z-]+:\s*write\s*(?:#.*)?$", re.IGNOREC
 JOB_HEADER_RE = re.compile(r"^  (?P<job>[A-Za-z0-9_-]+):\s*(?:#.*)?$")
 RUNS_ON_RE = re.compile(r"^    runs-on:\s*.+$")
 JOB_TIMEOUT_RE = re.compile(r"^    timeout-minutes:\s*(?P<value>\S+)\s*(?:#.*)?$")
+STEP_NAME_RE = re.compile(r"^\s*-\s+name:\s*(?P<name>.+?)\s*(?:#.*)?$")
+CONTINUE_ON_ERROR_TRUE_RE = re.compile(
+    r"^\s*continue-on-error:\s*true\s*(?:#.*)?$",
+    re.IGNORECASE,
+)
+IGNORED_FAILURE_RE = re.compile(r"\|\|\s*true(?:\s*(?:#.*)?)?$")
+SECURITY_STEP_NAME_RE = re.compile(r"\bsecurity audit\b|\bsupply-chain guard\b", re.IGNORECASE)
 CHECKOUT_ACTION_RE = re.compile(r"^actions/checkout@[0-9a-f]{40}$", re.IGNORECASE)
 PERSIST_CREDENTIALS_FALSE_RE = re.compile(
     r"^\s*persist-credentials:\s*false\s*(?:#.*)?$",
@@ -128,6 +135,27 @@ def _validate_job_timeouts(path: Path, lines: list[str]) -> list[str]:
     return issues
 
 
+def _validate_security_steps(path: Path, lines: list[str]) -> list[str]:
+    issues: list[str] = []
+    for line_no, line in enumerate(lines, start=1):
+        step_match = STEP_NAME_RE.match(line)
+        if not step_match:
+            continue
+
+        step_name = _clean_yaml_scalar(step_match.group("name"))
+        if not SECURITY_STEP_NAME_RE.search(step_name):
+            continue
+
+        block = _step_block_after_uses(lines, line_no - 1)
+        if any(CONTINUE_ON_ERROR_TRUE_RE.match(block_line) for block_line in block):
+            issues.append(
+                f"{path}:{line_no}: security step {step_name!r} must not use continue-on-error"
+            )
+        if any(IGNORED_FAILURE_RE.search(block_line) for block_line in block):
+            issues.append(f"{path}:{line_no}: security step {step_name!r} must not use || true")
+    return issues
+
+
 def validate_workflow_text(path: Path, text: str) -> list[str]:
     issues: list[str] = []
     if not _has_top_level_contents_read_permission(text):
@@ -135,6 +163,7 @@ def validate_workflow_text(path: Path, text: str) -> list[str]:
 
     lines = text.splitlines()
     issues.extend(_validate_job_timeouts(path, lines))
+    issues.extend(_validate_security_steps(path, lines))
 
     for line_no, line in enumerate(lines, start=1):
         if WRITE_PERMISSION_RE.match(line):

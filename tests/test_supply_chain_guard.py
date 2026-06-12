@@ -194,6 +194,65 @@ jobs:
     assert issues == []
 
 
+def test_workflow_rejects_continue_on_error_security_step():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Dependency security audit
+        continue-on-error: true
+        run: python -m pip_audit -r requirements-dev.txt --strict
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("security step" in issue and "continue-on-error" in issue for issue in issues)
+
+
+def test_workflow_rejects_ignored_security_step_failure():
+    workflow = """
+name: bad
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Supply-chain guard
+        run: python tools/check_supply_chain.py || true
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/bad.yml"), workflow)
+
+    assert any("security step" in issue and "|| true" in issue for issue in issues)
+
+
+def test_workflow_allows_non_security_advisory_step():
+    workflow = """
+name: good
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Mypy (designer - advisory)
+        continue-on-error: true
+        run: python -m mypy ui_designer.py || true
+"""
+
+    issues = validate_workflow_text(Path(".github/workflows/good.yml"), workflow)
+
+    assert issues == []
+
+
 def test_workflow_rejects_write_permissions():
     workflow = """
 name: bad
