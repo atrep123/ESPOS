@@ -5,6 +5,7 @@ from pathlib import Path
 from tools.check_supply_chain import (
     collect_issues,
     validate_dependabot_text,
+    validate_requirement_bounds,
     validate_requirements,
     validate_workflow_text,
 )
@@ -493,6 +494,42 @@ def test_requirements_requires_manifested_pip_audit():
     issues = validate_requirements("pytest>=9.0.3,<10\n")
 
     assert any("pip-audit" in issue for issue in issues)
+
+
+def test_requirements_rejects_unbounded_direct_dependency():
+    requirements = """
+-r requirements.txt
+pytest>=9.0.3,<10
+pip-audit>=2.10.1,<3
+mutmut>=2.5.0
+"""
+
+    issues = validate_requirement_bounds(Path("requirements-dev.txt"), requirements)
+
+    assert any("mutmut" in issue and "bounded version range" in issue for issue in issues)
+
+
+def test_requirements_rejects_bare_direct_dependency():
+    requirements = """
+# Runtime dependency
+pygame
+"""
+
+    issues = validate_requirement_bounds(Path("requirements.txt"), requirements)
+
+    assert any("pygame" in issue and "bounded version range" in issue for issue in issues)
+
+
+def test_requirements_accepts_bounded_dependencies_and_recursive_includes():
+    requirements = """
+-r requirements.txt
+pytest>=9.0.3,<10
+coverage[toml]>=7.3.0,<8
+"""
+
+    issues = validate_requirement_bounds(Path("requirements-dev.txt"), requirements)
+
+    assert issues == []
 
 
 def test_dependabot_requires_github_actions_group():

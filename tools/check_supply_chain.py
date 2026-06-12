@@ -42,6 +42,7 @@ DOWNLOAD_EXECUTE_RE = re.compile(
 PULL_REQUEST_TARGET_RE = re.compile(r"\bpull_request_target\b")
 WORKFLOW_RUN_RE = re.compile(r"\bworkflow_run\b")
 MUTABLE_RUNNER_RE = re.compile(r"^(?:ubuntu|windows|macos)-latest$", re.IGNORECASE)
+REQUIREMENT_NAME_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.-]+(?:\[[A-Za-z0-9_,.-]+\])?)")
 PIP_REQUIREMENT_OPTIONS = {"-r", "--requirement"}
 PIP_OPTIONS_WITH_VALUE = PIP_REQUIREMENT_OPTIONS | {
     "-c",
@@ -300,6 +301,27 @@ def validate_requirements(text: str) -> list[str]:
     return ["requirements-dev.txt: pip-audit must be declared in the dev dependency manifest"]
 
 
+def validate_requirement_bounds(path: Path, text: str) -> list[str]:
+    issues: list[str] = []
+    for line_no, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.split("#", 1)[0].strip()
+        if not line or line.startswith(("-r ", "--requirement ")):
+            continue
+        if line.startswith("-"):
+            continue
+
+        name_match = REQUIREMENT_NAME_RE.match(line)
+        package = name_match.group("name") if name_match else line
+        requirement_part = line.split(";", 1)[0]
+        has_lower_bound = ">=" in requirement_part
+        has_upper_bound = bool(re.search(r"(?:^|,)\s*<", requirement_part))
+        if not has_lower_bound or not has_upper_bound:
+            issues.append(
+                f"{path}:{line_no}: dependency {package!r} must use a bounded version range"
+            )
+    return issues
+
+
 def _clean_yaml_scalar(value: str) -> str:
     return value.strip().strip("\"'")
 
@@ -404,6 +426,14 @@ def collect_issues(root: Path) -> list[str]:
         issues.extend(validate_requirements(requirements_dev.read_text(encoding="utf-8")))
     else:
         issues.append("requirements-dev.txt: missing dev dependency manifest")
+
+    for requirements_file in sorted(root.glob("requirements*.txt")):
+        issues.extend(
+            validate_requirement_bounds(
+                requirements_file,
+                requirements_file.read_text(encoding="utf-8"),
+            )
+        )
 
     dependabot = root / ".github" / "dependabot.yml"
     if dependabot.exists():
