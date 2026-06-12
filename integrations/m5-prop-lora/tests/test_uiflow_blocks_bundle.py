@@ -314,6 +314,25 @@ def test_alpha2_dist_import_module_category_and_source_match_manifest():
         assert member["source"].strip() in data["pyCode"]
 
 
+def test_alpha2_toolbox_does_not_shadow_structured_inputs_with_empty_text():
+    data = json.loads(ALPHA2_DIST.read_text(encoding="utf-8"))
+    toolbox = ET.fromstring("<root>" + data["uiflow2"]["toolbox"] + "</root>")
+
+    for member in data["data"]["members"]:
+        method = member["name"]
+        block_type = f"custom_proptx_{'init' if method == '__init__' else method}"
+        block = toolbox.find(f".//block[@type='{block_type}']")
+        assert block is not None, block_type
+        for param in member["params"]:
+            value = block.find(f"value[@name='{param['name']}']")
+            shadow = value.find("shadow") if value is not None else None
+            if param["type"] in {"list", "tuple"}:
+                assert shadow is None, (block_type, param["name"])
+            elif param["type"] == "int":
+                assert shadow is not None
+                assert shadow.get("type") == "math_number"
+
+
 def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     class FakeUART:
         instances = []

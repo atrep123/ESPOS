@@ -315,12 +315,12 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
         assert not ops(frame, "orb_lens")
         assert len(ops(frame, "led_selection")) == (0 if view.awaiting_ack else 1)
         if view.awaiting_ack:
-            assert gui.state_color(view) == gui.MODE_SETUP
+            assert gui.state_color(view) == gui.P_AMBER
             assert one(frame, "wait_track")
             assert one(frame, "wait_sweep").color == gui.state_color(view)
             assert one(frame, "command_sent_text").text == "TX SENT"
             assert one(frame, "command_state_text").text == "WAIT ACK"
-            assert one(frame, "command_state_badge").color == gui.mix(gui.MODE_SETUP, gui.WHITE, 0.16)
+            assert one(frame, "command_state_badge").color == gui.mix(gui.P_AMBER, gui.WHITE, 0.10)
             assert bbox_height(one(frame, "command_state_text")) >= 22.0
             assert_bbox_contains(
                 one(frame, "command_state_badge"), one(frame, "command_state_text"), pad=4.0
@@ -332,32 +332,37 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
             assert not ops(frame, "command_text")
         elif (view.status or "") in ("no ack", "timeout"):
             assert one(frame, "command_state_text").text == "NO ACK"
-            assert one(frame, "command_state_text").color == gui.TEXT_HI
-            assert one(frame, "command_state_badge").color == gui.mix(gui.BG_BASE, gui.P_AMBER, 0.35)
+            assert one(frame, "command_state_text").color == 0x0E1116
+            assert one(frame, "command_state_badge").color == gui.mix(gui.P_AMBER, gui.WHITE, 0.10)
+            assert bbox_width(one(frame, "command_state_badge")) >= 132.0
+            assert_bbox_contains(
+                one(frame, "command_state_badge"), one(frame, "command_state_text"), pad=5.0
+            )
             assert not ops(frame, "command_text")
         else:
             expected_command_text = (
-                "NOT ARMED"
+                "LOCKED OUT"
                 if view.action_label == "ODPAL"
                 else ("NO FIRE" if view.action_label == "PREVIEW" else view.action_label)
             )
             assert one(frame, "command_text").text == expected_command_text
             if view.action_label == "PREVIEW":
-                assert one(frame, "command_preview_badge").text == "PREVIEW"
-                assert bbox_height(one(frame, "command_text")) >= 24.0
+                assert one(frame, "command_preview_badge").text == "PREVIEW ONLY"
+                assert bbox_height(one(frame, "command_text")) >= 28.0
                 assert bbox_height(one(frame, "command_preview_badge")) >= 12.0
-                assert bbox_width(one(frame, "command_preview_badge_plate")) >= 106.0
+                assert bbox_width(one(frame, "command_preview_badge_plate")) >= 146.0
                 assert not ops(frame, "command_chevron")
             if view.action_label == "ODPAL":
-                assert gui.state_color(view) == gui.MODE_SETUP
-                assert one(frame, "fire_locked_badge").color == gui.mix(gui.MODE_SETUP, gui.WHITE, 0.16)
-                assert one(frame, "fire_locked_text").text == "LOCKED"
+                assert gui.state_color(view) == gui.P_AMBER
+                assert one(frame, "fire_locked_badge").color == gui.mix(gui.P_AMBER, gui.WHITE, 0.10)
+                assert one(frame, "fire_locked_text").text == "ARM FIRST"
                 assert bbox_height(one(frame, "command_text")) >= 24.0
                 assert bbox_height(one(frame, "fire_locked_text")) >= 12.0
+                assert bbox_width(one(frame, "fire_locked_badge")) >= 164.0
                 assert_bbox_contains(
                     one(frame, "fire_locked_badge"), one(frame, "fire_locked_text"), pad=4.0
                 )
-                assert {op.color for op in ops(frame, "command_ring")} == {gui.MODE_SETUP}
+                assert {op.color for op in ops(frame, "command_ring")} == {gui.P_AMBER}
                 assert not ops(frame, "command_chevron")
     else:
         expected_orb = gui.setup_orb_color(view)

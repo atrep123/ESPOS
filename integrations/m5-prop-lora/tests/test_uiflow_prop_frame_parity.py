@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "uiflow" / "dial"))
+PROP_PROTOCOL_H = ROOT / "shared" / "protocol" / "prop_protocol.h"
 
 from shared.protocol import protocol as proto  # noqa: E402
 import prop_frame  # noqa: E402  (flat module, as it sits on the MicroPython device)
@@ -240,6 +241,26 @@ class HexAndLineParity(unittest.TestCase):
         self.assertEqual(
             proto.decode_frame(bytes.fromhex(hex_on_wire), KEYS).frame_type, proto.FrameType.PREVIEW
         )
+
+    def test_max_wire_lines_fit_cpp_host_rx_line_budget(self):
+        header = PROP_PROTOCOL_H.read_text(encoding="utf-8")
+        self.assertIn("MAX_HOST_RX_LINE_LENGTH", header)
+        max_host_line = proto.MAX_FRAME_LENGTH * 2 + 16 + 1
+        frame = _mine(
+            (
+                prop_frame.STATUS,
+                1,
+                0xFF,
+                0xFF,
+                0xFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF,
+                bytes(range(prop_frame.MAX_PAYLOAD_LENGTH)),
+            )
+        )
+
+        self.assertEqual(len(frame), proto.MAX_FRAME_LENGTH)
+        self.assertLessEqual(len(prop_frame.ff_line(frame)), max_host_line)
+        self.assertLessEqual(len(prop_frame.send_line(frame)), max_host_line)
 
 
 class SenderParity(unittest.TestCase):

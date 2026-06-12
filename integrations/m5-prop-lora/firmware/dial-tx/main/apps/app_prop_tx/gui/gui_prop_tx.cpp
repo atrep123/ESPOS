@@ -137,6 +137,21 @@ namespace
                strcmp(s, "BLOKOVANO") == 0;
     }
 
+    bool is_locked_fire_choice(const View_t& view)
+    {
+        const char* s = view.status == nullptr ? "" : view.status;
+        const char* label = view.action_label == nullptr ? "" : view.action_label;
+        return !view.armed && !view.awaiting_ack && strcmp(s, "ready") == 0 &&
+               strcmp(label, "ODPAL") == 0;
+    }
+
+    bool is_preview_choice(const View_t& view)
+    {
+        const char* label = view.action_label == nullptr ? "" : view.action_label;
+        return !view.armed && !view.awaiting_ack && strcmp(label, "PREVIEW") == 0 &&
+               is_command_mode(view);
+    }
+
     uint32_t state_color(const View_t& view)
     {
         const char* s = view.status == nullptr ? "" : view.status;
@@ -151,6 +166,10 @@ namespace
             strcmp(s, "FF DUTY") == 0)
         {
             return P_RED;
+        }
+        if (is_locked_fire_choice(view))
+        {
+            return P_AMBER;
         }
         if (view.awaiting_ack || strncmp(s, "sent ", 5) == 0 ||
             strcmp(s, "ODESILAM") == 0 || strcmp(s, "ODESLANO") == 0 ||
@@ -335,6 +354,35 @@ namespace
         if (strcmp(variant, "no_ack") == 0)
         {
             draw_x_glyph(canvas, cx, cy, sc);
+            canvas->fillRoundRect(cx - 70, cy + 18, 140, 40, 14, mix(P_AMBER, COL_WHITE, 0.10f));
+            canvas->setFont(GUI_FONT_CN_BIG);
+            canvas->setTextSize(1.08f);
+            canvas->setTextColor(COL_DARK);
+            drawTopCenterText(canvas, "NO ACK", cx, cy + 24);
+            return;
+        }
+        if (strcmp(variant, "locked_fire") == 0)
+        {
+            canvas->setFont(GUI_FONT_CN_BIG);
+            canvas->setTextSize(1.24f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "LOCKED OUT", cx, cy - 36);
+            canvas->fillRoundRect(cx - 82, cy + 20, 164, 26, 12, mix(P_AMBER, COL_WHITE, 0.10f));
+            canvas->setTextSize(0.72f);
+            canvas->setTextColor(COL_DARK);
+            drawTopCenterText(canvas, "ARM FIRST", cx, cy + 20);
+            return;
+        }
+        if (strcmp(variant, "preview") == 0)
+        {
+            canvas->setFont(GUI_FONT_CN_BIG);
+            canvas->setTextSize(1.48f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "NO FIRE", cx, cy - 38);
+            canvas->fillRoundRect(cx - 78, cy + 18, 156, 30, 15, mix(MODE_SETUP, COL_WHITE, 0.16f));
+            canvas->setTextSize(0.64f);
+            canvas->setTextColor(COL_DARK);
+            drawTopCenterText(canvas, "PREVIEW ONLY", cx, cy + 21);
             return;
         }
 
@@ -507,9 +555,17 @@ void GUI_PropTx::renderPage(const View_t& view)
         {
             variant = "no_ack";
         }
+        else if (is_locked_fire_choice(view))
+        {
+            variant = "locked_fire";
+        }
+        else if (is_preview_choice(view))
+        {
+            variant = "preview";
+        }
         draw_command_token(_canvas, CX, ORB_CY, sc, label, variant);
 
-        if (!view.awaiting_ack)
+        if (!view.awaiting_ack && strcmp(variant, "locked_fire") != 0 && strcmp(variant, "preview") != 0)
         {
             const int chev = COMMAND_RING_R + 14;
             draw_chevron(_canvas, CX - chev, ORB_CY, 9, 9, sc);

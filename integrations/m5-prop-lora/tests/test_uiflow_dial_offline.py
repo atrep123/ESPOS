@@ -242,6 +242,20 @@ def test_create_bundle_refuses_existing_non_bundle_output(tmp_path):
     assert marker.read_text(encoding="utf-8") == "do not delete"
 
 
+def test_create_bundle_refuses_existing_invalid_bundle_marker_output(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "important-dir"
+    out.mkdir()
+    (out / "offline_manifest.json").write_text("{}", encoding="utf-8")
+    marker = out / "keep.txt"
+    marker.write_text("do not delete", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="refusing to replace invalid existing bundle output"):
+        tool.create_bundle(out)
+
+    assert marker.read_text(encoding="utf-8") == "do not delete"
+
+
 def test_create_bundle_refuses_repo_source_subdirectory():
     tool = load_offline_tool()
 

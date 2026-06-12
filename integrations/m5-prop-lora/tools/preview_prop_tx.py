@@ -346,9 +346,9 @@ def state_color(v: View) -> int:
     if v.armed:
         return P_RED
     if is_locked_fire_choice(v):
-        return MODE_SETUP
+        return P_AMBER
     if v.awaiting_ack or s.startswith("sent "):
-        return MODE_SETUP
+        return P_AMBER
     if s in ("no ack", "timeout"):
         return P_AMBER
     if s.startswith("ERR "):
@@ -575,7 +575,7 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
             188,
             76,
             18,
-            mix(MODE_SETUP, WHITE, 0.16),
+            mix(P_AMBER, WHITE, 0.10),
             role="command_state_badge",
         )
         c.text_center("TX SENT", cx, cy - 22, 15, 0x0E1116, tracking=1.2, role="command_sent_text")
@@ -588,41 +588,41 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
     if variant == "no_ack":
         draw_x_glyph(c, cx, cy, sc)
         c.fill_round_rect(
-            cx - 57,
-            cy + 22,
-            114,
-            34,
+            cx - 70,
+            cy + 18,
+            140,
+            40,
             14,
-            mix(BG_BASE, P_AMBER, 0.35),
+            mix(P_AMBER, WHITE, 0.10),
             role="command_state_badge",
         )
-        c.text_center("NO ACK", cx, cy + 24, 28, TEXT_HI, role="command_state_text")
+        c.text_center("NO ACK", cx, cy + 24, 28, 0x0E1116, role="command_state_text")
         return
     if variant == "locked_fire":
-        c.text_center("NOT ARMED", cx, cy - 32, 34, TEXT_HI, role="command_text")
+        c.text_center("LOCKED OUT", cx, cy - 34, 34, TEXT_HI, role="command_text")
         c.fill_round_rect(
             cx - 82,
             cy + 20,
             164,
             26,
             12,
-            mix(MODE_SETUP, WHITE, 0.16),
+            mix(P_AMBER, WHITE, 0.10),
             role="fire_locked_badge",
         )
-        c.text_center("LOCKED", cx, cy + 20, 18, 0x0E1116, role="fire_locked_text")
+        c.text_center("ARM FIRST", cx, cy + 20, 18, 0x0E1116, role="fire_locked_text")
         return
     if variant == "preview":
-        c.text_center("NO FIRE", cx, cy - 32, 34, TEXT_HI, role="command_text")
+        c.text_center("NO FIRE", cx, cy - 39, 40, TEXT_HI, role="command_text")
         c.fill_round_rect(
-            cx - 58,
+            cx - 78,
             cy + 18,
-            116,
+            156,
             30,
             15,
             mix(MODE_SETUP, WHITE, 0.16),
             role="command_preview_badge_plate",
         )
-        c.text_center("PREVIEW", cx, cy + 21, 18, 0x0E1116, role="command_preview_badge")
+        c.text_center("PREVIEW ONLY", cx, cy + 21, 17, 0x0E1116, role="command_preview_badge")
         return
 
     ls = command_label_size(label)

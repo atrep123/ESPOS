@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -123,10 +124,60 @@ def _normalise_target(path: str) -> Path:
     return candidate
 
 
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _summarize_m5b2(path: Path) -> str:
+    rel = path.relative_to(ROOT).as_posix()
+    raw = path.read_bytes()
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return (
+            f"### {rel}\n\n"
+            "```text\n"
+            f"bytes: {len(raw)}\n"
+            f"sha256: {_sha256_bytes(raw)}\n"
+            f"parse_error: {type(exc).__name__}: {exc}\n"
+            "```\n"
+        )
+
+    uiflow2 = data.get("uiflow2", {}) if isinstance(data, dict) else {}
+    members = data.get("data", {}).get("members", []) if isinstance(data, dict) else []
+    py_code = str(data.get("pyCode", "")) if isinstance(data, dict) else ""
+    jscode = str(uiflow2.get("jscode", "")) if isinstance(uiflow2, dict) else ""
+    toolbox = str(uiflow2.get("toolbox", "")) if isinstance(uiflow2, dict) else ""
+    block_types = uiflow2.get("block_type", []) if isinstance(uiflow2, dict) else []
+    member_names = [
+        str(member.get("name", ""))
+        for member in members
+        if isinstance(member, dict) and member.get("name")
+    ]
+    summary = {
+        "bytes": len(raw),
+        "sha256": _sha256_bytes(raw),
+        "version": data.get("version") if isinstance(data, dict) else None,
+        "category": data.get("category") if isinstance(data, dict) else None,
+        "color": data.get("color") if isinstance(data, dict) else None,
+        "top_level_keys": sorted(data) if isinstance(data, dict) else [],
+        "block_type_count": len(block_types) if isinstance(block_types, list) else 0,
+        "member_count": len(member_names),
+        "member_names": member_names,
+        "pyCode_sha256": _sha256_bytes(py_code.encode("utf-8")),
+        "jscode_sha256": _sha256_bytes(jscode.encode("utf-8")),
+        "toolbox_sha256": _sha256_bytes(toolbox.encode("utf-8")),
+    }
+    lines = [f"{key}: {value}" for key, value in summary.items()]
+    return f"### {rel}\n\n```text\n" + "\n".join(lines) + "\n```\n"
+
+
 def _read_target(path: Path) -> str:
     rel = path.relative_to(ROOT).as_posix()
     if not path.is_file():
         return f"### {rel}\n\n<MISSING>\n"
+    if path.suffix == ".m5b2":
+        return _summarize_m5b2(path)
     text = path.read_text(encoding="utf-8", errors="replace")
     return f"### {rel}\n\n```text\n{redact_secrets(text)}\n```\n"
 

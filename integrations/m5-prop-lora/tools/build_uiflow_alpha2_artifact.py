@@ -258,6 +258,8 @@ def toolbox_shadow(param: dict[str, str]) -> str:
             "    </shadow>\n"
             "  </value>"
         )
+    if param.get("type") in {"list", "tuple"}:
+        return f'  <value name="{param["name"]}"/>'
     return (
         f'  <value name="{param["name"]}">\n'
         '    <shadow type="text">\n'

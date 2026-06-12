@@ -87,6 +87,14 @@ def _validate_output_path(out: Path) -> None:
 def _validate_replace_target(out: Path) -> None:
     if out.exists() and not (out / "offline_manifest.json").is_file():
         raise ValueError("refusing to replace existing non-bundle output")
+    if out.exists():
+        errors = [
+            error for error in verify_bundle(out) if not error.startswith("unexpected bundle file:")
+        ]
+        if errors:
+            raise ValueError(
+                "refusing to replace invalid existing bundle output: " + "; ".join(errors)
+            )
 
 
 def _preflight_sources() -> None:
