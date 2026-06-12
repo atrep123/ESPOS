@@ -12,8 +12,6 @@ import types
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import pytest
-
 
 ROOT = Path(__file__).resolve().parents[1]
 BLOCKS = ROOT / "uiflow" / "dial" / "blocks"
@@ -215,7 +213,7 @@ def test_alpha2_prop_tx_source_covers_every_prop_block_method():
         "import prop_ui",
         "self._tx = prop_frame.PropSender()",
         "self._tx.preview_line(colors)",
-        "self._tx.fire_line(colors)",
+        "self._tx.fire_burst_lines(colors)",
         "self._tx.stop_line()",
         "self._tx.arm_line()",
         "self._tx.remote_led_line(",
@@ -388,8 +386,9 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     tx.arm()
     tx.remote_led(3)
     tx.remote_led(5)
-    with pytest.raises(ValueError, match="remote LED must be 3 or 5"):
-        tx.remote_led(4)
+    writes_before_invalid_remote_led = len(uart.writes)
+    tx.remote_led(4)
+    assert len(uart.writes) == writes_before_invalid_remote_led
     tx.remote_led3()
     tx.remote_led5()
     tx.sync_palette(default_colors)
@@ -413,6 +412,8 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     assert [int(frame.frame_type) for frame in decoded] == [
         proto.FrameType.PREVIEW,
         proto.FrameType.FIRE,
+        proto.FrameType.FIRE,
+        proto.FrameType.FIRE,
         proto.FrameType.STOP,
         proto.FrameType.ARM,
         proto.FrameType.REMOTE_LED,
@@ -422,20 +423,24 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
         proto.FrameType.PALETTE_SET,
     ]
     assert proto.parse_led_payload(bytes(decoded[0].payload))["colors"] == colors
-    assert (
-        proto.parse_remote_led(bytes(decoded[4].payload))
-        == tx._prop_frame.REMOTE_LED_BIT_LED3
-    )
-    assert (
-        proto.parse_remote_led(bytes(decoded[5].payload))
-        == tx._prop_frame.REMOTE_LED_BIT_LED5
-    )
+    assert len(set(frame_lines[1:4])) == 1
+    assert all(line.startswith("FF ") for line in frame_lines[1:4])
+    assert decoded[1].sequence == decoded[2].sequence == decoded[3].sequence
+    assert decoded[1].nonce == decoded[2].nonce == decoded[3].nonce
     assert (
         proto.parse_remote_led(bytes(decoded[6].payload))
         == tx._prop_frame.REMOTE_LED_BIT_LED3
     )
     assert (
         proto.parse_remote_led(bytes(decoded[7].payload))
+        == tx._prop_frame.REMOTE_LED_BIT_LED5
+    )
+    assert (
+        proto.parse_remote_led(bytes(decoded[8].payload))
+        == tx._prop_frame.REMOTE_LED_BIT_LED3
+    )
+    assert (
+        proto.parse_remote_led(bytes(decoded[9].payload))
         == tx._prop_frame.REMOTE_LED_BIT_LED5
     )
 

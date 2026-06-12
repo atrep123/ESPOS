@@ -13,6 +13,7 @@ UIFLOW = ROOT / "uiflow" / "dial"
 class FakeTime:
     def __init__(self) -> None:
         self.now = 0
+        self.sleeps: list[int] = []
 
     def ticks_ms(self) -> int:
         self.now += 10
@@ -25,6 +26,7 @@ class FakeTime:
         return end - start
 
     def sleep_ms(self, value: int) -> None:
+        self.sleeps.append(value)
         self.now += value
 
 
@@ -111,12 +113,54 @@ def test_setup_initializes_prop_sender(monkeypatch):
 def test_first_action_send_uses_initialized_sender(monkeypatch):
     app = load_uiflow_main(monkeypatch)
     app.setup()
+    uart = FakeUART.instances[-1]
+    uart.writes.clear()
 
     app.send_current_action()
 
-    uart = FakeUART.instances[-1]
-    assert any(line.startswith("FF ") for line in uart.writes)
+    from shared.protocol import protocol as proto
+
+    keys = {1: bytes.fromhex("00112233445566778899aabbccddeeff")}
+    frame_lines = [
+        line for line in uart.writes if isinstance(line, str) and line.startswith("FF ")
+    ]
+    assert len(frame_lines) == 1
+    frame = proto.decode_frame(
+        bytes.fromhex(frame_lines[0].split(" ", 1)[1].strip()), keys
+    )
+    assert frame.frame_type == proto.FrameType.PREVIEW
     assert app._status != "TX FAIL"
+
+
+def test_fire_action_uses_redundant_ff_burst(monkeypatch):
+    app = load_uiflow_main(monkeypatch)
+    app.setup()
+    uart = FakeUART.instances[-1]
+    uart.writes.clear()
+    app.time.sleeps.clear()
+    app._action = app.A_ODPAL
+
+    app.send_current_action()
+
+    fire_lines = [
+        line for line in uart.writes if isinstance(line, str) and line.startswith("FF ")
+    ]
+    assert len(fire_lines) == 3
+    assert len(set(fire_lines)) == 1
+
+    from shared.protocol import protocol as proto
+
+    keys = {1: bytes.fromhex("00112233445566778899aabbccddeeff")}
+    decoded = [
+        proto.decode_frame(bytes.fromhex(line.split(" ", 1)[1].strip()), keys)
+        for line in fire_lines
+    ]
+    assert [frame.frame_type for frame in decoded] == [proto.FrameType.FIRE] * 3
+    assert decoded[0].sequence == decoded[1].sequence == decoded[2].sequence
+    assert decoded[0].nonce == decoded[1].nonce == decoded[2].nonce
+    assert not any(line.startswith("SEND ") for line in uart.writes)
+    assert app.time.sleeps[:2] == [app.pf.FIRE_BURST_GAP_MS, app.pf.FIRE_BURST_GAP_MS]
+    assert app.time.sleeps.count(app.pf.FIRE_BURST_GAP_MS) == 2
 
 
 def test_drain_modem_accepts_str_uart_lines(monkeypatch):

@@ -300,6 +300,28 @@ class SenderParity(unittest.TestCase):
         self.assertEqual(dec.frame_type, proto.FrameType.PREVIEW)
         self.assertEqual(proto.parse_led_payload(bytes(dec.payload))["colors"], colors)
 
+    def test_fire_burst_repeats_one_authenticated_ff_frame(self):
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+        s = prop_frame.PropSender(epoch=0xABCD0001, sequence=10, rand32=self._rng([0xCAFEBABE]))
+
+        lines = s.fire_burst_lines(colors, copies=3)
+
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(len(set(lines)), 1)
+        self.assertTrue(all(line.startswith("FF ") and line.endswith("\n") for line in lines))
+        dec = proto.decode_frame(bytes.fromhex(lines[0][3:-1]), KEYS)
+        self.assertEqual(dec.frame_type, proto.FrameType.FIRE)
+        self.assertEqual(dec.sequence, 10)
+        self.assertEqual(dec.nonce, (0xABCD0001 << 32) | 0xCAFEBABE)
+        self.assertEqual(proto.parse_led_payload(bytes(dec.payload))["colors"], colors)
+        self.assertEqual(s.sequence, 11)
+
+    def test_fire_burst_rejects_zero_copies(self):
+        s = prop_frame.PropSender(epoch=1, sequence=1, rand32=self._rng([1]))
+
+        with self.assertRaises(ValueError):
+            s.fire_burst_lines(LED_COLORS, copies=0)
+
 
 if __name__ == "__main__":
     unittest.main()

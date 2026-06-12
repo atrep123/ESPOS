@@ -247,6 +247,23 @@ def test_receiver_detects_stale_and_duplicate_sequences(
     assert result.receiver_state.colors == receiver.colors
 
 
+def test_receiver_deduplicates_identical_fire_burst_copy_without_reapplying() -> None:
+    state = controller(FrameType.FIRE, sequence=11, nonce=0x0102030405060708)
+    encoded = sim.encode_controller_frame(state)
+    first = sim.receive_encoded_frame(encoded, sim.ReceiverState())
+
+    duplicate = sim.receive_encoded_frame(encoded, first.receiver_state)
+
+    assert first.status == "FIRE"
+    assert first.accepted is True
+    assert first.receiver_state.mode == sim.ReceiverMode.FIRE
+    assert duplicate.status == "DUP"
+    assert duplicate.accepted is False
+    assert duplicate.receiver_state.last_accepted_sequence == first.receiver_state.last_accepted_sequence
+    assert duplicate.receiver_state.mode == first.receiver_state.mode
+    assert duplicate.receiver_state.colors == first.receiver_state.colors
+
+
 @pytest.mark.parametrize("payload", [b"", b"\x96", b"\x96" + bytes(range(11)), b"\x96" + bytes(range(13))])
 def test_receiver_rejects_malformed_led_payloads_without_applying_them(payload: bytes) -> None:
     encoded = sim.encode_controller_frame(

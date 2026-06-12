@@ -69,7 +69,19 @@ class PropTx:
                 name: colors
                 type: list
         """
-        self._uart.write(self._tx.fire_line(colors))
+        lines = self._tx.fire_burst_lines(colors)
+        for index, line in enumerate(lines):
+            self._uart.write(line)
+            if index + 1 < len(lines):
+                sleep_ms = None
+                try:
+                    import time
+
+                    sleep_ms = getattr(time, "sleep_ms", None)
+                except ImportError:
+                    sleep_ms = None
+                if sleep_ms is not None:
+                    sleep_ms(self._prop_frame.FIRE_BURST_GAP_MS)
 
     def stop(self):
         """
@@ -103,7 +115,7 @@ class PropTx:
         elif which == 5:
             bit = self._prop_frame.REMOTE_LED_BIT_LED5
         else:
-            raise ValueError("remote LED must be 3 or 5")
+            return
         self._uart.write(self._tx.remote_led_line(bit))
 
     def sync_palette(self, colors):

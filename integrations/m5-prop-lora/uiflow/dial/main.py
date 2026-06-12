@@ -255,7 +255,12 @@ def send_current_action():
         elif a == A_ARM:
             uart.write(tx.arm_line());                set_status("ARM ->", P_AMBER)
         elif a == A_ODPAL:
-            uart.write(tx.fire_line(_colors[:4]));    set_status("ODPAL ->", P_AMBER)
+            fire_lines = tx.fire_burst_lines(_colors[:4])
+            for index, line in enumerate(fire_lines):
+                uart.write(line)
+                if index + 1 < len(fire_lines):
+                    time.sleep_ms(pf.FIRE_BURST_GAP_MS)
+            set_status("ODPAL ->", P_AMBER)
         elif a == A_STOP:
             uart.write(tx.stop_line());               set_status("STOP ->", P_RED)
         elif a == A_LED3:

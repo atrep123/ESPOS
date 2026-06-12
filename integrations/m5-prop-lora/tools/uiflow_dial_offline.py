@@ -369,7 +369,15 @@ def deploy(port: str, target_dir: str, dry_run: bool, bundle: Path | None = None
                 print(error, file=sys.stderr)
             return 1
 
-    if not dry_run and importlib.util.find_spec("mpremote") is None:
+    mpremote_missing = importlib.util.find_spec("mpremote") is None
+    if dry_run and mpremote_missing:
+        print(
+            "warning: mpremote is not installed for this Python; dry-run commands "
+            "will need it before real deploy",
+            file=sys.stderr,
+        )
+
+    if not dry_run and mpremote_missing:
         print(
             "mpremote is not installed for this Python; install it before real deploy",
             file=sys.stderr,

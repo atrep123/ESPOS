@@ -120,6 +120,12 @@ DEFAULT_DESTINATION = 0x22
 # Senders write a constant placeholder for the (receiver-ignored) brightness byte.
 LED_PAYLOAD_BRIGHTNESS = 0xFF
 
+# Mirrors firmware/dial-tx/.../prop_tx_config.h: FF_REDUNDANCY and
+# FF_JITTER_MIN_MS. The Python side keeps the line generation deterministic; callers
+# that have a clock may sleep between the returned lines.
+FIRE_BURST_COPIES = 3
+FIRE_BURST_GAP_MS = 18
+
 
 # ---------------------------------------------------------------------------
 # [2] HMAC-SHA256 (hand-rolled, truncated)  -- mirrors hmacSha256Truncated()
@@ -337,7 +343,15 @@ class PropSender:
         return ff_line(self.encode(PREVIEW, encode_led_payload(brightness, colors)))
 
     def fire_line(self, colors, brightness=LED_PAYLOAD_BRIGHTNESS):
+        """Legacy ack-tracked FIRE line. Production firmware uses fire_burst_lines()."""
         return send_line(self.encode(FIRE, encode_led_payload(brightness, colors)))
+
+    def fire_burst_lines(self, colors, copies=FIRE_BURST_COPIES, brightness=LED_PAYLOAD_BRIGHTNESS):
+        copies = int(copies)
+        if copies < 1:
+            raise ValueError("fire burst copies must be >= 1")
+        line = ff_line(self.encode(FIRE, encode_led_payload(brightness, colors)))
+        return [line for _ in range(copies)]
 
     def stop_line(self):
         return ff_line(self.encode(STOP))

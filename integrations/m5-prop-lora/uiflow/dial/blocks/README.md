@@ -23,7 +23,7 @@ Category **`PropTx`**, colour `#2E9E72`. `${x}` = the block's input named `x`.
 |---|---|---|---|
 | **Prop init  TX `tx` RX `rx`** | execute | `tx`,`rx` (number) | `global prop_uart, prop_tx, prop_frame, prop_ui`<br>`import prop_frame`<br>`import prop_ui`<br>`from hardware import UART`<br>`prop_uart = UART(1, baudrate=115200, bits=8, parity=None, stop=1, tx=${tx}, rx=${rx})`<br>`prop_uart.write('\n')`<br>`prop_tx = prop_frame.PropSender()` |
 | **Prop PREVIEW colors `colors`** | execute | `colors` (variable) | `prop_uart.write(prop_tx.preview_line(${colors}))` |
-| **Prop ODPAL colors `colors`** | execute | `colors` (variable) | `prop_uart.write(prop_tx.fire_line(${colors}))` |
+| **Prop ODPAL colors `colors`** | execute | `colors` (variable) | `try: import time`<br>`except ImportError: time = None`<br>`lines = prop_tx.fire_burst_lines(${colors})`<br>`for index, line in enumerate(lines):`<br>`    prop_uart.write(line)`<br>`    if index + 1 < len(lines) and time is not None and hasattr(time, "sleep_ms"):`<br>`        time.sleep_ms(prop_frame.FIRE_BURST_GAP_MS)` |
 | **Prop STOP** | execute | — | `prop_uart.write(prop_tx.stop_line())` |
 | **Prop ARM** | execute | — | `prop_uart.write(prop_tx.arm_line())` |
 | **Prop remote LED `which`** | execute | `which` (number: 3 or 5) | `prop_uart.write(prop_tx.remote_led_line(prop_frame.REMOTE_LED_BIT_LED3 if ${which} == 3 else prop_frame.REMOTE_LED_BIT_LED5))` |
@@ -165,7 +165,7 @@ python -m uiflow_custom_block_generator uiflow/dial/blocks/prop_tx.json
 
 Safety unchanged: the Dial only *sends*; **ARM/Fire/STOP enforcement stays on the C++
 DinMeter**. These blocks emit the exact same `FF`/`SEND` lines as the firmware (proven by
-`tests/test_uiflow_prop_frame_parity.py`).
+`tests/test_uiflow_prop_frame_parity.py`), including the FIRE `FF` burst path.
 
 > Prefer no blocks at all? `main.py` already does all of the above in one file — run it in
 > UIFlow2 **Python mode**. The blocks are for those who want the canvas to stay drag-and-drop.

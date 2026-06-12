@@ -74,6 +74,8 @@ uart = UART(1, baudrate=115200, tx=13, rx=15)   # Dial -> its LoRa modem
 tx = pf.PropSender()                             # monotonic sequence + per-boot epoch
 
 uart.write(tx.preview_line([(255,0,0),(0,255,0),(0,0,255),(255,255,0)]))
+for line in tx.fire_burst_lines([(255,0,0),(0,255,0),(0,0,255),(255,255,0)]):
+    uart.write(line)                         # production FIRE path: FF burst
 uart.write(tx.stop_line())                       # STOP is the master off
 uart.write(tx.remote_led_line(pf.REMOTE_LED_BIT_LED5))
 ```
@@ -112,9 +114,10 @@ in `setup()` but never created the `PropSender`, so `tx` stayed `None` and **eve
 failed with "TX FAIL"** — `tx` is now instantiated, resuming its sequence from NVS.
 
 **Still to do for a faithful full port (all VERIFY ON DEVICE — need the M5Dial in hand):**
-ack-tracking / FF-retry if the Dial should confirm FIRE (a design choice — currently
-fire-and-forget, like the C++ Dial's PREVIEW); touch-zone input (currently encoder-only);
-polishing the layout to the round 240×240.
+receiver-side FIRE confirmation display if the Dial should surface deferred ACK telemetry;
+touch-zone input (currently encoder-only); polishing the layout to the round 240×240.
+The UIFlow FIRE send path now mirrors the production C++ default: one authenticated FIRE
+frame is emitted as a redundant `FF` burst, with receiver deduplication by sequence.
 
 ### Run on the M5Dial
 1. Flash UIFlow2 MicroPython to the Dial (M5Burner), or use the UIFlow2 web IDE.
@@ -177,8 +180,9 @@ python tools/gemini_code_review.py --out build/reviews/gemini_code_review.md
 ```
 
 Use the dry-run prompt when sharing the review package manually. Accept the
-code/workflow side only when Gemini has no hardware-acceptance blockers, and
-local validation below still passes.
+code/workflow side only when Gemini has no hardware-acceptance blockers, and the
+local block/offline checks still pass (`tools/validate_uiflow_blocks.py`,
+`tools/uiflow_dial_offline.py verify`, and the focused UIFlow pytest pack).
 
 ### Gemini visual review gate
 

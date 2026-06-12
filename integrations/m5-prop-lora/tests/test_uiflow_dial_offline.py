@@ -55,6 +55,29 @@ def test_offline_bundle_contains_runtime_files_and_block_artifact(tmp_path):
     assert "offline UIFlow Dial bundle" in result.stdout
 
 
+def test_offline_bundle_runtime_uses_fire_burst_path(tmp_path):
+    out = tmp_path / "offline"
+
+    subprocess.run(
+        [sys.executable, str(SCRIPT), "bundle", "--out", str(out)],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    prop_frame = (out / "device" / "prop_frame.py").read_text(encoding="utf-8")
+    main_py = (out / "device" / "main.py").read_text(encoding="utf-8")
+    prop_tx = (out / "device" / "PropTx.py").read_text(encoding="utf-8")
+
+    assert "def fire_burst_lines" in prop_frame
+    assert "tx.fire_burst_lines(_colors[:4])" in main_py
+    assert "self._tx.fire_burst_lines(colors)" in prop_tx
+    assert "fire_line(_colors[:4])" not in main_py
+    assert "self._tx.fire_line(colors)" not in prop_tx
+
+
 def test_offline_deploy_dry_run_prints_mpremote_upload_commands():
     result = subprocess.run(
         [sys.executable, str(SCRIPT), "deploy", "--port", "COM6", "--dry-run"],
@@ -432,6 +455,20 @@ def test_offline_deploy_requires_mpremote_for_real_upload(monkeypatch, tmp_path)
     rc = tool.deploy("COM6", "/flash", dry_run=False, bundle=out)
 
     assert rc == 1
+
+
+def test_offline_deploy_dry_run_warns_when_mpremote_is_missing(
+    monkeypatch, tmp_path, capsys
+):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    monkeypatch.setattr(tool.importlib.util, "find_spec", lambda name: None)
+
+    rc = tool.deploy("COM6", "/flash", dry_run=True, bundle=out)
+
+    assert rc == 0
+    assert "mpremote is not installed" in capsys.readouterr().err
 
 
 def test_uiflow_readme_documents_no_internet_deploy_path():

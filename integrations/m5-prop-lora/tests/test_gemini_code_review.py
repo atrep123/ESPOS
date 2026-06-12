@@ -135,6 +135,7 @@ def test_gemini_code_review_default_snapshot_includes_protocol_and_generator_fil
     assert "shared/protocol/protocol.py" in prompt
     assert "tools/build_uiflow_alpha2_artifact.py" in prompt
     assert "uiflow/dial/blocks/dist/PropTx.m5b2" in prompt
+    assert "uiflow/dial/blocks/code/send_fire.py" in prompt
     assert "uiflow/dial/blocks/code/reply.py" in prompt
 
 
@@ -152,3 +153,15 @@ def test_gemini_code_review_summarizes_m5b2_so_protocol_files_fit_default_budget
     assert "<TRUNCATED BY max-chars>" not in artifact_section
     assert "### shared/protocol/prop_protocol.h" in prompt
     assert "### shared/protocol/protocol.py" in prompt
+
+
+def test_gemini_code_review_includes_complete_key_loader_before_truncation():
+    module = load_module()
+
+    prompt = module.build_review_prompt(max_chars=70_000)
+    key_section = prompt.split("### tools/gemini_key.py", 1)[1].split("\n### ", 1)[0]
+
+    assert "def load_api_key" in key_section
+    assert "GEMINI_API_KEY_FILE" in key_section
+    assert "Secrets are never committed or printed" in key_section
+    assert "<TRUNCATED BY max-chars>" not in key_section
