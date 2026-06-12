@@ -12,12 +12,20 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import sys
 import urllib.request
 
 from gemini_key import load_api_key
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+API_KEY_RE = re.compile(r"AIza[0-9A-Za-z_-]{20,}")
+ENV_SECRET_RE = re.compile(
+    r"\b((?:GEMINI|GOOGLE|OPENAI|ANTHROPIC|API|AUTH)[A-Z0-9_]*(?:KEY|TOKEN|SECRET))=([^\s&]+)"
+)
+QUERY_KEY_RE = re.compile(r"([?&]key=)([^&\s]+)")
+BEARER_RE = re.compile(r"(Authorization:\s*Bearer\s+)([^\s]+)", re.IGNORECASE)
+GOOG_HEADER_RE = re.compile(r"(x-goog-api-key:\s*)([^\s]+)", re.IGNORECASE)
 
 PROMPT = (
     "You are a senior product/UI designer reviewing the on-device UI for an "
@@ -41,6 +49,14 @@ PROMPT = (
     "round screen? Give a short verdict (good / needs work) and a concise, "
     "prioritised list of concrete improvements."
 )
+
+
+def redact_secrets(text: str) -> str:
+    redacted = API_KEY_RE.sub("AIza<redacted>", text)
+    redacted = ENV_SECRET_RE.sub(lambda m: f"{m.group(1)}=<redacted>", redacted)
+    redacted = QUERY_KEY_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
+    redacted = BEARER_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
+    return GOOG_HEADER_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
 
 
 def main() -> int:
@@ -73,8 +89,9 @@ def main() -> int:
     try:
         text = payload["candidates"][0]["content"]["parts"][0]["text"]
     except (KeyError, IndexError):
-        print(json.dumps(payload, indent=2))
+        print(redact_secrets(json.dumps(payload, indent=2)))
         return 1
+    text = redact_secrets(text)
     out_path = os.path.join(
         os.path.dirname(__file__), "..", "build", "preview", "gemini_review.txt"
     )

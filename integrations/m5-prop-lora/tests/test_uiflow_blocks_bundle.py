@@ -12,6 +12,8 @@ import types
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 BLOCKS = ROOT / "uiflow" / "dial" / "blocks"
@@ -19,6 +21,7 @@ ALPHA2_SOURCE = BLOCKS / "alpha2" / "PropTx.py"
 ALPHA2_DIST = BLOCKS / "dist" / "PropTx.m5b2"
 SMOKE_EXAMPLE = BLOCKS / "examples" / "prop_tx_smoke.py"
 VALIDATOR = ROOT / "tools" / "validate_uiflow_blocks.py"
+ARTIFACT_BUILDER = ROOT / "tools" / "build_uiflow_alpha2_artifact.py"
 EXPECTED_ALPHA2_METHODS = [
     "__init__",
     "preview",
@@ -43,6 +46,14 @@ EXPECTED_ALPHA2_METHODS = [
 
 def load_validator():
     spec = importlib.util.spec_from_file_location("validate_uiflow_blocks", VALIDATOR)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_artifact_builder():
+    spec = importlib.util.spec_from_file_location("build_uiflow_alpha2_artifact", ARTIFACT_BUILDER)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -97,6 +108,20 @@ def test_uiflow_block_manifest_templates_are_consistent():
         "remote_led5",
     }.issubset(manifest_names)
     assert not report.errors
+
+
+def test_manual_reply_template_uses_non_throwing_decode():
+    source = (BLOCKS / "code" / "reply.py").read_text(encoding="utf-8")
+
+    assert '.decode("utf-8", "ignore")' in source
+    assert ".decode()" not in source
+
+
+def test_manual_send_fire_template_requires_sleep_ms():
+    source = (BLOCKS / "code" / "send_fire.py").read_text(encoding="utf-8")
+
+    assert "time.sleep_ms is required for Prop FIRE burst timing" in source
+    assert "raise RuntimeError" in source
 
 
 def test_uiflow_block_validator_reports_non_object_block(tmp_path):
@@ -307,9 +332,17 @@ def test_alpha2_dist_import_module_category_and_source_match_manifest():
     assert import_match.group(1) == data["data"]["python_file_name"] == "PropTx"
     assert import_match.group(2) == data["data"]["name"] == "PropTx"
     assert manifest["category"] == data["category"] == toolbox_category.get("name")
-    assert data["pyCode"].strip() == ALPHA2_SOURCE.read_text(encoding="utf-8").strip()
+    assert data["pyCode"] == ALPHA2_SOURCE.read_text(encoding="utf-8")
     for member in data["data"]["members"]:
         assert member["source"].strip() in data["pyCode"]
+
+
+def test_alpha2_dist_m5b2_matches_deterministic_builder_output():
+    builder = load_artifact_builder()
+    generated = builder.build_artifact_text().encode("utf-8")
+    tracked = ALPHA2_DIST.read_bytes()
+
+    assert generated == tracked
 
 
 def test_alpha2_toolbox_does_not_shadow_structured_inputs_with_empty_text():
@@ -355,6 +388,7 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
     monkeypatch.syspath_prepend(str(ROOT))
     monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
+    monkeypatch.setitem(sys.modules, "time", types.SimpleNamespace(sleep_ms=lambda _value: None))
 
     spec = importlib.util.spec_from_file_location("alpha2_prop_tx_under_test", ALPHA2_SOURCE)
     assert spec and spec.loader
@@ -427,22 +461,78 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
     assert all(line.startswith("FF ") for line in frame_lines[1:4])
     assert decoded[1].sequence == decoded[2].sequence == decoded[3].sequence
     assert decoded[1].nonce == decoded[2].nonce == decoded[3].nonce
-    assert (
-        proto.parse_remote_led(bytes(decoded[6].payload))
-        == tx._prop_frame.REMOTE_LED_BIT_LED3
-    )
-    assert (
-        proto.parse_remote_led(bytes(decoded[7].payload))
-        == tx._prop_frame.REMOTE_LED_BIT_LED5
-    )
-    assert (
-        proto.parse_remote_led(bytes(decoded[8].payload))
-        == tx._prop_frame.REMOTE_LED_BIT_LED3
-    )
-    assert (
-        proto.parse_remote_led(bytes(decoded[9].payload))
-        == tx._prop_frame.REMOTE_LED_BIT_LED5
-    )
+    assert proto.parse_remote_led(bytes(decoded[6].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED3
+    assert proto.parse_remote_led(bytes(decoded[7].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED5
+    assert proto.parse_remote_led(bytes(decoded[8].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED3
+    assert proto.parse_remote_led(bytes(decoded[9].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED5
+
+
+def test_alpha2_prop_tx_fire_sleeps_between_burst_frames(monkeypatch):
+    class FakeUART:
+        instances = []
+
+        def __init__(self, *args, **kwargs):
+            self.writes = []
+            FakeUART.instances.append(self)
+
+        def write(self, data):
+            self.writes.append(data)
+            return len(data)
+
+    sleep_calls = []
+
+    def sleep_ms(value):
+        sleep_calls.append(value)
+
+    monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
+    monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
+    monkeypatch.setitem(sys.modules, "time", types.SimpleNamespace(sleep_ms=sleep_ms))
+
+    spec = importlib.util.spec_from_file_location("alpha2_prop_tx_fire_sleep", ALPHA2_SOURCE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    tx = module.PropTx(13, 15)
+    tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
+
+    fire_writes = [
+        item
+        for item in FakeUART.instances[-1].writes
+        if isinstance(item, str) and item.startswith("FF ")
+    ]
+
+    assert len(fire_writes) == 3
+    assert sleep_calls == [
+        tx._prop_frame.FIRE_BURST_GAP_MS,
+        tx._prop_frame.FIRE_BURST_GAP_MS,
+    ]
+
+
+def test_alpha2_prop_tx_fire_requires_sleep_ms(monkeypatch):
+    class FakeUART:
+        instances = []
+
+        def __init__(self, *args, **kwargs):
+            self.writes = []
+            FakeUART.instances.append(self)
+
+        def write(self, data):
+            self.writes.append(data)
+            return len(data)
+
+    monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
+    monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
+    monkeypatch.setitem(sys.modules, "time", types.SimpleNamespace())
+
+    spec = importlib.util.spec_from_file_location("alpha2_prop_tx_fire_no_sleep", ALPHA2_SOURCE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    tx = module.PropTx(13, 15)
+    with pytest.raises(RuntimeError, match="time.sleep_ms is required"):
+        tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
 
 
 def test_alpha2_prop_tx_instances_keep_independent_uart_state(monkeypatch):

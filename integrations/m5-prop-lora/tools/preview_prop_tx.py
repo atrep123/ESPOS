@@ -571,58 +571,83 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
         draw_wait_sweep(c, cx, cy, sc)
         c.fill_round_rect(
             cx - 94,
-            cy - 28,
+            cy - 30,
             188,
-            76,
+            78,
             18,
-            mix(P_AMBER, WHITE, 0.10),
+            mix(P_AMBER, BG_BASE, 0.35),
             role="command_state_badge",
         )
-        c.text_center("TX SENT", cx, cy - 22, 15, 0x0E1116, tracking=1.2, role="command_sent_text")
-        c.text_center("WAIT ACK", cx, cy - 3, 32, 0x0E1116, role="command_state_text")
+        c.text_center(
+            "TX SENT",
+            cx,
+            cy - 23,
+            15,
+            mix(P_AMBER, WHITE, 0.82),
+            tracking=1.2,
+            role="command_sent_text",
+        )
+        c.text_center("WAIT ACK", cx, cy - 4, 32, TEXT_HI, role="command_state_text")
+        c.text_center(
+            "NOT ARMED",
+            cx,
+            cy + 35,
+            12,
+            mix(P_AMBER, WHITE, 0.88),
+            tracking=1.6,
+            role="command_safe_text",
+        )
         return
     if variant == "ack":
         draw_check_glyph(c, cx, cy, sc)
         c.text_center("ACK", cx, cy + 30, 21, TEXT_HI, role="command_state_text")
         return
     if variant == "no_ack":
-        draw_x_glyph(c, cx, cy, sc)
         c.fill_round_rect(
-            cx - 70,
-            cy + 18,
-            140,
-            40,
-            14,
-            mix(P_AMBER, WHITE, 0.10),
+            cx - 84,
+            cy - 22,
+            168,
+            72,
+            16,
+            mix(P_AMBER, BG_BASE, 0.42),
             role="command_state_badge",
         )
-        c.text_center("NO ACK", cx, cy + 24, 28, 0x0E1116, role="command_state_text")
+        c.text_center("NO ACK", cx, cy - 15, 34, TEXT_HI, role="command_state_text")
+        c.text_center(
+            "NOT ARMED",
+            cx,
+            cy + 26,
+            15,
+            mix(P_AMBER, WHITE, 0.86),
+            tracking=1.6,
+            role="command_safe_text",
+        )
         return
     if variant == "locked_fire":
-        c.text_center("LOCKED OUT", cx, cy - 34, 34, TEXT_HI, role="command_text")
+        c.text_center("NOT ARMED", cx, cy - 34, 34, TEXT_HI, role="command_text")
         c.fill_round_rect(
             cx - 82,
             cy + 20,
             164,
             26,
             12,
-            mix(P_AMBER, WHITE, 0.10),
+            mix(P_AMBER, BG_BASE, 0.35),
             role="fire_locked_badge",
         )
-        c.text_center("ARM FIRST", cx, cy + 20, 18, 0x0E1116, role="fire_locked_text")
+        c.text_center("ARM REQUIRED", cx, cy + 20, 17, TEXT_HI, role="fire_locked_text")
         return
     if variant == "preview":
         c.text_center("NO FIRE", cx, cy - 39, 40, TEXT_HI, role="command_text")
         c.fill_round_rect(
-            cx - 78,
-            cy + 18,
-            156,
-            30,
-            15,
+            cx - 94,
+            cy + 17,
+            188,
+            36,
+            16,
             mix(MODE_SETUP, WHITE, 0.16),
             role="command_preview_badge_plate",
         )
-        c.text_center("PREVIEW ONLY", cx, cy + 21, 17, 0x0E1116, role="command_preview_badge")
+        c.text_center("PREVIEW ONLY", cx, cy + 19, 21, 0x0E1116, role="command_preview_badge")
         return
 
     ls = command_label_size(label)
@@ -640,25 +665,13 @@ def draw_warning_glyph(c: Canvas, cx, cy, size, color):
 
 
 def render_armed_frame(v: View) -> RenderedFrame:
-    c = Canvas(P_RED)
-    c.fill_screen(P_RED, role="screen")
-    c.ring_band(120, 120, 119, 111, 0, 360, WHITE, role="armed_outer_ring")
-    c.ring_band(120, 120, 109, 106, 0, 360, mix(P_RED, WHITE, 0.42), role="armed_pulse_ring")
-    # Gemini review: the earlier warning triangle looked like a fault icon. The red
-    # flood plus explicit ARMED/READY wording carries the live safety state.
-    c.text_center("ARMED", 120, 62, 44, WHITE, role="armed_state_text")
-    # ARMED as a clean tracked label (no flanking rules -- they read as a broken
-    # line across the screen)
-    c.text_center(
-        "READY", 120, 122, 24, mix(P_RED, WHITE, 0.92), tracking=4.0, role="armed_live_text"
-    )
-    c.text_center("ODPAL", 120, 158, 20, WHITE, tracking=2.0, role="armed_fire_text")
-    # loaded channel colours -> shows WHAT will fire (specific to this prop, not generic)
-    for i in range(4):
-        chx = 96 + i * 16
-        col = led_rgb(v, i)
-        c.fill_circle(chx, 202, 7, mix(P_RED, WHITE, 0.85), role="armed_chip_rim")
-        c.fill_circle(chx, 202, 5, col, role="armed_chip")
+    armed_bg = P_RED
+    c = Canvas(armed_bg)
+    c.fill_screen(armed_bg, role="screen")
+    # Gemini review: the earlier warning triangle looked like a fault icon, while
+    # too many danger labels read as conflicting. Keep the screen purely stateful.
+    c.text_center("ARMED", 120, 82, 48, WHITE, tracking=0.0, role="armed_state_text")
+    c.text_center("FIRE ENABLED", 120, 146, 28, WHITE, tracking=0.0, role="armed_fire_text")
     return RenderedFrame(image=c.raw(), ops=c.ops)
 
 
@@ -755,7 +768,14 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         # Safety: once ARMED the only on-screen choice is ODPAL (fire) / cancel.
         # Hide the action-scroll chevrons so a stressed user can't dial to a
         # different action while the controller is live.
-        if not v.awaiting_ack and not v.armed and not is_locked_fire_choice(v) and not is_preview_choice(v):
+        if (
+            not v.awaiting_ack
+            and not v.armed
+            and not ack
+            and not no_ack
+            and not is_locked_fire_choice(v)
+            and not is_preview_choice(v)
+        ):
             cyc = ORB_CY
             chev = COMMAND_RING_R + 14  # sit just outside the command ring
             draw_chevron(c, 120 - chev, cyc, 9, 9, sc, 5)  # left  "<"
@@ -785,6 +805,9 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
     # --- palette dots on a concentric bottom arc (echoes the round shape) --
     # the selected slot is brought forward: larger, full-bright, with a glow.
     # B4b: draws palette_count (1..8) dots; dense palettes shrink the dots.
+    if command and (v.awaiting_ack or ack or no_ack):
+        return RenderedFrame(image=c.raw(), ops=c.ops)
+
     slot_count = max(1, min(8, v.palette_count))
     dense = slot_count > 5
     dot_r = 8 if dense else 10

@@ -159,6 +159,7 @@ def _write_bundle(out: Path) -> dict:
                 "",
                 "Custom block artifact:",
                 "  blocks/PropTx.m5b2 -> UIFlow2 Custom -> Open",
+                "  PropTx.m5b2 is for UIFlow2 Custom -> Open, not device upload.",
                 "",
                 "Upload with:",
                 "  python tools/uiflow_dial_offline.py verify --bundle build/uiflow_dial_offline",
@@ -240,6 +241,8 @@ def verify_bundle(bundle: Path) -> list[str]:
         return [str(exc)]
     if not isinstance(manifest, dict):
         return ["manifest must be a JSON object"]
+    if manifest.get("device_target_dir") != DEFAULT_TARGET_DIR:
+        errors.append(f"device_target_dir must be {DEFAULT_TARGET_DIR}")
 
     expected_sections = {
         "device_files": (set(_expected_device_paths()), _expected_device_sources()),

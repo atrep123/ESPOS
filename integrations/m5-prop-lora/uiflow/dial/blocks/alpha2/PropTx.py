@@ -70,18 +70,19 @@ class PropTx:
                 type: list
         """
         lines = self._tx.fire_burst_lines(colors)
+        sleep_ms = None
+        try:
+            import time
+
+            sleep_ms = getattr(time, "sleep_ms", None)
+        except ImportError:
+            sleep_ms = None
+        if len(lines) > 1 and sleep_ms is None:
+            raise RuntimeError("time.sleep_ms is required for Prop FIRE burst timing")
         for index, line in enumerate(lines):
             self._uart.write(line)
-            if index + 1 < len(lines):
-                sleep_ms = None
-                try:
-                    import time
-
-                    sleep_ms = getattr(time, "sleep_ms", None)
-                except ImportError:
-                    sleep_ms = None
-                if sleep_ms is not None:
-                    sleep_ms(self._prop_frame.FIRE_BURST_GAP_MS)
+            if index + 1 < len(lines) and sleep_ms is not None:
+                sleep_ms(self._prop_frame.FIRE_BURST_GAP_MS)
 
     def stop(self):
         """

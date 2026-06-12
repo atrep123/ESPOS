@@ -18,49 +18,143 @@ METHODS = [
         "label": "%1 Prop init TX %2 RX %3",
         "kind": "statement",
         "params": [
-            {"name": "tx", "type": "int", "default": "13", "field": "number", "min": "0", "max": "48"},
-            {"name": "rx", "type": "int", "default": "15", "field": "number", "min": "0", "max": "48"},
+            {
+                "name": "tx",
+                "type": "int",
+                "default": "13",
+                "field": "number",
+                "min": "0",
+                "max": "48",
+            },
+            {
+                "name": "rx",
+                "type": "int",
+                "default": "15",
+                "field": "number",
+                "min": "0",
+                "max": "48",
+            },
         ],
     },
-    {"name": "preview", "label": "Prop PREVIEW %1 colors %2", "kind": "statement", "params": [
-        {"name": "colors", "type": "list", "default_code": "[]"}
-    ]},
-    {"name": "fire", "label": "Prop ODPAL %1 colors %2", "kind": "statement", "params": [
-        {"name": "colors", "type": "list", "default_code": "[]"}
-    ]},
+    {
+        "name": "preview",
+        "label": "Prop PREVIEW %1 colors %2",
+        "kind": "statement",
+        "params": [{"name": "colors", "type": "list", "default_code": "[]"}],
+    },
+    {
+        "name": "fire",
+        "label": "Prop ODPAL %1 colors %2",
+        "kind": "statement",
+        "params": [{"name": "colors", "type": "list", "default_code": "[]"}],
+    },
     {"name": "stop", "label": "Prop STOP %1", "kind": "statement", "params": []},
     {"name": "arm", "label": "Prop ARM %1", "kind": "statement", "params": []},
-    {"name": "remote_led", "label": "Prop remote LED %1 which %2", "kind": "statement", "params": [
-        {"name": "which", "type": "int", "default": "3", "field": "number", "min": "3", "max": "5"},
-    ]},
-    {"name": "sync_palette", "label": "Prop sync palette %1 colors %2", "kind": "statement", "params": [
-        {"name": "colors", "type": "list", "default_code": "[]"}
-    ]},
+    {
+        "name": "remote_led",
+        "label": "Prop remote LED %1 which %2",
+        "kind": "statement",
+        "params": [
+            {
+                "name": "which",
+                "type": "int",
+                "default": "3",
+                "field": "number",
+                "min": "3",
+                "max": "5",
+            },
+        ],
+    },
+    {
+        "name": "sync_palette",
+        "label": "Prop sync palette %1 colors %2",
+        "kind": "statement",
+        "params": [{"name": "colors", "type": "list", "default_code": "[]"}],
+    },
     {"name": "reply", "label": "Prop reply %1", "kind": "value", "params": []},
-    {"name": "hue_color", "label": "Prop hue %1 deg %2 to color", "kind": "value", "params": [
-        {"name": "deg", "type": "int", "default": "0", "field": "number", "min": "0", "max": "359"},
-    ]},
+    {
+        "name": "hue_color",
+        "label": "Prop hue %1 deg %2 to color",
+        "kind": "value",
+        "params": [
+            {
+                "name": "deg",
+                "type": "int",
+                "default": "0",
+                "field": "number",
+                "min": "0",
+                "max": "359",
+            },
+        ],
+    },
     {"name": "default_hues", "label": "Prop default hues %1", "kind": "value", "params": []},
     {"name": "default_colors", "label": "Prop default colors %1", "kind": "value", "params": []},
-    {"name": "palette_from_hues", "label": "Prop colors from hues %1 hues %2", "kind": "value", "params": [
-        {"name": "hues", "type": "list", "default_code": "[0, 120, 240, 210, 60]"}
-    ]},
-    {"name": "set_color", "label": "Prop set color %1 colors %2 LED %3 color %4", "kind": "value", "params": [
-        {"name": "colors", "type": "list", "default_code": "[]"},
-        {"name": "index", "type": "int", "default": "1", "field": "number", "min": "1", "max": "5"},
-        {"name": "color", "type": "tuple", "default_code": "(255, 0, 0)"},
-    ]},
-    {"name": "first_four", "label": "Prop first four %1 colors %2", "kind": "value", "params": [
-        {"name": "colors", "type": "list", "default_code": "[]"}
-    ]},
-    {"name": "rgb_color", "label": "Prop RGB %1 R %2 G %3 B %4", "kind": "value", "params": [
-        {"name": "r", "type": "int", "default": "255", "field": "number", "min": "0", "max": "255"},
-        {"name": "g", "type": "int", "default": "0", "field": "number", "min": "0", "max": "255"},
-        {"name": "b", "type": "int", "default": "0", "field": "number", "min": "0", "max": "255"},
-    ]},
-    {"name": "rgb888", "label": "Prop RGB888 %1 color %2", "kind": "value", "params": [
-        {"name": "color", "type": "tuple", "default_code": "(255, 0, 0)"}
-    ]},
+    {
+        "name": "palette_from_hues",
+        "label": "Prop colors from hues %1 hues %2",
+        "kind": "value",
+        "params": [{"name": "hues", "type": "list", "default_code": "[0, 120, 240, 210, 60]"}],
+    },
+    {
+        "name": "set_color",
+        "label": "Prop set color %1 colors %2 LED %3 color %4",
+        "kind": "value",
+        "params": [
+            {"name": "colors", "type": "list", "default_code": "[]"},
+            {
+                "name": "index",
+                "type": "int",
+                "default": "1",
+                "field": "number",
+                "min": "1",
+                "max": "5",
+            },
+            {"name": "color", "type": "tuple", "default_code": "(255, 0, 0)"},
+        ],
+    },
+    {
+        "name": "first_four",
+        "label": "Prop first four %1 colors %2",
+        "kind": "value",
+        "params": [{"name": "colors", "type": "list", "default_code": "[]"}],
+    },
+    {
+        "name": "rgb_color",
+        "label": "Prop RGB %1 R %2 G %3 B %4",
+        "kind": "value",
+        "params": [
+            {
+                "name": "r",
+                "type": "int",
+                "default": "255",
+                "field": "number",
+                "min": "0",
+                "max": "255",
+            },
+            {
+                "name": "g",
+                "type": "int",
+                "default": "0",
+                "field": "number",
+                "min": "0",
+                "max": "255",
+            },
+            {
+                "name": "b",
+                "type": "int",
+                "default": "0",
+                "field": "number",
+                "min": "0",
+                "max": "255",
+            },
+        ],
+    },
+    {
+        "name": "rgb888",
+        "label": "Prop RGB888 %1 color %2",
+        "kind": "value",
+        "params": [{"name": "color", "type": "tuple", "default_code": "(255, 0, 0)"}],
+    },
     {"name": "remote_led3", "label": "Prop remote LED3 %1", "kind": "statement", "params": []},
     {"name": "remote_led5", "label": "Prop remote LED5 %1", "kind": "statement", "params": []},
 ]
@@ -85,7 +179,9 @@ def value_default(param: dict[str, str]) -> str:
 def method_sources(source: str) -> dict[str, str]:
     tree = ast.parse(source)
     lines = source.splitlines()
-    prop_tx = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx")
+    prop_tx = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "PropTx"
+    )
     sources: dict[str, str] = {}
     for method in [node for node in prop_tx.body if isinstance(node, ast.FunctionDef)]:
         body = list(method.body)
@@ -207,28 +303,30 @@ def build_jscode(category: str, color: str) -> str:
             if method["kind"] == "statement"
             else "      'output': null,"
         )
-        parts.extend([
-            f'Blockly.Blocks["{block}"] = {{',
-            "  init: function() {",
-            "    this.jsonInit(this._init());",
-            "  },",
-            "  _init: function() {",
-            "    return {",
-            f"      'message0': Blockly.Msg.{msg_key(name)},",
-            "      'args0': [",
-            f"        {args_text},",
-            "      ],",
-            connection,
-            "      'inputsInline': true,",
-            f"      'colour': \"{color}\",",
-            '      "tool": []',
-            "    };",
-            "  }",
-            "}",
-            "",
-            f'Blockly.Python["{block}"] = function(block) {{',
-            "  var varname = block.getFieldValue('NAME') || '_';",
-        ])
+        parts.extend(
+            [
+                f'Blockly.Blocks["{block}"] = {{',
+                "  init: function() {",
+                "    this.jsonInit(this._init());",
+                "  },",
+                "  _init: function() {",
+                "    return {",
+                f"      'message0': Blockly.Msg.{msg_key(name)},",
+                "      'args0': [",
+                f"        {args_text},",
+                "      ],",
+                connection,
+                "      'inputsInline': true,",
+                f"      'colour': \"{color}\",",
+                '      "tool": []',
+                "    };",
+                "  }",
+                "}",
+                "",
+                f'Blockly.Python["{block}"] = function(block) {{',
+                "  var varname = block.getFieldValue('NAME') || '_';",
+            ]
+        )
         parts.extend(js_value_line(param) for param in params)
         arg_names = [param["name"] for param in params]
         call_name = "PropTx" if name == "__init__" else name
@@ -286,7 +384,7 @@ def build_toolbox(category: str, color: str) -> str:
     )
 
 
-def main() -> int:
+def build_artifact_data() -> dict[str, object]:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     source = SOURCE.read_text(encoding="utf-8")
     sources = method_sources(source)
@@ -331,8 +429,16 @@ def main() -> int:
         "pyCode": source,
         "version": "alpha2",
     }
+    return data
+
+
+def build_artifact_text() -> str:
+    return json.dumps(build_artifact_data(), separators=(",", ":"))
+
+
+def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+    OUT.write_text(build_artifact_text(), encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)} with {len(METHODS)} Alpha-2 blocks")
     return 0
 

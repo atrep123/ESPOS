@@ -4,6 +4,7 @@ import json
 import importlib.util
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,8 @@ def test_offline_bundle_contains_runtime_files_and_block_artifact(tmp_path):
     ]
     assert manifest["block_artifacts"][0]["bundle_path"] == "blocks/PropTx.m5b2"
     assert all(len(item["sha256"]) == 64 for item in manifest["device_files"])
+    offline_readme = (out / "README_OFFLINE.txt").read_text(encoding="utf-8")
+    assert "PropTx.m5b2 is for UIFlow2 Custom -> Open, not device upload" in offline_readme
     assert "offline UIFlow Dial bundle" in result.stdout
 
 
@@ -147,6 +150,31 @@ def test_offline_verify_rejects_tampered_device_file(tmp_path):
 
     assert result.returncode == 1
     assert "sha256 mismatch: device/PropTx.py" in result.stderr
+
+
+def test_offline_verify_rejects_tampered_block_artifact(tmp_path):
+    out = tmp_path / "offline"
+    subprocess.run(
+        [sys.executable, str(SCRIPT), "bundle", "--out", str(out)],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+    (out / "blocks" / "PropTx.m5b2").write_text("tampered\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "verify", "--bundle", str(out)],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "sha256 mismatch: blocks/PropTx.m5b2" in result.stderr
 
 
 def test_offline_verify_rejects_non_hex_sha256(tmp_path):
@@ -420,6 +448,20 @@ def test_build_deploy_commands_rejects_bundle_target_dir_override(tmp_path):
         tool.build_deploy_commands("COM6", target_dir="/sd", bundle=out)
 
 
+def test_offline_verify_rejects_bundle_target_dir_mismatch(tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    manifest_path = out / "offline_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["device_target_dir"] = "/sd"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = tool.verify_bundle(out)
+
+    assert "device_target_dir must be /flash" in errors
+
+
 def test_build_deploy_commands_rejects_partial_manifest(tmp_path):
     tool = load_offline_tool()
     out = tmp_path / "offline"
@@ -457,9 +499,7 @@ def test_offline_deploy_requires_mpremote_for_real_upload(monkeypatch, tmp_path)
     assert rc == 1
 
 
-def test_offline_deploy_dry_run_warns_when_mpremote_is_missing(
-    monkeypatch, tmp_path, capsys
-):
+def test_offline_deploy_dry_run_warns_when_mpremote_is_missing(monkeypatch, tmp_path, capsys):
     tool = load_offline_tool()
     out = tmp_path / "offline"
     tool.create_bundle(out)
@@ -469,6 +509,28 @@ def test_offline_deploy_dry_run_warns_when_mpremote_is_missing(
 
     assert rc == 0
     assert "mpremote is not installed" in capsys.readouterr().err
+
+
+def test_offline_deploy_executes_bundle_upload_commands(monkeypatch, tmp_path):
+    tool = load_offline_tool()
+    out = tmp_path / "offline"
+    tool.create_bundle(out)
+    monkeypatch.setattr(tool.importlib.util, "find_spec", lambda name: object())
+    expected = tool.build_deploy_commands("COM6", "/flash", out.resolve())
+    calls = []
+
+    def fake_run(command, cwd, check):
+        calls.append((command, cwd, check))
+        return types.SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    rc = tool.deploy("COM6", "/flash", dry_run=False, bundle=out)
+
+    assert rc == 0
+    assert [command for command, _cwd, _check in calls] == expected
+    assert {cwd for _command, cwd, _check in calls} == {tool.REPO_ROOT}
+    assert {check for _command, _cwd, check in calls} == {False}
 
 
 def test_uiflow_readme_documents_no_internet_deploy_path():

@@ -26,6 +26,19 @@ def load_module():
     return module
 
 
+def repository_snapshot(prompt: str) -> str:
+    return prompt.split("# Repository Snapshot", 1)[1]
+
+
+def snapshot_coverage(prompt: str) -> str:
+    return prompt.split("# Snapshot Coverage", 1)[1].split("# Repository Snapshot", 1)[0]
+
+
+def snapshot_section(prompt: str, path: str) -> str:
+    snapshot = repository_snapshot(prompt)
+    return snapshot.split(f"### {path}", 1)[1].split("\n### ", 1)[0]
+
+
 def test_gemini_code_review_help_does_not_require_api_key():
     env = os.environ.copy()
     env.pop("GEMINI_API_KEY", None)
@@ -57,18 +70,23 @@ def test_gemini_code_review_prompt_covers_non_visual_domains():
     assert "wire protocol parity" in prompt
     assert "secret handling" in prompt
     assert "Gemini as a review gate" in prompt
+    assert "Reviewing source code for the key loader or its tests is expected" in prompt
+    assert "only concrete secret values" in prompt
+    assert "prototype HMAC key is acceptable only for PoC/dry-smoke" in prompt
+    assert "Release/CI builds" in prompt
 
 
 def test_gemini_code_review_default_snapshot_includes_core_files():
     module = load_module()
 
-    prompt = module.build_review_prompt(max_chars=50_000)
+    prompt = module.build_review_prompt()
+    snapshot = repository_snapshot(prompt)
 
-    assert "tools/validate_uiflow_blocks.py" in prompt
-    assert "tools/uiflow_dial_offline.py" in prompt
-    assert "uiflow/dial/blocks/alpha2/PropTx.py" in prompt
-    assert "uiflow/dial/prop_frame.py" in prompt
-    assert "tests/test_uiflow_blocks_bundle.py" in prompt
+    assert "### tools/validate_uiflow_blocks.py" in snapshot
+    assert "### tools/uiflow_dial_offline.py" in snapshot
+    assert "### uiflow/dial/blocks/alpha2/PropTx.py" in snapshot
+    assert "### uiflow/dial/prop_frame.py" in snapshot
+    assert "### tests/test_uiflow_blocks_bundle.py" in snapshot
 
 
 def test_gemini_code_review_redacts_google_api_keys():
@@ -130,22 +148,21 @@ def test_gemini_code_review_default_snapshot_includes_protocol_and_generator_fil
     module = load_module()
 
     prompt = module.build_review_prompt(max_chars=90_000)
+    snapshot = repository_snapshot(prompt)
 
-    assert "shared/protocol/prop_protocol.h" in prompt
-    assert "shared/protocol/protocol.py" in prompt
-    assert "tools/build_uiflow_alpha2_artifact.py" in prompt
-    assert "uiflow/dial/blocks/dist/PropTx.m5b2" in prompt
-    assert "uiflow/dial/blocks/code/send_fire.py" in prompt
-    assert "uiflow/dial/blocks/code/reply.py" in prompt
+    assert "### shared/protocol/prop_protocol.h" in snapshot
+    assert "### shared/protocol/protocol.py" in snapshot
+    assert "### tools/build_uiflow_alpha2_artifact.py" in snapshot
+    assert "### uiflow/dial/blocks/dist/PropTx.m5b2" in snapshot
+    assert "### uiflow/dial/blocks/code/send_fire.py" in snapshot
+    assert "### uiflow/dial/blocks/code/reply.py" in snapshot
 
 
 def test_gemini_code_review_summarizes_m5b2_so_protocol_files_fit_default_budget():
     module = load_module()
 
-    prompt = module.build_review_prompt(max_chars=70_000)
-    artifact_section = prompt.split("### uiflow/dial/blocks/dist/PropTx.m5b2", 1)[1].split(
-        "\n### ", 1
-    )[0]
+    prompt = module.build_review_prompt()
+    artifact_section = snapshot_section(prompt, "uiflow/dial/blocks/dist/PropTx.m5b2")
 
     assert "sha256:" in artifact_section
     assert "pyCode_sha256:" in artifact_section
@@ -158,10 +175,65 @@ def test_gemini_code_review_summarizes_m5b2_so_protocol_files_fit_default_budget
 def test_gemini_code_review_includes_complete_key_loader_before_truncation():
     module = load_module()
 
-    prompt = module.build_review_prompt(max_chars=70_000)
-    key_section = prompt.split("### tools/gemini_key.py", 1)[1].split("\n### ", 1)[0]
+    prompt = module.build_review_prompt()
+    key_section = snapshot_section(prompt, "tools/gemini_key.py")
 
     assert "def load_api_key" in key_section
     assert "GEMINI_API_KEY_FILE" in key_section
     assert "Secrets are never committed or printed" in key_section
     assert "<TRUNCATED BY max-chars>" not in key_section
+
+
+def test_gemini_code_review_reports_snapshot_coverage_for_omitted_files():
+    module = load_module()
+
+    prompt = module.build_review_prompt(
+        targets=["tools/gemini_key.py", "tools/validate_uiflow_blocks.py"],
+        max_chars=240,
+    )
+    coverage = snapshot_coverage(prompt)
+    snapshot = repository_snapshot(prompt)
+
+    assert "Treat the Included Files list as review intent, not proof of inclusion." in prompt
+    assert "- tools/gemini_key.py: partial" in coverage
+    assert "- tools/validate_uiflow_blocks.py: omitted" in coverage
+    assert "### tools/gemini_key.py" in snapshot
+    assert "### tools/validate_uiflow_blocks.py" not in snapshot
+
+
+def test_gemini_code_review_default_budget_includes_non_visual_gate_files_untruncated():
+    module = load_module()
+
+    prompt = module.build_review_prompt()
+    coverage = snapshot_coverage(prompt)
+    snapshot = repository_snapshot(prompt)
+
+    for path in [
+        "tools/build_uiflow_alpha2_artifact.py",
+        "tools/validate_uiflow_blocks.py",
+        "tools/uiflow_dial_offline.py",
+        "tools/gemini_key.py",
+        "tools/gemini_code_review.py",
+        "tools/gemini_jury.py",
+        "tools/ask_gemini.py",
+        "uiflow/dial/main.py",
+        "tests/test_gemini_key.py",
+        "tests/test_gemini_jury.py",
+        "tests/test_gemini_code_review.py",
+        "tests/test_uiflow_blocks_bundle.py",
+        "tests/test_uiflow_dial_offline.py",
+        "tests/test_uiflow_main_app.py",
+        "firmware/din-rx/src/prop_rx.cpp",
+        "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
+        "firmware/c6l-modem/src/modem_core.h",
+        "tools/build.ps1",
+        "uiflow/dial/README.md",
+        "uiflow/dial/blocks/README.md",
+    ]:
+        assert f"- {path}: full" in coverage
+        assert f"### {path}" in snapshot
+
+    assert "- tests/test_project_sources.py:" in coverage
+    assert "### tests/test_project_sources.py" in snapshot
+    assert "PROTOTYPE_SHARED_KEY" in snapshot_section(prompt, "tests/test_project_sources.py")
+    assert "python_syntax: ok" in snapshot_section(prompt, "tools/gemini_code_review.py")

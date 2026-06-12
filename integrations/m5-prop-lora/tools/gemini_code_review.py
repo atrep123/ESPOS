@@ -12,6 +12,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
+from dataclasses import dataclass
 import hashlib
 import json
 import os
@@ -29,10 +31,6 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_ENDPOINT_PREFIX = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 DEFAULT_TARGETS = (
-    "README.md",
-    "BUILD.md",
-    "uiflow/dial/README.md",
-    "uiflow/dial/blocks/README.md",
     "uiflow/dial/blocks/prop_tx.json",
     "uiflow/dial/blocks/alpha2/PropTx.py",
     "uiflow/dial/blocks/dist/PropTx.m5b2",
@@ -40,24 +38,33 @@ DEFAULT_TARGETS = (
     "uiflow/dial/blocks/code/reply.py",
     "uiflow/dial/blocks/examples/prop_tx_smoke.py",
     "uiflow/dial/prop_frame.py",
-    "tools/gemini_key.py",
+    "uiflow/dial/main.py",
     "shared/protocol/prop_protocol.h",
     "shared/protocol/protocol.py",
+    "firmware/din-rx/src/prop_rx.cpp",
+    "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
+    "firmware/c6l-modem/src/modem_core.h",
+    "tools/build.ps1",
     "tools/build_uiflow_alpha2_artifact.py",
     "tools/validate_uiflow_blocks.py",
     "tools/uiflow_dial_offline.py",
+    "tools/gemini_key.py",
+    "tools/gemini_code_review.py",
     "tools/gemini_jury.py",
     "tools/ask_gemini.py",
-    "tools/gemini_dinrx_review.py",
-    "tools/gemini_code_review.py",
-    "tests/test_uiflow_blocks_bundle.py",
-    "tests/test_uiflow_dial_offline.py",
-    "tests/test_uiflow_prop_frame_parity.py",
-    "tests/test_uiflow_main_app.py",
+    "tests/test_project_sources.py",
     "tests/test_gemini_key.py",
     "tests/test_gemini_jury.py",
     "tests/test_gemini_code_review.py",
-    "uiflow/dial/main.py",
+    "tests/test_uiflow_blocks_bundle.py",
+    "tests/test_uiflow_dial_offline.py",
+    "tests/test_uiflow_main_app.py",
+    "tests/test_uiflow_prop_frame_parity.py",
+    "README.md",
+    "BUILD.md",
+    "uiflow/dial/README.md",
+    "uiflow/dial/blocks/README.md",
+    "tools/gemini_dinrx_review.py",
 )
 
 REVIEW_BRIEF = """\
@@ -73,6 +80,14 @@ and release workflow. Evaluate:
 4. secret handling for Gemini as a review gate, including accidental logging/persistence.
 5. Test coverage gaps that could let artifact drift, frame drift, or unsafe deploys pass.
 6. Documentation gaps for operating M5 work from the full ESPOS repository.
+
+Reviewing source code for the key loader or its tests is expected and is not
+itself a secret exposure; only concrete secret values, persisted key files,
+unredacted runtime payloads, or logs containing key values are blockers.
+
+The prototype HMAC key is acceptable only for PoC/dry-smoke work when release
+gates explicitly block it from Release/CI builds; treat it as a production/field
+release blocker if the gate is missing, untested, or bypassable.
 
 Return a concise engineering review:
 - BLOCKERS: concrete issues that should stop hardware acceptance.
@@ -92,6 +107,70 @@ QUERY_KEY_RE = re.compile(r"([?&]key=)([^&\s]+)")
 BEARER_RE = re.compile(r"(Authorization:\s*Bearer\s+)([^\s]+)", re.IGNORECASE)
 GOOG_HEADER_RE = re.compile(r"(x-goog-api-key:\s*)([^\s]+)", re.IGNORECASE)
 SECRET_LIKE_NAMES = {".gemini_api_key"}
+FULL_TEXT_CHAR_LIMIT = 4_000
+SUMMARY_MATCH_LIMIT = 60
+SUMMARY_KEYWORDS = (
+    "ACCEPTANCE",
+    "PROTOTYPE_SHARED_KEY",
+    "PROP_ALLOW_PROTOTYPE_SHARED_KEY",
+    "PROP_TX_ALLOW_SELFTEST_FIRE",
+    "Release",
+    "Release/CI",
+    "ARM",
+    "FIRE",
+    "FF ",
+    "SEND ",
+    "ack",
+    "artifact",
+    "block_type",
+    "build_artifact",
+    "bundle",
+    "deploy",
+    "fire_burst",
+    "GEMINI_API_KEY",
+    "Gemini",
+    "UIFlow",
+    "blocks",
+    "Custom",
+    "mpremote",
+    "offline",
+    "PropTx",
+    "redact",
+    "remote_led",
+    "secret",
+    "SHARED_KEY",
+    "sleep_ms",
+    "validate",
+    "verify",
+)
+
+
+@dataclass(frozen=True)
+class SnapshotChunk:
+    target: str
+    text: str
+    representation: str
+    source_chars: int
+    sha256: str | None = None
+
+
+@dataclass(frozen=True)
+class SnapshotCoverage:
+    target: str
+    status: str
+    representation: str
+    source_chars: int
+    included_chars: int
+    sha256: str | None = None
+
+    def line(self) -> str:
+        detail = (
+            f"representation={self.representation}; "
+            f"included_chars={self.included_chars}; source_chars={self.source_chars}"
+        )
+        if self.sha256:
+            detail += f"; sha256={self.sha256[:12]}"
+        return f"- {self.target}: {self.status} ({detail})"
 
 
 def redact_secrets(text: str) -> str:
@@ -127,6 +206,68 @@ def _normalise_target(path: str) -> Path:
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _python_outline(text: str) -> list[str]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as exc:
+        return [f"python_parse_error: {exc}"]
+
+    lines: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            methods = [
+                item.name
+                for item in node.body
+                if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef)
+            ]
+            lines.append(f"class {node.name}: methods={methods}")
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            lines.append(f"def {node.name}(...): line {node.lineno}")
+    return lines
+
+
+def _keyword_matches(text: str) -> list[str]:
+    matches: list[str] = []
+    seen: set[int] = set()
+    source_lines = text.splitlines()
+    for keyword in SUMMARY_KEYWORDS:
+        lower_keyword = keyword.lower()
+        keyword_count = 0
+        for lineno, line in enumerate(source_lines, start=1):
+            if lineno in seen or lower_keyword not in line.lower():
+                continue
+            seen.add(lineno)
+            matches.append(f"{lineno}: {line[:220]}")
+            keyword_count += 1
+            if keyword_count >= 4 or len(matches) >= SUMMARY_MATCH_LIMIT:
+                break
+        if len(matches) >= SUMMARY_MATCH_LIMIT:
+            break
+    return matches
+
+
+def _summarize_text_target(path: Path, text: str) -> str:
+    rel = path.relative_to(ROOT).as_posix()
+    source = redact_secrets(text)
+    lines = [
+        f"chars: {len(source)}",
+        f"sha256: {_sha256_bytes(source.encode('utf-8'))}",
+        "representation: compact-summary",
+    ]
+    if path.suffix == ".py":
+        outline = _python_outline(text)
+        if outline:
+            if not outline[0].startswith("python_parse_error:"):
+                lines.append("python_syntax: ok")
+            lines.append("python_outline:")
+            lines.extend(f"  - {item}" for item in outline)
+    matches = _keyword_matches(source)
+    if matches:
+        lines.append("keyword_matches:")
+        lines.extend(f"  - {item}" for item in matches)
+    return f"### {rel}\n\n```text\n" + "\n".join(lines) + "\n```\n"
 
 
 def _summarize_m5b2(path: Path) -> str:
@@ -173,40 +314,123 @@ def _summarize_m5b2(path: Path) -> str:
     return f"### {rel}\n\n```text\n" + "\n".join(lines) + "\n```\n"
 
 
-def _read_target(path: Path) -> str:
+def _read_target(path: Path) -> SnapshotChunk:
     rel = path.relative_to(ROOT).as_posix()
     if not path.is_file():
-        return f"### {rel}\n\n<MISSING>\n"
+        return SnapshotChunk(rel, f"### {rel}\n\n<MISSING>\n", "missing", 0)
     if path.suffix == ".m5b2":
-        return _summarize_m5b2(path)
+        raw = path.read_bytes()
+        return SnapshotChunk(
+            rel,
+            _summarize_m5b2(path),
+            "artifact-summary",
+            len(raw),
+            _sha256_bytes(raw),
+        )
     text = path.read_text(encoding="utf-8", errors="replace")
-    return f"### {rel}\n\n```text\n{redact_secrets(text)}\n```\n"
+    redacted = redact_secrets(text)
+    source_hash = _sha256_bytes(redacted.encode("utf-8"))
+    if len(redacted) > FULL_TEXT_CHAR_LIMIT:
+        return SnapshotChunk(
+            rel,
+            _summarize_text_target(path, text),
+            "compact-summary",
+            len(redacted),
+            source_hash,
+        )
+    return SnapshotChunk(
+        rel,
+        f"### {rel}\n\n```text\n{redacted}\n```\n",
+        "full-text",
+        len(redacted),
+        source_hash,
+    )
 
 
-def collect_snapshot(targets: list[str] | None = None, max_chars: int = 70_000) -> str:
+def collect_snapshot_with_coverage(
+    targets: list[str] | None = None, max_chars: int = 140_000
+) -> tuple[str, list[SnapshotCoverage]]:
     selected = DEFAULT_TARGETS if targets is None else tuple(targets)
     chunks: list[str] = []
+    coverage: list[SnapshotCoverage] = []
     used = 0
 
     for target in selected:
         chunk = _read_target(_normalise_target(target))
         remaining = max_chars - used
         if remaining <= 0:
-            break
-        if len(chunk) > remaining:
-            chunk = chunk[: max(0, remaining - 80)] + "\n\n<TRUNCATED BY max-chars>\n"
-        chunks.append(chunk)
-        used += len(chunk)
+            coverage.append(
+                SnapshotCoverage(
+                    chunk.target,
+                    "omitted",
+                    chunk.representation,
+                    chunk.source_chars,
+                    0,
+                    chunk.sha256,
+                )
+            )
+            continue
+        if len(chunk.text) > remaining:
+            suffix = "\n\n<TRUNCATED BY max-chars>\n"
+            included = chunk.text[: max(0, remaining - len(suffix))] + suffix
+            chunks.append(included)
+            used += len(included)
+            coverage.append(
+                SnapshotCoverage(
+                    chunk.target,
+                    "partial",
+                    chunk.representation,
+                    chunk.source_chars,
+                    len(included),
+                    chunk.sha256,
+                )
+            )
+            continue
+        chunks.append(chunk.text)
+        used += len(chunk.text)
+        coverage.append(
+            SnapshotCoverage(
+                chunk.target,
+                "full",
+                chunk.representation,
+                chunk.source_chars,
+                len(chunk.text),
+                chunk.sha256,
+            )
+        )
 
-    return "\n".join(chunks)
+    return "\n".join(chunks), coverage
 
 
-def build_review_prompt(targets: list[str] | None = None, max_chars: int = 70_000) -> str:
+def collect_snapshot(targets: list[str] | None = None, max_chars: int = 140_000) -> str:
+    snapshot, _coverage = collect_snapshot_with_coverage(targets=targets, max_chars=max_chars)
+    return snapshot
+
+
+def format_snapshot_coverage(coverage: list[SnapshotCoverage]) -> str:
+    if not coverage:
+        return "- <no files selected>"
+    return "\n".join(item.line() for item in coverage)
+
+
+def build_review_prompt(targets: list[str] | None = None, max_chars: int = 140_000) -> str:
     selected = DEFAULT_TARGETS if targets is None else tuple(targets)
     file_list = "\n".join(f"- {target}" for target in selected)
-    snapshot = collect_snapshot(targets=targets, max_chars=max_chars)
+    snapshot, coverage = collect_snapshot_with_coverage(targets=targets, max_chars=max_chars)
+    coverage_text = format_snapshot_coverage(coverage)
     return redact_secrets(
-        f"{REVIEW_BRIEF}\n\n# Included Files\n\n{file_list}\n\n# Repository Snapshot\n\n{snapshot}"
+        f"{REVIEW_BRIEF}\n\n"
+        "# Included Files\n\n"
+        f"{file_list}\n\n"
+        "# Snapshot Coverage\n\n"
+        "Treat the Included Files list as review intent, not proof of inclusion. "
+        "Use this coverage table to distinguish full, partial, and omitted evidence; "
+        "report 'insufficient evidence' for omitted or truncated files instead of guessing. "
+        "For compact-summary Python files, report syntax blockers only when "
+        "python_syntax is not ok or a concrete parse error appears in the snapshot.\n\n"
+        f"{coverage_text}\n\n"
+        "# Repository Snapshot\n\n"
+        f"{snapshot}"
     )
 
 
@@ -258,7 +482,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=str(ROOT / "build" / "reviews" / "gemini_code_review.md"),
         help="markdown report path",
     )
-    ap.add_argument("--max-chars", type=int, default=70_000, help="snapshot character budget")
+    ap.add_argument("--max-chars", type=int, default=140_000, help="snapshot character budget")
     ap.add_argument(
         "--target",
         action="append",
