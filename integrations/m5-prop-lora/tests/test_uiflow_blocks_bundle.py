@@ -123,6 +123,31 @@ def test_uiflow_block_validator_reports_non_object_param(tmp_path):
     assert any("blocks[0].params[0] must be an object" in error for error in report.errors)
 
 
+def test_uiflow_block_validator_reports_non_object_manifest(tmp_path):
+    repo = copy_uiflow_tree(tmp_path)
+    manifest_path = repo / "uiflow" / "dial" / "blocks" / "prop_tx.json"
+    manifest_path.write_text(json.dumps(["bad"]), encoding="utf-8")
+    validator = load_validator()
+
+    report = validator.validate_bundle(repo)
+
+    assert any("manifest must be a JSON object" in error for error in report.errors)
+
+
+def test_uiflow_block_validator_reports_non_object_alpha2_artifact(tmp_path):
+    repo = copy_uiflow_tree(tmp_path)
+    artifact_path = repo / "uiflow" / "dial" / "blocks" / "dist" / "PropTx.m5b2"
+    artifact_path.write_text(json.dumps(["bad"]), encoding="utf-8")
+    validator = load_validator()
+
+    report = validator.validate_bundle(repo)
+
+    assert any(
+        "uiflow/dial/blocks/dist/PropTx.m5b2: artifact must be a JSON object" in error
+        for error in report.errors
+    )
+
+
 def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
     readme = (BLOCKS / "README.md").read_text(encoding="utf-8")
 

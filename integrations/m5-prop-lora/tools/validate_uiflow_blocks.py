@@ -69,6 +69,8 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
         return BundleReport(
             "", "", 0, [], "", 0, "", 0, 0, [f"invalid JSON in {_rel(repo, manifest_path)}: {exc}"]
         )
+    if not isinstance(manifest, dict):
+        return BundleReport("", "", 0, [], "", 0, "", 0, 0, ["manifest must be a JSON object"])
 
     category = manifest.get("category", "")
     color = manifest.get("color", "")
@@ -195,101 +197,106 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
         except json.JSONDecodeError as exc:
             errors.append(f"invalid JSON in {alpha2_artifact}: {exc}")
         else:
-            if artifact.get("version") != "alpha2":
-                errors.append(f"{alpha2_artifact}: version must be 'alpha2'")
-            if artifact.get("category") != "PropTx":
-                errors.append(f"{alpha2_artifact}: category must be 'PropTx'")
-            if artifact.get("color") != color:
-                errors.append(f"{alpha2_artifact}: color must match manifest color {color}")
-
-            uiflow2 = artifact.get("uiflow2", {})
-            jscode = uiflow2.get("jscode", "") if isinstance(uiflow2, dict) else ""
-            import_match = re.search(r"from\s+(\w+)\s+import\s+(\w+)", jscode)
-
-            data = artifact.get("data", {})
-            python_file_name = data.get("python_file_name") if isinstance(data, dict) else None
-            data_name = data.get("name") if isinstance(data, dict) else None
-            if not import_match:
-                errors.append(f"{alpha2_artifact}: missing runtime import")
+            if not isinstance(artifact, dict):
+                errors.append(f"{alpha2_artifact}: artifact must be a JSON object")
             else:
-                if import_match.group(1) != python_file_name:
-                    errors.append(
-                        f"{alpha2_artifact}: runtime import module must match data.python_file_name"
+                if artifact.get("version") != "alpha2":
+                    errors.append(f"{alpha2_artifact}: version must be 'alpha2'")
+                if artifact.get("category") != "PropTx":
+                    errors.append(f"{alpha2_artifact}: category must be 'PropTx'")
+                if artifact.get("color") != color:
+                    errors.append(f"{alpha2_artifact}: color must match manifest color {color}")
+
+                uiflow2 = artifact.get("uiflow2", {})
+                jscode = uiflow2.get("jscode", "") if isinstance(uiflow2, dict) else ""
+                import_match = re.search(r"from\s+(\w+)\s+import\s+(\w+)", jscode)
+
+                data = artifact.get("data", {})
+                python_file_name = data.get("python_file_name") if isinstance(data, dict) else None
+                data_name = data.get("name") if isinstance(data, dict) else None
+                if not import_match:
+                    errors.append(f"{alpha2_artifact}: missing runtime import")
+                else:
+                    if import_match.group(1) != python_file_name:
+                        errors.append(
+                            f"{alpha2_artifact}: runtime import module must match data.python_file_name"
+                        )
+                    if import_match.group(2) != data_name:
+                        errors.append(
+                            f"{alpha2_artifact}: runtime import class must match data.name"
+                        )
+                if python_file_name != "PropTx":
+                    errors.append(f"{alpha2_artifact}: data.python_file_name must be 'PropTx'")
+                if data_name != "PropTx":
+                    errors.append(f"{alpha2_artifact}: data.name must be 'PropTx'")
+
+                toolbox = uiflow2.get("toolbox", "") if isinstance(uiflow2, dict) else ""
+                try:
+                    toolbox_root = ET.fromstring("<root>" + toolbox + "</root>")
+                except ET.ParseError as exc:
+                    errors.append(f"{alpha2_artifact}: invalid toolbox XML: {exc}")
+                else:
+                    toolbox_category = toolbox_root.find("category")
+                    toolbox_name = (
+                        toolbox_category.get("name") if toolbox_category is not None else None
                     )
-                if import_match.group(2) != data_name:
-                    errors.append(f"{alpha2_artifact}: runtime import class must match data.name")
-            if python_file_name != "PropTx":
-                errors.append(f"{alpha2_artifact}: data.python_file_name must be 'PropTx'")
-            if data_name != "PropTx":
-                errors.append(f"{alpha2_artifact}: data.name must be 'PropTx'")
+                    if toolbox_name != category:
+                        errors.append(
+                            f"{alpha2_artifact}: toolbox category must match manifest category"
+                        )
 
-            toolbox = uiflow2.get("toolbox", "") if isinstance(uiflow2, dict) else ""
-            try:
-                toolbox_root = ET.fromstring("<root>" + toolbox + "</root>")
-            except ET.ParseError as exc:
-                errors.append(f"{alpha2_artifact}: invalid toolbox XML: {exc}")
-            else:
-                toolbox_category = toolbox_root.find("category")
-                toolbox_name = (
-                    toolbox_category.get("name") if toolbox_category is not None else None
-                )
-                if toolbox_name != category:
+                artifact_py = artifact.get("pyCode")
+                if artifact_py is None:
+                    errors.append(f"{alpha2_artifact}: missing pyCode")
+                elif (
+                    alpha2_path.exists()
+                    and artifact_py.strip() != alpha2_path.read_text(encoding="utf-8").strip()
+                ):
+                    errors.append(f"{alpha2_artifact}: pyCode must match {alpha2_source}")
+
+                members = data.get("members", []) if isinstance(data, dict) else []
+                if not isinstance(members, list):
+                    errors.append(f"{alpha2_artifact}: data.members must be a list")
+                    members = []
+                artifact_methods = {
+                    member.get("name")
+                    for member in members
+                    if isinstance(member, dict) and isinstance(member.get("name"), str)
+                }
+                alpha2_artifact_method_count = len(artifact_methods)
+                missing_methods = expected_alpha2_methods - artifact_methods
+                extra_methods = artifact_methods - expected_alpha2_methods
+                if missing_methods:
+                    errors.append(f"{alpha2_artifact}: missing methods: {sorted(missing_methods)}")
+                if extra_methods:
+                    errors.append(f"{alpha2_artifact}: unexpected methods: {sorted(extra_methods)}")
+                if artifact_py is not None:
+                    for member in members:
+                        if isinstance(member, dict) and isinstance(member.get("source"), str):
+                            if member["source"].strip() not in artifact_py:
+                                errors.append(
+                                    f"{alpha2_artifact}: member {member.get('name')} source not found in pyCode"
+                                )
+
+                registered_blocks = set(re.findall(r'Blockly\.Blocks\["([^"]+)"\]', jscode))
+                alpha2_artifact_block_count = len(registered_blocks)
+                block_types = uiflow2.get("block_type", []) if isinstance(uiflow2, dict) else []
+                if not isinstance(block_types, list):
+                    errors.append(f"{alpha2_artifact}: uiflow2.block_type must be a list")
+                    block_types = []
+                block_type_set = {item for item in block_types if isinstance(item, str)}
+                expected_blocks = {
+                    f"custom_proptx_{'init' if method == '__init__' else method}"
+                    for method in expected_alpha2_methods
+                }
+                if registered_blocks != expected_blocks:
                     errors.append(
-                        f"{alpha2_artifact}: toolbox category must match manifest category"
+                        f"{alpha2_artifact}: Blockly registrations must be {sorted(expected_blocks)}"
                     )
-
-            artifact_py = artifact.get("pyCode")
-            if artifact_py is None:
-                errors.append(f"{alpha2_artifact}: missing pyCode")
-            elif (
-                alpha2_path.exists()
-                and artifact_py.strip() != alpha2_path.read_text(encoding="utf-8").strip()
-            ):
-                errors.append(f"{alpha2_artifact}: pyCode must match {alpha2_source}")
-
-            members = data.get("members", []) if isinstance(data, dict) else []
-            if not isinstance(members, list):
-                errors.append(f"{alpha2_artifact}: data.members must be a list")
-                members = []
-            artifact_methods = {
-                member.get("name")
-                for member in members
-                if isinstance(member, dict) and isinstance(member.get("name"), str)
-            }
-            alpha2_artifact_method_count = len(artifact_methods)
-            missing_methods = expected_alpha2_methods - artifact_methods
-            extra_methods = artifact_methods - expected_alpha2_methods
-            if missing_methods:
-                errors.append(f"{alpha2_artifact}: missing methods: {sorted(missing_methods)}")
-            if extra_methods:
-                errors.append(f"{alpha2_artifact}: unexpected methods: {sorted(extra_methods)}")
-            if artifact_py is not None:
-                for member in members:
-                    if isinstance(member, dict) and isinstance(member.get("source"), str):
-                        if member["source"].strip() not in artifact_py:
-                            errors.append(
-                                f"{alpha2_artifact}: member {member.get('name')} source not found in pyCode"
-                            )
-
-            registered_blocks = set(re.findall(r'Blockly\.Blocks\["([^"]+)"\]', jscode))
-            alpha2_artifact_block_count = len(registered_blocks)
-            block_types = uiflow2.get("block_type", []) if isinstance(uiflow2, dict) else []
-            if not isinstance(block_types, list):
-                errors.append(f"{alpha2_artifact}: uiflow2.block_type must be a list")
-                block_types = []
-            block_type_set = {item for item in block_types if isinstance(item, str)}
-            expected_blocks = {
-                f"custom_proptx_{'init' if method == '__init__' else method}"
-                for method in expected_alpha2_methods
-            }
-            if registered_blocks != expected_blocks:
-                errors.append(
-                    f"{alpha2_artifact}: Blockly registrations must be {sorted(expected_blocks)}"
-                )
-            if block_type_set != registered_blocks:
-                errors.append(
-                    f"{alpha2_artifact}: uiflow2.block_type must match Blockly registrations"
-                )
+                if block_type_set != registered_blocks:
+                    errors.append(
+                        f"{alpha2_artifact}: uiflow2.block_type must match Blockly registrations"
+                    )
 
     return BundleReport(
         category,
