@@ -142,6 +142,13 @@ def _font(text_size: int, bold: bool = False, mono: bool = False) -> ImageFont.I
     return ImageFont.load_default()
 
 
+@dataclass(frozen=True)
+class DrawOp:
+    kind: str
+    text: str = ""
+    bbox: tuple[int, int, int, int] | None = None
+
+
 # ----------------------------------------------------------------------------
 # Canvas: supersampled wrapper exposing LovyanGFX-like primitives.
 # ----------------------------------------------------------------------------
@@ -154,6 +161,14 @@ class Canvas:
         self.text_size = 1
         self.text_color = COLOR_TEXT
         self.text_bg = bg
+        self.ops: list[DrawOp] = []
+
+    def _record_text_bbox(self, text: str, bbox: tuple[int, int, int, int]) -> None:
+        left = int(math.floor(bbox[0] / S))
+        top = int(math.floor(bbox[1] / S))
+        right = int(math.ceil(bbox[2] / S))
+        bottom = int(math.ceil(bbox[3] / S))
+        self.ops.append(DrawOp("text", text, (left, top, right, bottom)))
 
     def fill_screen(self, color: int) -> None:
         self.d.rectangle([0, 0, SCREEN_W * S, SCREEN_H * S], fill=rgb(color))
@@ -226,8 +241,9 @@ class Canvas:
         color = self.text_color if fg is None else fg
         background = self.text_bg if bg is None else bg
         f = _font(self.text_size, bold=bold, mono=mono)
+        bbox = self.d.textbbox((x * S, y * S), text, font=f)
+        self._record_text_bbox(text, bbox)
         if background is not None:
-            bbox = self.d.textbbox((x * S, y * S), text, font=f)
             self.d.rectangle(bbox, fill=rgb(background))
         self.d.text((x * S, y * S), text, font=f, fill=rgb(color))
 
@@ -276,6 +292,8 @@ class Canvas:
         ink_top = bbox[1]
         ink_h = bbox[3] - bbox[1]
         ty = int(round(cy * S - ink_h / 2 - ink_top))
+        draw_bbox = self.d.textbbox((x * S, ty), text, font=f)
+        self._record_text_bbox(text, draw_bbox)
         self.d.text((x * S, ty), text, font=f, fill=rgb(fg))
 
     def raw(self) -> Image.Image:
@@ -855,6 +873,7 @@ def draw_main_info_area(canvas: Canvas, view: View) -> None:
         draw_firing_readout(canvas, view)
         return
     if view.mode == "preview":
+        draw_preview_readout(canvas, view)
         return
     draw_plot_readout(canvas, view.config)
 
@@ -868,13 +887,27 @@ def total_time_text(config: EffectConfig) -> str:
 
 
 def draw_firing_readout(canvas: Canvas, view: View) -> None:
-    rows = (
-        ("JAS", f"{view.config.intensity}%", clamp_percent(view.config.intensity) / 100.0, COLOR_WARN),
-        ("DOBA", f"{view.config.period_ms}ms", min(1.0, view.config.period_ms / 3000.0), COLOR_BLUE),
-        ("Celkem", total_time_text(view.config), None, COLOR_TEXT),
+    columns = (
+        (12, "JAS", f"{view.config.intensity}%", COLOR_WARN),
+        (82, "DOBA", f"{view.config.period_ms}ms", COLOR_BLUE),
+        (158, "CELKOVÁ DOBA", total_time_text(view.config), COLOR_TEXT),
     )
-    for idx, (label, value, fraction, dot_color) in enumerate(rows):
-        draw_value_row(canvas, ROW_Y + idx * ROW_H, label, value, False, False, fraction, dot_color)
+    for x, label, value, accent in columns:
+        canvas.set_text_size(1)
+        canvas.draw_string(label, x, ROW_Y + 4, LABEL_DIM, COLOR_BG, bold=True)
+        canvas.set_text_size(2)
+        canvas.draw_string(value, x, ROW_Y + 18, accent, COLOR_BG, bold=True, mono=True)
+
+
+def draw_preview_readout(canvas: Canvas, view: View) -> None:
+    canvas.set_text_size(1)
+    pre_value = "SVIT" if view.config.pre_trigger else "VYP"
+    canvas.draw_string("PŘED", 12, ROW_Y + 5, LABEL_DIM, COLOR_BG, bold=True)
+    canvas.draw_string(pre_value, 12, ROW_Y + 20, COLOR_TEXT, COLOR_BG, bold=True, mono=True)
+    canvas.draw_fast_vline(79, ROW_Y + 7, 25, dim_rgb(COLOR_MUTED, 90))
+    canvas.draw_string("CELKOVÁ DOBA", 94, ROW_Y + 5, LABEL_DIM, COLOR_BG, bold=True)
+    canvas.set_text_size(2)
+    canvas.draw_string(total_time_text(view.config), 94, ROW_Y + 17, COLOR_TEXT, COLOR_BG, bold=True, mono=True)
 
 
 def draw_plot_readout(canvas: Canvas, config: EffectConfig) -> None:
@@ -937,14 +970,12 @@ def draw_delay_timeline(canvas: Canvas, view: View) -> None:
         canvas.draw_right_string(value, SCREEN_W - 8, line_y - 8, text_color, COLOR_BG)
 
 
-def render(view: View, page: str = "main", hires: bool = False) -> Image.Image:
-    # hires=True returns the full supersampled buffer (SCREEN*S) instead of the
-    # device-native 240x135 downscale -- crisp max-resolution export for review.
+def render_canvas(view: View, page: str = "main") -> Canvas:
     canvas = Canvas(COLOR_BG)
     canvas.fill_screen(COLOR_BG)
     if page == "delays":
         draw_delay_timeline(canvas, view)
-        return canvas.img if hires else canvas.raw()
+        return canvas
 
     draw_status_bar(canvas, view)
     draw_plot(canvas, view)
@@ -966,7 +997,18 @@ def render(view: View, page: str = "main", hires: bool = False) -> Image.Image:
     # cue that persists even when the status bar is a quiet chip (KLID). Drawn LAST so
     # nothing (status fill, plot fill, alarm border) paints over it.
     canvas.fill_rect(0, 0, SPINE_W, SCREEN_H, state_spine_color(view))
+    return canvas
+
+
+def render(view: View, page: str = "main", hires: bool = False) -> Image.Image:
+    # hires=True returns the full supersampled buffer (SCREEN*S) instead of the
+    # device-native 240x135 downscale -- crisp max-resolution export for review.
+    canvas = render_canvas(view, page)
     return canvas.img if hires else canvas.raw()
+
+
+def render_ops(view: View, page: str = "main") -> list[DrawOp]:
+    return list(render_canvas(view, page).ops)
 
 
 # ----------------------------------------------------------------------------

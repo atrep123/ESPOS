@@ -69,6 +69,28 @@ jobs:
             tests/test_focus_nav_listmodel.py \
             tests/test_inspector_commit.py \
             tests/test_scene_ops.py
+      - name: M5 Prop LoRa static + dry-smoke gates (no firmware build)
+        if: matrix.python-version == '3.12'
+        working-directory: integrations/m5-prop-lora
+        run: |
+          python -m pytest -q --tb=short tests
+          # Toolchain-light release invariant check; exits before PlatformIO/ESP-IDF builds.
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1 -ReleaseGatesOnly
+          python tools/validate_uiflow_blocks.py
+          python tools/uiflow_dial_offline.py bundle --dry-smoke --out "$RUNNER_TEMP/m5_uiflow_dial_offline"
+          python tools/uiflow_dial_offline.py verify --bundle "$RUNNER_TEMP/m5_uiflow_dial_offline"
+      - name: M5 host C++ logic
+        if: matrix.python-version == '3.12'
+        shell: pwsh
+        working-directory: integrations/m5-prop-lora
+        run: ./tools/run_host_tests.ps1
+      - name: M5 Terminal firmware build
+        if: matrix.python-version == '3.12'
+        working-directory: integrations/m5-prop-lora
+        run: |
+          pio run -d firmware/sticks3-terminal -e sticks3-terminal
+          pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke
+          pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
       - name: Run tests
         env:
           PYTHONIOENCODING: "utf-8"

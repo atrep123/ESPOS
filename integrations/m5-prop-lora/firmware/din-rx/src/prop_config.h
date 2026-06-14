@@ -182,6 +182,12 @@ constexpr std::uint32_t RX_REPLAY_WINDOW_BITS  = 32;  // sliding replay window s
 // Compile-time on/off switches. These add or remove whole behaviours -- unlike
 // the numeric knobs above, flipping one changes WHETHER a feature runs at all.
 //
+// Production three-device stack:
+//   false = DinMeter is indication + electronics/safety authority only. Setup
+//           edits live on the M5StickS3 Terminal and arrive over USB.
+//   true  = legacy local encoder editor is enabled for bench/debug builds.
+constexpr bool DINMETER_LOCAL_SETUP_EDITOR_ENABLED = false;
+//
 // ----- Boot LED self-test (the power-on "chase") -----------------------------
 // On boot the firmware walks EACH pixel individually through R, G, B, W (a
 // "chase") so a dead first pixel / cold DIN solder joint is visually

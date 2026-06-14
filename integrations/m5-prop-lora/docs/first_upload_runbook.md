@@ -1,0 +1,190 @@
+# First Upload Runbook
+
+This is the operator runbook for the first bench uploads of the prop chain:
+
+- **Odpalovac / Dial:** M5 Dial ESP32-S3 fire controller plus its C6 modem.
+- **Terminal:** M5StickS3 Terminal USB setup editor.
+- **Prop electronics:** DinMeter/StampS3 receiver, receiver-side C6 modem, NeoDriver,
+  LED-only dummy load, ByteButton/input wiring, and the Terminal USB setup link.
+
+Do not connect live pyro or actuator outputs during this run. First upload is a
+dummy/LED-only dry-smoke bench path until the hardware receipt proves matching
+runtime keys, safe ARM/FIRE behavior, STOP, and Terminal setup rollback.
+
+## Current PC Preflight
+
+Checked on 2026-06-14 from `C:\Users\atrep\Desktop\ESPOS`:
+
+- `pio` is available.
+- `python -m esptool version` works.
+- `python -m mpremote --help` works.
+- `idf.py` is not on PATH in the current shell. Load ESP-IDF v5.1.3 before Dial
+  C++ build/flash.
+- `pio device list` currently shows only `COM1`; no M5 boards are attached.
+
+Generate the current non-secret rehearsal report before every first-upload
+attempt:
+
+```powershell
+python tools/first_upload_preflight.py --out build/first_upload_preflight.md
+```
+
+Use `--strict` when you want CI-style failure while any blocker remains.
+
+## Port Map To Fill Before Flashing
+
+Run:
+
+```powershell
+pio device list
+```
+
+Fill this table from the actual device enumeration. Do not rely on historical
+COM values.
+
+| Role | Variable | Example only | Upload path |
+|---|---|---:|---|
+| M5 Dial fire controller | `<DIAL_COM>` | COM6 | ESP-IDF `dial-tx` |
+| Dial-side C6 modem | `<MODEM_DIAL_COM>` | COM7 | PlatformIO env `m5stack-c6l` / flash target `c6l-modem` |
+| Prop-side C6 modem | `<MODEM_PROP_COM>` | COM8 | PlatformIO env `m5stack-c6l` / flash target `c6l-modem` |
+| DinMeter / prop receiver | `<DIN_COM>` | COM9 | PlatformIO `din-rx` |
+| M5StickS3 Terminal | `<TERMINAL_COM>` | COM10 | PlatformIO `sticks3-terminal` |
+
+For each ESP32-S3 target, record identity before and after flashing:
+
+```powershell
+python -m esptool --chip esp32s3 --port <DIAL_COM> chip_id
+python -m esptool --chip esp32s3 --port <DIAL_COM> read_mac
+```
+
+For C6 modems use the same command with `--chip esp32c6`.
+
+## Deterministic Gates Before Hardware
+
+Run from `integrations/m5-prop-lora` unless noted:
+
+```powershell
+python -m pytest -q --tb=short tests
+powershell -ExecutionPolicy Bypass -File tools/run_host_tests.ps1 -Compiler build\toolchains\winlibs-gcc-16.1.0-msvcrt-r3\mingw64\bin\g++.exe
+pio run -d firmware/sticks3-terminal -e sticks3-terminal
+pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke
+pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
+pio run -d firmware/din-rx -e esp32-s3-devkitc-1
+$env:PLATFORMIO_CORE_DIR = "C:\.pio-m5-prop-lora\c6l-modem"
+pio run -d firmware/c6l-modem -e m5stack-c6l
+Remove-Item Env:\PLATFORMIO_CORE_DIR
+```
+
+Load ESP-IDF v5.1.3 before Dial:
+
+```powershell
+# Example only; use the actual ESP-IDF install path on this PC.
+& C:\Espressif\frameworks\esp-idf-v5.1.3\export.ps1
+idf.py -C firmware/dial-tx build
+```
+
+## Runtime HMAC Key Preflight
+
+Firmware intentionally fails closed without the same runtime HMAC key on Dial
+and DinMeter. First positive Preview/ARM/FIRE smoke therefore needs key
+provisioning, even for a dummy load.
+
+Production key:
+
+```powershell
+python -c "import pathlib,secrets; pathlib.Path('prop-key.hex').write_text(secrets.token_hex(32) + '\n', encoding='ascii')"
+python tools/provision_prop_key.py --key-file prop-key.hex --out build/prop_key_provisioning
+```
+
+Dry-smoke bench key, dummy load only:
+
+```powershell
+Set-Content -NoNewline -Encoding ASCII build\prop-key.dry-smoke.hex "00112233445566778899aabbccddeeff"
+python tools/provision_prop_key.py --key-file build\prop-key.dry-smoke.hex --allow-dry-smoke --out build/prop_key_provisioning_dry_smoke
+```
+
+Any C++ firmware run that uses this bench-only key must be built with
+`PROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=1`. Release and production builds must keep
+that define at `0` and use a non-prototype key.
+
+If ESP-IDF `nvs_partition_gen.py` is available, add `--generate-nvs-bin` to
+produce `prop_key.nvs.bin`. Treat generated CSV/header/bin files and readback
+bins as secret artifacts, even for production. Record only the SHA-256
+fingerprint from `prop_key_manifest.json`.
+
+Dial NVS partition is `0x9000` size `0x6000`. DinMeter currently uses the
+PlatformIO board/default partition table; read `0x8000` size `0x1000` first and
+derive the actual `data,nvs` offset/size before writing or reading NVS.
+
+Before any positive PREVIEW/ARM/FIRE smoke, complete
+`prop_key_receipt.template.json`: actual ports, chip ids, MACs, NVS offset/size,
+readback command evidence, and matching non-secret fingerprints for Dial and
+DinMeter. A `PENDING_HARDWARE` receipt blocks positive acceptance.
+
+## First Upload Commands
+
+Use `tools/flash.ps1` so PlatformIO core directories stay isolated. Run dry-runs
+first and inspect the resolved commands before removing `-DryRun`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port <MODEM_DIAL_COM> -DryRun
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port <MODEM_PROP_COM> -DryRun
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target din-rx -Port <DIN_COM> -DryRun
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target sticks3-terminal -Port <TERMINAL_COM> -DryRun
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dial-tx -Port <DIAL_COM> -DryRun
+```
+
+Then flash only the confirmed ports:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port <MODEM_DIAL_COM>
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port <MODEM_PROP_COM>
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target din-rx -Port <DIN_COM>
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target sticks3-terminal -Port <TERMINAL_COM>
+```
+
+Dial C++ fire controller after ESP-IDF export:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dial-tx -Port <DIAL_COM>
+```
+
+Optional UIFlow runtime bundle for a MicroPython Dial path:
+
+```powershell
+python tools/uiflow_dial_offline.py bundle --out build/uiflow_dial_offline --dry-smoke
+python tools/uiflow_dial_offline.py verify --bundle build/uiflow_dial_offline
+python tools/uiflow_dial_offline.py deploy --port <DIAL_COM> --bundle build/uiflow_dial_offline --dry-smoke --dry-run
+python tools/uiflow_dial_offline.py deploy --port <DIAL_COM> --bundle build/uiflow_dial_offline --dry-smoke
+```
+
+## First Power-On Order
+
+1. Power the prop electronics with LED-only dummy load connected.
+2. Flash receiver-side C6 modem and DinMeter.
+3. Flash Dial-side C6 modem and Dial.
+4. Flash Terminal last, then connect Terminal USB setup link to DinMeter.
+5. Keep one serial reader per port at most. Use `tools/read_com.py`, not a
+   default monitor that toggles DTR/RTS:
+
+```powershell
+python tools/read_com.py <MODEM_DIAL_COM> 15 115200
+python tools/read_com.py <DIN_COM> 15 115200
+python tools/read_com.py <TERMINAL_COM> 15 115200
+```
+
+## Acceptance For First Bench Upload
+
+- Dial/DinMeter with missing or mismatched HMAC key fail closed with `KEY MISSING`,
+  `BAD MAC`, or no accepted action.
+- With matching runtime keys on dummy load: PREVIEW works, ARM enters armed TTL,
+  physical Chain Key before ARM does not fire, Chain Key after ARM fires, STOP
+  clears output and requires fresh ARM.
+- Terminal upload sends `SETUP <request_id>` and receives matching
+  `SETUP_OK <request_id>`; `NAHRANO` appears on Terminal.
+- Terminal rejected upload receives matching `SETUP_ERR <request_id>`.
+- Forced `SETUP_ERR`, timeout, or overflow shows `PROBLEM` and rolls Terminal
+  draft back to the last saved setup.
+- `SIM_FIRE <request_id>` previews enabled effect lanes only and does not commit
+  setup or use the radio FIRE path.
+- Power-cycle DinMeter after accepted setup; accepted Terminal setup persists.

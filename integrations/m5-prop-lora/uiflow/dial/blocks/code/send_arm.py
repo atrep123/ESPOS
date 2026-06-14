@@ -1,2 +1,3 @@
 # type: ignore # noqa: F821
-prop_uart.write(prop_tx.arm_line())
+for line in prop_tx.arm_lines():
+    prop_uart.write(line)

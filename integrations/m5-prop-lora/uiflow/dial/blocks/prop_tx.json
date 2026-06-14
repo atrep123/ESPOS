@@ -39,64 +39,14 @@
       "params": [{ "name": "Prop ARM", "type": "label" }]
     },
     {
-      "name": "remote_led",
-      "type": "execute",
-      "params": [
-        { "name": "Prop remote LED", "type": "label" },
-        { "name": "which", "type": "number" }
-      ]
-    },
-    {
-      "name": "sync_palette",
-      "type": "execute",
-      "params": [
-        { "name": "Prop sync palette", "type": "label" },
-        { "name": "colors", "type": "variable" }
-      ]
-    },
-    {
       "name": "reply",
       "type": "value",
       "params": [{ "name": "Prop reply", "type": "label" }]
     },
     {
-      "name": "hue_color",
-      "type": "value",
-      "params": [
-        { "name": "Prop hue", "type": "label" },
-        { "name": "deg", "type": "number" },
-        { "name": "to color", "type": "label" }
-      ]
-    },
-    {
-      "name": "default_hues",
-      "type": "value",
-      "params": [{ "name": "Prop default hues", "type": "label" }]
-    },
-    {
       "name": "default_colors",
       "type": "value",
       "params": [{ "name": "Prop default colors", "type": "label" }]
-    },
-    {
-      "name": "palette_from_hues",
-      "type": "value",
-      "params": [
-        { "name": "Prop colors from hues", "type": "label" },
-        { "name": "hues", "type": "variable" }
-      ]
-    },
-    {
-      "name": "set_color",
-      "type": "value",
-      "params": [
-        { "name": "Prop set color", "type": "label" },
-        { "name": "colors", "type": "variable" },
-        { "name": "LED", "type": "label" },
-        { "name": "index", "type": "number" },
-        { "name": "to", "type": "label" },
-        { "name": "color", "type": "variable" }
-      ]
     },
     {
       "name": "first_four",
@@ -125,16 +75,6 @@
         { "name": "Prop RGB888", "type": "label" },
         { "name": "color", "type": "variable" }
       ]
-    },
-    {
-      "name": "remote_led3",
-      "type": "execute",
-      "params": [{ "name": "Prop remote LED3", "type": "label" }]
-    },
-    {
-      "name": "remote_led5",
-      "type": "execute",
-      "params": [{ "name": "Prop remote LED5", "type": "label" }]
     }
   ]
 }

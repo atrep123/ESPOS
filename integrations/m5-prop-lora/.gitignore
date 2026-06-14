@@ -55,6 +55,17 @@ output/
 .*_api_key
 .*_token
 *.secret
+secrets/
+prop-key.hex
+prop_key.hex
+*.prop-key
+*.prop-key.hex
+*.prop-key.txt
+*.prop_key
+*.prop_key.hex
+*.prop_key.txt
+uiflow/dial/prop_key.py
+**/prop_key.py
 
 # Stray backup folder of stale build artifacts
 /Nová složka/

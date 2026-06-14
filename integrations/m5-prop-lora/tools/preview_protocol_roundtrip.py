@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from shared.protocol.protocol import (  # noqa: E402
+    FrameReplayWindow,
     FrameType,
     PropFrame,
     ProtocolError,
@@ -64,6 +65,7 @@ DEFAULT_COLORS: tuple[Rgb, ...] = (
     (16, 32, 48),
 )
 LED_FRAME_TYPES = frozenset((FrameType.PREVIEW, FrameType.FIRE))
+ARM_TTL_MS = 12000
 
 
 class ReceiverMode(IntEnum):
@@ -97,6 +99,15 @@ class ReceiverState:
     mode: ReceiverMode = ReceiverMode.IDLE
     last_status: str = "READY"
     last_accepted_sequence: int = 0
+    replay_epoch: int | None = None
+    replay_seen_mask: int = 0
+    armed: bool = False
+    arm_epoch: int = 0
+    arm_sequence: int = 0
+    arm_expiry_ms: int = 0
+    lockout: bool = False
+    lockout_sequence: int = 0
+    now_ms: int = 0
 
 
 @dataclass(frozen=True)
@@ -170,8 +181,14 @@ def receive_rx_line(line: str, receiver: ReceiverState | None = None) -> RoundTr
     return receive_encoded_frame(encoded, receiver)
 
 
-def receive_encoded_frame(encoded: bytes, receiver: ReceiverState | None = None) -> RoundTripResult:
+def receive_encoded_frame(
+    encoded: bytes,
+    receiver: ReceiverState | None = None,
+    *,
+    now_ms: int | None = None,
+) -> RoundTripResult:
     receiver = receiver or ReceiverState()
+    now_ms = receiver.now_ms if now_ms is None else int(now_ms)
     try:
         frame = _decode_like_receiver_firmware(bytes(encoded))
     except ProtocolError:
@@ -181,18 +198,33 @@ def receive_encoded_frame(encoded: bytes, receiver: ReceiverState | None = None)
     if route_status is not None:
         return _reject(receiver, route_status, frame)
 
-    replay_state = _classify_replay(receiver, frame.sequence)
+    replay_state, remembered = _classify_replay(receiver, frame, now_ms)
     if replay_state == "stale":
         return _reject(receiver, "STALE", frame)
     if replay_state == "duplicate":
         return _reject(receiver, "DUP", frame)
 
-    remembered = replace(receiver, last_accepted_sequence=frame.sequence)
-
-    if frame.frame_type in LED_FRAME_TYPES:
+    if frame.frame_type == FrameType.ARM:
+        return _apply_arm_frame(frame, remembered, now_ms)
+    if frame.frame_type == FrameType.FIRE:
+        return _apply_fire_frame(frame, remembered, now_ms)
+    if frame.frame_type == FrameType.PREVIEW:
         return _apply_led_frame(frame, remembered)
     if frame.frame_type == FrameType.STOP:
-        state = replace(remembered, mode=ReceiverMode.IDLE, last_status="STOP")
+        lockout_sequence = remembered.lockout_sequence
+        if not remembered.lockout or frame.sequence > lockout_sequence:
+            lockout_sequence = frame.sequence
+        state = replace(
+            remembered,
+            mode=ReceiverMode.IDLE,
+            last_status="STOP",
+            armed=False,
+            arm_epoch=0,
+            arm_sequence=0,
+            arm_expiry_ms=0,
+            lockout=True,
+            lockout_sequence=lockout_sequence,
+        )
         return RoundTripResult("STOP", True, state, frame)
     if frame.frame_type in (FrameType.PING, FrameType.STATUS):
         state = replace(remembered, last_status="PING")
@@ -234,15 +266,74 @@ def _route_reject_status(frame: PropFrame) -> str | None:
     return None
 
 
-def _classify_replay(receiver: ReceiverState, sequence: int) -> str:
-    if receiver.last_accepted_sequence == 0 or sequence > receiver.last_accepted_sequence:
-        return "new"
-    if sequence == receiver.last_accepted_sequence:
-        return "duplicate"
-    return "stale"
+def _classify_replay(
+    receiver: ReceiverState,
+    frame: PropFrame,
+    now_ms: int,
+) -> tuple[str, ReceiverState]:
+    window = FrameReplayWindow()
+    window._epoch = receiver.replay_epoch
+    window._base = receiver.last_accepted_sequence
+    window._mask = receiver.replay_seen_mask
+    decision = window.classify(frame.nonce, frame.sequence)
+    remembered = replace(
+        receiver,
+        last_accepted_sequence=window._base,
+        replay_epoch=window._epoch,
+        replay_seen_mask=window._mask,
+        now_ms=now_ms,
+    )
+    return decision, remembered
+
+
+def _epoch(frame: PropFrame) -> int:
+    return (int(frame.nonce) >> 32) & 0xFFFFFFFF
+
+
+def _apply_arm_frame(frame: PropFrame, receiver: ReceiverState, now_ms: int) -> RoundTripResult:
+    if receiver.lockout and frame.sequence <= receiver.lockout_sequence:
+        return _reject(receiver, "LOCKOUT", frame)
+    state = replace(
+        receiver,
+        mode=ReceiverMode.IDLE,
+        last_status="ARMED",
+        armed=True,
+        arm_epoch=_epoch(frame),
+        arm_sequence=frame.sequence,
+        arm_expiry_ms=now_ms + ARM_TTL_MS,
+        lockout=False,
+    )
+    return RoundTripResult("ARMED", True, state, frame)
+
+
+def _apply_fire_frame(frame: PropFrame, receiver: ReceiverState, now_ms: int) -> RoundTripResult:
+    if (
+        not receiver.armed
+        or receiver.lockout
+        or _epoch(frame) != receiver.arm_epoch
+        or frame.sequence <= receiver.arm_sequence
+        or frame.sequence <= receiver.lockout_sequence
+        or now_ms >= receiver.arm_expiry_ms
+    ):
+        return _reject(receiver, "NOT_ARMED", frame)
+
+    consumed = replace(
+        receiver,
+        armed=False,
+        arm_epoch=0,
+        arm_sequence=0,
+        arm_expiry_ms=0,
+    )
+    return _apply_led_frame(frame, consumed)
 
 
 def _apply_led_frame(frame: PropFrame, receiver: ReceiverState) -> RoundTripResult:
+    if (
+        frame.frame_type != FrameType.FIRE
+        and receiver.lockout
+        and frame.sequence <= receiver.lockout_sequence
+    ):
+        return _reject(receiver, "STOP", frame)
     try:
         parsed = parse_led_payload(frame.payload)
     except ProtocolError:
@@ -269,12 +360,16 @@ def _reject(receiver: ReceiverState, status: str, frame: PropFrame | None = None
 
 
 def scenes() -> dict[str, tuple[ControllerState, ReceiverState]]:
+    default_epoch = (ControllerState().nonce >> 32) & 0xFFFFFFFF
     return {
         "01_preview": (ControllerState(FrameType.PREVIEW), ReceiverState()),
-        "02_fire": (ControllerState(FrameType.FIRE, sequence=2), ReceiverState()),
+        "02_fire_without_arm": (ControllerState(FrameType.FIRE, sequence=2), ReceiverState()),
         "03_stop": (ControllerState(FrameType.STOP, sequence=3), ReceiverState()),
         "04_ping": (ControllerState(FrameType.PING, sequence=4), ReceiverState()),
-        "05_duplicate": (ControllerState(FrameType.PREVIEW, sequence=4), ReceiverState(last_accepted_sequence=4)),
+        "05_duplicate": (
+            ControllerState(FrameType.PREVIEW, sequence=4),
+            ReceiverState(last_accepted_sequence=4, replay_epoch=default_epoch),
+        ),
     }
 
 

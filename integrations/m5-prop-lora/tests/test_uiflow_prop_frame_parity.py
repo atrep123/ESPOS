@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import hashlib
 import hmac as std_hmac
+import importlib.util
 import sys
+import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -20,13 +23,19 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "uiflow" / "dial"))
 PROP_PROTOCOL_H = ROOT / "shared" / "protocol" / "prop_protocol.h"
+TEST_KEY_HEX = "00112233445566778899aabbccddeeff"
+sys.modules["prop_key"] = types.SimpleNamespace(
+    SHARED_KEY_HEX=TEST_KEY_HEX,
+    ALLOW_PROTOTYPE_SHARED_KEY=True,
+)
 
 from shared.protocol import protocol as proto  # noqa: E402
 import prop_frame  # noqa: E402  (flat module, as it sits on the MicroPython device)
 
 
-KEY = bytes.fromhex("00112233445566778899aabbccddeeff")
+KEY = bytes.fromhex(TEST_KEY_HEX)
 KEYS = {1: KEY}
+PROVISIONED_KEY = bytes.fromhex("102132435465768798a9babbdcddedef")
 
 ALL_TYPES = [
     prop_frame.PING,
@@ -89,9 +98,122 @@ def _mine(v):
     return prop_frame.encode_frame(t, key_id, src, dst, seq, nonce, payload, KEY)
 
 
+def _load_prop_frame_with_prop_key(source: str):
+    old_path = list(sys.path)
+    old_prop_key = sys.modules.pop("prop_key", None)
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        (tmp_path / "prop_key.py").write_text(source, encoding="utf-8")
+        sys.path.insert(0, str(tmp_path))
+        spec = importlib.util.spec_from_file_location(
+            f"prop_frame_under_test_{id(source)}", ROOT / "uiflow" / "dial" / "prop_frame.py"
+        )
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            sys.path[:] = old_path
+            sys.modules.pop("prop_key", None)
+            if old_prop_key is not None:
+                sys.modules["prop_key"] = old_prop_key
+        return module
+
+
+def _load_prop_frame_without_prop_key():
+    old_path = list(sys.path)
+    old_prop_key = sys.modules.pop("prop_key", None)
+    spec = importlib.util.spec_from_file_location(
+        "prop_frame_without_prop_key", ROOT / "uiflow" / "dial" / "prop_frame.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = old_path
+        sys.modules.pop("prop_key", None)
+        if old_prop_key is not None:
+            sys.modules["prop_key"] = old_prop_key
+    return module
+
+
 class FrameParity(unittest.TestCase):
     def test_shared_key_matches(self):
         self.assertEqual(prop_frame.SHARED_KEY, KEY)
+
+    def test_provisioned_prop_key_module_overrides_prototype_key(self):
+        module = _load_prop_frame_with_prop_key(
+            'SHARED_KEY_HEX = "102132435465768798a9babbdcddedef"\n'
+        )
+
+        self.assertEqual(module.SHARED_KEY, PROVISIONED_KEY)
+        self.assertFalse(module.DRY_SMOKE_KEY_ACTIVE)
+        frame = module.encode_frame(module.PING, 1, 0x11, 0x22, 1, 1)
+        self.assertEqual(proto.decode_frame(frame, {1: PROVISIONED_KEY}).frame_type, proto.FrameType.PING)
+
+    def test_prop_key_module_missing_key_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "did not provide SHARED_KEY"):
+            _load_prop_frame_with_prop_key("# intentionally empty\n")
+
+    def test_missing_prop_key_module_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "did not provide SHARED_KEY"):
+            _load_prop_frame_without_prop_key()
+
+    def test_prop_key_module_can_explicitly_allow_prototype_for_bench(self):
+        module = _load_prop_frame_with_prop_key(
+            'ALLOW_PROTOTYPE_SHARED_KEY = True\nSHARED_KEY_HEX = "00112233445566778899aabbccddeeff"\n'
+        )
+
+        self.assertEqual(module.SHARED_KEY, KEY)
+        self.assertTrue(module.DRY_SMOKE_KEY_ACTIVE)
+
+    def test_prop_key_module_requires_literal_bool_for_prototype_flag(self):
+        with self.assertRaisesRegex(RuntimeError, "ALLOW_PROTOTYPE_SHARED_KEY must be True or False"):
+            _load_prop_frame_with_prop_key(
+                'ALLOW_PROTOTYPE_SHARED_KEY = "yes"\n'
+                'SHARED_KEY_HEX = "00112233445566778899aabbccddeeff"\n'
+            )
+
+    def test_prop_key_module_rejects_prototype_key_without_explicit_bench_flag(self):
+        with self.assertRaisesRegex(RuntimeError, "dry-smoke HMAC key"):
+            _load_prop_frame_with_prop_key('SHARED_KEY_HEX = "00112233445566778899aabbccddeeff"\n')
+
+    def test_prop_key_module_rejects_keys_longer_than_cxx_runtime_limit(self):
+        with self.assertRaisesRegex(RuntimeError, "at most 64 bytes"):
+            _load_prop_frame_with_prop_key(f'SHARED_KEY_HEX = "{"aa" * 65}"\n')
+
+    def test_key_from_hex_rejects_malformed_input(self):
+        for value, message in (
+            ("123", "even number of digits"),
+            ("12G4", "non-hex character"),
+            ("00:11:22:3", "even number of digits"),
+        ):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, message):
+                    prop_frame._key_from_hex(value)
+
+    def test_explicit_key_override_uses_runtime_length_limits(self):
+        with self.assertRaisesRegex(RuntimeError, "at least 16 bytes"):
+            prop_frame.encode_frame(prop_frame.PING, 1, 0x11, 0x22, 1, 2, key=b"short")
+        with self.assertRaisesRegex(RuntimeError, "at least 16 bytes"):
+            prop_frame.PropSender(key=b"short")
+
+    def test_prop_key_module_rejects_raw_shared_key_schema(self):
+        with self.assertRaisesRegex(RuntimeError, "must not define SHARED_KEY"):
+            _load_prop_frame_with_prop_key(
+                'SHARED_KEY_HEX = "102132435465768798a9babbdcddedef"\n'
+                'SHARED_KEY = bytes.fromhex("102132435465768798a9babbdcddedef")\n'
+            )
+
+    def test_prop_frame_source_has_no_compiled_prototype_key(self):
+        source = (ROOT / "uiflow" / "dial" / "prop_frame.py").read_text(encoding="utf-8")
+
+        self.assertIn("DRY_SMOKE_KEY_ACTIVE", source)
+        self.assertNotIn("00112233445566778899aabbccddeeff", source)
+        self.assertNotIn("_PROTOTYPE_KEY", source)
+        self.assertNotIn("SHARED_KEY = bytes(", source)
+        self.assertNotIn(TEST_KEY_HEX, source)
 
     def test_encode_frame_byte_exact(self):
         for v in _vectors():
@@ -321,6 +443,70 @@ class SenderParity(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             s.fire_burst_lines(LED_COLORS, copies=0)
+
+    def test_stop_line_uses_ack_tracked_send_path(self):
+        s = prop_frame.PropSender(epoch=1, sequence=1, rand32=self._rng([2]))
+
+        line = s.stop_line()
+
+        self.assertTrue(line.startswith("SEND "))
+        dec = proto.decode_frame(bytes.fromhex(line.split(" ", 1)[1].strip()), KEYS)
+        self.assertEqual(dec.frame_type, proto.FrameType.STOP)
+
+    def test_stop_lines_retry_same_ack_tracked_frame(self):
+        s = prop_frame.PropSender(epoch=1, sequence=4, rand32=self._rng([2]))
+
+        lines = s.stop_lines()
+
+        self.assertEqual(len(lines), prop_frame.STOP_RETRY_COPIES)
+        self.assertEqual(len(set(lines)), 1)
+        self.assertTrue(all(line.startswith("SEND ") for line in lines))
+        decoded = [
+            proto.decode_frame(bytes.fromhex(line.split(" ", 1)[1].strip()), KEYS)
+            for line in lines
+        ]
+        self.assertEqual(
+            [frame.frame_type for frame in decoded],
+            [proto.FrameType.STOP] * prop_frame.STOP_RETRY_COPIES,
+        )
+        self.assertEqual(decoded[0].sequence, decoded[1].sequence)
+        self.assertEqual(decoded[1].sequence, decoded[2].sequence)
+        self.assertEqual(decoded[0].nonce, decoded[1].nonce)
+        self.assertEqual(decoded[1].nonce, decoded[2].nonce)
+        self.assertEqual(s.sequence, 5)
+
+    def test_arm_lines_repeat_one_authenticated_ff_frame(self):
+        s = prop_frame.PropSender(epoch=1, sequence=7, rand32=self._rng([3]))
+
+        lines = s.arm_lines()
+
+        self.assertEqual(len(lines), prop_frame.ARM_BURST_COPIES)
+        self.assertEqual(len(set(lines)), 1)
+        self.assertTrue(all(line.startswith("FF ") for line in lines))
+        dec = proto.decode_frame(bytes.fromhex(lines[0].split(" ", 1)[1].strip()), KEYS)
+        self.assertEqual(dec.frame_type, proto.FrameType.ARM)
+        self.assertEqual(dec.sequence, 7)
+        self.assertEqual(s.sequence, 8)
+
+    def test_remote_led_lines_repeat_remote_without_palette_preflight(self):
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 127, 255), (255, 127, 0)]
+        s = prop_frame.PropSender(epoch=1, sequence=20, rand32=self._rng([4, 5]))
+
+        lines = s.remote_led_lines(prop_frame.REMOTE_LED_BIT_LED5, colors)
+
+        self.assertEqual(len(lines), prop_frame.REMOTE_LED_BURST_COPIES)
+        self.assertTrue(all(line.startswith("FF ") for line in lines))
+        decoded = [
+            proto.decode_frame(bytes.fromhex(line.split(" ", 1)[1].strip()), KEYS)
+            for line in lines
+        ]
+        self.assertEqual(
+            [frame.frame_type for frame in decoded],
+            [proto.FrameType.REMOTE_LED] * prop_frame.REMOTE_LED_BURST_COPIES,
+        )
+        self.assertEqual(len(set(lines)), 1)
+        self.assertEqual(proto.parse_remote_led(bytes(decoded[0].payload)), proto.REMOTE_LED_BIT_LED5)
+        self.assertEqual(s.sequence, 21)
 
 
 if __name__ == "__main__":

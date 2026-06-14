@@ -2,6 +2,7 @@
 #include "../common_define.h"
 #include "prop_colors.h"
 #include "prop_protocol.h"
+#include "prop_runtime_key.h"
 #include "prop_tx_config.h"  // USER KNOBS (Marlin-style): UART pins, encoder/ARM/ACK/FF timings, protocol routing, factory palette. See that file's SECTION INDEX.
 
 #include "driver/gpio.h"
@@ -61,29 +62,16 @@ namespace
     constexpr gpio_num_t  PROP_UART_RX   = static_cast<gpio_num_t>(prop_tx_config::PROP_UART_RX_GPIO);
 
     // INTERNAL (kept out of the config header on purpose):
-    //   PROP_NVS_*  -- NVS blob namespace + log tag (storage layout, not a knob)
-    //   SHARED_KEY  -- the 16-byte HMAC secret (NEVER expose / move this)
+    //   PROP_NVS_*  -- settings namespace + log tag (storage layout, not a knob)
     //   COMMAND_ACTIONS -- the action-cycle order is wired to the UI/enum below
     constexpr const char* PROP_NVS_NAMESPACE = "prop_tx";
     constexpr const char* PROP_NVS_TAG = "prop_tx_nvs";
-    constexpr std::array<PROP_TX::Action_t, 6> COMMAND_ACTIONS = {
+    constexpr std::array<PROP_TX::Action_t, 4> COMMAND_ACTIONS = {
         PROP_TX::ACTION_PREVIEW,
         PROP_TX::ACTION_PING,
         PROP_TX::ACTION_STOP,
-        PROP_TX::ACTION_LED3_ON,   // ON-only; sits next to STOP (STOP is the master clear for both)
-        PROP_TX::ACTION_LED5_ON,
         PROP_TX::ACTION_ARM,
     };
-#ifndef PROP_ALLOW_PROTOTYPE_SHARED_KEY
-#define PROP_ALLOW_PROTOTYPE_SHARED_KEY 1
-#endif
-#if !PROP_ALLOW_PROTOTYPE_SHARED_KEY
-#error "Release build requested while the prototype shared HMAC key is still compiled in"
-#endif
-    constexpr uint8_t SHARED_KEY[] = {
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-
 #if SELFTEST_FIRE
     constexpr uint32_t SELFTEST_INTERVAL_MS = 700;
     constexpr uint32_t SELFTEST_MAX_SHOTS = 50;
@@ -240,10 +228,6 @@ namespace
                 return "STOP";
             case PROP_TX::ACTION_PING:
                 return "PING";
-            case PROP_TX::ACTION_LED3_ON:
-                return "LED3";
-            case PROP_TX::ACTION_LED5_ON:
-                return "LED5";
             default:
                 return "?";
         }
@@ -304,15 +288,6 @@ namespace
         }
     }
 
-    void bump_palette_rev(uint8_t& palette_rev)
-    {
-        palette_rev = static_cast<uint8_t>(palette_rev + 1);
-        if (palette_rev == 0)
-        {
-            palette_rev = 1;
-        }
-    }
-
     uint16_t hue_from_rgb(const std::array<uint8_t, 3>& color)
     {
         const int red = color[0];
@@ -340,18 +315,6 @@ namespace
             hue = 240 + (60 * (red - green)) / delta;
         }
         return wrap_hue(hue);
-    }
-
-    bool color_has_hue(const std::array<uint8_t, 3>& color)
-    {
-        const bool white = color[0] == 255 && color[1] == 255 && color[2] == 255;
-        const bool off = color[0] == 0 && color[1] == 0 && color[2] == 0;
-        return !white && !off;
-    }
-
-    size_t color_preset_index(const std::array<uint8_t, 3>& color)
-    {
-        return static_cast<size_t>(prop_colors::nearestPresetIndex(color[0], color[1], color[2]));
     }
 
     bool rejected_ack_payload(const std::string& payload)
@@ -402,6 +365,34 @@ namespace
         {
             ESP_LOGE(PROP_NVS_TAG, "nvs init failed: %d", ret);
         }
+    }
+
+    bool load_runtime_key_from_nvs(prop_runtime_key::RuntimeKey& key)
+    {
+        nvs_init_once();
+
+        nvs_handle_t nvs;
+        esp_err_t ret = nvs_open(prop_runtime_key::NVS_NAMESPACE, NVS_READONLY, &nvs);
+        if (ret != ESP_OK)
+        {
+            key.clear();
+            return false;
+        }
+
+        std::array<uint8_t, prop_runtime_key::MAX_KEY_LENGTH> buffer = {};
+        size_t size = buffer.size();
+        ret = nvs_get_blob(nvs, prop_runtime_key::NVS_KEY, buffer.data(), &size);
+        nvs_close(nvs);
+
+        if (ret != ESP_OK)
+        {
+            prop_runtime_key::secureZero(buffer);
+            key.clear();
+            return false;
+        }
+        const bool ok = key.set(buffer.data(), size);
+        prop_runtime_key::secureZero(buffer);
+        return ok;
     }
 
     uint64_t make_session_nonce(uint32_t bootCount)
@@ -488,8 +479,7 @@ bool PropTx::_locked() const
 
 bool PropTx::_is_command_mode() const
 {
-    return _data.mode == PROP_TX::MODE_COMMAND || _data.armed ||
-           _data.awaiting_ack || _data.last_arm_ack_pending;
+    return true;
 }
 
 uint32_t PropTx::_arm_remaining_ms() const
@@ -523,11 +513,10 @@ void PropTx::_load_settings()
 
     nvs_get_u32(nvs, "shots", &_data.shot_count);
     nvs_get_u32(nvs, "seq", &_data.sequence);
-    uint8_t pal_fade = _data.palette_fade ? 1 : 0;
-    if (nvs_get_u8(nvs, "palFade", &pal_fade) == ESP_OK)
-    {
-        _data.palette_fade = pal_fade != 0;
-    }
+    nvs_erase_key(nvs, "palFade");
+    nvs_erase_key(nvs, "colors");
+    nvs_erase_key(nvs, "hueDeg");
+    nvs_erase_key(nvs, "hues");
     if (bootCountLoaded)
     {
         _data.session_boot_count = bootCountForBoot;
@@ -544,37 +533,6 @@ void PropTx::_load_settings()
         bootCountForBoot = epoch;
         bootCountLoaded = true;
     }
-    size_t color_size = sizeof(_data.colors);
-    esp_err_t color_ret = nvs_get_blob(nvs, "colors", _data.colors.data(), &color_size);
-    size_t hue_size = sizeof(_data.hues);
-    esp_err_t hue_deg_ret = nvs_get_blob(nvs, "hueDeg", _data.hues.data(), &hue_size);
-    if (hue_deg_ret != ESP_OK || hue_size != sizeof(_data.hues))
-    {
-        if (color_ret == ESP_OK && color_size == sizeof(_data.colors))
-        {
-            for (size_t i = 0; i < _data.hues.size(); ++i)
-            {
-                _data.hues[i] = hue_from_rgb(_data.colors[i]);
-            }
-        }
-        else
-        {
-            hue_size = sizeof(_data.hues);
-            nvs_get_blob(nvs, "hues", _data.hues.data(), &hue_size);
-        }
-    }
-    for (size_t i = 0; i < _data.hues.size(); ++i)
-    {
-        _data.hues[i] = wrap_hue(_data.hues[i]);
-    }
-    if (color_ret != ESP_OK || color_size != sizeof(_data.colors))
-    {
-        _sync_colors_from_hues();
-    }
-    if (_data.selected_led >= PROP_TX_FIXED_LEDS)
-    {
-        _data.selected_led = static_cast<uint8_t>(PROP_TX_FIXED_LEDS - 1);
-    }
     _data.armed = false;
     _data.armed_started_ms = 0;
     if (_data.sequence == 0)
@@ -582,6 +540,27 @@ void PropTx::_load_settings()
         _data.sequence = 1;
     }
     nvs_close(nvs);
+}
+
+bool PropTx::_load_runtime_key()
+{
+    if (load_runtime_key_from_nvs(_runtime_key))
+    {
+        return true;
+    }
+    _runtime_key.clear();
+    _set_status("KEY MISSING");
+    return false;
+}
+
+const prop_runtime_key::RuntimeKey* PropTx::_runtime_key_or_status()
+{
+    if (_runtime_key.loaded())
+    {
+        return &_runtime_key;
+    }
+    _set_status("KEY MISSING");
+    return nullptr;
 }
 
 void PropTx::_save_settings()
@@ -597,11 +576,11 @@ void PropTx::_save_settings()
     }
 
     nvs_erase_key(nvs, "armed");
-    nvs_set_u32(nvs, "shots", _data.shot_count);
-    nvs_set_u8(nvs, "palFade", _data.palette_fade ? 1 : 0);
-    nvs_set_blob(nvs, "hueDeg", _data.hues.data(), sizeof(_data.hues));
+    nvs_erase_key(nvs, "palFade");
+    nvs_erase_key(nvs, "hueDeg");
     nvs_erase_key(nvs, "hues");
-    nvs_set_blob(nvs, "colors", _data.colors.data(), sizeof(_data.colors));
+    nvs_erase_key(nvs, "colors");
+    nvs_set_u32(nvs, "shots", _data.shot_count);
     nvs_commit(nvs);
     nvs_close(nvs);
 }
@@ -688,6 +667,12 @@ void PropTx::_init_chain_key()
 
 void PropTx::_send_frame(prop_protocol::FrameType frameType)
 {
+    const prop_runtime_key::RuntimeKey* key = _runtime_key_or_status();
+    if (key == nullptr)
+    {
+        return;
+    }
+
     prop_protocol::Frame frame;
     frame.type = frameType;
     frame.keyId = PROP_KEY_ID;
@@ -702,7 +687,7 @@ void PropTx::_send_frame(prop_protocol::FrameType frameType)
     }
 
     std::vector<uint8_t> encoded;
-    if (!prop_protocol::encodeFrame(frame, SHARED_KEY, sizeof(SHARED_KEY), encoded))
+    if (!prop_protocol::encodeFrame(frame, key->data(), key->size(), encoded))
     {
         _set_status("ENCODE FAIL");
         return;
@@ -751,6 +736,12 @@ void PropTx::_send_frame(prop_protocol::FrameType frameType)
 #if FIRE_MODE_FF
 void PropTx::_send_fire_burst()
 {
+    const prop_runtime_key::RuntimeKey* key = _runtime_key_or_status();
+    if (key == nullptr)
+    {
+        return;
+    }
+
     prop_protocol::Frame frame;
     frame.type = prop_protocol::FrameType::Fire;
     frame.keyId = PROP_KEY_ID;
@@ -761,7 +752,7 @@ void PropTx::_send_fire_burst()
     prop_protocol::encodeLedPayload(PROP_TX_LED_PAYLOAD_BRIGHTNESS, first4_colors(_data.colors), frame.payload);
 
     _data.ff_encoded.clear();
-    if (!prop_protocol::encodeFrame(frame, SHARED_KEY, sizeof(SHARED_KEY), _data.ff_encoded))
+    if (!prop_protocol::encodeFrame(frame, key->data(), key->size(), _data.ff_encoded))
     {
         _set_status("ENCODE FAIL");
         return;
@@ -789,6 +780,12 @@ void PropTx::_send_fire_burst()
 
 void PropTx::_send_arm(int copies)
 {
+    const prop_runtime_key::RuntimeKey* key = _runtime_key_or_status();
+    if (key == nullptr)
+    {
+        return;
+    }
+
     // Sprint A (0.1): tell the receiver to ARM. Fire is rejected by the receiver
     // unless it is locally ARMED, so this MUST reach it before a FIRE.
     // A2 (0.3): also used as a sparse dual-band ARM-heartbeat (copies=1) so the
@@ -805,7 +802,7 @@ void PropTx::_send_arm(int copies)
     const bool track_arm_ack = !_data.armed;
 
     std::vector<uint8_t> encoded;
-    if (!prop_protocol::encodeFrame(frame, SHARED_KEY, sizeof(SHARED_KEY), encoded))
+    if (!prop_protocol::encodeFrame(frame, key->data(), key->size(), encoded))
     {
         _set_status("ENCODE FAIL");
         return;
@@ -837,8 +834,6 @@ void PropTx::_send_arm(int copies)
     // sequence need NOT be persisted every 5 s.
 }
 
-void PropTx::_send_remote_led(uint8_t mask)
-{
     // ON-only remote latch for SK6812 #3 / #5. Fire-and-forget ("FF"), modeled on
     // _send_arm: it MUST NOT set awaiting_ack (no UI lock) and MUST NOT arm — it is a
     // status LED, independent of the pyro/ARM FSM. OFF travels ONLY as STOP (the acked,
@@ -850,98 +845,6 @@ void PropTx::_send_remote_led(uint8_t mask)
     // Always (re)send the palette before lighting a remote LED, even if palette_rev did not drift:
     // a freshly-flashed / NVS-wiped DinMeter (or a lost prior palette FF) would otherwise light
     // #3/#5 from its local default colour instead of the Dial's slot. PaletteSet is idempotent.
-    _send_palette(false);
-
-    prop_protocol::Frame frame;
-    frame.type = prop_protocol::FrameType::RemoteLed;
-    frame.keyId = PROP_KEY_ID;
-    frame.source = PROP_SOURCE;
-    frame.destination = PROP_DESTINATION;
-    frame.sequence = _data.sequence++;
-    frame.nonce = make_session_nonce(_data.session_boot_count);
-    if (!prop_protocol::encodeRemoteLedPayload(mask, frame.payload))
-    {
-        _set_status("ENCODE FAIL");
-        return;
-    }
-
-    std::vector<uint8_t> encoded;
-    if (!prop_protocol::encodeFrame(frame, SHARED_KEY, sizeof(SHARED_KEY), encoded))
-    {
-        _set_status("ENCODE FAIL");
-        return;
-    }
-
-    std::string hex = prop_protocol::bytesToHex(encoded.data(), encoded.size());
-    std::string line = "FF " + hex + "\n";
-    // 2 copies: idempotent ON tolerates loss/dup (RX dedups by sequence anyway).
-    uart_write_bytes(PROP_UART_PORT, line.data(), line.size());
-    uart_write_bytes(PROP_UART_PORT, line.data(), line.size());
-    _remember_ff_command(prop_protocol::FrameType::RemoteLed, encoded);  // FF-retry-on-ERR path
-    _save_sequence();
-    _set_status((mask & prop_protocol::REMOTE_LED_BIT_LED3) ? "LED3 ON" : "LED5 ON");
-}
-
-void PropTx::_send_palette(bool track_ack)
-{
-    prop_protocol::Frame frame;
-    frame.type = prop_protocol::FrameType::PaletteSet;
-    frame.keyId = PROP_KEY_ID;
-    frame.source = PROP_SOURCE;
-    frame.destination = PROP_DESTINATION;
-    frame.sequence = _data.sequence++;
-    frame.nonce = make_session_nonce(_data.session_boot_count);
-
-    prop_protocol::PalettePayload pal;
-    pal.paletteRev = _data.palette_rev;
-    pal.fade = _data.palette_fade;
-    pal.colors.assign(_data.colors.begin(), _data.colors.begin() + PROP_TX_FIXED_LEDS);
-
-    if (!prop_protocol::encodePalettePayload(pal, frame.payload))
-    {
-        _set_status("PAL ENC FAIL");
-        return;
-    }
-
-    std::vector<uint8_t> encoded;
-    if (!prop_protocol::encodeFrame(frame, SHARED_KEY, sizeof(SHARED_KEY), encoded))
-    {
-        _set_status("PAL ENC FAIL");
-        return;
-    }
-
-    std::string hex = prop_protocol::bytesToHex(encoded.data(), encoded.size());
-    std::string line = std::string(track_ack ? "SEND " : "FF ") + hex + "\n";
-    if (track_ack)
-    {
-        _data.pending_sequence = frame.sequence;
-        _data.pending_nonce = frame.nonce;
-        _data.pending_type = frame.type;
-        _data.pending_encoded = encoded;
-        _data.pending_retry_count = 0;
-        _data.pending_deadline_ms = millis() + ACK_RETRY_TIMEOUT_MS;
-        _data.pending_palette_rev = _data.palette_rev;
-        _data.awaiting_ack = true;
-        _data.tx_started_ms = millis();
-    }
-    uart_write_bytes(PROP_UART_PORT, line.data(), line.size());
-    if (track_ack)
-    {
-        _save_sequence();
-        _set_status("ODESILAM");
-    }
-    else
-    {
-        // Do NOT advance last_sent_palette_rev here: an FF PaletteSet is unacked and may
-        // be lost. Marking it "delivered" let a future FIRE skip palette resend and light
-        // the receiver with stale colours. The rev only advances on a real PALETTE ack
-        // (the ack-tracked SEND path); until then the palette stays dirty and FIRE/RemoteLed
-        // keep (idempotently) re-sending it, which is the safe behaviour.
-        _remember_ff_command(prop_protocol::FrameType::PaletteSet, encoded);
-        _save_sequence();
-    }
-}
-
 bool PropTx::_retry_pending_ack()
 {
     if (!_data.awaiting_ack ||
@@ -1163,8 +1066,13 @@ void PropTx::_handle_modem_line(const char* line)
 
         std::vector<uint8_t> encoded;
         prop_protocol::Frame decoded;
+        const prop_runtime_key::RuntimeKey* key = _runtime_key_or_status();
+        if (key == nullptr)
+        {
+            return;
+        }
         if (!prop_protocol::hexToBytes(std::string(hex), encoded) ||
-            !prop_protocol::decodeFrame(encoded.data(), encoded.size(), SHARED_KEY, sizeof(SHARED_KEY), decoded))
+            !prop_protocol::decodeFrame(encoded.data(), encoded.size(), key->data(), key->size(), decoded))
         {
             _set_status("RX IGNORED");
             return;
@@ -1172,36 +1080,11 @@ void PropTx::_handle_modem_line(const char* line)
 
         if (decoded.type == prop_protocol::FrameType::LedColorSet)
         {
-            if (decoded.keyId != PROP_KEY_ID ||
-                decoded.source != PROP_DESTINATION ||
-                decoded.destination != PROP_SOURCE)
-            {
-                return;
-            }
-            if (decoded.payload.size() != prop_protocol::LED_PAYLOAD_LENGTH)
-            {
-                return;
-            }
-            if (_data.has_last_led_color_set &&
-                decoded.sequence == _data.last_led_color_set_sequence &&
-                decoded.nonce == _data.last_led_color_set_nonce)
-            {
-                return;
-            }
+            return;
+        }
 
-            for (size_t i = 0; i < 4; ++i)
-            {
-                const size_t offset = 1 + i * 3;
-                _data.colors[i][0] = decoded.payload[offset];
-                _data.colors[i][1] = decoded.payload[offset + 1];
-                _data.colors[i][2] = decoded.payload[offset + 2];
-                _data.hues[i] = hue_from_rgb(_data.colors[i]);
-            }
-            _data.has_last_led_color_set = true;
-            _data.last_led_color_set_sequence = decoded.sequence;
-            _data.last_led_color_set_nonce = decoded.nonce;
-            _save_settings();
-            _set_status("BARVY SYNC");
+        if (decoded.type == prop_protocol::FrameType::PaletteSet)
+        {
             return;
         }
 
@@ -1228,7 +1111,6 @@ void PropTx::_handle_modem_line(const char* line)
             {
                 _data.armed = true;
                 _data.armed_started_ms = millis();
-                _data.mode = PROP_TX::MODE_COMMAND;
                 _data.selected_action = PROP_TX::ACTION_FIRE;
                 _data.armed_hb_ms = millis();
                 _set_status("NABITO");
@@ -1367,69 +1249,13 @@ bool PropTx::_ack_payload_matches(const prop_protocol::Frame& ack) const
     return payload == expected || payload == "DUP";
 }
 
-void PropTx::_adjust_selected_field(int direction)
+void PropTx::_adjust_selected_action(int direction)
 {
     if (direction == 0)
     {
         return;
     }
 
-    if (_is_command_mode())
-    {
-        _adjust_selected_action(direction);
-        return;
-    }
-
-    switch (_data.selected_field)
-    {
-        case PROP_TX::FIELD_LED:
-        {
-            int led = static_cast<int>(_data.selected_led) + direction;
-            if (led < 0)
-            {
-                led = 0;
-            }
-            if (led >= PROP_TX_FIXED_LEDS)
-            {
-                led = PROP_TX_FIXED_LEDS - 1;
-            }
-            _data.selected_led = static_cast<uint8_t>(led);
-            break;
-        }
-
-        case PROP_TX::FIELD_HUE:
-        {
-            int index = static_cast<int>(color_preset_index(_data.colors[_data.selected_led])) + direction;
-            while (index < 0)
-            {
-                index += prop_colors::NUM_COLOR_PRESETS;
-            }
-            index %= prop_colors::NUM_COLOR_PRESETS;
-            const prop_colors::ColorPreset& preset = prop_colors::COLOR_PRESETS[index];
-            const std::array<uint8_t, 3> preset_color = {{preset.r, preset.g, preset.b}};
-            _data.colors[_data.selected_led] = preset_color;
-            if (color_has_hue(preset_color))
-            {
-                _data.hues[_data.selected_led] = hue_from_rgb(preset_color);
-            }
-            bump_palette_rev(_data.palette_rev);
-            _save_settings();
-            break;
-        }
-
-        case PROP_TX::FIELD_MODE:
-            _data.palette_fade = !_data.palette_fade;
-            bump_palette_rev(_data.palette_rev);
-            _save_settings();
-            break;
-
-        default:
-            break;
-    }
-}
-
-void PropTx::_adjust_selected_action(int direction)
-{
     int index = command_action_index(_data.selected_action) + direction;
     while (index < 0)
     {
@@ -1439,57 +1265,15 @@ void PropTx::_adjust_selected_action(int direction)
     _data.selected_action = COMMAND_ACTIONS[index];
 }
 
-void PropTx::_next_field()
-{
-    switch (_data.selected_field)
-    {
-        case PROP_TX::FIELD_LED:
-            _data.selected_field = PROP_TX::FIELD_HUE;
-            break;
-        case PROP_TX::FIELD_HUE:
-            _data.selected_field = PROP_TX::FIELD_MODE;
-            break;
-        case PROP_TX::FIELD_MODE:
-            _data.selected_field = PROP_TX::FIELD_LED;
-            break;
-        default:
-            _data.selected_field = PROP_TX::FIELD_LED;
-            break;
-    }
-}
-
 void PropTx::_toggle_mode()
 {
-    if (_data.mode == PROP_TX::MODE_SETUP)
-    {
-        // Leaving colour setup -> land on PREVIEW and auto-send the colours (real
-        // update). FIRE only triggers the effect; colours travel on this Preview.
-        _data.mode = PROP_TX::MODE_COMMAND;
-        _data.selected_action = PROP_TX::ACTION_PREVIEW;
-        if (_data.palette_rev != _data.last_sent_palette_rev)
-        {
-            _data.send_preview_after_palette_ack = true;
-            _send_palette();
-            if (!_data.awaiting_ack)
-            {
-                _data.send_preview_after_palette_ack = false;
-            }
-        }
-        else
-        {
-            _send_frame(prop_protocol::FrameType::Preview);
-        }
-    }
-    else
-    {
-        _data.mode = PROP_TX::MODE_SETUP;
-        _set_status("SETUP");
-    }
+    _set_status("SETUP NA TERMINALU");
 }
 
 void PropTx::_handle_back()
 {
-    // Touch BACK is a fallback for the encoder: cancel when armed, else toggle mode.
+    // Touch BACK is a fallback for the encoder: cancel when armed, else report
+    // that setup editing moved to the Terminal.
     if (_data.awaiting_ack || _data.armed || _data.last_arm_ack_pending)
     {
         _cancel_to_safe();
@@ -1535,36 +1319,12 @@ bool PropTx::_poll_fire_button()
     return false;
 }
 
-void PropTx::_select_led_from_touch(int x)
-{
-    int led = (x - (PROP_TX_LED_START_X - PROP_TX_LED_SPACING / 2)) / PROP_TX_LED_SPACING;
-    if (led < 0)
-    {
-        led = 0;
-    }
-    if (led > PROP_TX_FIXED_LEDS - 1)
-    {
-        led = PROP_TX_FIXED_LEDS - 1;   // 5 LEDs now: 5th dot is touch-selectable too
-    }
-    _data.selected_led = static_cast<uint8_t>(led);
-    _data.selected_field = PROP_TX::FIELD_HUE;
-    _set_status("LED %u BARVA", _data.selected_led + 1);
-}
-
 bool PropTx::_touch_in_action_button(int x, int y) const
 {
     return x >= PROP_TX_ACTION_TOUCH_LEFT &&
            x <= PROP_TX_ACTION_TOUCH_RIGHT &&
            y >= PROP_TX_ACTION_TOUCH_TOP &&
            y <= PROP_TX_ACTION_TOUCH_BOTTOM;
-}
-
-bool PropTx::_touch_in_led_strip(int x, int y) const
-{
-    return x >= PROP_TX_LED_TOUCH_LEFT &&
-           x <= PROP_TX_LED_TOUCH_RIGHT &&
-           y >= PROP_TX_LED_TOUCH_TOP &&
-           y <= PROP_TX_LED_TOUCH_BOTTOM;
 }
 
 void PropTx::_run_selected_action()
@@ -1587,7 +1347,6 @@ void PropTx::_run_selected_action(PROP_TX::Action_t action)
             break;
 
         case PROP_TX::ACTION_ARM:
-            _data.mode = PROP_TX::MODE_COMMAND;
             _data.selected_action = PROP_TX::ACTION_ARM;
             _set_status("ARMING");
             _send_arm();                 // Sprint A: arm the RECEIVER, not just the Dial UI (2 copies)
@@ -1598,10 +1357,6 @@ void PropTx::_run_selected_action(PROP_TX::Action_t action)
             {
                 _set_status("ARM FIRST");
                 break;
-            }
-            if (_data.palette_rev != _data.last_sent_palette_rev)
-            {
-                _send_palette(false);
             }
 #if FIRE_MODE_FF
             _send_fire_burst();
@@ -1622,14 +1377,6 @@ void PropTx::_run_selected_action(PROP_TX::Action_t action)
             _send_frame(prop_protocol::FrameType::Ping);
             break;
 
-        case PROP_TX::ACTION_LED3_ON:
-            _send_remote_led(prop_protocol::REMOTE_LED_BIT_LED3);
-            break;
-
-        case PROP_TX::ACTION_LED5_ON:
-            _send_remote_led(prop_protocol::REMOTE_LED_BIT_LED5);
-            break;
-
         default:
             break;
     }
@@ -1647,13 +1394,11 @@ PROP_TX::View_t PropTx::_view() const
 {
     PROP_TX::View_t view;
     view.action_label = _action_label();
-    view.field_label = _field_label();
+    view.field_label = "akce";
     view.status = _data.status;
-    view.command_mode = _is_command_mode();
+    view.command_mode = true;
     view.armed = _data.armed;
     view.awaiting_ack = _data.awaiting_ack || _data.last_arm_ack_pending;
-    view.selected_led = _data.selected_led;
-    view.selected_hue_degrees = _data.hues[_data.selected_led];
     view.shot_count = _data.shot_count;
     view.status_age_ms = (_data.status_started_ms == 0) ? STATUS_TOKEN_MS + 1 : (millis() - _data.status_started_ms);
     view.arm_remaining_ms = _arm_remaining_ms();
@@ -1661,20 +1406,7 @@ PROP_TX::View_t PropTx::_view() const
     {
         view.colors[i] = _data.colors[i];
     }
-    switch (_data.selected_field)
-    {
-        case PROP_TX::FIELD_HUE:
-            view.field = PROP_TX::VIEW_FIELD_HUE;
-            break;
-        case PROP_TX::FIELD_MODE:
-            view.field = PROP_TX::VIEW_FIELD_MODE;
-            break;
-        case PROP_TX::FIELD_LED:
-        default:
-            view.field = PROP_TX::VIEW_FIELD_LED;
-            break;
-    }
-    _field_value(view.field_value, sizeof(view.field_value));
+    snprintf(view.field_value, sizeof(view.field_value), "%s", view.action_label == nullptr ? "" : view.action_label);
     return view;
 }
 
@@ -1685,48 +1417,6 @@ const char* PropTx::_action_label() const
         return action_to_label(PROP_TX::ACTION_FIRE);
     }
     return action_to_label(_data.selected_action);
-}
-
-const char* PropTx::_field_label() const
-{
-    switch (_data.selected_field)
-    {
-        case PROP_TX::FIELD_LED:
-            return "LED";
-        case PROP_TX::FIELD_HUE:
-            return "BARVA";
-        case PROP_TX::FIELD_MODE:
-            return "MODE";
-        default:
-            return "?";
-    }
-}
-
-void PropTx::_field_value(char* buffer, size_t buffer_size) const
-{
-    if (buffer == nullptr || buffer_size == 0)
-    {
-        return;
-    }
-
-    switch (_data.selected_field)
-    {
-        case PROP_TX::FIELD_LED:
-            snprintf(buffer, buffer_size, "%u", _data.selected_led + 1);
-            break;
-        case PROP_TX::FIELD_HUE:
-        {
-            const auto& c = _data.colors[_data.selected_led];
-            snprintf(buffer, buffer_size, "%s", prop_colors::exactPresetName(c[0], c[1], c[2]));
-            break;
-        }
-        case PROP_TX::FIELD_MODE:
-            snprintf(buffer, buffer_size, "%s", _data.palette_fade ? "FADE" : "STEP");
-            break;
-        default:
-            snprintf(buffer, buffer_size, "?");
-            break;
-    }
 }
 
 void PropTx::onSetup()
@@ -1772,6 +1462,7 @@ void PropTx::onCreate()
     _load_settings();
     _uart_init();
     _init_chain_key();
+    _load_runtime_key();
     _render();
 
     while (_data.hal->tp.isTouched())
@@ -1941,7 +1632,7 @@ void PropTx::onRunning()
                 int remaining = abs(steps);
                 while (remaining-- > 0)
                 {
-                    _adjust_selected_field(direction);
+                    _adjust_selected_action(direction);
                 }
                 if (_data.next_encoder_render_ms == 0 ||
                     static_cast<int32_t>(now - _data.next_encoder_render_ms) >= 0)
@@ -1996,7 +1687,7 @@ void PropTx::onRunning()
                 {
                     // Fire the mode switch AT the threshold while still held (not on
                     // release): buzz + redraw give immediate feedback.
-                    _toggle_mode();  // COMMAND<->SETUP; commits colours on leaving SETUP
+                    _toggle_mode();  // setup handoff/status feedback; Terminal owns editing
                     _data.hal->buzz.tone(4000, 30);
                     _render();
                     fired_long = true;
@@ -2005,14 +1696,7 @@ void PropTx::onRunning()
             }
             if (!fired_long)
             {
-                if (_data.mode == PROP_TX::MODE_COMMAND)
-                {
-                    _run_selected_action();
-                }
-                else
-                {
-                    _next_field();
-                }
+                _run_selected_action();
             }
             needs_render = true;
         }
@@ -2044,19 +1728,9 @@ void PropTx::onRunning()
             _handle_back();
             needs_render = true;
         }
-        else if (!_locked() && !_is_command_mode() && _touch_in_led_strip(x, y))
-        {
-            _select_led_from_touch(x);
-            needs_render = true;
-        }
-        else if (!_locked() && _is_command_mode() && _touch_in_action_button(x, y))
+        else if (!_locked() && _touch_in_action_button(x, y))
         {
             _run_selected_action();
-            needs_render = true;
-        }
-        else if (!_locked() && !_is_command_mode())
-        {
-            _next_field();
             needs_render = true;
         }
 

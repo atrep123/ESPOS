@@ -20,8 +20,23 @@ from M5 import Widgets          # noqa: F401  (kept for managed widgets if prefe
 from hardware import UART, Rotary
 import time
 
-import prop_frame as pf
+try:
+    import prop_frame as pf
+    _PROP_FRAME_IMPORT_ERROR = None
+except Exception as e:
+    pf = None
+    _PROP_FRAME_IMPORT_ERROR = e
 import prop_state as ps
+
+
+def delay_ms(ms):
+    if hasattr(time, "sleep_ms"):
+        time.sleep_ms(ms)
+    elif hasattr(time, "sleep"):
+        time.sleep(ms / 1000)
+    else:
+        raise RuntimeError("time.sleep_ms or time.sleep is required for Prop timing")
+
 
 # ---------------------------------------------------------------------------
 # NVS persistence -- the thin device layer. esp32.NVS exists only on the M5;
@@ -93,15 +108,15 @@ P_RED     = 0xCC0000   # armed / error / STOP
 MODE_SETUP = 0x59C6DC  # cyan: NASTAVENI (edit) mode
 
 # Command actions, mirroring COMMAND_ACTIONS in app_prop_tx.cpp.
-A_PREVIEW, A_ARM, A_ODPAL, A_STOP, A_LED3, A_LED5 = range(6)
-ACTIONS = ("NAHLED", "ARM", "ODPAL", "STOP", "LED3", "LED5")
-ACTION_COLOR = (P_GREEN, P_RED, P_AMBER, P_RED, P_GREEN, P_GREEN)
+A_PREVIEW, A_ARM, A_ODPAL, A_STOP = range(4)
+ACTIONS = ("NAHLED", "ARM", "ODPAL", "STOP")
+ACTION_COLOR = (P_GREEN, P_RED, P_AMBER, P_RED)
 
-# Factory palette (DEFAULT_COLORS[0..4] / DEFAULT_HUES[0..4] from prop_tx_config.h).
+# Factory effect colors used only for PREVIEW/FIRE payloads. Terminal owns setup.
 DEFAULT_HUES = [0, 120, 240, 210, 60]
 NUM_LEDS = 5
 
-MODE_CMD, MODE_SETUP_ = 0, 1
+MODE_CMD = 0
 
 # ---------------------------------------------------------------------------
 # State
@@ -215,11 +230,6 @@ def _persist_seq_if_needed():
         _nvs_set_i32("seq", new_res)
 
 
-def _save_palette():
-    """Remember the tuned per-LED hues so a power-cycle keeps the operator's colours."""
-    _nvs_set_blob("hues", ps.hues_to_blob(_hues))
-
-
 def drain_modem(deadline_ms=120):
     """Read modem reply lines for a short window; surface the most relevant one."""
     end = time.ticks_add(time.ticks_ms(), deadline_ms)
@@ -243,38 +253,51 @@ def drain_modem(deadline_ms=120):
             elif s.startswith("RX"):
                 set_status("RX", P_GREEN)
         else:
-            time.sleep_ms(2)
+            delay_ms(2)
     return seen
 
 
 def send_current_action():
+    if tx is None or uart is None:
+        set_status("KEY MISSING", P_RED)
+        return
     a = _action
     try:
         if a == A_PREVIEW:
             uart.write(tx.preview_line(_colors[:4])); set_status("NAHLED ->", P_GREEN)
         elif a == A_ARM:
-            uart.write(tx.arm_line());                set_status("ARM ->", P_AMBER)
+            for line in tx.arm_lines():
+                uart.write(line)
+            set_status("ARM ->", P_AMBER)
         elif a == A_ODPAL:
+            delay_ms(0)
             fire_lines = tx.fire_burst_lines(_colors[:4])
             for index, line in enumerate(fire_lines):
                 uart.write(line)
                 if index + 1 < len(fire_lines):
                     # Keep redundant FIRE copies spaced by the protocol constant;
                     # the receiver dedups them, but the modem still needs air gap.
-                    time.sleep_ms(pf.FIRE_BURST_GAP_MS)
+                    delay_ms(pf.FIRE_BURST_GAP_MS)
             set_status("ODPAL ->", P_AMBER)
         elif a == A_STOP:
-            uart.write(tx.stop_line());               set_status("STOP ->", P_RED)
-        elif a == A_LED3:
-            uart.write(tx.remote_led_line(pf.REMOTE_LED_BIT_LED3)); set_status("LED3 ->", P_GREEN)
-        elif a == A_LED5:
-            uart.write(tx.remote_led_line(pf.REMOTE_LED_BIT_LED5)); set_status("LED5 ->", P_GREEN)
+            delay_ms(0)
+            stop_lines = tx.stop_lines()
+            for index, line in enumerate(stop_lines):
+                uart.write(line)
+                set_status("STOP ->", P_RED)
+                seen = drain_modem(pf.STOP_RETRY_TIMEOUT_MS)
+                if seen and (seen.startswith("OK") or seen.startswith("RX")):
+                    break
+                if index + 1 < len(stop_lines):
+                    delay_ms(pf.STOP_RETRY_GAP_MS)
     except Exception as e:           # never let a send fault wedge the UI
         set_status("TX FAIL", P_RED)
         print("send error:", e)
         return
-    # ARM/ODPAL round-trip an ACK over LoRa -- give it longer to land than a local cmd
-    drain_modem(350 if a in (A_ARM, A_ODPAL) else 120)
+    # ARM/ODPAL round-trip an ACK over LoRa -- give it longer to land than a local cmd.
+    # STOP drains during its retry loop above.
+    if a != A_STOP:
+        drain_modem(350 if a in (A_ARM, A_ODPAL) else 120)
     _persist_seq_if_needed()
 
 
@@ -302,22 +325,10 @@ def on_click():
 
 
 def on_hold():
-    """Long press: toggle command <-> setup. Leaving setup syncs the palette."""
+    """Long press: setup handoff. Terminal owns all setup editing."""
     global _mode, _dirty
-    if _mode == MODE_CMD:
-        _mode = MODE_SETUP_
-        set_status("NASTAVENI", MODE_SETUP)
-    else:
-        _mode = MODE_CMD
-        # push the edited palette so the receiver's slots match before PREVIEW/FIRE
-        try:
-            uart.write(tx.palette_line(1, False, _colors, track_ack=False))
-            drain_modem()
-        except Exception as e:
-            print("palette sync error:", e)
-        _save_palette()                 # tuned colours survive a reboot
-        _persist_seq_if_needed()
-        set_status("READY", P_GREEN)
+    _mode = MODE_CMD
+    set_status("SETUP NA TERMINALU", MODE_SETUP)
     _dirty = True
 
 
@@ -331,13 +342,16 @@ def setup():
     # M5.Display instead, change this one line.)
     LCD = M5.Lcd
 
-    # Restore the tuned palette from NVS before the first paint (factory hues if none).
-    saved_hues = ps.blob_to_hues(_nvs_get_blob("hues", NUM_LEDS * 2), NUM_LEDS)
-    if saved_hues:
-        for i in range(NUM_LEDS):
-            _hues[i] = saved_hues[i]
     refresh_colors()
-    tx = pf.PropSender()
+    if _PROP_FRAME_IMPORT_ERROR is not None:
+        tx = None
+        uart = None
+        rotary = Rotary()
+        _last_rotary = rotary.get_rotary_value()
+        set_status("KEY MISSING", P_RED)
+        print("prop_frame import error:", _PROP_FRAME_IMPORT_ERROR)
+        draw()
+        return
 
     # Resume the frame sequence one past the last value reserved in NVS, so a reboot
     # never reuses or rewinds a sequence number. tx MUST be created here -- the first
@@ -350,7 +364,7 @@ def setup():
     uart = UART(UART_ID, baudrate=UART_BAUD, bits=8, parity=None, stop=1,
                 tx=UART_TX, rx=UART_RX, timeout=20, timeout_char=5)
     uart.write("\n")                 # leading newline flushes the modem's line parser
-    time.sleep_ms(50)
+    delay_ms(50)
     drain_modem(80)
 
     rotary = Rotary()
@@ -380,7 +394,7 @@ def loop():
 
     if _dirty:
         draw()
-    time.sleep_ms(10)
+    delay_ms(10)
 
 
 if __name__ == "__main__":

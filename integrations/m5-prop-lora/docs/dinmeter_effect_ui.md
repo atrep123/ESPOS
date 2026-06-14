@@ -1,15 +1,17 @@
-# DinMeter effect-mechanics UI — spec (converged from 3 council rounds, unanimous GO)
+# DinMeter effect mechanics — superseded UI note
 
 The DinMeter (rectangular 240x135 ST7789, one rotary encoder + one side button, battery,
-drives 4 WS2812 LEDs / Unit Puzzle) is the prop receiver. It **edits + stores + executes** the
-LED EFFECT MECHANICS (the brightness-over-time animation played when a FIRE command arrives).
+drives 4 WS2812 LEDs / Unit Puzzle) is the prop receiver. Current setup editing
+belongs to the M5StickS3 Terminal; DinMeter **stores + executes + indicates**
+the accepted LED effect mechanics and remains the receiver-side safety authority.
 
 ## Ownership
-- **Dial** owns per-LED COLOUR + master BRIGHTNESS and ARM/FIRE. Over LoRa it sends only
-  fire / colour / brightness. It never edits effect timing. (It may later display the effect
-  version/checksum to detect mismatch — out of scope for this MVP.)
-- **DinMeter == the prop here**: it edits the effect, persists it locally (NVS), and executes
-  it on FIRE using the Dial's last-sent colour + brightness as the amplitude/colour.
+- **Terminal** owns setup editing over the local USB setup link: named palette
+  color, brightness/normal on-off state, and fire-change participation.
+- **Dial** owns only radio fire-control actions: Preview/Arm/Stop/Fire through
+  the C6 modem pair.
+- **DinMeter == the prop here**: it validates and persists accepted setup locally
+  (NVS), rejects unsafe commits, and executes the effect on FIRE.
 
 ## Effect model (REPLACES the old fadeInMs/holdMs/fadeOutMs envelope)
 ```

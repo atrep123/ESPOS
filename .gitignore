@@ -20,8 +20,21 @@ __pycache__/
 .env
 .env.*
 .gemini_api_key
+prop-key.hex
+prop_key.hex
+*.prop-key
+*.prop-key.hex
+*.prop-key.txt
+*.prop_key
+*.prop_key.hex
+*.prop_key.txt
+secrets/
 .openai_api_key
 .*_api_key
+*_api_key
+.*_token
+*_token
+*.secret
 
 # PyInstaller build artifacts
 build/

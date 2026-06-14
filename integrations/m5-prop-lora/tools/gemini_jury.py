@@ -28,6 +28,7 @@ import urllib.request
 from collections import Counter
 from pathlib import Path
 
+from gemini_code_review import redact_secrets, safe_print
 from gemini_key import load_api_key
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +70,64 @@ def _positive_int(value: str) -> int:
     if parsed < 1:
         raise argparse.ArgumentTypeError("must be >= 1")
     return parsed
+
+
+def parse_vote_output(text: str) -> dict[str, object]:
+    match = re.fullmatch(
+        r"\s*SCORE:\s*(10|[1-9])\s*\n"
+        r"SAFE:\s*(yes|no)\s*\n"
+        r"ISSUE:\s*(\S[^\r\n]*)\s*\n"
+        r"GOOD:\s*(\S[^\r\n]*)\s*",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        raise ValueError("malformed Gemini vote")
+    return {
+        "score": int(match.group(1)),
+        "safe": match.group(2).lower() == "yes",
+        "issue": match.group(3).strip(),
+        "good": match.group(4).strip(),
+    }
+
+
+def resolve_image_dir(value: str, allow_external: bool = False) -> Path:
+    raw = Path(value)
+    img_dir = (raw if raw.is_absolute() else ROOT / raw).resolve()
+    if allow_external:
+        return img_dir
+    try:
+        rel = img_dir.relative_to(ROOT.resolve())
+    except ValueError as exc:
+        raise ValueError(
+            "--dir must stay inside this repo unless --allow-external-images is supplied"
+        ) from exc
+    if not (
+        len(rel.parts) >= 2
+        and rel.parts[0] == "build"
+        and rel.parts[1].startswith("preview")
+    ):
+        raise ValueError(
+            "--dir must point at build/preview* unless --allow-external-images is supplied"
+        )
+    return img_dir
+
+
+def select_pngs(img_dir: Path, image_names: list[str] | None, exclude: str) -> list[Path]:
+    if image_names:
+        selected: list[Path] = []
+        for name in image_names:
+            requested = Path(name)
+            if requested.name != name or requested.is_absolute():
+                raise ValueError(f"--image must be a filename inside --dir: {name}")
+            if requested.suffix.lower() != ".png":
+                raise ValueError(f"--image must name a PNG file: {name}")
+            path = img_dir / requested
+            if not path.is_file():
+                raise ValueError(f"--image not found in {img_dir}: {name}")
+            selected.append(path)
+        return selected
+    return sorted(p for p in img_dir.glob("*.png") if exclude not in p.stem)
 
 
 def run_one(img: Path, device: str, idx: int, endpoint: dict[str, object]) -> dict:
@@ -115,21 +174,29 @@ def run_one(img: Path, device: str, idx: int, endpoint: dict[str, object]) -> di
             "idx": idx,
             "score": None,
             "safe": None,
-            "issue": f"ERROR: {exc}",
+            "issue": redact_secrets(f"ERROR: {exc}"),
             "good": "",
         }
 
-    score = re.search(r"SCORE:\s*(\d+)", out)
-    safe = re.search(r"SAFE:\s*(yes|no)", out, re.IGNORECASE)
-    issue = re.search(r"ISSUE:\s*(.+)", out)
-    good = re.search(r"GOOD:\s*(.+)", out)
+    out = redact_secrets(out)
+    try:
+        parsed = parse_vote_output(out)
+    except ValueError as exc:
+        return {
+            "img": img.name,
+            "idx": idx,
+            "score": None,
+            "safe": None,
+            "issue": f"ERROR: {exc}",
+            "good": "",
+        }
     return {
         "img": img.name,
         "idx": idx,
-        "score": int(score.group(1)) if score else None,
-        "safe": (safe.group(1).lower() == "yes") if safe else None,
-        "issue": issue.group(1).strip() if issue else "(unparsed)",
-        "good": good.group(1).strip() if good else "",
+        "score": parsed["score"],
+        "safe": parsed["safe"],
+        "issue": parsed["issue"],
+        "good": parsed["good"],
     }
 
 
@@ -139,16 +206,35 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--device", required=True, help="device label for the rubric")
     ap.add_argument("--per", type=_positive_int, default=3, help="votes per image")
     ap.add_argument("--workers", type=_positive_int, default=5, help="max concurrent Gemini calls")
+    ap.add_argument(
+        "--image",
+        action="append",
+        dest="images",
+        help="exact PNG filename inside --dir to review; repeat to select multiple images",
+    )
     ap.add_argument("--exclude", default="contact", help="substring of filenames to skip")
     ap.add_argument(
         "--allow-errors",
         action="store_true",
         help="exit 0 even when one or more Gemini votes fail or cannot be parsed",
     )
+    ap.add_argument(
+        "--allow-external-images",
+        action="store_true",
+        help="allow --dir outside repo build/preview*; otherwise avoids uploading unrelated PNGs",
+    )
     args = ap.parse_args(argv)
 
-    img_dir = (ROOT / args.dir).resolve()
-    pngs = sorted(p for p in img_dir.glob("*.png") if args.exclude not in p.stem)
+    try:
+        img_dir = resolve_image_dir(args.dir, allow_external=args.allow_external_images)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    try:
+        pngs = select_pngs(img_dir, args.images, args.exclude)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if not pngs:
         print(f"no PNGs in {img_dir}", file=sys.stderr)
         return 2
@@ -215,8 +301,9 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = ROOT / "build" / "reviews"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"jury_{img_dir.name}.md"
-    out_path.write_text("\n".join(out_lines), encoding="utf-8")
-    print("\n".join(out_lines))
+    report = redact_secrets("\n".join(out_lines))
+    out_path.write_text(report, encoding="utf-8")
+    safe_print(report)
     print(f"\n[saved to {out_path}]", file=sys.stderr)
     return 0 if args.allow_errors or not error_votes else 1
 

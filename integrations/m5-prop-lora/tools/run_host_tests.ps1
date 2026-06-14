@@ -11,6 +11,10 @@
     leave unverified between flashes:
       * shared/core/safety_logic.h   -- ARM/STOP/TTL fire authority + replay window
       * shared/protocol/prop_protocol.h palette encode/decode (via test_palette)
+      * shared/terminal + sticks3-terminal pure logic -- setup parsing/apply,
+        app upload/rollback behavior, USB setup replies, control surface,
+        fader/encoder/switch/display filters, hardware topology, and Arduino
+        driver seams compiled against local stubs
 
     A compile-only mbedtls stub (firmware/tests/stubs/mbedtls/md.h) lets tests
     that include prop_protocol.h build without a real mbedtls; tests that never
@@ -41,6 +45,16 @@ function Resolve-Compiler {
     }
     $onPath = Get-Command g++ -ErrorAction SilentlyContinue
     if ($onPath) { return $onPath.Source }
+
+    $repoToolchains = Join-Path $RepoRoot 'build/toolchains'
+    if (Test-Path $repoToolchains) {
+        $repoCompiler = Get-ChildItem -LiteralPath $repoToolchains -Recurse -Filter 'g++.exe' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like '*\mingw64\bin\g++.exe' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+        if ($repoCompiler) { return $repoCompiler.FullName }
+    }
+
     # Fallback: WinLibs UCRT install location (winget BrechtSanders.WinLibs.POSIX.UCRT)
     $winlibs = Join-Path $env:LOCALAPPDATA `
         'Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\g++.exe'

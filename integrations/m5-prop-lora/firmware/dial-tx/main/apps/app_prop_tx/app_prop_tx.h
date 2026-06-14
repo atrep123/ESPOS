@@ -5,6 +5,7 @@
 #include "chain_key_poller.h"
 #include "gui/gui_prop_tx.h"
 #include "prop_protocol.h"
+#include "prop_runtime_key.h"
 #include "prop_tx_config.h"  // factory palette defaults (DEFAULT_COLORS / DEFAULT_HUES) seed Data_t below
 
 #include <array>
@@ -25,32 +26,13 @@ namespace MOONCAKE
                 ACTION_FIRE,
                 ACTION_STOP,
                 ACTION_PING,
-                ACTION_LED3_ON,   // ON-only remote latch for SK6812 #3 (RemoteLed frame, FF; OFF = STOP)
-                ACTION_LED5_ON,   // ON-only remote latch for SK6812 #5 (RemoteLed frame, FF; OFF = STOP)
                 ACTION_COUNT,
-            };
-
-            enum Mode_t : uint8_t
-            {
-                MODE_SETUP = 0,
-                MODE_COMMAND,
-            };
-
-            enum EditField_t : uint8_t
-            {
-                FIELD_LED = 0,
-                FIELD_HUE,
-                FIELD_MODE,
-                FIELD_COUNT,
             };
 
             struct Data_t
             {
                 HAL::HAL* hal = nullptr;
-                Mode_t mode = MODE_COMMAND;  // boot into the controller's primary mode (scroll actions / ARM); SETUP via long-press BACK
                 Action_t selected_action = ACTION_PREVIEW;
-                EditField_t selected_field = FIELD_LED;
-                uint8_t selected_led = 0;
                 bool armed = false;
                 // Keep the old 8-slot backing arrays for NVS compatibility; the UI and
                 // transmitted palette are fixed to the five physical DinMeter LEDs
@@ -83,6 +65,9 @@ namespace MOONCAKE
                 bool has_last_led_color_set = false;
                 uint32_t last_led_color_set_sequence = 0;
                 uint64_t last_led_color_set_nonce = 0;
+                bool has_last_palette_set = false;
+                uint32_t last_palette_set_sequence = 0;
+                uint64_t last_palette_set_nonce = 0;
                 // FF retry FIFO. A single multi-frame action (e.g. RemoteLed sends a
                 // PaletteSet FF then a RemoteLed FF) registers >1 FF in quick succession;
                 // a single slot would let the later frame overwrite the earlier one, so an
@@ -140,8 +125,11 @@ namespace MOONCAKE
                 const char* _tag = "prop_tx";
                 PROP_TX::Data_t _data;
                 PROP_TX::ChainKeyPoller _chain_key;
+                prop_runtime_key::RuntimeKey _runtime_key;
 
                 void _load_settings();
+                bool _load_runtime_key();
+                const prop_runtime_key::RuntimeKey* _runtime_key_or_status();
                 void _save_settings();
                 void _save_sequence();
                 void _uart_init();
@@ -156,8 +144,6 @@ namespace MOONCAKE
                 void _send_frame(prop_protocol::FrameType frameType);
                 void _send_fire_burst();
                 void _send_arm(int copies = 2);
-                void _send_remote_led(uint8_t mask);  // ON-only RemoteLed (FF, fire-and-forget): no awaiting_ack, no arm
-                void _send_palette(bool track_ack = true);
                 void _poll_uart();
                 void _handle_modem_line(const char* line);
                 bool _ack_payload_matches(const prop_protocol::Frame& ack) const;
@@ -166,23 +152,17 @@ namespace MOONCAKE
                 bool _handle_recent_ff_error(const char* line);
                 bool _retry_pending_ack();
                 void _handle_ack_timeout();
-                void _adjust_selected_field(int direction);
                 void _adjust_selected_action(int direction);
-                void _next_field();
                 void _handle_back();
                 void _toggle_mode();
                 bool _poll_fire_button();
                 bool _service_link_during_input_wait();
-                void _select_led_from_touch(int x);
-                bool _touch_in_led_strip(int x, int y) const;
                 bool _touch_in_action_button(int x, int y) const;
                 void _run_selected_action(PROP_TX::Action_t action);
                 void _run_selected_action();
                 void _render();
                 PROP_TX::View_t _view() const;
                 const char* _action_label() const;
-                const char* _field_label() const;
-                void _field_value(char* buffer, size_t buffer_size) const;
 
             public:
                 GUI_PropTx _gui;

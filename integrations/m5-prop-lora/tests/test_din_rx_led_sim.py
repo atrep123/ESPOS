@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+import importlib.util
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,7 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from shared.protocol.protocol import FrameType, encode_led_payload, parse_led_payload  # noqa: E402
-from tools import preview_din_rx as sim  # noqa: E402
+
+_SIM_SPEC = importlib.util.spec_from_file_location(
+    "m5_preview_din_rx", ROOT / "tools" / "preview_din_rx.py"
+)
+assert _SIM_SPEC is not None and _SIM_SPEC.loader is not None
+sim = importlib.util.module_from_spec(_SIM_SPEC)
+sys.modules[_SIM_SPEC.name] = sim
+_SIM_SPEC.loader.exec_module(sim)
 
 
 PROP_RX_CPP = ROOT / "firmware/din-rx/src/prop_rx.cpp"
@@ -20,20 +28,6 @@ PROP_RX_H = ROOT / "firmware/din-rx/src/prop_rx.h"
 MAIN_CPP = ROOT / "firmware/din-rx/src/main.cpp"
 VIEW_CPP = ROOT / "firmware/din-rx/src/view/view.cpp"
 PROTOCOL_H = ROOT / "shared/protocol/prop_protocol.h"
-
-
-# The din-rx UI was redesigned this session: 4->5 LEDs, the SK6812 strip now driven via the
-# seesaw NeoDriver (seesaw_NeoPixel pixels(LED_STRIP_MAX, ...), not Adafruit_NeoPixel), and the
-# old single status screen + per-field effect editor were replaced by the Stav/Barvy/Jas pages.
-# preview_din_rx.py still models the OLD UI. Per the agreed "retire, don't re-model the preview
-# sim" decision, the sim<->firmware cross-checks that pin that removed UI are retired (skipped)
-# rather than rewritten. The sim's own render-determinism tests still pass and are left as-is.
-# See the test-suite-state / uiflow-dial-port-poc memory notes. Protocol/addressing constants are
-# still covered by test_protocol_roundtrip_sim.py; radio/UART constants by test_c6l_modem_sim.py.
-_DIN_RX_UI_REDESIGNED = (
-    "din-rx UI redesigned this session (4->5 LED, seesaw NeoDriver, Stav/Barvy/Jas pages); "
-    "preview_din_rx.py still models the removed UI -- retired per 'retire, don't re-model'."
-)
 
 
 FIXTURE_COLORS: tuple[sim.Rgb, ...] = (
@@ -50,24 +44,6 @@ def fixture_payload(brightness: int = 150, colors: tuple[sim.Rgb, ...] = FIXTURE
 
 def independent_requested_brightness(settings: sim.EffectSettings) -> int:
     return min(settings.dial_brightness, settings.master_brightness)
-
-
-def independent_budgeted_brightness(base_frame: tuple[sim.Rgb, ...], settings: sim.EffectSettings) -> int:
-    channel_sum = sum(r + g + b for r, g, b in base_frame)
-    brightness = independent_requested_brightness(settings)
-    if channel_sum == 0 or brightness == 0:
-        return brightness
-
-    current_times_255 = (
-        sim.LED_COUNT * sim.WS2812_IDLE_MA * 255
-        + channel_sum * sim.WS2812_CHANNEL_MA * brightness // 255
-    )
-    budget_times_255 = sim.LED_CURRENT_BUDGET_MA * 255
-    if current_times_255 <= budget_times_255:
-        return brightness
-
-    scaled = brightness * budget_times_255 // current_times_255
-    return max(1, min(brightness, scaled))
 
 
 def independent_scale_rgb(color: sim.Rgb, brightness: int) -> sim.Rgb:
@@ -137,7 +113,7 @@ def test_accepted_preview_payload_renders_all_enabled_led_colors_after_budget() 
     state = sim.state_after_accepted_frame(FrameType.PREVIEW, fixture_payload())
     frame = sim.render_frame(state)
 
-    expected_budget = independent_budgeted_brightness(FIXTURE_COLORS, state.settings)
+    expected_budget = 150
     expected_ws2812 = tuple(independent_scale_rgb(color, expected_budget) for color in FIXTURE_COLORS)
 
     assert parse_led_payload(fixture_payload()) == {"brightness": 150, "colors": list(FIXTURE_COLORS)}
@@ -159,7 +135,7 @@ def test_fire_effect_renders_timed_sequence_before_budgeting() -> None:
         (0, 0, 0),
         (0, 0, 0),
     )
-    expected_budget = independent_budgeted_brightness(expected_base, state.settings)
+    expected_budget = 150
 
     assert sim.led_level_at(state.settings.led[0], 200) == 255
     assert sim.led_level_at(state.settings.led[1], 200) == 127
@@ -201,7 +177,6 @@ def test_power_budget_reduces_full_white_frame_and_final_rgb_stays_in_range() ->
     state = sim.ReceiverState(settings=settings, mode=sim.EffectMode.PREVIEW, last_status="PREVIEW")
     frame = sim.render_frame(state)
 
-    assert independent_budgeted_brightness(colors, settings) == 229
     assert frame.budgeted_brightness == 229
     assert frame.ws2812_frame == ((229, 229, 229),) * sim.LED_COUNT
     assert frame.active_led_count == 4
@@ -210,20 +185,33 @@ def test_power_budget_reduces_full_white_frame_and_final_rgb_stays_in_range() ->
 
 
 @pytest.mark.parametrize(
-    "base_frame,settings",
+    "base_frame,settings,expected_budget",
     [
-        (((0, 0, 0),) * sim.LED_COUNT, sim.EffectSettings()),
-        (FIXTURE_COLORS, sim.EffectSettings(colors=FIXTURE_COLORS)),
-        (((255, 255, 255),) * sim.LED_COUNT, sim.EffectSettings(255, 255, 0, ((255, 255, 255),) * 4)),
-        (((255, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)), sim.EffectSettings(master_brightness=40)),
-        (((255, 255, 255),) * sim.LED_COUNT, sim.EffectSettings(master_brightness=0, dial_brightness=255)),
+        (((0, 0, 0),) * sim.LED_COUNT, sim.EffectSettings(), 150),
+        (FIXTURE_COLORS, sim.EffectSettings(colors=FIXTURE_COLORS), 150),
+        (
+            ((255, 255, 255),) * sim.LED_COUNT,
+            sim.EffectSettings(255, 255, 0, ((255, 255, 255),) * 4),
+            229,
+        ),
+        (
+            ((255, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)),
+            sim.EffectSettings(master_brightness=40),
+            40,
+        ),
+        (
+            ((255, 255, 255),) * sim.LED_COUNT,
+            sim.EffectSettings(master_brightness=0, dial_brightness=255),
+            0,
+        ),
     ],
 )
-def test_budgeted_brightness_matches_independent_current_limit_math(
+def test_budgeted_brightness_matches_literal_current_limit_examples(
     base_frame: tuple[sim.Rgb, ...],
     settings: sim.EffectSettings,
+    expected_budget: int,
 ) -> None:
-    assert sim.budgeted_brightness(base_frame, settings) == independent_budgeted_brightness(base_frame, settings)
+    assert sim.budgeted_brightness(base_frame, settings) == expected_budget
 
 
 @pytest.mark.parametrize(
@@ -394,106 +382,55 @@ def test_all_builtin_scenes_are_headless_deterministic_and_rgb_safe(
         assert all(0 <= component <= 255 for component in color)
 
 
-@pytest.mark.skip(reason=_DIN_RX_UI_REDESIGNED)
-def test_preview_sim_constants_match_prop_rx_firmware_source() -> None:
+def test_current_dinmeter_led_hardware_contract_matches_firmware_source() -> None:
     cpp = PROP_RX_CPP.read_text(encoding="utf-8")
+    config = (ROOT / "firmware/din-rx/src/prop_config.h").read_text(encoding="utf-8")
 
-    int_constants = {
-        "LED_COUNT": sim.LED_COUNT,
-        "LED_PIN": sim.LED_PIN,
-        "UART1_TX_PIN": sim.UART1_TX_PIN,
-        "UART1_RX_PIN": sim.UART1_RX_PIN,
-        "MODEM_BAUD": sim.MODEM_BAUD,
-        "EFFECT_RENDER_MS": sim.EFFECT_RENDER_MS,
-        "LONG_PRESS_EXIT_MS": sim.LONG_PRESS_EXIT_MS,
-        "SETTINGS_SAVE_DEBOUNCE_MS": sim.SETTINGS_SAVE_DEBOUNCE_MS,
-        "LED_CURRENT_BUDGET_MA": sim.LED_CURRENT_BUDGET_MA,
-        "WS2812_CHANNEL_MA": sim.WS2812_CHANNEL_MA,
-        "WS2812_IDLE_MA": sim.WS2812_IDLE_MA,
-        "PROP_KEY_ID": sim.PROP_KEY_ID,
-    }
-    for name, expected in int_constants.items():
-        assert _cpp_int_constant(cpp, name) == expected
+    assert "constexpr int LED_COUNT = 5;" in config
+    assert "constexpr int LED_STRIP_MAX = 30;" in config
+    assert "constexpr std::uint8_t LED_ORDER[LED_COUNT] = {0, 2, 3, 4, 1};" in config
+    order_match = re.search(r"LED_ORDER\[LED_COUNT\]\s*=\s*\{([^}]+)\}", config)
+    assert order_match
+    order = [int(value.strip()) for value in order_match.group(1).split(",")]
+    assert sorted(order) == list(range(5))
 
-    assert sim.PROP_SOURCE == _cpp_hex_constant(cpp, "PROP_SOURCE")
-    assert sim.PROP_DESTINATION == _cpp_hex_constant(cpp, "PROP_DESTINATION")
-    for name in ("COLOR_BG", "COLOR_PANEL", "COLOR_TEXT", "COLOR_MUTED", "COLOR_GOOD", "COLOR_WARN"):
-        assert getattr(sim, name) == _cpp_hex_constant(cpp, name)
-
-    assert sim.DEFAULT_COLORS == _extract_default_colors(cpp)
-    assert sim.DEFAULT_TIMINGS == _extract_default_timings(cpp)
-    assert "Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800)" in cpp
+    assert "seesaw_NeoPixel pixels(LED_STRIP_MAX, NEODRIVER_NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800, &Wire1)" in cpp
+    assert "pixels.updateLength(LED_COUNT)" in cpp
+    assert "const int phys = (i < LED_COUNT) ? LED_ORDER[i] : i;" in cpp
+    assert "pixels.setPixelColor(phys, c.r, c.g, c.b, 0)" in cpp
+    assert "#include <Adafruit_NeoPixel" not in cpp
+    assert "Adafruit_NeoPixel pixels(" not in cpp
+    assert "constexpr int LED_PIN" not in cpp
 
 
-@pytest.mark.skip(reason=_DIN_RX_UI_REDESIGNED)
-def test_sim_status_strings_match_prop_rx_render_source() -> None:
+def test_current_dinmeter_display_source_is_indication_not_legacy_setup_editor() -> None:
     cpp = PROP_RX_CPP.read_text(encoding="utf-8")
 
     for literal in (
-        "Prop RX",
-        "Port B G2: 4 WS2812",
-        "UART1 115200 G13/G15",
-        "State:",
-        "Short press field, hold exits",
-        "L%d %s D%u FI%u H%u FO%u",
-        "Dial %u  Master %u  repeat %s",
+        "TERMINAL_SETUP_MAGIC",
+        "TERMINAL_SETUP_KEY",
+        "LED 1",
+        "SPINAC",
+        "ODPAL",
+        "LED 5",
+        "SETUP BUSY",
+        "SETUP ERR",
     ):
         assert literal in cpp
 
-    assert {op.text for op in sim.status_display_ops(sim.ReceiverState())} >= {
-        "Prop RX",
-        "Port B G2: 4 WS2812",
-        "UART1 115200 G13/G15",
-        "State:",
-        "Short press field, hold exits",
-    }
+    assert "DINMETER_LOCAL_SETUP_EDITOR_ENABLED" in cpp
+    assert "if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)" in cpp
 
 
-@pytest.mark.skip(reason=_DIN_RX_UI_REDESIGNED)
-def test_sim_field_names_and_statuses_cover_firmware_controller_states() -> None:
+def test_legacy_preview_sim_is_not_current_dinmeter_firmware_parity() -> None:
     cpp = PROP_RX_CPP.read_text(encoding="utf-8")
-    fields = {
-        sim.UiField.LED: "LED",
-        sim.UiField.ENABLED: "enabled",
-        sim.UiField.DELAY: "delayMs",
-        sim.UiField.FADE_IN: "fadeInMs",
-        sim.UiField.HOLD: "holdMs",
-        sim.UiField.FADE_OUT: "fadeOutMs",
-        sim.UiField.REPEAT: "repeat",
-        sim.UiField.MASTER_BRIGHTNESS: "masterBrightness",
-        sim.UiField.PREVIEW: "preview",
-    }
-    for field, label in fields.items():
-        assert sim.field_name(field) == label
-        assert f'return "{label}";' in cpp
 
-    expected_statuses = {
-        "READY",
-        "UNKNOWN",
-        "BAD KEY",
-        "BAD SRC",
-        "BAD DST",
-        "BAD RX",
-        "BAD MAC",
-        "STALE",
-        "DUP",
-        "BAD PAYLOAD",
-        "PREVIEW",
-        "FIRE",
-        "STOP",
-        "PING",
-        "UNHANDLED",
-        "DONE",
-    }
-    assert expected_statuses <= _cpp_string_assignments(cpp, "_lastStatus")
-    assert {sim.render_frame(state, elapsed).display_lines[3] for state, elapsed in sim.scenes().values()} >= {
-        "State: READY",
-        "State: PREVIEW",
-        "State: FIRE",
-        "State: STOP",
-        "State: BAD MAC",
-        "State: BAD PAYLOAD",
-    }
+    assert sim.LED_COUNT == 4
+    assert "constexpr int LED_COUNT = 5;" in (ROOT / "firmware/din-rx/src/prop_config.h").read_text(
+        encoding="utf-8"
+    )
+    assert "seesaw_NeoPixel pixels" in cpp
+    assert "Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800)" not in cpp
 
 
 def test_protocol_constants_and_payload_contract_match_receiver_sim() -> None:

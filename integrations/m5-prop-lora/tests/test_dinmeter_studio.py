@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools import dinmeter_studio as studio  # noqa: E402
+_STUDIO_SPEC = importlib.util.spec_from_file_location(
+    "m5_dinmeter_studio", ROOT / "tools" / "dinmeter_studio.py"
+)
+assert _STUDIO_SPEC is not None and _STUDIO_SPEC.loader is not None
+studio = importlib.util.module_from_spec(_STUDIO_SPEC)
+sys.modules[_STUDIO_SPEC.name] = studio
+_STUDIO_SPEC.loader.exec_module(studio)
 
 
 def test_build_view_clamps_invalid_controls_and_preserves_valid_palette_cells() -> None:

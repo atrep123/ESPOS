@@ -168,6 +168,7 @@ CRITICAL_WARNING_MARKERS = (
     "too dim",
     "fully outside scene",
     "outside scene bounds",
+    "outside round safe area",
 )
 
 # Widget types that act as backdrop / container frames. When one of these
@@ -648,6 +649,17 @@ def validate_data(
             issues.append(Issue("ERROR", f"{pfx}: height must be int >= 1"))
             continue
         sw, sh = int(scene_w), int(scene_h)
+        display_shape = str(scene.get("display_shape", data.get("display_shape", "")) or "").lower()
+        round_safe_enabled = display_shape in {"round", "circle"}
+        raw_round_margin = scene.get("round_safe_margin", data.get("round_safe_margin", 0))
+        round_safe_margin = int(raw_round_margin) if _is_int(raw_round_margin) else 0
+        if round_safe_margin < 0:
+            round_safe_margin = 0
+        round_safe_radius = min(sw, sh) / 2.0 - round_safe_margin
+        if round_safe_radius < 0:
+            round_safe_radius = 0.0
+        round_safe_cx = sw / 2.0
+        round_safe_cy = sh / 2.0
 
         widgets = scene.get("widgets", [])
         if not isinstance(widgets, list):
@@ -717,6 +729,32 @@ def validate_data(
                 issues.append(
                     Issue("WARN", f"{wl}: rect ({x},{y},{ww},{hh}) out of bounds {sw}x{sh}")
                 )
+
+            # Rule 133: opt-in round display safe area. A widget can be inside
+            # the square framebuffer and still be clipped by a circular display
+            # mask, which is common on M5 Dial-style screens.
+            if (
+                round_safe_enabled
+                and w.get("visible") is not False
+                and w.get("round_safe_ignore") is not True
+                and ww > 0
+                and hh > 0
+            ):
+                radius_sq = round_safe_radius * round_safe_radius
+                corners = ((x, y), (x + ww, y), (x, y + hh), (x + ww, y + hh))
+                if any(
+                    (cx - round_safe_cx) * (cx - round_safe_cx)
+                    + (cy - round_safe_cy) * (cy - round_safe_cy)
+                    > radius_sq + 0.01
+                    for cx, cy in corners
+                ):
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{wl}: rect ({x},{y},{ww},{hh}) outside round safe area "
+                            f"r={round_safe_radius:.1f} margin={round_safe_margin}",
+                        )
+                    )
 
             # ── Rule 1: Unique widget IDs ──
             widget_id = w.get("_widget_id") or w.get("id")

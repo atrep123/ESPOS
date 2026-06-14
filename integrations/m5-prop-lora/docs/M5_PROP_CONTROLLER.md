@@ -4,11 +4,21 @@
 > Stav: jádro hotové a ověřené na reálném HW (100 % doručení, dual-band, efektový engine, robustnost pro zahlcená místa).
 > Poslední aktualizace: 2026-05-24.
 
+> 2026-06-13 transition note: setup editing is moving to the M5StickS3
+> Terminal. Terminal owns setup editing and has no radio module. Dial remains
+> the radio fire controller with no setup editing. DinMeter remains the
+> receiver-side safety authority and LED execution/indication surface. Older
+> sections below may still describe transitional Dial/DinMeter setup UI.
+
 ---
 
 ## 1. Přehled
 
-Operátor na **M5 Dial** (kulatý ovladač) navolí barvy/efekt a odpálí **FIRE**. Povel jde bezdrátově (LoRa 868 MHz **+** ESP-NOW 2.4 GHz současně) přes dvojici **C6 modemů** k **M5 DinMeter** (přijímač), který přehraje světelný efekt na 4 (konfigurovatelně N) RGB LED.
+Operator uses the **M5StickS3 Terminal** for setup editing and the **M5 Dial**
+only for Preview/Arm/Stop/Fire. The fire command goes wirelessly (LoRa 868 MHz
+**+** ESP-NOW 2.4 GHz at the same time) through the **C6 modem pair** to the
+**M5 DinMeter** receiver, which persists accepted setup and executes/indicates
+the configured LED effect.
 
 Návrhové priority (pořadí): **spolehlivost doručení → bezpečnost → nízká latence → bohatost efektů**.
 
@@ -69,6 +79,10 @@ FIRE se **nečeká na ACK**. Dial pošle FIRE **3× s jitterem** (~18–40 ms me
 - Důvod: SF7 má ~6–8 % ztrátu/paket; 3× redundance → <0,1 % selhání doručení, latence = první kopie.
 - Deferred (ne okamžitý) ACK: vyhne se half-duplex kolizi s 3× burstem odesílatele.
 
+Terminal setup exception: kdyz Terminal zakaze ucast odpalove LED v efektu,
+DinMeter zobrazi `ODPAL VYP`, odpovi `NO_EFFECT`, nespusti zivy odpal a po teto
+ceste nevznikne zadny deferred `FIRE` ACK.
+
 ### 4.2 Dual-band (LoRa 868 + ESP-NOW 2.4)
 Každý rámec jde po **obou** pásmech současně. Přijímač dedupuje. Výhoda: pásmová diverzita (když jedno pásmo selže, druhé doručí) + nízká latence ESP-NOW (~jednotky ms) vs dosah LoRa.
 - **LoRa:** 868.1 MHz, SF7, BW 250 kHz, CR 4/5, 13 dBm, preamble 8, syncword 0x34.
@@ -101,7 +115,11 @@ Sněm 3 modelů našel 8 latentních chyb, které se na čistém stole neprojev�
 ---
 
 ## 6. Efektový engine (DinMeter-local)
-Konfigurace je **lokální na DinMeteru** (NVS klíč `eff2`, edituje se enkodérem; Dial posílá jen barvy + FIRE trigger). Editace **live-apply** (co nastavíš, hraje hned — graf, Náhled i FIRE).
+Setup values are edited on the **M5StickS3 Terminal** and uploaded over the local
+USB setup link. DinMeter remains the persistence and safety authority for the
+accepted setup blob; it rejects unsafe commits while armed, firing, locked out,
+or inhibited. Dial sends Preview/Arm/Stop/Fire only and does not own setup
+editing.
 
 **Model výstupu LED:** `RGB(t) = barva(t) · B_tvar(t − delay_i) · intenzita`
 
@@ -115,8 +133,12 @@ Konfigurace je **lokální na DinMeteru** (NVS klíč `eff2`, edituje se enkodé
 
 ## 7. UI
 
-- **Dial (kulatý):** 12 stavů — PREVIEW/ARM/STOP/PING, ARMED→ODPAL, ODESÍLÁM/WAIT/POTVRZENO, NO ACK, SETUP LED/HUE/JAS. Zelený prstenec = stav, 4 tečky = LED kanály, orb = hodnota/akce.
-- **DinMeter (obdélníkový):** živý graf křivky jasu (4 LED posunuté o delay), paleta (segmenty), LED delays, status (KLID/NABITO/PÁLÍ/ULOŽENO), baterie, debug HUD.
+- **Dial (round):** Preview/Arm/Stop/Fire radio controller. Setup editing is
+  disabled here; long setup gestures report that setup lives on Terminal.
+- **Terminal (M5StickS3):** five direct physical lanes for named palette color,
+  brightness/normal on-off state, and per-lane fire-change behavior; upload and
+  simulated-fire switches use the USB setup link.
+- **DinMeter (obdélníkový):** živý graf křivky jasu (5 LED posunutých o delay), paleta (segmenty), LED delays, status (KLID/NABITO/PÁLÍ/ULOŽENO), baterie, debug HUD.
 - **Simulátor:** `espos/tools/dinmeter_sim.html` (web), `render_dinmeter_native.py` (PNG rendery; `DINMETER_HIRES=1 DINMETER_TILES=1` → hi-res dlaždice).
 
 ---

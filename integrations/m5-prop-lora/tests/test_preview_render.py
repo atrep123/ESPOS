@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import importlib.util
 from dataclasses import replace
 from pathlib import Path
 
@@ -10,7 +11,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools import preview_din_rx_render as render  # noqa: E402
+_RENDER_SPEC = importlib.util.spec_from_file_location(
+    "m5_preview_din_rx_render", ROOT / "tools" / "preview_din_rx_render.py"
+)
+assert _RENDER_SPEC is not None and _RENDER_SPEC.loader is not None
+render = importlib.util.module_from_spec(_RENDER_SPEC)
+sys.modules[_RENDER_SPEC.name] = render
+_RENDER_SPEC.loader.exec_module(render)
 
 
 def pixel_int(image, x: int, y: int) -> int:
@@ -106,3 +113,66 @@ def test_waveform_plot_contracts_cover_infinite_repeat_and_pretrigger_floor() ->
     assert render.plot_visible_cycles(infinite) == render.PLOT_MAX_CYCLES
     assert render.finite_effect_total_ms(infinite) == (False, 0)
     assert render.plot_level_at(pretrigger, 2, -1) == render.plot_floor_level(pretrigger) == 41
+
+
+def test_dinmeter_render_records_text_boxes_and_czech_labels_inside_screen() -> None:
+    scenarios = {
+        "fire": render.scenes()["main_firing"],
+        "fade": render.scenes()["main_idle"],
+        "saw_down": (
+            render.View(
+                rows_visible=True,
+                row_scroll=3,
+                selected_row=3,
+                config=render.EffectConfig(shape=render.EFFECT_SHAPE_SAWTOOTH, shape_param=20, repeat=0),
+            ),
+            "main",
+        ),
+        "infinite_total": (
+            render.View(config=render.EffectConfig(repeat=0), rows_visible=False),
+            "main",
+        ),
+    }
+    labels: set[str] = set()
+
+    for name, (view, page) in scenarios.items():
+        text_ops = [op for op in render.render_ops(view, page=page) if op.kind == "text"]
+        labels.update(op.text for op in text_ops)
+        for op in text_ops:
+            assert op.bbox is not None, (name, op)
+            left, top, right, bottom = op.bbox
+            assert 0 <= left < right <= render.SCREEN_W, (name, op)
+            assert 0 <= top < bottom <= render.SCREEN_H, (name, op)
+
+    for label in {"PÁLÍ", "PŘECHOD", "SMĚR", "DOLŮ", "CELKOVÁ DOBA", "nekon."}:
+        assert label in labels
+
+
+def test_dinmeter_preview_orange_screen_keeps_lower_content_nonblank() -> None:
+    view, page = render.scenes()["main_preview"]
+    ops = render.render_ops(view, page=page)
+    lower_text = [
+        op
+        for op in ops
+        if op.kind == "text" and op.bbox is not None and op.bbox[1] >= render.ROW_Y
+    ]
+
+    assert any(op.text == "CELKOVÁ DOBA" for op in lower_text)
+    assert any(op.text == "PŘED" for op in lower_text)
+
+
+def test_dinmeter_builtin_scene_text_boxes_do_not_collide() -> None:
+    def intersects(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> bool:
+        ax0, ay0, ax1, ay1 = a
+        bx0, by0, bx1, by1 = b
+        return ax0 < bx1 and bx0 < ax1 and ay0 < by1 and by0 < ay1
+
+    for name, (view, page) in render.scenes().items():
+        text_ops = [
+            op
+            for op in render.render_ops(view, page=page)
+            if op.kind == "text" and op.bbox is not None and op.text != "!"
+        ]
+        for i, left in enumerate(text_ops):
+            for right in text_ops[i + 1 :]:
+                assert not intersects(left.bbox, right.bbox), (name, left, right)

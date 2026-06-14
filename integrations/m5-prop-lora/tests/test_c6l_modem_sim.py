@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import struct
 import sys
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools import preview_c6l_modem as sim  # noqa: E402
+_SIM_SPEC = importlib.util.spec_from_file_location(
+    "m5_preview_c6l_modem", ROOT / "tools" / "preview_c6l_modem.py"
+)
+assert _SIM_SPEC is not None and _SIM_SPEC.loader is not None
+sim = importlib.util.module_from_spec(_SIM_SPEC)
+sys.modules[_SIM_SPEC.name] = sim
+_SIM_SPEC.loader.exec_module(sim)
 
 MAIN_CPP = ROOT / "firmware/c6l-modem/src/main.cpp"
 MODEM_CONFIG_H = ROOT / "firmware/c6l-modem/src/modem_config.h"
@@ -164,9 +171,7 @@ def test_bad_frame_on_unparseable_hex(cmd: str) -> None:
     assert sim.process_host_line(cmd + "zz", radio_ready=True) == ["ERR BAD_FRAME"]      # invalid hex
     assert sim.process_host_line(cmd + "abc", radio_ready=True) == ["ERR BAD_FRAME"]     # odd length
     assert sim.process_host_line(cmd + "", radio_ready=True) == ["ERR BAD_FRAME"]        # empty frame
-    too_long = (sim.MAX_RADIO_FRAME + 1) * 2
     assert sim.process_host_line(cmd + "00" * (sim.MAX_RADIO_FRAME + 1), radio_ready=True) == ["ERR BAD_FRAME"]
-    assert len("00" * (sim.MAX_RADIO_FRAME + 1)) == too_long
 
 
 def test_radio_not_ready_blocks_send_and_ack() -> None:

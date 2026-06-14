@@ -21,11 +21,11 @@ namespace MOONCAKE
             struct View_t
             {
                 const char* action_label = "PREVIEW";
-                const char* field_label = "LED";
+                const char* field_label = "akce";
                 const char* status = "ready";
-                char field_value[24] = "1";
+                char field_value[24] = "PREVIEW";
                 ViewField_t field = VIEW_FIELD_LED;
-                bool command_mode = false;
+                bool command_mode = true;
                 bool armed = false;
                 bool awaiting_ack = false;
                 uint8_t selected_led = 0;

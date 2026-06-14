@@ -50,68 +50,8 @@ METHODS = [
     },
     {"name": "stop", "label": "Prop STOP %1", "kind": "statement", "params": []},
     {"name": "arm", "label": "Prop ARM %1", "kind": "statement", "params": []},
-    {
-        "name": "remote_led",
-        "label": "Prop remote LED %1 which %2",
-        "kind": "statement",
-        "params": [
-            {
-                "name": "which",
-                "type": "int",
-                "default": "3",
-                "field": "number",
-                "min": "3",
-                "max": "5",
-            },
-        ],
-    },
-    {
-        "name": "sync_palette",
-        "label": "Prop sync palette %1 colors %2",
-        "kind": "statement",
-        "params": [{"name": "colors", "type": "list", "default_code": "[]"}],
-    },
     {"name": "reply", "label": "Prop reply %1", "kind": "value", "params": []},
-    {
-        "name": "hue_color",
-        "label": "Prop hue %1 deg %2 to color",
-        "kind": "value",
-        "params": [
-            {
-                "name": "deg",
-                "type": "int",
-                "default": "0",
-                "field": "number",
-                "min": "0",
-                "max": "359",
-            },
-        ],
-    },
-    {"name": "default_hues", "label": "Prop default hues %1", "kind": "value", "params": []},
     {"name": "default_colors", "label": "Prop default colors %1", "kind": "value", "params": []},
-    {
-        "name": "palette_from_hues",
-        "label": "Prop colors from hues %1 hues %2",
-        "kind": "value",
-        "params": [{"name": "hues", "type": "list", "default_code": "[0, 120, 240, 210, 60]"}],
-    },
-    {
-        "name": "set_color",
-        "label": "Prop set color %1 colors %2 LED %3 color %4",
-        "kind": "value",
-        "params": [
-            {"name": "colors", "type": "list", "default_code": "[]"},
-            {
-                "name": "index",
-                "type": "int",
-                "default": "1",
-                "field": "number",
-                "min": "1",
-                "max": "5",
-            },
-            {"name": "color", "type": "tuple", "default_code": "(255, 0, 0)"},
-        ],
-    },
     {
         "name": "first_four",
         "label": "Prop first four %1 colors %2",
@@ -155,8 +95,6 @@ METHODS = [
         "kind": "value",
         "params": [{"name": "color", "type": "tuple", "default_code": "(255, 0, 0)"}],
     },
-    {"name": "remote_led3", "label": "Prop remote LED3 %1", "kind": "statement", "params": []},
-    {"name": "remote_led5", "label": "Prop remote LED5 %1", "kind": "statement", "params": []},
 ]
 
 

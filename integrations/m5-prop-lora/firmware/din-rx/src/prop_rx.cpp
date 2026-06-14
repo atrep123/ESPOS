@@ -9,6 +9,7 @@
 #include <esp_system.h>
 #include <Preferences.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -18,6 +19,8 @@
 
 #include "prop_colors.h"
 #include "prop_protocol.h"
+#include "prop_runtime_key.h"
+#include "terminal_setup_receiver.h"
 #include "prop_config.h"   // Marlin-style tuning/configuration (all user knobs)
 #include "fonts/din_bold_8.h"
 #include "fonts/din_bold_15.h"
@@ -59,21 +62,17 @@ constexpr const char*   LED_COLORS_KEY    = "ledc1";
 constexpr std::uint32_t LED_BRIGHTNESS_MAGIC = 0x4C425254; // 'LBRT'
 constexpr std::uint8_t  LED_BRIGHTNESS_VERSION = 2;   // v2: LED_COUNT 4->5 grew the blob (value[]), discard old 4-wide blob
 constexpr const char*   LED_BRIGHTNESS_KEY = "ledbrite";
+constexpr std::uint32_t TERMINAL_SETUP_MAGIC = 0x54534554; // 'TSET'
+constexpr std::uint8_t  TERMINAL_SETUP_VERSION = 1;
+constexpr const char*   TERMINAL_SETUP_KEY = "tset1";
 constexpr std::uint32_t ODPAL_CFG_MAGIC   = 0x4F44504C;   // 'ODPL'
 constexpr std::uint8_t  ODPAL_CFG_VERSION = 1;
 constexpr const char*   ODPAL_CFG_KEY     = "odpl1";
+constexpr std::uint8_t TERMINAL_ODPAL_LANE = 3;
+constexpr std::uint8_t DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK =
+    static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE);
 constexpr std::uint8_t PROP_SOURCE = 0x22;
 constexpr std::uint8_t PROP_DESTINATION = 0x11;
-#ifndef PROP_ALLOW_PROTOTYPE_SHARED_KEY
-#define PROP_ALLOW_PROTOTYPE_SHARED_KEY 1
-#endif
-#if !PROP_ALLOW_PROTOTYPE_SHARED_KEY
-#error "Release build requested while the prototype shared HMAC key is still compiled in"
-#endif
-constexpr std::uint8_t SHARED_KEY[] = {
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-
 constexpr int SCREEN_W = 240;
 constexpr int SCREEN_H = 135;
 // Layout / geometry (STATUS_H, SPINE_W, PLOT_*, EFEKT_*, PALETTE_Y, ROW_*, PLOT_MAX_CYCLES)
@@ -220,6 +219,17 @@ struct __attribute__((packed)) PersistedLedBrightness
     std::uint32_t checksum;
 };
 
+struct __attribute__((packed)) PersistedTerminalSetup
+{
+    std::uint32_t magic;
+    std::uint8_t  version;
+    std::uint8_t  onMask;
+    std::uint8_t  effectMask;
+    std::uint8_t  brightness[LED_COUNT];
+    std::uint8_t  rgb[LED_COUNT][3];
+    std::uint32_t checksum;
+};
+
 struct StaticColorFade
 {
     RenderColor start;
@@ -349,6 +359,7 @@ public:
         _debugBootUntilMs = DIAG_DISPLAY ? (millis() + DEBUG_HUD_BOOT_MS) : 0;
 #endif
         preferences.begin("prop_rx", false);
+        loadRuntimeKey();
         // FACTORY DEFAULTS (single source of truth = prop_config.h section [B]).
         // Seed the live LED colour/brightness + odpal envelope from the config
         // defaults BEFORE any NVS load below, so a fresh flash reproduces the
@@ -364,8 +375,11 @@ public:
         _odpal.holdMs = DEFAULT_ODPAL_HOLD_MS;
         _odpal.fadeMs = DEFAULT_ODPAL_FADE_MS;
         _odpal.curve  = DEFAULT_ODPAL_CURVE;
-        loadPalette();   // Stage B5: restore last palette across a receiver-only reboot
-        loadLedColors(); // restore the on-device LED colours from NVS
+        if (DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+        {
+            loadPalette();   // bench/legacy local editor state
+            loadLedColors(); // bench/legacy local editor state
+        }
         // Seed the Dial-pushed colour buffer from the persisted defaults so it is never
         // stale-zero before the first PaletteSet. Guards LED#5 (idx4): applyLedPayload seeds
         // channel 4 from this buffer, and a RemoteLed LED5-ON arriving before any palette must
@@ -373,11 +387,14 @@ public:
         // Dial push, so localColor() still falls back to _ledColors until then.
         for (int i = 0; i < LED_COUNT; ++i)
             _dialColors[i] = _ledColors[i];
-        if (_hasPalette)
+        if (DINMETER_LOCAL_SETUP_EDITOR_ENABLED && _hasPalette)
             reflectPaletteColors(false); // re-apply boot-restored palette without a redundant NVS write
-        loadOdpalCfg();  // restore the LED4 odpal envelope (ramp/hold/fade/curve) from NVS
+        if (DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+            loadOdpalCfg();  // bench/legacy local editor state
         _txEpoch = esp_random();   // unique TX epoch for DinMeter-originated colour-sync frames
-        loadLedBrightness();
+        if (DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+            loadLedBrightness();
+        loadTerminalSetupState();  // authoritative Terminal setup blob: colors + brightness + on/effect masks
         _lastAcceptedSequence = preferences.getUInt("lastSeq", 0);
         _lastPersistedSequence = _lastAcceptedSequence;
         _lastEpoch = preferences.getUInt("epoch", 0);
@@ -540,7 +557,7 @@ public:
 
         _lastEncoderPos = _ft ? _ft->_enc.getPosition() : 0;
         readBattery(true);
-        setStatus("KLID");
+        setStatus(_runtimeKey.loaded() ? "KLID" : "KEY MISSING");
         render(true);
     }
 
@@ -560,6 +577,7 @@ public:
         readByteButton();    // prop switch + 2 buttons via the I2C ByteButton (module = primary input)
         readModem();
         flushPendingAck();   // transmit any deferred fire-and-forget ack once due
+        readUsbSetup();
         serviceDeferredPersistence(); // drain colour/palette NVS after ACKs, on a debounce timer
         updateBattery();
         serviceArmTtl();     // Sprint A: drop ARM back to SAFE after TTL if no Fire came
@@ -740,6 +758,70 @@ private:
             std::max<std::uint32_t>(15, preferences.getUInt("brite", LOCAL_BRIGHTNESS))));
         for (int i = 0; i < LED_COUNT; ++i)
             _ledBrightness[i] = legacy;
+    }
+
+    void loadTerminalSetupState()
+    {
+        PersistedTerminalSetup blob{};
+        if (preferences.getBytesLength(TERMINAL_SETUP_KEY) != sizeof(blob) ||
+            preferences.getBytes(TERMINAL_SETUP_KEY, &blob, sizeof(blob)) != sizeof(blob))
+            return;
+
+        const std::uint32_t expected = checksumBytes(
+            reinterpret_cast<const std::uint8_t*>(&blob), sizeof(blob) - sizeof(blob.checksum));
+        if (blob.magic != TERMINAL_SETUP_MAGIC || blob.version != TERMINAL_SETUP_VERSION ||
+            blob.checksum != expected)
+            return;
+
+        const std::uint8_t validMask = static_cast<std::uint8_t>((1U << LED_COUNT) - 1U);
+        blob.onMask &= validMask;
+        blob.effectMask &= validMask;
+        for (int i = 0; i < LED_COUNT; ++i)
+        {
+            _ledColors[i] = RenderColor(blob.rgb[i][0], blob.rgb[i][1], blob.rgb[i][2]);
+            _dialColors[i] = _ledColors[i];
+            _ledBrightness[i] = blob.brightness[i];
+        }
+        _led1On = (blob.onMask & (1U << 0)) != 0;
+        _led2On = (blob.onMask & (1U << 1)) != 0;
+        _led3RemoteOn = (blob.onMask & (1U << 2)) != 0;
+        _led5RemoteOn = (blob.onMask & (1U << 4)) != 0;
+        _terminalEffectMask = blob.effectMask & validMask;
+        _terminalPreviewMask = _terminalEffectMask;
+    }
+
+    bool storeTerminalSetup(const terminal_setup_apply::AppliedSetup& setup)
+    {
+        PersistedTerminalSetup blob{};
+        blob.magic = TERMINAL_SETUP_MAGIC;
+        blob.version = TERMINAL_SETUP_VERSION;
+        blob.onMask = setup.onMask;
+        blob.effectMask = setup.effectMask;
+        for (int i = 0; i < LED_COUNT; ++i)
+        {
+            const terminal_setup_apply::AppliedLane& lane = setup.lanes[i];
+            blob.brightness[i] = lane.brightness;
+            blob.rgb[i][0] = lane.color.r;
+            blob.rgb[i][1] = lane.color.g;
+            blob.rgb[i][2] = lane.color.b;
+        }
+        blob.checksum = checksumBytes(
+            reinterpret_cast<const std::uint8_t*>(&blob), sizeof(blob) - sizeof(blob.checksum));
+
+        PersistedTerminalSetup existing{};
+        if (preferences.getBytesLength(TERMINAL_SETUP_KEY) == sizeof(existing) &&
+            preferences.getBytes(TERMINAL_SETUP_KEY, &existing, sizeof(existing)) == sizeof(existing) &&
+            std::memcmp(&existing, &blob, sizeof(blob)) == 0)
+            return true;
+
+        if (preferences.putBytes(TERMINAL_SETUP_KEY, &blob, sizeof(blob)) != sizeof(blob))
+        {
+            _savedUntilMs = 0;
+            setStatus("SAVE ERR");
+            markStatusDirty();
+            return false;
+        }
+        return true;
     }
 
     // LED4 odpal envelope persistence -- same magic/version/checksum pattern as the LED colours,
@@ -1136,14 +1218,27 @@ private:
 
     void servicePreviewOverlay()
     {
-        if (_previewUntilMs == 0)
+        if (_previewUntilMs == 0 && _terminalPreviewUntilMs == 0)
             return;
 
         const std::uint32_t now = millis();
-        if (static_cast<std::int32_t>(now - _previewUntilMs) < 0)
+        bool expired = false;
+        if (_previewUntilMs != 0 && static_cast<std::int32_t>(now - _previewUntilMs) >= 0)
+        {
+            _previewUntilMs = 0;
+            expired = true;
+        }
+        if (_terminalPreviewUntilMs != 0 &&
+            static_cast<std::int32_t>(now - _terminalPreviewUntilMs) >= 0)
+        {
+            _terminalPreviewUntilMs = 0;
+            expired = true;
+        }
+        if (!expired)
+        {
             return;
+        }
 
-        _previewUntilMs = 0;
         _forceShow = true;
         markLocalDirty();
     }
@@ -1152,6 +1247,15 @@ private:
     {
         RenderColor frame[LED_COUNT] = {};
         const std::uint32_t now = millis();
+        // STOP/master-off is output-dominant. It must beat any later local USB
+        // preview overlay as well as the normal local latch renderer.
+        if (_masterOffInhibit)
+        {
+            showBudgetedFrame(frame);   // frame is all-zero -> strip dark
+            _lastStaticFadeDrawMs = now;
+            return;
+        }
+
         if (_previewUntilMs != 0 && static_cast<std::int32_t>(now - _previewUntilMs) < 0 && _dialColorsValid)
         {
             for (int i = 0; i < LED_COUNT; ++i)
@@ -1159,13 +1263,18 @@ private:
             showBudgetedFrame(frame);
             return;
         }
-
-        // Master-off inhibit (configurable STOP "kill all"): hold the local channels (#1/#2/#3)
-        // dark and ignore the live switch until a local input/edge releases the latch. odpal (#4)
-        // and remote #5 are already cleared by stopOutput, so the whole local strip stays off.
-        if (_masterOffInhibit)
+        if (_terminalPreviewUntilMs != 0 &&
+            static_cast<std::int32_t>(now - _terminalPreviewUntilMs) < 0)
         {
-            showBudgetedFrame(frame);   // frame is all-zero -> strip dark
+            for (int i = 0; i < LED_COUNT; ++i)
+            {
+                const bool previewChangesState =
+                    (_terminalPreviewMask & static_cast<std::uint8_t>(1U << i)) != 0U;
+                const bool previewOn = terminalLaneBaseOn(i) != previewChangesState;
+                if (previewOn)
+                    frame[i] = localColor(i);
+            }
+            showBudgetedFrame(frame);
             _lastStaticFadeDrawMs = now;
             return;
         }
@@ -1184,6 +1293,19 @@ private:
         _lastStaticFadeDrawMs = now;
     }
 
+    bool terminalLaneBaseOn(int led) const
+    {
+        switch (led)
+        {
+            case 0: return _led1On;
+            case 1: return _led2On;
+            case 2: return _switchEngaged || _led3RemoteOn;
+            case 3: return false;
+            case 4: return _led5RemoteOn;
+            default: return false;
+        }
+    }
+
     // Drives the local-control frame whenever no Dial-driven effect owns the LEDs.
     void applyLocalControlIfIdle()
     {
@@ -1197,12 +1319,16 @@ private:
 
     void scheduleLedColorsPersist()
     {
+        if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+            return;
         _ledColorsPersistDirty = true;
         _deferredPersistDueMs = millis() + SETTINGS_SAVE_DEBOUNCE_MS;
     }
 
     void schedulePalettePersist()
     {
+        if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+            return;
         _palettePersistDirty = true;
         _deferredPersistDueMs = millis() + SETTINGS_SAVE_DEBOUNCE_MS;
     }
@@ -1270,17 +1396,33 @@ private:
         triggerOdpal();
     }
 
+    bool terminalEffectAllowsOdpal() const
+    {
+        return (_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE)) != 0U;
+    }
+
     // Generic placeholder "odpal" on SK6812 #4: a LoRa Fire triggers a single bright flash
     // of #4's colour that fades to off over ODPAL_MS. Replace later with the real behaviour.
-    void triggerOdpal()
+    bool triggerOdpal()
     {
         _previewUntilMs = 0;
+        _terminalPreviewUntilMs = 0;
+        if (!terminalEffectAllowsOdpal())
+        {
+            _odpalActive = false;
+            _forceShow = true;
+            setStatus("ODPAL VYP");
+            markStatusDirty();
+            markLocalDirty();
+            return false;
+        }
         _odpalStartMs = millis();
         _odpalActive  = true;
         _forceShow    = true;   // guarantee the strip write at the start of the flash
         setStatus("ODPAL");
         markStatusDirty();
         markLocalDirty();
+        return true;
     }
 
     std::uint32_t odpalTotalMs() const
@@ -1378,6 +1520,10 @@ private:
     void handleEncoder(int delta, std::uint32_t now)
     {
         (void)now;
+        if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+        {
+            return;
+        }
         if (delta == 0)
             return;
 
@@ -1439,6 +1585,11 @@ private:
 
     void handleShortPress()
     {
+        if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+        {
+            return;
+        }
+
         if (onArrowRow())
         {
             advancePage();
@@ -1475,6 +1626,11 @@ private:
 
     void handleLongPress()
     {
+        if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+        {
+            return;
+        }
+
         if (_page == UiPage::Barvy)
         {
             storeLedColors();
@@ -1495,6 +1651,15 @@ private:
 
     void advancePage()
     {
+        if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)
+        {
+            _editing = false;
+            _page = UiPage::Stav;
+            _row = 0;
+            _dirtyAll = true;
+            return;
+        }
+
         if (_page == UiPage::Barvy)
         {
             storeLedColors();
@@ -1534,7 +1699,7 @@ private:
             if (_lineOverflow)
                 continue;                // drop the rest of an over-long line until the newline
 
-            if (_line.length() < 160)
+            if (_line.length() < prop_protocol::MAX_HOST_RX_LINE_LENGTH)
                 _line += c;
             else
             {
@@ -1577,6 +1742,154 @@ private:
             _modemLastSeenMs = millis();   // modem liveness heartbeat
             _modemEverSeen = true;         // standalone: before first contact, "no Dial" is normal, not SPOJ?
         }
+    }
+
+    void readUsbSetup()
+    {
+        while (Serial.available() > 0)
+        {
+            const char c = static_cast<char>(Serial.read());
+            if (c == '\r')
+                continue;
+
+            if (c == '\n')
+            {
+                if (!_usbSetupOverflow && _usbSetupLine.length() > 0)
+                    handleUsbSetupLine(_usbSetupLine);
+                _usbSetupLine = "";
+                _usbSetupOverflow = false;
+                continue;
+            }
+
+            if (_usbSetupOverflow)
+                continue;
+
+            if (_usbSetupLine.length() < prop_protocol::MAX_HOST_RX_LINE_LENGTH)
+                _usbSetupLine += c;
+            else
+            {
+                _usbSetupLine = "";
+                _usbSetupOverflow = true;
+                Serial.println(terminal_setup_link::formatUnscopedResponseLine(terminal_setup_link::RESPONSE_ERR).c_str());
+            }
+        }
+    }
+
+    static bool commitTerminalSetupCallback(void* ctx, const terminal_setup_apply::AppliedSetup& setup)
+    {
+        return static_cast<PropRxApp*>(ctx)->commitTerminalSetup(setup);
+    }
+
+    static bool previewTerminalSimFireCallback(void* ctx)
+    {
+        return static_cast<PropRxApp*>(ctx)->previewTerminalSimFire();
+    }
+
+    void handleUsbSetupLine(String line)
+    {
+        line.trim();
+        terminal_setup_receiver::ReceiverCallbacks callbacks{
+            this,
+            commitTerminalSetupCallback,
+            previewTerminalSimFireCallback,
+        };
+        const terminal_setup_receiver::ReplyResult reply =
+            terminal_setup_receiver::handleLineResult(line.c_str(), callbacks);
+        const std::string replyLine = terminal_setup_receiver::replyLine(reply);
+        if (!replyLine.empty())
+            Serial.println(replyLine.c_str());
+    }
+
+    bool terminalSetupSafeToCommit() const
+    {
+        return !_lockout && !_masterOffInhibit && !_armed && !_odpalActive;
+    }
+
+    bool commitTerminalSetup(const terminal_setup_apply::AppliedSetup& setup)
+    {
+        if (!terminalSetupSafeToCommit())
+        {
+            setStatus("SETUP BUSY");
+            markStatusDirty();
+            return false;
+        }
+
+        RenderColor oldColors[LED_COUNT] = {};
+        std::uint8_t oldBrightness[LED_COUNT] = {};
+        for (int i = 0; i < LED_COUNT; ++i)
+        {
+            oldColors[i] = _ledColors[i];
+            oldBrightness[i] = _ledBrightness[i];
+        }
+        const bool oldLed1On = _led1On;
+        const bool oldLed2On = _led2On;
+        const bool oldLed3RemoteOn = _led3RemoteOn;
+        const bool oldLed5RemoteOn = _led5RemoteOn;
+        const bool oldDialColorsValid = _dialColorsValid;
+        const std::uint8_t oldTerminalEffectMask = _terminalEffectMask;
+        const std::uint8_t oldTerminalPreviewMask = _terminalPreviewMask;
+
+        for (int i = 0; i < LED_COUNT; ++i)
+        {
+            const terminal_setup_apply::AppliedLane& lane = setup.lanes[i];
+            _ledColors[i] = RenderColor(lane.color.r, lane.color.g, lane.color.b);
+            _ledBrightness[i] = lane.brightness;
+        }
+        _led1On = setup.lanes[0].on;
+        _led2On = setup.lanes[1].on;
+        _led3RemoteOn = setup.lanes[2].on;
+        _led5RemoteOn = setup.lanes[4].on;
+        _terminalEffectMask = setup.effectMask;
+        _terminalPreviewMask = setup.effectPreviewMask;
+        _dialColorsValid = false;
+        _localColorEditPending = false;
+
+        const bool savedSetup = storeTerminalSetup(setup);
+        if (!savedSetup)
+        {
+            for (int i = 0; i < LED_COUNT; ++i)
+            {
+                _ledColors[i] = oldColors[i];
+                _ledBrightness[i] = oldBrightness[i];
+            }
+            _led1On = oldLed1On;
+            _led2On = oldLed2On;
+            _led3RemoteOn = oldLed3RemoteOn;
+            _led5RemoteOn = oldLed5RemoteOn;
+            _dialColorsValid = oldDialColorsValid;
+            _terminalEffectMask = oldTerminalEffectMask;
+            _terminalPreviewMask = oldTerminalPreviewMask;
+            setStatus("SETUP ERR");
+            markStatusDirty();
+            markLocalDirty();
+            return false;
+        }
+
+        _savedUntilMs = millis() + SAVED_BADGE_MS;
+        setStatus("NAHRANO");
+        markStatusDirty();
+        markLocalDirty();
+        _forceShow = true;
+        return true;
+    }
+
+    bool previewTerminalSimFire()
+    {
+        if (_lockout || _masterOffInhibit || _armed || _odpalActive)
+        {
+            _terminalPreviewUntilMs = 0;
+            _forceShow = true;
+            markLocalDirty();
+            setStatus("STOP");
+            markStatusDirty();
+            return false;
+        }
+        _terminalPreviewUntilMs = millis() + PREVIEW_OVERLAY_MS;
+        _forceShow = true;
+        markLocalDirty();
+        setStatus("SIM FIRE");
+        markStatusDirty();
+        return true;
     }
 
 #if DEBUG_HUD
@@ -1633,6 +1946,53 @@ private:
             return false;
         }
         return true;
+    }
+
+    bool loadRuntimeKeyFromPreferences()
+    {
+        Preferences keyPrefs;
+        if (!keyPrefs.begin(prop_runtime_key::NVS_NAMESPACE, true))
+        {
+            _runtimeKey.clear();
+            return false;
+        }
+
+        const std::size_t size = keyPrefs.getBytesLength(prop_runtime_key::NVS_KEY);
+        std::array<std::uint8_t, prop_runtime_key::MAX_KEY_LENGTH> buffer = {};
+        bool ok = false;
+        if (size >= prop_runtime_key::MIN_KEY_LENGTH && size <= buffer.size() &&
+            keyPrefs.getBytes(prop_runtime_key::NVS_KEY, buffer.data(), size) == size)
+        {
+            ok = _runtimeKey.set(buffer.data(), size);
+        }
+        keyPrefs.end();
+        prop_runtime_key::secureZero(buffer);
+        if (!ok)
+        {
+            _runtimeKey.clear();
+        }
+        return ok;
+    }
+
+    bool loadRuntimeKey()
+    {
+        if (loadRuntimeKeyFromPreferences())
+        {
+            return true;
+        }
+        _runtimeKey.clear();
+        setStatus("KEY MISSING");
+        return false;
+    }
+
+    const prop_runtime_key::RuntimeKey* runtimeKeyOrStatus()
+    {
+        if (_runtimeKey.loaded())
+        {
+            return &_runtimeKey;
+        }
+        setStatus("KEY MISSING");
+        return nullptr;
     }
 
     ReplayDecision classifyReplay(std::uint32_t sequence)
@@ -1765,7 +2125,15 @@ private:
         }
 
         prop_protocol::Frame frame;
-        if (!prop_protocol::decodeFrame(encoded.data(), encoded.size(), SHARED_KEY, sizeof(SHARED_KEY), frame))
+        const prop_runtime_key::RuntimeKey* key = runtimeKeyOrStatus();
+        if (key == nullptr)
+        {
+#if DEBUG_HUD
+            ++_debug.rxBad;
+#endif
+            return;
+        }
+        if (!prop_protocol::decodeFrame(encoded.data(), encoded.size(), key->data(), key->size(), frame))
         {
 #if DEBUG_HUD
             ++_debug.rxBad;
@@ -1835,7 +2203,8 @@ private:
                 //  - FIRE burst copy: drop SILENTLY (do NOT ack). The sender bursts FIRE 3x and
                 //    both radios are half-duplex; ack-ing each copy makes our modem transmit
                 //    during the burst -> mutual deafness drops the remaining copies and floods
-                //    the return channel. The single deferred EXECUTE ack is the only FIRE confirm.
+                //    the return channel. The single deferred EXECUTE ack is the only successful
+                //    FIRE confirm; a Terminal-disabled odpal lane returns NO_EFFECT immediately.
                 //  - ack-tracked / idempotent type (Stop/Ping/Status/Preview/PaletteSet/Arm):
                 //    the duplicate is the Dial RE-SENDING because our original ACK was lost. It
                 //    matches the ACK by (sequence,nonce)+payload, so we MUST re-emit that ACK or
@@ -1869,6 +2238,8 @@ private:
 #if DEBUG_HUD
                 ++_debug.rxBad;
 #endif
+                _terminalPreviewUntilMs = 0;
+                markLocalDirty();
                 setStatus("SPATNA DATA");
                 sendAckFrame(frame, "BAD_PAYLOAD");
                 return;
@@ -2014,6 +2385,8 @@ private:
 #if DEBUG_HUD
                 ++_debug.rxBad;
 #endif
+                _terminalPreviewUntilMs = 0;
+                markLocalDirty();
                 setStatus("SPATNA DATA");
                 sendAckFrame(frame, "BAD_PAYLOAD");
                 return;
@@ -2021,7 +2394,11 @@ private:
 #if DEBUG_HUD
             ++_debug.rxValid;
 #endif
-            triggerOdpal();   // generic placeholder odpal on SK6812 #4 (real behaviour TBD)
+            if (!triggerOdpal())   // Terminal setup mask disabled the odpal lane.
+            {
+                sendAckFrame(frame, "NO_EFFECT");
+                return;
+            }
             scheduleFireAck(frame);   // deferred best-effort ack (avoids burst collision)
             return;
         }
@@ -2314,6 +2691,7 @@ private:
             _armSeq = 0;
         }
         _previewUntilMs = 0;
+        _terminalPreviewUntilMs = 0;
         _odpalActive = false;   // SAFETY: a STOP / e-stop must kill an in-progress odpal IMMEDIATELY
                                 // (was left burning for the rest of the ramp/hold/fade envelope).
         _led3RemoteOn = false;  // STOP is the master OFF for the REMOTE LED states (#3 remote, #5).
@@ -2355,7 +2733,8 @@ private:
         ack.sequence = request.sequence;
         ack.nonce = request.nonce;
         ack.payload.assign(message, message + strlen(message));
-        return prop_protocol::encodeFrame(ack, SHARED_KEY, sizeof(SHARED_KEY), encoded);
+        const prop_runtime_key::RuntimeKey* key = runtimeKeyOrStatus();
+        return key != nullptr && prop_protocol::encodeFrame(ack, key->data(), key->size(), encoded);
     }
 
     void transmitAck(const std::vector<std::uint8_t>& encoded)
@@ -2394,10 +2773,48 @@ private:
             f.payload.push_back(_ledColors[i].b);
         }
         std::vector<std::uint8_t> encoded;
-        if (!prop_protocol::encodeFrame(f, SHARED_KEY, sizeof(SHARED_KEY), encoded))
+        const prop_runtime_key::RuntimeKey* key = runtimeKeyOrStatus();
+        if (key == nullptr || !prop_protocol::encodeFrame(f, key->data(), key->size(), encoded))
             return;
         const std::string hex = prop_protocol::bytesToHex(encoded.data(), encoded.size());
         propSerial.print("FF ");   // fire-and-forget (no ack-wait); modem parses FF as no-wait send
+        propSerial.println(hex.c_str());
+    }
+
+    std::uint8_t nextTxPaletteRev()
+    {
+        _txPaletteRev = static_cast<std::uint8_t>(_txPaletteRev + 1U);
+        if (_txPaletteRev == 0)
+            _txPaletteRev = 1;
+        return _txPaletteRev;
+    }
+
+    void sendPaletteSet()
+    {
+        prop_protocol::Frame f;
+        f.type = prop_protocol::FrameType::PaletteSet;
+        f.keyId = PROP_KEY_ID;
+        f.source = PROP_SOURCE;
+        f.destination = PROP_DESTINATION;
+        f.sequence = ++_txSeq;
+        f.nonce = (static_cast<std::uint64_t>(_txEpoch) << 32) | esp_random();
+
+        prop_protocol::PalettePayload pal;
+        pal.paletteRev = nextTxPaletteRev();
+        pal.fade = false;
+        pal.colors.reserve(LED_COUNT);
+        for (int i = 0; i < LED_COUNT; ++i)
+            pal.colors.push_back({_ledColors[i].r, _ledColors[i].g, _ledColors[i].b});
+
+        if (!prop_protocol::encodePalettePayload(pal, f.payload))
+            return;
+
+        std::vector<std::uint8_t> encoded;
+        const prop_runtime_key::RuntimeKey* key = runtimeKeyOrStatus();
+        if (key == nullptr || !prop_protocol::encodeFrame(f, key->data(), key->size(), encoded))
+            return;
+        const std::string hex = prop_protocol::bytesToHex(encoded.data(), encoded.size());
+        propSerial.print("FF ");
         propSerial.println(hex.c_str());
     }
 
@@ -2415,7 +2832,9 @@ private:
         transmitAck(encoded);
     }
 
-    // Deferred ack -- ONLY for fire-and-forget FIRE. The sender transmits FIRE as a
+    // Deferred ack -- ONLY for a fire-and-forget FIRE that actually starts the odpal
+    // effect. Terminal-disabled odpal lanes reply NO_EFFECT immediately instead.
+    // The sender transmits FIRE as a
     // 3x redundancy burst (~70 ms) and both radios are half-duplex, so an immediate
     // ack would land while the sender's modem is still bursting (deaf) and be lost.
     // We hold the ack and transmit it after the burst, inside the sender's long
@@ -3066,7 +3485,8 @@ private:
     FactoryTest* _ft;
     RenderColor _dialColors[LED_COUNT] = {};
     bool _dialColorsValid = false;   // true once Dial Preview/Fire/PaletteSet pushed colours (precedence over on-device state)
-    std::uint32_t _txSeq = 0;        // DinMeter-originated frame sequence (LedColorSet colour sync)
+    std::uint32_t _txSeq = 0;        // DinMeter-originated frame sequence (colour/palette sync)
+    std::uint8_t _txPaletteRev = 1;  // DinMeter-originated palette sync revision for Terminal uploads
     std::uint32_t _txEpoch = 0;      // DinMeter TX epoch (random per boot; top 32 bits of nonce)
     // Local prop controls (ByteButton) -> SK6812 #1-3 state; #4 reserved for odpal (TBD).
     bool _led1On = false;     // SK6812 #1 latch (button 1)
@@ -3102,6 +3522,7 @@ private:
     int _foundAddr = -1;      // last I2C address the Port B scan saw (diagnostic for unknown modules)
     bool _localDirty = true;  // redraw the local-control frame on the next idle loop
     std::uint32_t _previewUntilMs = 0; // nonzero while Dial Preview owns a visible full-strip overlay
+    std::uint32_t _terminalPreviewUntilMs = 0; // nonzero while Terminal SIM_FIRE owns an effect-mask overlay
     bool _ledColorsPersistDirty = false;
     bool _palettePersistDirty = false;
     bool _localColorEditPending = false;  // a local Barvy edit awaits save -> drop pal1 so it wins on next boot
@@ -3126,6 +3547,8 @@ private:
     UiPage _page = UiPage::Stav;
     String _line;
     bool _lineOverflow = false;   // true while discarding the tail of an over-long UART line
+    String _usbSetupLine;
+    bool _usbSetupOverflow = false;
     String _lastLine = "-";
     String _lastStatus = "BOOT";
     std::uint32_t _modemLastSeenMs = 0;   // last OK/BOOT seen from modem (liveness)
@@ -3165,11 +3588,14 @@ private:
     // channels (#1/#2/#3) dark and ignores the physical switch until the next LOCAL input/edge.
     bool _stopClearsAllLocal = STOP_CLEARS_ALL_LOCAL_DEFAULT;
     bool _masterOffInhibit = false;                // true: suppress ALL local LED output until a local edge
+    std::uint8_t _terminalEffectMask = DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK;   // Terminal USB setup: effect lanes
+    std::uint8_t _terminalPreviewMask = DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK;  // lanes that invert state during Terminal SIM_FIRE
     // A2 (0.3): TTL is refreshed by the Dial's 5 s ARM-heartbeat. If the heartbeat
     // stops (Dial off / link jammed) the receiver lapses to SAFE within this window.
     static constexpr std::uint32_t ARM_TTL_MS = 12000;  // ~2 missed 5 s heartbeats
     bool _dirtyAll = true;
     bool _dirtyStatus = true;
+    prop_runtime_key::RuntimeKey _runtimeKey;
 #if DEBUG_HUD
     DebugHudStats _debug;
     std::uint32_t _debugBootUntilMs = 0;

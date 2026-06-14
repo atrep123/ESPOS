@@ -343,16 +343,31 @@ def mix(a: int, b: int, t: float) -> int:
 
 def state_color(v: View) -> int:
     s = v.status or ""
-    if v.armed:
+    if (
+        v.armed
+        or s.startswith("ERR ")
+        or "FAIL" in s
+        or "err" in s
+        or "MISSING" in s
+        or s
+        in (
+            "BAD ACK",
+            "RX IGNORED",
+            "ZAMITNUTO",
+            "BLOKOVANO",
+            "FF BUSY",
+            "FF DUTY",
+        )
+    ):
         return P_RED
-    if is_locked_fire_choice(v):
+    if is_locked_fire_choice(v) or is_preview_choice(v) or is_stop_choice(v):
+        return TEXT_DIM
+    if (
+        v.awaiting_ack
+        or s.startswith("sent ")
+        or s in ("ODESILAM", "ODESLANO", "no ack", "timeout")
+    ):
         return P_AMBER
-    if v.awaiting_ack or s.startswith("sent "):
-        return P_AMBER
-    if s in ("no ack", "timeout"):
-        return P_AMBER
-    if s.startswith("ERR "):
-        return P_RED
     return P_GREEN
 
 
@@ -401,7 +416,7 @@ def field_caption(v: View) -> str:
     if lbl == "LED":
         return "LED"
     if lbl == "HUE":
-        return "ODSTIN"
+        return "ODSTÍN"
     return lbl.upper()
 
 
@@ -427,6 +442,15 @@ def is_preview_choice(v: View) -> bool:
         not v.armed
         and not v.awaiting_ack
         and (v.action_label or "").upper() == "PREVIEW"
+        and is_command_mode(v)
+    )
+
+
+def is_stop_choice(v: View) -> bool:
+    return (
+        not v.armed
+        and not v.awaiting_ack
+        and (v.action_label or "").upper() == "STOP"
         and is_command_mode(v)
     )
 
@@ -473,7 +497,7 @@ def led_angle(i: int, count: int) -> float:
     more slots; a single slot sits dead-centre at 90deg. Mirrors gui_prop_tx.cpp."""
     if count <= 1:
         return 90.0
-    span = min((count - 1) * 24.0, 144.0)
+    span = 110.0 if count > 5 else min((count - 1) * 24.0, 144.0)
     spacing = span / (count - 1)
     return 90.0 + span / 2.0 - i * spacing
 
@@ -499,7 +523,7 @@ def draw_orb(c: Canvas, cx, cy, r, color, accent, label):
     if label:
         n = len(label)
         size = 42 if n <= 1 else (34 if n <= 3 else 28)  # edited value lives in the orb
-        c.text_center(label, cx, cy - size * 0.46, size, on_color(color), role="orb_text")
+        c.text_center(label, cx, cy - size * 0.70, size, on_color(color), role="orb_text")
 
 
 def command_label_size(label: str) -> int:
@@ -524,6 +548,18 @@ def draw_polyline_round(c: Canvas, pts, width, color, role="line"):
     r = width / 2.0
     for px, py in (pts[0], pts[-1]):
         c.fill_circle(px, py, r, color)
+    xs = [float(x) for x, _ in pts]
+    ys = [float(y) for _, y in pts]
+    c._record(
+        DrawOp(
+            "line",
+            role,
+            color=color,
+            bbox=(min(xs) - r, min(ys) - r, max(xs) + r, max(ys) + r),
+            width=float(width),
+            points=tuple((float(x), float(y)) for x, y in pts),
+        )
+    )
 
 
 def draw_x_glyph(c: Canvas, cx, cy, color):
@@ -570,84 +606,96 @@ def draw_command_token(c: Canvas, cx, cy, sc, label, variant="normal"):
     if variant == "wait":
         draw_wait_sweep(c, cx, cy, sc)
         c.fill_round_rect(
-            cx - 94,
-            cy - 30,
-            188,
-            78,
+            cx - 90,
+            cy - 28,
+            180,
+            84,
             18,
-            mix(P_AMBER, BG_BASE, 0.35),
+            mix(P_AMBER, BG_BASE, 0.42),
             role="command_state_badge",
         )
         c.text_center(
             "TX SENT",
             cx,
-            cy - 23,
-            15,
+            cy - 22,
+            14,
             mix(P_AMBER, WHITE, 0.82),
             tracking=1.2,
             role="command_sent_text",
         )
-        c.text_center("WAIT ACK", cx, cy - 4, 32, TEXT_HI, role="command_state_text")
+        c.text_center("WAIT ACK", cx, cy - 7, 31, TEXT_HI, role="command_state_text")
         c.text_center(
-            "NOT ARMED",
+            "DO NOT PRESS",
             cx,
-            cy + 35,
-            12,
-            mix(P_AMBER, WHITE, 0.88),
-            tracking=1.6,
+            cy + 30,
+            18,
+            TEXT_HI,
+            tracking=0.5,
             role="command_safe_text",
         )
         return
     if variant == "ack":
         draw_check_glyph(c, cx, cy, sc)
-        c.text_center("ACK", cx, cy + 30, 21, TEXT_HI, role="command_state_text")
         return
     if variant == "no_ack":
         c.fill_round_rect(
-            cx - 84,
-            cy - 22,
-            168,
-            72,
-            16,
+            cx - 90,
+            cy - 28,
+            180,
+            84,
+            18,
             mix(P_AMBER, BG_BASE, 0.42),
             role="command_state_badge",
         )
-        c.text_center("NO ACK", cx, cy - 15, 34, TEXT_HI, role="command_state_text")
+        c.text_center("NO ACK", cx, cy - 16, 28, TEXT_HI, role="command_state_text")
         c.text_center(
-            "NOT ARMED",
+            "CHECK LINK",
             cx,
-            cy + 26,
-            15,
-            mix(P_AMBER, WHITE, 0.86),
-            tracking=1.6,
+            cy + 25,
+            19,
+            TEXT_HI,
+            tracking=1.0,
             role="command_safe_text",
         )
         return
     if variant == "locked_fire":
-        c.text_center("NOT ARMED", cx, cy - 34, 34, TEXT_HI, role="command_text")
+        c.text_center("FIRE LOCKED", cx, cy - 36, 25, TEXT_HI, role="command_text")
         c.fill_round_rect(
-            cx - 82,
-            cy + 20,
-            164,
-            26,
-            12,
-            mix(P_AMBER, BG_BASE, 0.35),
+            cx - 84,
+            cy + 8,
+            168,
+            38,
+            16,
+            TEXT_DIM,
             role="fire_locked_badge",
         )
-        c.text_center("ARM REQUIRED", cx, cy + 20, 17, TEXT_HI, role="fire_locked_text")
+        c.text_center("ARM REQUIRED", cx, cy + 15, 18, TEXT_HI, role="fire_locked_text")
+        return
+    if variant == "stop":
+        c.text_center("STOP", cx, cy - 39, 38, TEXT_HI, role="command_text")
+        c.fill_round_rect(
+            cx - 86,
+            cy + 15,
+            172,
+            34,
+            16,
+            mix(TEXT_DIM, BG_BASE, 0.35),
+            role="command_stop_badge_plate",
+        )
+        c.text_center("OUTPUT OFF", cx, cy + 18, 21, TEXT_HI, role="command_stop_badge")
         return
     if variant == "preview":
-        c.text_center("NO FIRE", cx, cy - 39, 40, TEXT_HI, role="command_text")
+        c.text_center("NO FIRE", cx, cy - 40, 41, TEXT_HI, role="command_text")
         c.fill_round_rect(
-            cx - 94,
-            cy + 17,
-            188,
-            36,
+            cx - 86,
+            cy + 15,
+            172,
+            34,
             16,
             mix(MODE_SETUP, WHITE, 0.16),
             role="command_preview_badge_plate",
         )
-        c.text_center("PREVIEW ONLY", cx, cy + 19, 21, 0x0E1116, role="command_preview_badge")
+        c.text_center("OUTPUT OFF", cx, cy + 18, 21, 0x0E1116, role="command_preview_badge")
         return
 
     ls = command_label_size(label)
@@ -665,13 +713,19 @@ def draw_warning_glyph(c: Canvas, cx, cy, size, color):
 
 
 def render_armed_frame(v: View) -> RenderedFrame:
-    armed_bg = P_RED
+    armed_bg = BG_BASE
     c = Canvas(armed_bg)
     c.fill_screen(armed_bg, role="screen")
-    # Gemini review: the earlier warning triangle looked like a fault icon, while
-    # too many danger labels read as conflicting. Keep the screen purely stateful.
-    c.text_center("ARMED", 120, 82, 48, WHITE, tracking=0.0, role="armed_state_text")
-    c.text_center("FIRE ENABLED", 120, 146, 28, WHITE, tracking=0.0, role="armed_fire_text")
+    c.fill_round_rect(40, 42, 160, 50, 20, P_RED, role="armed_live_plate")
+    c.text_center("ARMED", 120, 50, 38, WHITE, tracking=0.0, role="armed_state_text")
+    c.fill_round_rect(46, 108, 148, 96, 24, TEXT_HI, role="armed_cancel_plate")
+    c.text_center(
+        "PRESS", 120, 114, 25, P_RED, tracking=0.6, role="armed_cancel_prompt_text"
+    )
+    c.text_center("STOP", 120, 136, 48, P_RED, tracking=0.0, role="armed_cancel_text")
+    c.text_center(
+        "TO DISARM", 120, 181, 18, 0x0E1116, tracking=0.6, role="armed_cancel_subtext"
+    )
     return RenderedFrame(image=c.raw(), ops=c.ops)
 
 
@@ -682,7 +736,7 @@ def draw_leader(c: Canvas, angle_deg: float, color: int):
     px, py = math.cos(a), math.sin(a)
     qx, qy = -py, px
     bx, by = 120 + px * (LED_R - 12), 120 + py * (LED_R - 12)  # base: tucked under the dot
-    ax, ay = 120 + px * (ORB_R + 9), 120 + py * (ORB_R + 9)  # apex: touches the orb edge
+    ax, ay = 120 + px * (ORB_R + 20), 120 + py * (ORB_R + 20)  # apex: clears orb label
     c.polygon(
         ((bx + qx * 7.5, by + qy * 7.5), (bx - qx * 7.5, by - qy * 7.5), (ax, ay)),
         SOCKET,
@@ -737,8 +791,8 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
 
     # --- mode caption (top) — the single clearest mode signal -------------
     # colour-coded so SETUP vs COMMAND read at a glance even before the text:
-    # cool cyan = NASTAVENI (tuning), neutral near-white = PRIKAZ (transmit).
-    mode_caption = "PRIKAZ" if command else "NASTAVENI"
+    # cool cyan = NASTAVENÍ (tuning), neutral near-white = PŘÍKAZ (transmit).
+    mode_caption = "PŘÍKAZ" if command else "NASTAVENÍ"
     mode_color = ACCENT if command else setup_caption_color()
     # padded clear of the brightness ring so the caption doesn't collide with it
     c.text_center(mode_caption, 120, 35, 16, mode_color, tracking=3.2, role="mode_caption")
@@ -762,6 +816,8 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
             variant = "no_ack"
         elif is_locked_fire_choice(v):
             variant = "locked_fire"
+        elif is_stop_choice(v):
+            variant = "stop"
         elif is_preview_choice(v):
             variant = "preview"
         draw_command_token(c, 120, ORB_CY, sc, label, variant)
@@ -774,6 +830,7 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
             and not ack
             and not no_ack
             and not is_locked_fire_choice(v)
+            and not is_stop_choice(v)
             and not is_preview_choice(v)
         ):
             cyc = ORB_CY
@@ -794,8 +851,8 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         c.text_center(
             field_caption(v),
             ORB_CX,
-            ORB_CY + 24,
-            12,
+            ORB_CY + 14,
+            13,
             on_color(col),
             tracking=1.2,
             role="orb_subtext",
@@ -822,12 +879,20 @@ def render_frame(v: View, accent: int = ACCENT) -> RenderedFrame:
         if sel and not v.awaiting_ack:
             if not command:
                 draw_leader(c, ang, col)  # pointer from selected dot -> orb (setup)
-            c.fill_circle(x, y, sock_r + 3, mix(BG_BASE, col, 0.30), role="led_glow", index=i)
+            c.fill_circle(x, y, sock_r + 5, mix(BG_BASE, col, 0.30), role="led_glow", index=i)
             c.fill_circle(x, y, sock_r, SOCKET, role="led_socket", index=i)
             c.fill_circle(x, y, dot_r, col, role="led_lens", index=i)
-            selection_color = WHITE if command else MODE_SETUP
+            selection_color = ACCENT
             c.ring_band(
-                x, y, sock_r + 2, sock_r, 0, 360, selection_color, role="led_selection", index=i
+                x,
+                y,
+                sock_r + 4,
+                sock_r + 1,
+                0,
+                360,
+                selection_color,
+                role="led_selection",
+                index=i,
             )
         else:
             c.fill_circle(x, y, sock_r, SOCKET, role="led_socket", index=i)
@@ -868,16 +933,6 @@ def render(v: View, accent: int = ACCENT) -> Image.Image:
 
 def scenes():
     cols = [(255, 30, 30), (30, 220, 90), (40, 120, 255), (255, 180, 0)]
-    cols8 = [
-        (255, 30, 30),
-        (30, 220, 90),
-        (40, 120, 255),
-        (255, 180, 0),
-        (200, 40, 255),
-        (0, 220, 220),
-        (255, 80, 160),
-        (150, 255, 40),
-    ]
     return {
         "01_ready_action": View(
             action_label="PREVIEW",
@@ -923,50 +978,40 @@ def scenes():
             field_value="PING",
             colors=cols,
         ),
-        "07_edit_jas": View(
-            field_label="jas", status="ready", field_value="59%", brightness_percent=59, colors=cols
-        ),
-        "08_edit_led": View(
-            field_label="LED",
-            status="LED 3 BARVA",
-            field_value="3",
-            selected_led=2,
-            selected_hue_degrees=240,
-            colors=cols,
-        ),
-        "09_edit_hue": View(
-            field_label="HUE",
+        "07_stop": View(
+            action_label="STOP",
+            field_label="akce",
             status="ready",
-            field_value="120°",
-            selected_led=1,
-            selected_hue_degrees=120,
-            brightness_percent=80,
+            field_value="STOP",
             colors=cols,
         ),
-        # B4b: variable palette length (1..8) on the dot ring.
-        "10_palette1": View(
-            field_label="BARVY",
-            status="1 barva",
-            field_value="1",
-            palette_count=1,
-            selected_led=0,
-            colors=cols8,
+        "08_ping": View(
+            action_label="PING",
+            field_label="akce",
+            status="ready",
+            field_value="PING",
+            colors=cols,
         ),
-        "11_palette6": View(
-            field_label="BARVY",
-            status="6 barev",
-            field_value="6",
-            palette_count=6,
-            selected_led=4,
-            colors=cols8,
+        "09_arm": View(
+            action_label="ARM",
+            field_label="akce",
+            status="ready",
+            field_value="ARM",
+            colors=cols,
         ),
-        "12_palette8": View(
-            field_label="BARVY",
-            status="8 barev",
-            field_value="8",
-            palette_count=8,
-            selected_led=6,
-            colors=cols8,
+        "10_error": View(
+            action_label="PING",
+            field_label="akce",
+            status="ERR BAD_FRAME",
+            field_value="PING",
+            colors=cols,
+        ),
+        "11_setup_handoff": View(
+            action_label="PREVIEW",
+            field_label="akce",
+            status="SETUP NA TERMINALU",
+            field_value="PREVIEW",
+            colors=cols,
         ),
     }
 
@@ -975,6 +1020,8 @@ def main():
     out = os.path.join(os.path.dirname(__file__), "..", "build", "preview")
     out = os.path.abspath(out)
     os.makedirs(out, exist_ok=True)
+    for stale in Path(out).glob("*.png"):
+        stale.unlink()
 
     imgs = []
     for name, v in scenes().items():

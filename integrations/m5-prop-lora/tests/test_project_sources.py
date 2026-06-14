@@ -1,16 +1,23 @@
 from pathlib import Path
+import os
 import re
-import shutil
 import subprocess
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ESPOS_ROOT = ROOT.parents[1]
 
 
 class ProjectSourceTests(unittest.TestCase):
     def read(self, relative_path: str) -> str:
         path = ROOT / relative_path
+        if not path.exists():
+            self.fail(f"{relative_path} does not exist")
+        return path.read_text(encoding="utf-8")
+
+    def read_espos(self, relative_path: str) -> str:
+        path = ESPOS_ROOT / relative_path
         if not path.exists():
             self.fail(f"{relative_path} does not exist")
         return path.read_text(encoding="utf-8")
@@ -102,8 +109,8 @@ class ProjectSourceTests(unittest.TestCase):
         # Marlin-style refactor: the UART port/pins moved into prop_tx_config.h as
         # PROP_UART_PORT_NUM=1 / PROP_UART_TX_GPIO=13 / PROP_UART_RX_GPIO=15 (the .cpp
         # casts them to uart_port_t/gpio_num_t). Read cpp + that config header so the
-        # moved pin knobs are found. FIELD_BRIGHTNESS was removed (no brightness field
-        # anymore: the edit fields are now FIELD_LED/FIELD_HUE/FIELD_MODE).
+        # moved pin knobs are found. Setup/editor fields now live on the Terminal;
+        # the Dial keeps only a command action selector.
         text = self.module_text(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
             "firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h",
@@ -127,14 +134,144 @@ class ProjectSourceTests(unittest.TestCase):
                 "PROP_UART_RX_GPIO  = 15",
                 "static_cast<uart_port_t>(prop_tx_config::PROP_UART_PORT_NUM)",
                 "static_cast<gpio_num_t>(prop_tx_config::PROP_UART_TX_GPIO)",
-                "selected_field",
-                "FIELD_LED",  # was FIELD_BRIGHTNESS (removed); FIELD_LED/HUE/MODE are the live edit fields
-                "FIELD_HUE",
+                "selected_action",
+                "_adjust_selected_action(direction)",
+                '"SETUP NA TERMINALU"',
                 "FrameType::Ack",
                 "_poll_uart",
             ],
             "dial prop_tx module (app_prop_tx.cpp + prop_tx_config.h)",
         )
+
+    def test_dial_setup_editor_paths_are_not_active_today(self):
+        text = self.module_text(
+            "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
+            "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h",
+            "firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h",
+        )
+        self.assert_text_contains_all(
+            text,
+            [
+                "DIAL_SETUP_EDITOR_ENABLED  = false",
+                '"SETUP NA TERMINALU"',
+                "_adjust_selected_action(direction)",
+            ],
+            "dial command-only setup handoff",
+        )
+        self.assert_text_not_contains_any(
+            text,
+            [
+                "_data.mode = PROP_TX::MODE_SETUP",
+                "_next_field();",
+                "_select_led_from_touch(x);",
+                "_touch_in_led_strip(x, y)",
+                "else if (!_locked() && !_is_command_mode())",
+            ],
+            "dial command-only setup handoff",
+        )
+
+    def test_dial_command_surface_does_not_push_terminal_owned_palette_or_remote_leds(self):
+        text = self.module_text(
+            "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
+            "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h",
+        )
+        command_block = text.split("COMMAND_ACTIONS", 1)[1].split("#if SELFTEST_FIRE", 1)[0]
+        self.assert_text_not_contains_any(
+            command_block,
+            [
+                "ACTION_LED3_ON",
+                "ACTION_LED5_ON",
+            ],
+            "dial command action order",
+        )
+        self.assert_text_not_contains_any(
+            text,
+            [
+                "void PropTx::_send_remote_led",
+                "_send_remote_led(",
+                "void PropTx::_send_palette",
+                "_send_palette(",
+            ],
+            "dial production command path",
+        )
+
+    def test_dinmeter_local_setup_editor_is_disabled_by_default(self):
+        text = self.module_text(
+            "firmware/din-rx/src/prop_rx.cpp",
+            "firmware/din-rx/src/prop_config.h",
+        )
+        self.assert_text_contains_all(
+            text,
+            [
+                "DINMETER_LOCAL_SETUP_EDITOR_ENABLED = false",
+                "if (!DINMETER_LOCAL_SETUP_EDITOR_ENABLED)",
+            ],
+            "dinmeter indication-only production guard",
+        )
+        for mutator in (
+            "void handleEncoder",
+            "void handleShortPress",
+            "void handleLongPress",
+            "void advancePage",
+        ):
+            block = text.split(mutator, 1)[1].split("\n    }", 1)[0]
+            self.assertIn("DINMETER_LOCAL_SETUP_EDITOR_ENABLED", block, mutator)
+
+    def test_dinmeter_modem_line_buffer_uses_shared_protocol_budget(self):
+        text = self.read("firmware/din-rx/src/prop_rx.cpp")
+        self.assertIn("prop_protocol::MAX_HOST_RX_LINE_LENGTH", text)
+        self.assertNotIn("_line.length() < 160", text)
+
+    def test_dial_does_not_persist_terminal_owned_palette_state(self):
+        text = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
+        load_section = text[
+            text.index("void PropTx::_load_settings()") :
+            text.index("bool PropTx::_load_runtime_key()", text.index("void PropTx::_load_settings()"))
+        ]
+        save_section = text[
+            text.index("void PropTx::_save_settings()") :
+            text.index("void PropTx::_save_sequence()", text.index("void PropTx::_save_settings()"))
+        ]
+        rx_section = text[
+            text.index("if (decoded.type == prop_protocol::FrameType::LedColorSet)") :
+            text.index("const bool ack_route_matches", text.index("if (decoded.type == prop_protocol::FrameType::LedColorSet)"))
+        ]
+
+        self.assertNotIn("nvs_get_blob", load_section)
+        self.assertNotIn("nvs_set_blob", save_section)
+        for key in ('"palFade"', '"colors"', '"hueDeg"', '"hues"'):
+            self.assertIn(f"nvs_erase_key(nvs, {key})", load_section + save_section)
+        self.assertNotIn("_save_settings();", rx_section)
+        self.assertNotIn("BARVY SYNC", rx_section)
+        self.assertNotIn("PALETA SYNC", rx_section)
+
+    def test_dinmeter_terminal_commit_does_not_sync_setup_back_to_dial(self):
+        text = self.read("firmware/din-rx/src/prop_rx.cpp")
+        begin_section = text[
+            text.index("void begin()") :
+            text.index("Serial.begin", text.index("void begin()"))
+        ]
+        commit_section = text[
+            text.index("bool commitTerminalSetup") :
+            text.index("bool previewTerminalSimFire", text.index("bool commitTerminalSetup"))
+        ]
+
+        for load_call in ("loadPalette();", "loadLedColors();", "loadOdpalCfg();", "loadLedBrightness();"):
+            self.assertIn(load_call, begin_section)
+        self.assertIn("if (DINMETER_LOCAL_SETUP_EDITOR_ENABLED)", begin_section)
+        self.assertIn("loadTerminalSetupState();", begin_section)
+        self.assertNotIn("sendLedColorSet();", commit_section)
+        self.assertNotIn("sendPaletteSet();", commit_section)
+
+    def test_dinmeter_usb_setup_overflow_is_scoped_and_uses_shared_budget(self):
+        text = self.module_text(
+            "firmware/din-rx/src/prop_rx.cpp",
+            "shared/terminal/terminal_setup_link.h",
+        )
+        self.assertIn("_usbSetupLine.length() < prop_protocol::MAX_HOST_RX_LINE_LENGTH", text)
+        self.assertIn("formatUnscopedResponseLine", text)
+        self.assertIn('+ " 0"', text)
+        self.assertNotIn("Serial.println(terminal_setup_link::RESPONSE_ERR);", text)
 
     def test_dial_boots_straight_into_prop_tx(self):
         # The demo launcher was dropped (task #34): main boots directly into Prop TX.
@@ -292,17 +429,16 @@ class ProjectSourceTests(unittest.TestCase):
         self.assert_contains_all(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h",
             [
-                "FIELD_HUE",
                 "std::array<uint16_t, 8> hues",
             ],
         )
         self.assert_not_contains_any(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h",
-            ["FIELD_RED", "FIELD_GREEN", "FIELD_BLUE"],
+            ["FIELD_RED", "FIELD_GREEN", "FIELD_BLUE", "FIELD_HUE", "selected_field"],
         )
-        # HUE_MAX moved into prop_tx_config.h ([7] colour-wheel range); the HUE edit
-        # field is labelled BARVA (Czech "colour") now, so the label literals are
-        # "BARVA" / "LED %u BARVA". Read cpp + config so HUE_MAX is found.
+        # HUE_MAX moved into prop_tx_config.h ([7] colour-wheel range). Dial keeps
+        # factory hue/color helpers for effect payload defaults, but no longer
+        # persists setup-owned palette state.
         text = self.module_text(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
             "firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h",
@@ -315,12 +451,6 @@ class ProjectSourceTests(unittest.TestCase):
                 "set_color_from_hue",
                 "hue_from_rgb",
                 "_sync_colors_from_hues",
-                'nvs_get_blob(nvs, "hueDeg"',
-                'nvs_set_blob(nvs, "hueDeg"',
-                'nvs_get_blob(nvs, "hues"',
-                "FIELD_HUE",
-                '"BARVA"',
-                '"LED %u BARVA"',
             ],
             "dial prop_tx module (app_prop_tx.cpp + prop_tx_config.h)",
         )
@@ -337,6 +467,11 @@ class ProjectSourceTests(unittest.TestCase):
                 "hue_degrees_from_legacy_percent",
                 "looks_like_legacy_percent",
                 'nvs_set_blob(nvs, "hues"',
+                "FIELD_HUE",
+                '"LED %u BARVA"',
+                'nvs_get_blob(nvs, "hueDeg"',
+                'nvs_set_blob(nvs, "hueDeg"',
+                'nvs_get_blob(nvs, "hues"',
             ],
         )
 
@@ -378,13 +513,20 @@ class ProjectSourceTests(unittest.TestCase):
                 'variant = "no_ack"',
                 'variant = "preview"',
                 'variant = "locked_fire"',
+                'variant = "stop"',
                 "draw_wait_sweep(",
                 "draw_check_glyph(",
                 "draw_x_glyph(",
                 '"NO FIRE"',
-                '"PREVIEW ONLY"',
-                '"LOCKED OUT"',
-                '"ARM FIRST"',
+                '"OUTPUT OFF"',
+                '"FIRE LOCKED"',
+                '"ARM REQUIRED"',
+                '"STOP"',
+                '"OUTPUT OFF"',
+                '"DO NOT PRESS"',
+                '"PRESS"',
+                '"TO DISARM"',
+                "field_caption(view)",
                 "is_editing(view, 'H')",
                 # the edited value, compact, inside the orb (formatted upstream)
                 'snprintf(oval, sizeof(oval), "%s", view.field_value)',
@@ -403,24 +545,17 @@ class ProjectSourceTests(unittest.TestCase):
             ],
         )
 
-    def test_dial_prop_tx_hue_is_degrees_and_field_value_is_named_preset(self):
-        # This session the editable BRIGHTNESS field was removed entirely (the edit
-        # fields are now LED / HUE(=BARVA) / MODE). So the old "brightness shown as %%,
-        # hue as deg" contract no longer applies. The surviving, current truth:
-        #   * hue still lives as DEGREES (selected_hue_degrees, hue_from_rgb, wrap_hue
-        #     mod HUE_MAX) -- never as a percent;
-        #   * the orb's field value is the colour PRESET NAME (exactPresetName) for HUE,
-        #     the LED number for LED, and FADE/STEP for MODE -- not a "%%"/"deg" number.
+    def test_dial_prop_tx_hue_is_protocol_state_not_dial_editor_state(self):
+        # Hues remain factory effect-payload defaults, but Dial no longer projects
+        # them into an editable setup view or persists terminal-owned palette state.
         self.assert_contains_all(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
             [
                 "hue_from_rgb",
                 "wrap_hue",
-                "view.selected_hue_degrees = _data.hues[_data.selected_led]",
-                # the HUE field value is the named preset, not a numeric percent/degree
-                'snprintf(buffer, buffer_size, "%s", prop_colors::exactPresetName(c[0], c[1], c[2]))',
-                # MODE field value is FADE/STEP text
-                '_data.palette_fade ? "FADE" : "STEP"',
+                'nvs_erase_key(nvs, "hueDeg")',
+                'nvs_erase_key(nvs, "hues")',
+                'snprintf(view.field_value, sizeof(view.field_value), "%s", view.action_label == nullptr ? "" : view.action_label)',
             ],
         )
         self.assert_not_contains_any(
@@ -433,6 +568,9 @@ class ProjectSourceTests(unittest.TestCase):
                 "_data.brightness",
                 "hue_percent_from_rgb",
                 "selected_hue_percent",
+                "view.selected_hue_degrees",
+                "selected_field",
+                "_field_value",
                 # the orb no longer prints a "%%"/"deg" number for the edited value
                 'snprintf(buffer, buffer_size, "%u%%"',
                 'snprintf(buffer, buffer_size, "%udeg"',
@@ -543,8 +681,8 @@ class ProjectSourceTests(unittest.TestCase):
 
     def test_dial_prop_tx_action_touch_zone_prevents_accidental_fire(self):
         # The ACTION-button hit rectangle moved into prop_tx_config.h ([7] TOUCH
-        # ZONES); the gating logic (_touch_in_action_button, command-mode guard) stays
-        # in app_prop_tx.cpp. Read cpp + config so the moved constants are found.
+        # ZONES); Dial is command-only now, so the touch gate is just locked-state
+        # plus the action hitbox. Read cpp + config so moved constants are found.
         text = self.module_text(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
             "firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h",
@@ -557,7 +695,6 @@ class ProjectSourceTests(unittest.TestCase):
                 "PROP_TX_ACTION_TOUCH_TOP    = 74",
                 "PROP_TX_ACTION_TOUCH_BOTTOM = 166",
                 "_touch_in_action_button(x, y)",
-                "_is_command_mode() && _touch_in_action_button(x, y)",
             ],
             "dial prop_tx module (app_prop_tx.cpp + prop_tx_config.h)",
         )
@@ -566,11 +703,9 @@ class ProjectSourceTests(unittest.TestCase):
             ["else if (y > 50 && y < 190)"],
         )
 
-    def test_dial_prop_tx_touch_row_selects_led_without_firing_action(self):
-        # The LED touch-strip rectangle + dot layout moved into prop_tx_config.h
-        # ([7] TOUCH ZONES). PROP_TX_LED_TOUCH_RIGHT widened 188->221 for the 5th LED
-        # column; the touch-select status label is now "LED %u BARVA" (HUE field is
-        # labelled BARVA). Read cpp + config so the moved constants are found.
+    def test_dial_prop_tx_touch_row_no_longer_selects_setup_led(self):
+        # The older LED touch-strip geometry can remain documented in the config
+        # for render parity, but the active Dial app must not use it as an editor.
         text = self.module_text(
             "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
             "firmware/dial-tx/main/apps/app_prop_tx/prop_tx_config.h",
@@ -584,6 +719,12 @@ class ProjectSourceTests(unittest.TestCase):
                 "PROP_TX_LED_TOUCH_BOTTOM = 220",
                 "PROP_TX_LED_START_X      = 70",
                 "PROP_TX_LED_SPACING      = 33",
+            ],
+            "dial prop_tx module (app_prop_tx.cpp + prop_tx_config.h)",
+        )
+        self.assert_text_not_contains_any(
+            text,
+            [
                 "_touch_in_led_strip(x, y)",
                 "_select_led_from_touch(x)",
                 '"LED %u BARVA"',
@@ -869,6 +1010,22 @@ class ProjectSourceTests(unittest.TestCase):
         )
         self.assertIn('sendAckFrame(frame, "COLORSET")', colorset_branch)
 
+    def test_dial_ignores_dinmeter_palette_sync_for_terminal_owned_setup(self):
+        text = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
+
+        palette_branch = text.split("if (decoded.type == prop_protocol::FrameType::PaletteSet)", 1)[
+            1
+        ].split("const bool ack_route_matches", 1)[0]
+        led_branch = text.split("if (decoded.type == prop_protocol::FrameType::LedColorSet)", 1)[
+            1
+        ].split("if (decoded.type == prop_protocol::FrameType::PaletteSet)", 1)[0]
+        self.assertRegex(palette_branch, r"\{\s*return;\s*\}")
+        self.assertRegex(led_branch, r"\{\s*return;\s*\}")
+        self.assertNotIn("prop_protocol::parsePalettePayload", palette_branch)
+        self.assertNotIn("_save_settings()", palette_branch + led_branch)
+        self.assertNotIn("_set_status(\"PALETA SYNC\")", palette_branch)
+        self.assertNotIn("_set_status(\"BARVY SYNC\")", led_branch)
+
     def test_c6l_modem_rejects_unready_radio_and_waits_for_matching_ack(self):
         # The unready-radio guard + frame-bounds + host-command parse migrated into
         # modem_core.h (single source w/ the host simulator); main.cpp keeps the
@@ -910,8 +1067,8 @@ class ProjectSourceTests(unittest.TestCase):
                 "LED-only",
             ],
         )
-        self.assert_contains_all("tools/build.ps1", ["dial-tx", "din-rx", "c6l-modem"])
-        self.assert_contains_all("tools/flash.ps1", ["dial-tx", "din-rx", "c6l-modem"])
+        self.assert_contains_all("tools/build.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal"])
+        self.assert_contains_all("tools/flash.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal"])
         self.assert_contains_all("firmware/dial-tx/main/CMakeLists.txt", ["gui_prop_tx.cpp"])
 
     def test_build_helper_runs_pytest_and_gates_release_toolchains(self):
@@ -926,17 +1083,132 @@ class ProjectSourceTests(unittest.TestCase):
                 "PlatformIO command 'pio' was not found",
                 "ESP-IDF command 'idf.py' was not found",
                 "Invoke-ReleaseGates",
-                "Get-ReleaseBuildDefineArgs",
-                "PROP_ALLOW_PROTOTYPE_SHARED_KEY=0",
+                "Get-FirmwareBuildDefineArgs",
                 "PROP_TX_ALLOW_SELFTEST_FIRE=0",
                 "SELFTEST_FIRE=0",
-                "Prototype HMAC key is still compiled in",
-                "uiflow/dial/prop_frame.py",
-                "PROTOTYPE_SHARED_KEY\\s*=\\s*True",
+                "Runtime HMAC key provider is incomplete",
+                "C++ firmware must use the runtime HMAC key provider",
+                "C++ firmware still uses a source-embedded HMAC key",
                 '$Release -or ($env:CI -eq "true")',
             ],
         )
         self.assert_not_contains_any("tools/build.ps1", ["-m unittest", "unittest discover"])
+
+    def test_root_ci_runs_m5_deterministic_gates(self):
+        workflow = self.read_espos(".github/workflows/ci.yml")
+
+        self.assert_text_contains_all(
+            workflow,
+            [
+                "M5 Prop LoRa static + dry-smoke gates (no firmware build)",
+                "if: matrix.python-version == '3.12'",
+                "working-directory: integrations/m5-prop-lora",
+                "python -m pytest -q --tb=short tests",
+                "Toolchain-light release invariant check",
+                "tools/build.ps1 -ReleaseGatesOnly",
+                "python tools/validate_uiflow_blocks.py",
+                "python tools/uiflow_dial_offline.py bundle --dry-smoke --out \"$RUNNER_TEMP/m5_uiflow_dial_offline\"",
+                "python tools/uiflow_dial_offline.py verify --bundle \"$RUNNER_TEMP/m5_uiflow_dial_offline\"",
+                "M5 host C++ logic",
+                "./tools/run_host_tests.ps1",
+                "M5 Terminal firmware build",
+                "pio run -d firmware/sticks3-terminal -e sticks3-terminal",
+                "pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke",
+                "pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke",
+            ],
+            ".github/workflows/ci.yml",
+        )
+        self.assert_text_not_contains_any(
+            workflow,
+            [
+                "tools/build.ps1 -Release\n",
+                "idf.py -C firmware/dial-tx",
+            ],
+            ".github/workflows/ci.yml",
+        )
+
+    def test_build_docs_explain_host_safety_test_compiler_prereq(self):
+        self.assert_contains_all(
+            "BUILD.md",
+            [
+                "Host C++ logic tests",
+                "./tools/run_host_tests.ps1",
+                "firmware/tests/test_*.cpp",
+                "Terminal pure logic",
+                "g++",
+                "WinLibs",
+                "winget install --id BrechtSanders.WinLibs.POSIX.UCRT",
+                "sudo apt-get install g++",
+                "xcode-select --install",
+                "-Compiler",
+                "CI / local deterministic gates",
+                "CI-equivalent local gate from the ESPOS repo root",
+                "python -m pytest -q --tb=short tests",
+                "python tools/uiflow_dial_offline.py verify --bundle build/m5_uiflow_dial_offline",
+                "Terminal PlatformIO firmware builds",
+                "sticks3-terminal-chain-uart-smoke",
+                "sticks3-terminal-oled-i2c-scan-smoke",
+                "does not compile Dial ESP-IDF or non-Terminal PlatformIO firmware images",
+                "./tools/build.ps1 -Release",
+                "hardware key provisioning",
+            ],
+        )
+
+    def test_host_cpp_runner_discovers_all_firmware_test_cpp_files(self):
+        self.assert_contains_all(
+            "tools/run_host_tests.ps1",
+            [
+                "$TestDir  = Join-Path $RepoRoot 'firmware/tests'",
+                "-Filter 'test_*.cpp'",
+                "shared/terminal + sticks3-terminal pure logic",
+                "USB setup replies",
+                "Arduino",
+                "Get-ChildItem",
+                "& $gxx",
+                "& $exe",
+            ],
+        )
+
+    def test_docs_do_not_overstate_chain_key_or_production_acceptance(self):
+        readme = self.read("README.md")
+        self.assert_text_contains_all(
+            readme,
+            [
+                "dry-smoke bench work is supported",
+                "full current hardware acceptance, including Chain Key, is pending",
+                "Production release requires runtime non-source HMAC key provisioning",
+            ],
+            "README.md",
+        )
+        self.assert_text_not_contains_any(
+            readme,
+            [
+                "chain (Dial",
+                "LoRa + 2.4 link, ARM/Fire/Preview/sync",
+            ],
+            "README.md",
+        )
+
+        control = self.read("docs/control_architecture.md")
+        self.assert_text_contains_all(
+            control,
+            [
+                "M5Stack Chain Key",
+                "Port B",
+                "UART/M5Chain",
+                "VERIFY ON DEVICE",
+            ],
+            "docs/control_architecture.md",
+        )
+        self.assert_text_not_contains_any(
+            control,
+            [
+                "NEW, to be added",
+                "new GPIO",
+                "pick the FIRE-button GPIO",
+            ],
+            "docs/control_architecture.md",
+        )
 
     def test_release_build_flags_are_consumed_by_firmware_build_systems(self):
         self.assert_contains_all(
@@ -948,43 +1220,252 @@ class ProjectSourceTests(unittest.TestCase):
             ["PROP_RELEASE_BUILD_FLAGS", "separate_arguments", "add_compile_options"],
         )
 
-    def test_prototype_hmac_key_is_marked_and_release_blocked(self):
+    def test_cpp_hmac_key_is_runtime_provisioned_and_uiflow_key_fails_closed(self):
         tx = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
         rx = self.read("firmware/din-rx/src/prop_rx.cpp")
+        tx_h = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h")
+        provider = self.read("shared/protocol/prop_runtime_key.h")
         ui = self.read("uiflow/dial/prop_frame.py")
         for text in (tx, rx):
-            self.assertIn("PROP_ALLOW_PROTOTYPE_SHARED_KEY", text)
-            self.assertIn("#error", text)
-            self.assertIn("prototype shared HMAC key", text)
-        self.assertIn("PROTOTYPE_SHARED_KEY = True", ui)
+            self.assertIn("prop_runtime_key.h", text)
+            self.assertIn("RuntimeKey", text)
+            self.assertIn("KEY MISSING", text)
+            self.assertNotIn("SHARED_KEY[]", text)
+            self.assertNotIn("sizeof(SHARED_KEY)", text)
+        self.assertIn("prop_runtime_key::RuntimeKey _runtime_key", tx_h)
+        self.assertIn("NVS_NAMESPACE", provider)
+        self.assertIn("NVS_KEY", provider)
+        self.assertIn("MIN_KEY_LENGTH = 16", provider)
+        self.assertIn("isKnownDrySmokeKey", provider)
+        self.assertIn("secureZero", provider)
+        self.assertIn("volatile std::uint8_t* p", provider)
+        self.assertIn("secureZero(bytes)", provider)
+        self.assertIn("PROP_ALLOW_DRY_SMOKE_RUNTIME_KEY", provider)
+        self.assertNotIn("00112233445566778899aabbccddeeff", provider)
+        self.assertIn("import prop_key", ui)
+        self.assertIn("prop_key.py did not provide SHARED_KEY_HEX", ui)
+        self.assertIn("prop_key.py must not define SHARED_KEY", ui)
+        self.assertIn("ALLOW_PROTOTYPE_SHARED_KEY", ui)
+        self.assertIn("dry-smoke HMAC key", ui)
+        self.assertIn("DRY_SMOKE_KEY_ACTIVE", ui)
+        self.assertNotIn("00112233445566778899aabbccddeeff", ui)
+        self.assertNotIn("_PROTOTYPE_KEY", ui)
+        self.assertNotIn("SHARED_KEY = bytes(", ui)
+        self.assertNotIn("00112233445566778899aabbccddeeff", ui)
         self.assertIn("PROP_TX_ALLOW_SELFTEST_FIRE", tx)
         self.assertIn("SELFTEST_FIRE requires explicit bench-only", tx)
+        self.assertIn("prop_runtime_key::secureZero(buffer)", tx)
+        self.assertIn("prop_runtime_key::secureZero(buffer)", rx)
 
-    def test_release_build_fails_closed_while_prototype_hmac_key_is_present(self):
-        shell = shutil.which("powershell") or shutil.which("pwsh")
-        if shell is None:
-            self.skipTest("PowerShell is not available")
+    def test_dial_tx_send_paths_use_runtime_hmac_key_material(self):
+        tx = self.read("firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp")
+        for method in [
+            "_send_frame",
+            "_send_fire_burst",
+            "_send_arm",
+        ]:
+            with self.subTest(method=method):
+                start = tx.index(f"PropTx::{method}")
+                next_method = tx.find("\nvoid PropTx::", start + 1)
+                if next_method == -1:
+                    next_method = tx.find("\nbool PropTx::", start + 1)
+                body = tx[start: next_method if next_method != -1 else len(tx)]
+                self.assertIn("_runtime_key_or_status()", body)
+                self.assertIn("key->data()", body)
+                self.assertIn("key->size()", body)
+                self.assertIn("prop_protocol::encodeFrame", body)
 
-        command = [shell, "-NoProfile"]
-        if Path(shell).name.lower().startswith("powershell"):
-            command += ["-ExecutionPolicy", "Bypass"]
-        command += ["-File", str(ROOT / "tools" / "build.ps1"), "-Release"]
+    def test_release_gate_checks_runtime_hmac_provider_instead_of_compiled_key(self):
+        build = self.read("tools/build.ps1")
+        self.assertIn("shared/protocol/prop_runtime_key.h", build)
+        self.assertIn("load_runtime_key_from_nvs", build)
+        self.assertIn("loadRuntimeKeyFromPreferences", build)
+        self.assertIn("PROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=0", build)
+        self.assertIn("DEBUG_HUD=0", build)
+        self.assertIn("Get-ReleaseBuildDefineMap", build)
+        self.assertIn("Test-ReleaseDefineIsExactlyZero", build)
+        self.assertIn("Test-RuntimeKeyAtRestPolicy", build)
+        self.assertIn("docs/runtime_key_at_rest_decision.json", build)
+        self.assertIn("PROP_RUNTIME_KEY_AT_REST_DECISION", build)
+        self.assertIn('$releaseFlags = $env:PROP_RELEASE_BUILD_FLAGS', build)
+        self.assertIn('(Get-FirmwareBuildDefineArgs) -join " "', build)
+        self.assertIn("Release builds must reject the dry-smoke runtime HMAC key.", build)
+        self.assertIn("Release builds must disable receiver debug HUD/serial diagnostics.", build)
+        self.assertIn("Release builds must disable bench self-test fire override.", build)
+        self.assertIn("Release builds must keep bench auto-fire disabled.", build)
+        self.assertIn("SHARED_KEY\\s*\\[\\]", build)
+        self.assertIn("sizeof\\s*\\(\\s*SHARED_KEY\\s*\\)", build)
+        self.assertNotIn("Prototype HMAC key is still compiled in", build)
 
+    def test_release_gates_reject_nonzero_missing_or_duplicate_safety_defines(self):
+        cases = [
+            (
+                "-DPROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=0x10 "
+                "-DPROP_TX_ALLOW_SELFTEST_FIRE=0 -DSELFTEST_FIRE=0 -DDEBUG_HUD=0",
+                "Release builds must reject the dry-smoke runtime HMAC key.",
+            ),
+            (
+                "-DPROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=0 "
+                "-DPROP_TX_ALLOW_SELFTEST_FIRE=0 -DSELFTEST_FIRE=0 "
+                "-DDEBUG_HUD=0 -DDEBUG_HUD=1",
+                "Release build define DEBUG_HUD is set more than once.",
+            ),
+            (
+                "-DPROP_TX_ALLOW_SELFTEST_FIRE=0 -DSELFTEST_FIRE=0 -DDEBUG_HUD=0",
+                "Release builds must reject the dry-smoke runtime HMAC key.",
+            ),
+        ]
+        for flags, expected_error in cases:
+            with self.subTest(flags=flags):
+                env = os.environ.copy()
+                env["PROP_RELEASE_BUILD_FLAGS"] = flags
+                result = subprocess.run(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(ROOT / "tools" / "build.ps1"),
+                        "-ReleaseGatesOnly",
+                    ],
+                    cwd=ROOT,
+                    env=env,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected_error, result.stderr)
+
+    def test_release_gates_require_runtime_key_at_rest_policy_decision(self):
+        valid_policy = ROOT / "docs" / "runtime_key_at_rest_decision.json"
+        self.assertTrue(valid_policy.exists())
+        policy_text = valid_policy.read_text(encoding="utf-8")
+        self.assertIn("prop-runtime-key-at-rest-decision-v1", policy_text)
+        self.assertIn("accepted-with-waiver", policy_text)
+        self.assertIn("raw_key_bytes_allowed_in_repo", policy_text)
+        self.assertNotIn("00112233445566778899aabbccddeeff", policy_text)
+
+        sdkconfig = self.read("firmware/dial-tx/sdkconfig")
+        self.assertIn("# CONFIG_SECURE_BOOT is not set", sdkconfig)
+        self.assertIn("# CONFIG_FLASH_ENCRYPTION_ENABLED is not set", sdkconfig)
+
+        cases = [
+            (ROOT / "build" / "missing-runtime-key-policy.json", "policy decision is required"),
+        ]
+        invalid_policy = ROOT / "build" / "invalid-runtime-key-policy.json"
+        invalid_policy.parent.mkdir(parents=True, exist_ok=True)
+        invalid_policy.write_text('{"schema":"wrong"}\n', encoding="utf-8")
+        cases.append((invalid_policy, "policy decision schema mismatch"))
+
+        for policy_path, expected_error in cases:
+            with self.subTest(policy_path=str(policy_path)):
+                env = os.environ.copy()
+                env["PROP_RUNTIME_KEY_AT_REST_DECISION"] = str(policy_path)
+                result = subprocess.run(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(ROOT / "tools" / "build.ps1"),
+                        "-ReleaseGatesOnly",
+                    ],
+                    cwd=ROOT,
+                    env=env,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected_error, result.stderr)
+
+        env = os.environ.copy()
+        env["PROP_RUNTIME_KEY_AT_REST_DECISION"] = str(valid_policy)
         result = subprocess.run(
-            command,
+            [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(ROOT / "tools" / "build.ps1"),
+                "-ReleaseGatesOnly",
+            ],
             cwd=ROOT,
+            env=env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=False,
         )
-        combined = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Release gates completed.", result.stdout)
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Prototype HMAC key is still compiled in", combined)
-        self.assertIn("Release gates failed", combined)
-        self.assertNotIn("PlatformIO command 'pio' was not found", combined)
-        self.assertNotIn("ESP-IDF command 'idf.py' was not found", combined)
+    def test_disabled_openthread_dataset_does_not_commit_public_credentials(self):
+        sdkconfig = self.read("firmware/dial-tx/sdkconfig")
+
+        self.assertIn("# CONFIG_OPENTHREAD_ENABLED is not set", sdkconfig)
+        self.assertIn(
+            'CONFIG_OPENTHREAD_NETWORK_MASTERKEY="00000000000000000000000000000000"',
+            sdkconfig,
+        )
+        self.assertIn(
+            'CONFIG_OPENTHREAD_NETWORK_PSKC="00000000000000000000000000000000"',
+            sdkconfig,
+        )
+        self.assertNotIn("CONFIG_OPENTHREAD_NETWORK_MASTERKEY=\"00112233445566778899aabbccddeeff\"", sdkconfig)
+        self.assertNotIn("CONFIG_OPENTHREAD_NETWORK_PSKC=\"104810e2315100afd6bc9215a6bfac53\"", sdkconfig)
+
+    def test_cxx_runtime_key_provisioning_runbook_is_concrete(self):
+        self.assert_contains_all(
+            "docs/cxx_key_provisioning.md",
+            [
+                "namespace `prop_key`, key `shared`",
+                "prop-key.hex",
+                "tools/provision_prop_key.py",
+                "prop_key_manifest.json",
+                "prop_key_receipt.template.json",
+                "prop_key.nvs.csv",
+                "sha256(key_bytes)",
+                "Hardware Receipt And Readback",
+                "read_flash 0x9000 0x6000",
+                "readback bins are secret",
+                "complete NVS partition image",
+                "docs/runtime_key_at_rest_decision.json",
+                "secureZero(readback",
+                "validated.clear()",
+                "loaded.clear()",
+                "prop_runtime_key::NVS_NAMESPACE",
+                "prop_runtime_key::NVS_KEY",
+                "nvs_set_blob",
+                "Preferences prefs",
+                "prefs.putBytes",
+                "KEY MISSING",
+                "BAD MAC",
+                "Production hardware acceptance remains blocked",
+            ],
+        )
+
+    def test_uiflow_docs_do_not_regress_block_or_key_upload_paths(self):
+        uiflow_readme = self.read("uiflow/dial/README.md")
+        bench = self.read("docs/bench_test_checklist.md")
+        control = self.read("docs/control_architecture.md")
+        self.assertIn("`prop_key.py`, `prop_frame.py`", uiflow_readme)
+        self.assertIn("uiflow/dial/blocks/dist/PropTx.m5b2", uiflow_readme)
+        self.assertIn("build/uiflow_dial_offline/blocks/PropTx.m5b2", uiflow_readme)
+        self.assertIn("--dry-smoke --dry-run", uiflow_readme)
+        self.assertIn("--prop-key-hex-file C:\\path\\to\\prop-key.hex", uiflow_readme)
+        self.assertIn("docs/cxx_key_provisioning.md", bench)
+        self.assertIn("KEY MISSING` for the HMAC runtime key", bench)
+        self.assertIn("FIRE KEY MISSING", bench)
+        self.assertIn("separate from the physical Chain Key diagnostic", control)
+        self.assertNotIn("Import `blocks/PropTx.m5b2`", uiflow_readme)
+        self.assertNotIn("currently always `_next_field`", control)
 
 
 if __name__ == "__main__":

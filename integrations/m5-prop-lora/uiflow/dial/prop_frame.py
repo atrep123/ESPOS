@@ -86,31 +86,75 @@ LED_PAYLOAD_LENGTH = 13
 REMOTE_LED_PAYLOAD_LENGTH = 2
 PALETTE_HEADER_LENGTH = 3
 MAX_PALETTE_COLORS = 8
+MIN_RUNTIME_KEY_BYTES = 16
+MAX_RUNTIME_KEY_BYTES = 64
 
-# The 16-byte HMAC secret baked into the C++ firmware (app_prop_tx.cpp SHARED_KEY).
-# Kept here ONLY so the PoC is self-contained + testable. A real deployment would
-# load this from secure storage, exactly like the firmware keeps it out of headers.
-PROTOTYPE_SHARED_KEY = True
-SHARED_KEY = bytes(
-    (
-        0x00,
-        0x11,
-        0x22,
-        0x33,
-        0x44,
-        0x55,
-        0x66,
-        0x77,
-        0x88,
-        0x99,
-        0xAA,
-        0xBB,
-        0xCC,
-        0xDD,
-        0xEE,
-        0xFF,
-    )
-)
+# HMAC key material is provisioned out-of-band by /flash/prop_key.py.
+# The runtime intentionally has no compiled prototype key and no implicit fallback.
+# Dry-smoke bundles may mark ALLOW_PROTOTYPE_SHARED_KEY=True in prop_key.py, but they
+# must still provide the key explicitly; production bundle verification rejects that
+# marker before upload.
+
+
+def _hex_nibble(ch):
+    code = ord(ch)
+    if 48 <= code <= 57:
+        return code - 48
+    if 65 <= code <= 70:
+        return code - 55
+    if 97 <= code <= 102:
+        return code - 87
+    raise ValueError("shared key hex contains a non-hex character")
+
+
+def _key_from_hex(value):
+    text = "".join(str(value).strip().replace(":", " ").split())
+    if len(text) % 2:
+        raise ValueError("shared key hex must have an even number of digits")
+    out = bytearray()
+    for index in range(0, len(text), 2):
+        out.append((_hex_nibble(text[index]) << 4) | _hex_nibble(text[index + 1]))
+    return bytes(out)
+
+
+def _validate_shared_key(key, source):
+    key = bytes(key)
+    if len(key) < MIN_RUNTIME_KEY_BYTES:
+        raise RuntimeError(f"{source} must provide at least 16 bytes of HMAC key material")
+    if len(key) > MAX_RUNTIME_KEY_BYTES:
+        raise RuntimeError(f"{source} must provide at most 64 bytes of HMAC key material")
+    return key
+
+
+def _is_known_dry_smoke_key(key):
+    return key == bytes(range(0x00, 0x100, 0x11))[:16]
+
+
+def _load_shared_key():
+    try:
+        import prop_key  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError("prop_key.py did not provide SHARED_KEY or SHARED_KEY_HEX") from exc
+
+    allow_prototype = getattr(prop_key, "ALLOW_PROTOTYPE_SHARED_KEY", False)
+    if not isinstance(allow_prototype, bool):
+        raise RuntimeError("prop_key.py ALLOW_PROTOTYPE_SHARED_KEY must be True or False")
+    if hasattr(prop_key, "SHARED_KEY"):
+        raise RuntimeError("prop_key.py must not define SHARED_KEY; use SHARED_KEY_HEX")
+    key_hex = getattr(prop_key, "SHARED_KEY_HEX", None)
+    if key_hex is None:
+        raise RuntimeError("prop_key.py did not provide SHARED_KEY_HEX")
+    key = _key_from_hex(key_hex)
+
+    key = _validate_shared_key(key, "prop_key.py")
+    if _is_known_dry_smoke_key(key) and not allow_prototype:
+        raise RuntimeError(
+            "prop_key.py uses the dry-smoke HMAC key without explicit ALLOW_PROTOTYPE_SHARED_KEY"
+        )
+    return key, allow_prototype
+
+
+SHARED_KEY, DRY_SMOKE_KEY_ACTIVE = _load_shared_key()
 
 # Default frame addressing (prop_tx_config.h: PROP_KEY_ID / PROP_SOURCE / PROP_DESTINATION)
 DEFAULT_KEY_ID = 1
@@ -125,6 +169,11 @@ LED_PAYLOAD_BRIGHTNESS = 0xFF
 # that have a clock may sleep between the returned lines.
 FIRE_BURST_COPIES = 3
 FIRE_BURST_GAP_MS = 18
+ARM_BURST_COPIES = 2
+STOP_RETRY_COPIES = 3
+STOP_RETRY_TIMEOUT_MS = 120
+STOP_RETRY_GAP_MS = 20
+REMOTE_LED_BURST_COPIES = 2
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +252,7 @@ def encode_frame(
     frame_type, key_id, source, destination, sequence, nonce, payload=b"", key=SHARED_KEY
 ):
     """Return the full on-air frame bytes: 20-byte header + payload + 12-byte MAC."""
+    key = _validate_shared_key(key, "explicit key")
     payload = bytes(payload)
     if len(payload) > MAX_PAYLOAD_LENGTH:
         raise ValueError("payload too long")
@@ -310,7 +360,7 @@ class PropSender:
         epoch=None,
         rand32=_default_rand32,
     ):
-        self.key = bytes(key)
+        self.key = _validate_shared_key(key, "explicit key")
         self.key_id = key_id
         self.source = source
         self.destination = destination
@@ -354,13 +404,41 @@ class PropSender:
         return [line for _ in range(copies)]
 
     def stop_line(self):
-        return ff_line(self.encode(STOP))
+        return send_line(self.encode(STOP))
+
+    def stop_lines(self, copies=STOP_RETRY_COPIES):
+        copies = int(copies)
+        if copies < 1:
+            raise ValueError("stop retry copies must be >= 1")
+        line = self.stop_line()
+        return [line for _ in range(copies)]
 
     def arm_line(self):
         return ff_line(self.encode(ARM))
 
+    def arm_lines(self, copies=ARM_BURST_COPIES):
+        copies = int(copies)
+        if copies < 1:
+            raise ValueError("arm burst copies must be >= 1")
+        line = self.arm_line()
+        return [line for _ in range(copies)]
+
     def remote_led_line(self, mask):
         return ff_line(self.encode(REMOTE_LED, encode_remote_led(mask)))
+
+    def remote_led_lines(
+        self,
+        mask,
+        colors=None,
+        palette_rev=1,
+        fade=False,
+        copies=REMOTE_LED_BURST_COPIES,
+    ):
+        copies = int(copies)
+        if copies < 1:
+            raise ValueError("remote LED burst copies must be >= 1")
+        line = self.remote_led_line(mask)
+        return [line for _ in range(copies)]
 
     def palette_line(self, palette_rev, fade, colors, track_ack=True):
         frame = self.encode(PALETTE_SET, encode_palette_payload(palette_rev, fade, colors))

@@ -7,6 +7,38 @@ license  MIT License
 """
 
 
+def _remember_colors(instance, colors):
+    incoming = list(colors)
+    if len(incoming) == 4 and len(instance._colors) > 4:
+        instance._colors = incoming + list(instance._colors[4:])
+    else:
+        instance._colors = incoming
+    return incoming
+
+
+def _first_four_for_frame(instance, colors):
+    return _remember_colors(instance, colors)[:4]
+
+
+DEFAULT_HUES = [0, 120, 240, 210, 60]
+
+
+def _delay_ms_or_raise(message):
+    delay_ms = None
+    try:
+        import time
+
+        if hasattr(time, "sleep_ms"):
+            delay_ms = time.sleep_ms
+        elif hasattr(time, "sleep"):
+            delay_ms = lambda ms: time.sleep(ms / 1000)
+    except ImportError:
+        delay_ms = None
+    if delay_ms is None:
+        raise RuntimeError(message)
+    return delay_ms
+
+
 class PropTx:
     """
     note:
@@ -47,6 +79,8 @@ class PropTx:
         self._tx = prop_frame.PropSender()
         self._prop_frame = prop_frame
         self._prop_ui = prop_ui
+        self._colors = self.default_colors()
+        self._armed = False
         self._uart.write("\n")
 
     def preview(self, colors):
@@ -58,7 +92,7 @@ class PropTx:
                 name: colors
                 type: list
         """
-        self._uart.write(self._tx.preview_line(colors))
+        self._uart.write(self._tx.preview_line(_first_four_for_frame(self, colors)))
 
     def fire(self, colors):
         """
@@ -69,71 +103,43 @@ class PropTx:
                 name: colors
                 type: list
         """
-        lines = self._tx.fire_burst_lines(colors)
-        delay_ms = None
-        try:
-            import time
-
-            if hasattr(time, "sleep_ms"):
-                delay_ms = time.sleep_ms
-            elif hasattr(time, "sleep"):
-                delay_ms = lambda ms: time.sleep(ms / 1000)
-        except ImportError:
-            delay_ms = None
-        if len(lines) > 1 and delay_ms is None:
-            raise RuntimeError("time.sleep_ms or time.sleep is required for Prop FIRE burst timing")
+        if not self._armed:
+            raise RuntimeError("Prop FIRE requires Prop ARM first")
+        delay_ms = _delay_ms_or_raise(
+            "time.sleep_ms or time.sleep is required for Prop FIRE burst timing"
+        )
+        lines = self._tx.fire_burst_lines(_first_four_for_frame(self, colors))
         for index, line in enumerate(lines):
             self._uart.write(line)
             # Keep redundant FIRE copies spaced by the protocol constant; the
             # receiver dedups them by sequence, but the modem still needs air gap.
-            if index + 1 < len(lines) and delay_ms is not None:
+            if index + 1 < len(lines):
                 delay_ms(self._prop_frame.FIRE_BURST_GAP_MS)
+        self._armed = False
 
     def stop(self):
         """
         label:
             en: 'Prop STOP %1'
         """
-        self._uart.write(self._tx.stop_line())
+        delay_ms = _delay_ms_or_raise(
+            "time.sleep_ms or time.sleep is required for Prop STOP retry timing"
+        )
+        lines = self._tx.stop_lines()
+        for index, line in enumerate(lines):
+            self._uart.write(line)
+            if index + 1 < len(lines):
+                delay_ms(self._prop_frame.STOP_RETRY_GAP_MS)
+        self._armed = False
 
     def arm(self):
         """
         label:
             en: 'Prop ARM %1'
         """
-        self._uart.write(self._tx.arm_line())
-
-    def remote_led(self, which: int = 3):
-        """
-        label:
-            en: 'Prop remote LED %1 which %2'
-        params:
-            which:
-                name: which
-                type: int
-                default: '3'
-                field: number
-                min: '3'
-                max: '5'
-        """
-        if which == 3:
-            bit = self._prop_frame.REMOTE_LED_BIT_LED3
-        elif which == 5:
-            bit = self._prop_frame.REMOTE_LED_BIT_LED5
-        else:
-            return
-        self._uart.write(self._tx.remote_led_line(bit))
-
-    def sync_palette(self, colors):
-        """
-        label:
-            en: 'Prop sync palette %1 colors %2'
-        params:
-            colors:
-                name: colors
-                type: list
-        """
-        self._uart.write(self._tx.palette_line(1, False, colors, track_ack=False))
+        for line in self._tx.arm_lines():
+            self._uart.write(line)
+        self._armed = True
 
     def reply(self) -> str:
         """
@@ -146,79 +152,17 @@ class PropTx:
         if isinstance(data, str):
             return data
         try:
-            return data.decode()
+            return data.decode("utf-8", "ignore")
         except Exception:
             return ""
-
-    def hue_color(self, deg: int = 0) -> tuple:
-        """
-        label:
-            en: 'Prop hue %1 deg %2 to color'
-        params:
-            deg:
-                name: deg
-                type: int
-                default: '0'
-                field: number
-                min: '0'
-                max: '359'
-        """
-        return self._prop_ui.hsv(deg)
-
-    def default_hues(self) -> list:
-        """
-        label:
-            en: 'Prop default hues %1'
-        """
-        return [0, 120, 240, 210, 60]
 
     def default_colors(self) -> list:
         """
         label:
             en: 'Prop default colors %1'
         """
-        return self._prop_ui.palette_from_hues(self.default_hues())
-
-    def palette_from_hues(self, hues) -> list:
-        """
-        label:
-            en: 'Prop colors from hues %1 hues %2'
-        params:
-            hues:
-                name: hues
-                type: list
-        """
-        return self._prop_ui.palette_from_hues(hues)
-
-    def set_color(self, colors, index: int = 1, color=(255, 0, 0)) -> list:
-        """
-        label:
-            en: 'Prop set color %1 colors %2 LED %3 color %4'
-        params:
-            colors:
-                name: colors
-                type: list
-            index:
-                name: index
-                type: int
-                default: '1'
-                field: number
-                min: '1'
-                max: '5'
-            color:
-                name: color
-                type: tuple
-        """
-        out = list(colors)
-        if not out:
-            return [color]
-        try:
-            pos = int(index)
-        except Exception:
-            pos = 1
-        pos = max(1, min(pos, len(out)))
-        out[pos - 1] = color
-        return out
+        self._colors = self._prop_ui.palette_from_hues(DEFAULT_HUES)
+        return list(self._colors)
 
     def first_four(self, colors) -> list:
         """
@@ -275,16 +219,3 @@ class PropTx:
         """
         return self._prop_ui.rgb888(color)
 
-    def remote_led3(self):
-        """
-        label:
-            en: 'Prop remote LED3 %1'
-        """
-        self.remote_led(3)
-
-    def remote_led5(self):
-        """
-        label:
-            en: 'Prop remote LED5 %1'
-        """
-        self.remote_led(5)

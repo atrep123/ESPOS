@@ -22,6 +22,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from gemini_code_review import redact_secrets, safe_print
 from gemini_key import load_api_key
 import preview_din_rx_render as P
 from PIL import Image, ImageDraw, ImageFont
@@ -42,7 +43,7 @@ CONTEXT = (
     "and firing (PALI) states MUST be unmistakable across a room. UI strings are Czech "
     "(KLID=idle/safe, NABITO=armed, PALI=firing, STOP=e-stopped/latched). The agreed "
     "design is a 'decluttered hybrid' with 3 zones: a STATUS bar on top, a framed EFEKT "
-    "panel (4 LED brightness curves in identity colours red/green/blue/amber + a colour "
+    "panel (5 LED brightness curves in identity colours + a colour "
     "PALETTE strip merged at the 0% line + a PRECHOD/SKOK fade/step tag), and a "
     "focus+scroll PARAMETRY list (2 rows). There is a 4px state-colour spine down the "
     "left edge. Danger states get a full colour flood + a hazard triangle + a screen "
@@ -88,13 +89,19 @@ def _ask(endpoint: dict[str, object], parts: list[dict], max_tokens: int = 1400)
     try:
         resp = urllib.request.urlopen(req, timeout=180)  # noqa: S310
         data = json.loads(resp.read())
-        return (
+        text = (
             data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-        ) or "(empty)"
+        )
+        return redact_secrets(text) or "(empty)"
     except urllib.error.HTTPError as exc:
-        return f"ERROR HTTP {exc.code}: {exc.read().decode('utf-8', 'replace')[:400]}"
+        detail = redact_secrets(exc.read().decode("utf-8", "replace"))[:400]
+        return f"ERROR HTTP {exc.code}: {detail}"
     except Exception as exc:
-        return f"ERROR: {exc}"
+        return redact_secrets(f"ERROR: {exc}")
+
+
+def _is_error_result(text: str) -> bool:
+    return any(line.strip().startswith("ERROR") for line in text.splitlines())
 
 
 def hires_contact(named: list[tuple[str, Image.Image]]) -> Image.Image:
@@ -124,6 +131,7 @@ def hires_contact(named: list[tuple[str, Image.Image]]) -> Image.Image:
 
 def main() -> int:
     endpoint = _endpoint(_load_api_key())
+    had_error = False
     out = ROOT / "build" / "preview_dinrx_hires"
     out.mkdir(parents=True, exist_ok=True)
 
@@ -169,6 +177,7 @@ def main() -> int:
             {"inline_data": {"mime_type": "image/png", "data": _b64(sheet)}},
         ],
     )
+    had_error = had_error or _is_error_result(holistic)
     lines += ["## Holistic critique (all states)", "", holistic, ""]
 
     # 2) Per-state structured verdict.
@@ -188,15 +197,17 @@ def main() -> int:
             [{"text": per_prompt}, {"inline_data": {"mime_type": "image/png", "data": _b64(im)}}],
             max_tokens=300,
         )
+        had_error = had_error or _is_error_result(verdict)
         lines += [f"### {name}", "```", verdict.strip(), "```", ""]
 
     rev = ROOT / "build" / "reviews"
     rev.mkdir(parents=True, exist_ok=True)
     md = rev / "gemini_dinrx_hires.md"
-    md.write_text("\n".join(lines), encoding="utf-8")
-    print("\n" + "\n".join(lines))
-    print(f"\n[saved -> {md}]\n[hires sheet -> {sheet_path}]")
-    return 0
+    report = redact_secrets("\n".join(lines))
+    md.write_text(report, encoding="utf-8")
+    safe_print("\n" + report)
+    safe_print(f"\n[saved -> {md}]\n[hires sheet -> {sheet_path}]")
+    return 1 if had_error else 0
 
 
 if __name__ == "__main__":

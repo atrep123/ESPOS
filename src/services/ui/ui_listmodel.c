@@ -210,16 +210,19 @@ int ui_listmodel_active_slot(const UiListModel *m)
 
 void ui_listmodel_format_scroll(const UiListModel *m, char *out, int out_cap)
 {
+    char tmp[16];
+
     if (out == NULL || out_cap <= 0) {
         return;
     }
     if (m == NULL || m->count == 0) {
-        snprintf(out, (size_t)out_cap, "0/0");
+        ui_copy_str(out, out_cap, "0/0");
         return;
     }
     unsigned a = (unsigned)m->active + 1U;
     unsigned c = (unsigned)m->count;
-    snprintf(out, (size_t)out_cap, "%u/%u", a, c);
+    snprintf(tmp, sizeof(tmp), "%u/%u", a, c);
+    ui_copy_str(out, out_cap, tmp);
 }
 
 void ui_listmodel_parse_item_text(const char *text, char *label, int label_cap, char *value, int value_cap)

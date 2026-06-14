@@ -41,8 +41,10 @@ DEFAULT_TARGETS = (
     "uiflow/dial/main.py",
     "shared/core/safety_logic.h",
     "shared/protocol/prop_protocol.h",
+    "shared/protocol/prop_runtime_key.h",
     "shared/protocol/protocol.py",
     "firmware/din-rx/src/prop_rx.cpp",
+    "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.h",
     "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
     "firmware/c6l-modem/src/modem_core.h",
     "tools/build.ps1",
@@ -65,7 +67,10 @@ DEFAULT_TARGETS = (
     "tests/test_sim_link_safety.py",
     "README.md",
     "BUILD.md",
+    "docs/control_architecture.md",
+    "docs/cxx_key_provisioning.md",
     "docs/hardware.md",
+    "docs/bench_test_checklist.md",
     "uiflow/dial/README.md",
     "uiflow/dial/blocks/README.md",
     "tools/gemini_dinrx_review.py",
@@ -91,18 +96,79 @@ unredacted runtime payloads, or logs containing key values are blockers.
 Treat <redacted> inside source excerpts as a sanitization artifact, not source
 evidence, unless confirmed by unredacted tests or coverage.
 
-The prototype HMAC key is acceptable only for PoC/dry-smoke work when release
-gates explicitly block it from Release/CI builds; treat it as a production/field
-release blocker if the gate is missing, untested, or bypassable.
+C++ Dial/DinMeter firmware must not compile usable HMAC key material. A hardcoded
+byte pattern used only to reject the known dry-smoke key is not usable key
+material. Treat production as blocked unless the runtime key provider is used,
+missing/mismatched keys fail closed, and UIFlow `/flash/prop_key.py` keys are
+proven to match the C++ runtime provisioning source.
+
+Interpret these expected invariants carefully:
+- `uiflow/dial/prop_frame.py` intentionally rejects legacy `SHARED_KEY`
+  byte/string schemas and accepts only `SHARED_KEY_HEX`; that rejection is a
+  safety control, not a mismatch. Flag it only if generated bundles still emit
+  legacy `SHARED_KEY`, or if malformed/missing keys do not fail closed.
+- The internal assignment `SHARED_KEY, DRY_SMOKE_KEY_ACTIVE = _load_shared_key()`
+  in `uiflow/dial/prop_frame.py` is expected runtime state after validation. It
+  is not the legacy `/flash/prop_key.py` schema and is not emitted by the bundle
+  generator. Do not report it as a blocker.
+- `tools/gemini_key.py` necessarily returns the Gemini API key string in memory
+  so the HTTP request can be authenticated. This is a blocker only if the key is
+  printed, persisted, included in prompts/reports, committed, or sent to an
+  unintended endpoint; check the redaction and no-network-before-redaction tests
+  for evidence.
+- `shared/protocol/prop_runtime_key.h` may contain the known dry-smoke key bytes
+  only as a rejection pattern. Treat that as acceptable evidence when production
+  builds force `PROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=0` and encoders/decoders use
+  `RuntimeKey` data loaded from NVS/Preferences. Flag any compiled secret bytes
+  that are used as HMAC key material.
+- C++ production hardware remains blocked until the local non-source key has
+  been provisioned into namespace `prop_key`, key `shared`; the presence of this
+  runbook gap is important, but do not confuse it with a committed-key leak.
+- Dial-TX runtime key usage is accepted when the snapshot shows the send/decode
+  paths calling `_runtime_key_or_status()` and passing `key->data()` plus
+  `key->size()` into `prop_protocol::encodeFrame` or `prop_protocol::decodeFrame`.
+  Do not report Dial-TX as unable to authenticate frames unless you can cite a
+  specific current send path that lacks those calls.
+- `key_handling_evidence` entries are file-local positive sightings. Missing
+  evidence in a header, test file, or unrelated helper is not a violation by
+  itself; judge send/receive authentication from the owning implementation files.
+
+The actual `/flash/prop_key.py` file is intentionally not included in snapshots
+because it can contain production HMAC material. For UIFlow/MicroPython, the
+runtime provider is the generated or provisioned `/flash/prop_key.py` file with
+`SHARED_KEY_HEX` plus `ALLOW_PROTOTYPE_SHARED_KEY`; it is expected not to use
+ESP32 NVS directly. Review `tools/uiflow_dial_offline.py`, its manifest, and
+tests for that schema. For C++ Dial/DinMeter, the runtime provider is NVS /
+Preferences namespace `prop_key`, key `shared`. Hardware acceptance requires
+both providers to be populated from the same local non-source secret. If no C++
+prototype key bytes or legacy prototype compile flag remain, do not require a
+prototype-key compile gate solely for its own sake; source and release gates
+should instead prove that compiled key bytes are absent.
 
 Return a concise engineering review:
+- EXPECTED INVARIANTS: accepted/violated/insufficient-evidence status for the
+  four named invariant areas above. Do not repeat accepted invariants under
+  BLOCKERS.
 - BLOCKERS: concrete issues that should stop hardware acceptance.
 - IMPORTANT: fixes worth doing before the next field test.
 - NICE: lower-risk cleanup.
 - TESTS: exact tests or commands you would add/run.
-- ACCEPTANCE: whether this is ready for a dry hardware smoke, and why.
+- ACCEPTANCE: separate statuses for `code snapshot`, `dry hardware smoke`, and
+  `production hardware acceptance`. Do not mark production hardware accepted
+  unless the C++ key provisioning and hardware smoke sequence are complete.
 
 Be specific and cite filenames from the snapshot. Avoid generic advice.
+"""
+
+PROP_KEY_SCHEMA = """\
+### /flash/prop_key.py redacted schema (not a committed file)
+
+```python
+# Generated by tools/uiflow_dial_offline.py from a local key file.
+# Do not commit generated production key bundles.
+ALLOW_PROTOTYPE_SHARED_KEY = False  # True only for explicit dry-smoke bundles
+SHARED_KEY_HEX = "<redacted hex, at least 16 bytes>"
+```
 """
 
 API_KEY_RE = re.compile(r"AIza[0-9A-Za-z_-]{20,}")
@@ -112,14 +178,44 @@ ENV_SECRET_RE = re.compile(
 QUERY_KEY_RE = re.compile(r"([?&]key=)([^&\s]+)")
 BEARER_RE = re.compile(r"(Authorization:\s*Bearer\s+)([^\s]+)", re.IGNORECASE)
 GOOG_HEADER_RE = re.compile(r"(x-goog-api-key:\s*)([^\s]+)", re.IGNORECASE)
+HMAC_HEX_ASSIGN_RE = re.compile(
+    r"\b((?:SHARED_KEY_HEX|PROP_KEY_HEX|HMAC_KEY_HEX|PROTOTYPE_KEY_HEX|DRY_SMOKE_KEY_HEX)\s*=\s*[\"'])([0-9A-Fa-f]{32,128})([\"'])"
+)
+RAW_HMAC_HEX_RE = re.compile(r"\b[0-9A-Fa-f]{32,128}\b")
 SECRET_LIKE_NAMES = {".gemini_api_key"}
 FULL_TEXT_CHAR_LIMIT = 4_000
-SUMMARY_MATCH_LIMIT = 60
+FULL_TEXT_TARGETS = {
+    "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp",
+    "firmware/din-rx/src/prop_rx.cpp",
+    "shared/protocol/prop_protocol.h",
+    "tools/uiflow_dial_offline.py",
+    "tests/test_uiflow_dial_offline.py",
+    "uiflow/dial/blocks/alpha2/PropTx.py",
+    "uiflow/dial/prop_frame.py",
+    "uiflow/dial/main.py",
+    "uiflow/dial/README.md",
+}
+SUMMARY_MATCH_LIMIT = 90
+REQUIRED_REVIEW_SECTIONS = (
+    "EXPECTED INVARIANTS",
+    "BLOCKERS",
+    "IMPORTANT",
+    "NICE",
+    "TESTS",
+    "ACCEPTANCE",
+)
+RAW_SOURCE_SECRET_PATTERNS = (
+    API_KEY_RE,
+    ENV_SECRET_RE,
+    QUERY_KEY_RE,
+    BEARER_RE,
+    GOOG_HEADER_RE,
+)
 SUMMARY_KEYWORDS = (
     "ACCEPTANCE",
-    "PROTOTYPE_SHARED_KEY",
     "PROP_ALLOW_PROTOTYPE_SHARED_KEY",
     "PROP_TX_ALLOW_SELFTEST_FIRE",
+    "DRY_SMOKE_KEY_ACTIVE",
     "Release",
     "Release/CI",
     "ARM",
@@ -135,16 +231,33 @@ SUMMARY_KEYWORDS = (
     "fire_burst",
     "GEMINI_API_KEY",
     "Gemini",
+    "KEY MISSING",
+    "--production requires --prop-key-hex-file",
+    "--prop-key-hex-file",
     "UIFlow",
     "blocks",
     "Custom",
     "mpremote",
     "offline",
     "PropTx",
+    "production bundle requires",
+    "key_fingerprint",
+    "key_kind",
+    "prop_runtime_key",
+    "prop_key_hex_file mismatch",
     "redact",
+    "refusing to bundle prototype HMAC key",
     "remote_led",
+    "runtime_key",
+    "runtimeKey",
     "secret",
+    "prop_key.py did not provide SHARED_KEY",
+    "prop_key.py must not define SHARED_KEY",
     "SHARED_KEY",
+    "key->data",
+    "key->size",
+    "load_runtime_key",
+    "loadRuntimeKey",
     "sleep_ms",
     "validate",
     "verify",
@@ -184,7 +297,66 @@ def redact_secrets(text: str) -> str:
     redacted = ENV_SECRET_RE.sub(lambda m: f"{m.group(1)}=<redacted>", redacted)
     redacted = QUERY_KEY_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
     redacted = BEARER_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
-    return GOOG_HEADER_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
+    redacted = GOOG_HEADER_RE.sub(lambda m: f"{m.group(1)}<redacted>", redacted)
+    return HMAC_HEX_ASSIGN_RE.sub(lambda m: f"{m.group(1)}<redacted>{m.group(3)}", redacted)
+
+
+def require_no_unredacted_secrets(text: str, label: str) -> None:
+    if redact_secrets(text) != text:
+        raise ValueError(f"unredacted secret-like value in {label}")
+
+
+def require_no_raw_transport_secrets(text: str, label: str) -> None:
+    for pattern in RAW_SOURCE_SECRET_PATTERNS:
+        for match in pattern.finditer(text):
+            value = match.group(0)
+            if _looks_like_regex_literal_fragment(value) or _looks_like_placeholder_secret(value):
+                continue
+            raise ValueError(f"raw secret-like value in {label}; refusing to include it")
+
+
+def require_no_raw_hmac_key_material(text: str, label: str) -> None:
+    if not _looks_hmac_key_material_label(label):
+        return
+    if RAW_HMAC_HEX_RE.search(text):
+        raise ValueError(f"raw HMAC key-like value in {label}; refusing to include it")
+
+
+def _looks_hmac_key_material_label(label: str) -> bool:
+    lower = label.replace("\\", "/").lower()
+    name = lower.rsplit("/", 1)[-1]
+    return (
+        name in {"prop-key.hex", "prop_key.hex", "prop_key.py"}
+        or name.endswith(".prop-key")
+        or name.endswith(".prop-key.hex")
+        or name.endswith(".prop-key.txt")
+        or name.endswith(".prop_key")
+        or name.endswith(".prop_key.hex")
+        or name.endswith(".prop_key.txt")
+    )
+
+
+def _looks_like_regex_literal_fragment(value: str) -> bool:
+    return any(fragment in value for fragment in (r"\s", r"[^\s]", r"[0-9", r"{20,}"))
+
+
+def _looks_like_placeholder_secret(value: str) -> bool:
+    return (
+        value.endswith("=...")
+        or "<redacted>" in value
+        or "secret-value" in value
+        or ("{" in value and "}" in value)
+    )
+
+
+def safe_print(text: str, stream=None) -> None:
+    stream = sys.stdout if stream is None else stream
+    try:
+        print(text, file=stream)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        safe = text.encode(encoding, "replace").decode(encoding, "replace")
+        print(safe, file=stream)
 
 
 def _looks_secret_like(path: Path) -> bool:
@@ -192,9 +364,15 @@ def _looks_secret_like(path: Path) -> bool:
         lower = part.lower()
         if lower in SECRET_LIKE_NAMES:
             return True
+        if lower in {"secrets", "prop_key.py", "prop-key.hex", "prop_key.hex"}:
+            return True
         if lower.endswith(".secret") or lower.startswith(".env"):
             return True
         if lower.endswith("_token") or lower.endswith("_api_key"):
+            return True
+        if lower.endswith(".prop-key") or lower.endswith(".prop-key.hex") or lower.endswith(".prop-key.txt"):
+            return True
+        if lower.endswith(".prop_key") or lower.endswith(".prop_key.hex") or lower.endswith(".prop_key.txt"):
             return True
     return False
 
@@ -269,11 +447,54 @@ def _summarize_text_target(path: Path, text: str) -> str:
                 lines.append("python_syntax: ok")
             lines.append("python_outline:")
             lines.extend(f"  - {item}" for item in outline)
+    key_evidence = _key_handling_evidence(source)
+    if key_evidence:
+        lines.append("key_handling_evidence:")
+        lines.extend(f"  - {item}" for item in key_evidence)
     matches = _keyword_matches(source)
     if matches:
         lines.append("keyword_matches:")
         lines.extend(f"  - {item}" for item in matches)
     return f"### {rel}\n\n```text\n" + "\n".join(lines) + "\n```\n"
+
+
+def _key_handling_evidence(text: str) -> list[str]:
+    if not any(
+        marker in text
+        for marker in (
+            "prop_runtime_key",
+            "load_runtime_key",
+            "loadRuntimeKey",
+            "SHARED_KEY",
+            "encodeFrame",
+            "decodeFrame",
+        )
+    ):
+        return []
+    active_lines = "\n".join(
+        line
+        for line in text.splitlines()
+        if not re.search(r"\bassert(?:In|NotIn|True|False|Equal|NotEqual)?\b", line)
+    )
+    needles = {
+        "uses_uiflow_prop_key_provider": "import prop_key" in text,
+        "uses_cxx_runtime_key_provider": "prop_runtime_key.h" in text,
+        "references_runtime_namespace": "prop_runtime_key::" in text,
+        "loads_runtime_key": "load_runtime_key_from_nvs" in text
+        or "loadRuntimeKeyFromPreferences" in text,
+        "uses_runtime_key_data": "key->data()" in text,
+        "uses_runtime_key_size": "key->size()" in text,
+        "reports_key_missing": "KEY MISSING" in text,
+        "defines_shared_key_array_literal": "SHARED_KEY[]" in active_lines,
+        "uses_sizeof_shared_key_as_key_material": "sizeof(SHARED_KEY)" in active_lines,
+        "mentions_shared_key_array_literal": "SHARED_KEY[]" in text,
+        "mentions_known_dry_smoke_key_hex": "00112233445566778899aabbccddeeff" in text,
+        "rejects_known_dry_smoke_key": (
+            "isKnownDrySmokeKey(src, len) && !allowDrySmokeRuntimeKey()" in text
+        ),
+        "mentions_legacy_prototype_compile_gate": "PROP_ALLOW_PROTOTYPE_SHARED_KEY" in text,
+    }
+    return [f"{name}: True" for name, value in needles.items() if value]
 
 
 def _summarize_m5b2(path: Path) -> str:
@@ -334,9 +555,12 @@ def _read_target(path: Path) -> SnapshotChunk:
             _sha256_bytes(raw),
         )
     text = path.read_text(encoding="utf-8", errors="replace")
+    require_no_raw_transport_secrets(text, rel)
+    require_no_raw_hmac_key_material(text, rel)
     redacted = redact_secrets(text)
+    require_no_unredacted_secrets(redacted, f"sanitized {rel}")
     source_hash = _sha256_bytes(redacted.encode("utf-8"))
-    if len(redacted) > FULL_TEXT_CHAR_LIMIT:
+    if rel not in FULL_TEXT_TARGETS and len(redacted) > FULL_TEXT_CHAR_LIMIT:
         return SnapshotChunk(
             rel,
             _summarize_text_target(path, text),
@@ -354,7 +578,7 @@ def _read_target(path: Path) -> SnapshotChunk:
 
 
 def collect_snapshot_with_coverage(
-    targets: list[str] | None = None, max_chars: int = 140_000
+    targets: list[str] | None = None, max_chars: int = 500_000
 ) -> tuple[str, list[SnapshotCoverage]]:
     selected = DEFAULT_TARGETS if targets is None else tuple(targets)
     chunks: list[str] = []
@@ -408,7 +632,7 @@ def collect_snapshot_with_coverage(
     return "\n".join(chunks), coverage
 
 
-def collect_snapshot(targets: list[str] | None = None, max_chars: int = 140_000) -> str:
+def collect_snapshot(targets: list[str] | None = None, max_chars: int = 500_000) -> str:
     snapshot, _coverage = collect_snapshot_with_coverage(targets=targets, max_chars=max_chars)
     return snapshot
 
@@ -419,7 +643,7 @@ def format_snapshot_coverage(coverage: list[SnapshotCoverage]) -> str:
     return "\n".join(item.line() for item in coverage)
 
 
-def build_review_prompt(targets: list[str] | None = None, max_chars: int = 140_000) -> str:
+def build_review_prompt(targets: list[str] | None = None, max_chars: int = 500_000) -> str:
     selected = DEFAULT_TARGETS if targets is None else tuple(targets)
     file_list = "\n".join(f"- {target}" for target in selected)
     snapshot, coverage = collect_snapshot_with_coverage(targets=targets, max_chars=max_chars)
@@ -435,6 +659,8 @@ def build_review_prompt(targets: list[str] | None = None, max_chars: int = 140_0
         "For compact-summary Python files, report syntax blockers only when "
         "python_syntax is not ok or a concrete parse error appears in the snapshot.\n\n"
         f"{coverage_text}\n\n"
+        "# Redacted Runtime Key Schema\n\n"
+        f"{PROP_KEY_SCHEMA}\n"
         "# Repository Snapshot\n\n"
         f"{snapshot}"
     )
@@ -445,6 +671,7 @@ def _endpoint(api_key: str) -> str:
 
 
 def ask_gemini(prompt: str) -> str:
+    require_no_unredacted_secrets(prompt, "Gemini prompt")
     api_key = load_api_key(ROOT)
     endpoint = _endpoint(api_key)
     body = json.dumps(
@@ -452,7 +679,7 @@ def ask_gemini(prompt: str) -> str:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.35,
-                "maxOutputTokens": 1800,
+                "maxOutputTokens": 4096,
                 "thinkingConfig": {"thinkingBudget": 0},
             },
         }
@@ -471,12 +698,38 @@ def ask_gemini(prompt: str) -> str:
     except Exception as exc:  # noqa: BLE001
         return redact_secrets(f"ERROR: {exc}")
 
-    return (
-        redact_secrets(
-            data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-        )
-        or "(empty)"
+    candidate = data.get("candidates", [{}])[0]
+    text = redact_secrets(
+        candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
+    ) or "(empty)"
+    if candidate.get("finishReason") == "MAX_TOKENS":
+        return "ERROR: Gemini response truncated at maxOutputTokens.\n\nPartial response:\n" + text
+    return text
+
+
+def review_gate_errors(review: str) -> list[str]:
+    errors: list[str] = []
+    if review.startswith("ERROR"):
+        errors.append("Gemini API call failed or returned a tool-level error.")
+        return errors
+
+    def section_re(section: str) -> str:
+        return rf"(?im)^\s*(?:[-*]\s*)?(?:#+\s*)?{re.escape(section)}\b(?:\s*:.*|\s*)$"
+
+    for section in REQUIRED_REVIEW_SECTIONS:
+        if not re.search(section_re(section), review):
+            errors.append(f"missing required section: {section}")
+
+    acceptance = re.search(
+        r"(?ims)^\s*(?:[-*]\s*)?(?:#+\s*)?ACCEPTANCE\b(?:\s*:)?(.*)\Z",
+        review,
     )
+    acceptance_text = acceptance.group(1) if acceptance else ""
+    for required in ("code snapshot", "dry hardware smoke", "production hardware acceptance"):
+        if required not in acceptance_text.lower():
+            errors.append(f"ACCEPTANCE missing separate `{required}` status")
+
+    return errors
 
 
 def _write(path: Path, text: str) -> None:
@@ -491,7 +744,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=str(ROOT / "build" / "reviews" / "gemini_code_review.md"),
         help="markdown report path",
     )
-    ap.add_argument("--max-chars", type=int, default=140_000, help="snapshot character budget")
+    ap.add_argument("--max-chars", type=int, default=500_000, help="snapshot character budget")
     ap.add_argument(
         "--target",
         action="append",
@@ -515,22 +768,34 @@ def main(argv: list[str] | None = None) -> int:
             f"model: {GEMINI_MODEL}\n\n"
             f"```text\n{prompt}\n```\n",
         )
-        print(f"No Gemini API call was made; prompt written to {out_path}")
+        safe_print(f"No Gemini API call was made; prompt written to {out_path}")
         return 0
 
     review = redact_secrets(ask_gemini(prompt))
-    _write(
-        out_path,
+    gate_errors = review_gate_errors(review)
+    gate_section = (
+        "## Gate Errors\n\n"
+        + "\n".join(f"- {error}" for error in gate_errors)
+        + "\n\n"
+        if gate_errors
+        else ""
+    )
+    report = (
         "# Gemini code/workflow review\n\n"
         f"model: {GEMINI_MODEL}\n\n"
+        f"{gate_section}"
         "## Review\n\n"
         f"{review}\n\n"
         "## Prompt Snapshot\n\n"
-        f"```text\n{prompt}\n```\n",
+        f"```text\n{prompt}\n```\n"
     )
-    print(f"Gemini code/workflow review written to {out_path}")
-    print(review)
-    return 1 if review.startswith("ERROR") else 0
+    _write(out_path, report)
+    safe_print(f"Gemini code/workflow review written to {out_path}")
+    if gate_errors:
+        safe_print("Gemini code/workflow review gate failed:")
+        safe_print("\n".join(f"- {error}" for error in gate_errors))
+    safe_print(review)
+    return 1 if gate_errors else 0
 
 
 if __name__ == "__main__":

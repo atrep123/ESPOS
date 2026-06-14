@@ -1,0 +1,31 @@
+{
+  "schema": "prop-runtime-key-at-rest-decision-v1",
+  "status": "accepted-with-waiver",
+  "scope": [
+    "Dial ESP32-S3 NVS prop_key/shared runtime HMAC key",
+    "DinMeter ESP32-S3 Preferences prop_key/shared runtime HMAC key",
+    "UIFlow /flash/prop_key.py production bundle key"
+  ],
+  "decision": "Runtime key at rest is permitted only with this explicit project waiver until target-specific flash/NVS protection is enabled and verified.",
+  "rationale": "Current checked-in Dial sdkconfig has secure boot and flash encryption disabled, and DinMeter PlatformIO protection cannot be proven statically. Release gates must not silently accept this posture.",
+  "reviewer": "project owner",
+  "last_reviewed": "2026-06-12",
+  "raw_key_bytes_allowed_in_repo": false,
+  "required_evidence": [
+    "prop_key_receipt.template.json completed from hardware readback",
+    "only SHA-256 fingerprints recorded in notes",
+    "no prop_key.nvs.csv, prop_key_bytes.h, prop_key.nvs.bin, readback/*.bin, or raw key files committed",
+    "hardware protection posture recorded for each shipped target"
+  ],
+  "dial_tx_static_posture": {
+    "secure_boot": "disabled in checked-in sdkconfig",
+    "flash_encryption": "disabled in checked-in sdkconfig",
+    "nvs_offset": "0x9000",
+    "nvs_size": "0x6000"
+  },
+  "din_rx_static_posture": {
+    "framework": "Arduino Preferences on ESP32-S3",
+    "partition_table": "board default unless firmware/din-rx/platformio.ini adds board_build.partitions",
+    "flash_encryption": "not statically proven"
+  }
+}

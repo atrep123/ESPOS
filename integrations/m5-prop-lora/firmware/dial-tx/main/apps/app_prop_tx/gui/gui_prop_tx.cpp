@@ -62,6 +62,29 @@ namespace
         canvas->drawCenterString(text, x, yTop);
     }
 
+    size_t utf8_glyph_len(const char* text, size_t offset, size_t len)
+    {
+        const unsigned char c = static_cast<unsigned char>(text[offset]);
+        size_t glyph_len = 1;
+        if ((c & 0x80U) == 0U)
+        {
+            glyph_len = 1;
+        }
+        else if ((c & 0xE0U) == 0xC0U)
+        {
+            glyph_len = 2;
+        }
+        else if ((c & 0xF0U) == 0xE0U)
+        {
+            glyph_len = 3;
+        }
+        else if ((c & 0xF8U) == 0xF0U)
+        {
+            glyph_len = 4;
+        }
+        return (offset + glyph_len <= len) ? glyph_len : 1;
+    }
+
     void drawTrackedTopCenterText(LGFX_Sprite* canvas, const char* text, int x, int yTop, float tracking)
     {
         if (canvas == nullptr || text == nullptr)
@@ -75,24 +98,45 @@ namespace
             return;
         }
 
-        float width = 0.0f;
-        char glyph[2] = {0, 0};
-        for (size_t i = 0; i < n; ++i)
+        size_t glyph_count = 0;
+        for (size_t i = 0; i < n;)
         {
-            glyph[0] = text[i];
+            i += utf8_glyph_len(text, i, n);
+            glyph_count++;
+        }
+
+        float width = 0.0f;
+        char glyph[5] = {0, 0, 0, 0, 0};
+        size_t glyph_index = 0;
+        for (size_t i = 0; i < n;)
+        {
+            const size_t glyph_len = utf8_glyph_len(text, i, n);
+            memcpy(glyph, text + i, glyph_len);
+            glyph[glyph_len] = '\0';
             width += canvas->textWidth(glyph);
-            if (i + 1 < n)
+            glyph_index++;
+            if (glyph_index < glyph_count)
             {
                 width += tracking;
             }
+            i += glyph_len;
         }
 
         float cursor = static_cast<float>(x) - width / 2.0f;
-        for (size_t i = 0; i < n; ++i)
+        glyph_index = 0;
+        for (size_t i = 0; i < n;)
         {
-            glyph[0] = text[i];
+            const size_t glyph_len = utf8_glyph_len(text, i, n);
+            memcpy(glyph, text + i, glyph_len);
+            glyph[glyph_len] = '\0';
             canvas->drawString(glyph, static_cast<int>(cursor), yTop);
-            cursor += canvas->textWidth(glyph) + tracking;
+            cursor += canvas->textWidth(glyph);
+            glyph_index++;
+            if (glyph_index < glyph_count)
+            {
+                cursor += tracking;
+            }
+            i += glyph_len;
         }
     }
 
@@ -152,6 +196,13 @@ namespace
                is_command_mode(view);
     }
 
+    bool is_stop_choice(const View_t& view)
+    {
+        const char* label = view.action_label == nullptr ? "" : view.action_label;
+        return !view.armed && !view.awaiting_ack && strcmp(label, "STOP") == 0 &&
+               is_command_mode(view);
+    }
+
     uint32_t state_color(const View_t& view)
     {
         const char* s = view.status == nullptr ? "" : view.status;
@@ -167,9 +218,9 @@ namespace
         {
             return P_RED;
         }
-        if (is_locked_fire_choice(view))
+        if (is_locked_fire_choice(view) || is_preview_choice(view) || is_stop_choice(view))
         {
-            return P_AMBER;
+            return TEXT_DIM;
         }
         if (view.awaiting_ack || strncmp(s, "sent ", 5) == 0 ||
             strcmp(s, "ODESILAM") == 0 || strcmp(s, "ODESLANO") == 0 ||
@@ -192,16 +243,16 @@ namespace
     }
 
     // B4b: palette dots are arranged on the lower ring arc. With 4 slots this matches
-    // the original LED_ANGLES {126,102,78,54} (a 72deg span, 24deg apart). For more
-    // slots the span widens (capped at 144deg) so up to 8 dots fit without overlap;
-    // a single slot sits dead-centre at the bottom (90deg).
+    // the original LED_ANGLES {126,102,78,54} (a 72deg span, 24deg apart). Dense
+    // 6..8 slot palettes use a tighter span so the side dots do not climb into the
+    // setup orb label zone.
     float led_angle(int i, int count)
     {
         if (count <= 1)
         {
             return 90.0f;
         }
-        float span = (count - 1) * 24.0f;
+        float span = count > 5 ? 110.0f : (count - 1) * 24.0f;
         if (span > 144.0f)
         {
             span = 144.0f;
@@ -215,6 +266,37 @@ namespace
         const int r = (col >> 16) & 0xFF, g = (col >> 8) & 0xFF, b = col & 0xFF;
         const float lum = 0.299f * r + 0.587f * g + 0.114f * b;
         return lum > 150.0f ? COL_DARK : COL_WHITE;
+    }
+
+    uint32_t setup_orb_color()
+    {
+        return mix(MODE_SETUP, COL_WHITE, 0.18f);
+    }
+
+    const char* field_caption(const View_t& view)
+    {
+        const char* lbl = view.field_label == nullptr ? "" : view.field_label;
+        if (strcmp(lbl, "jas") == 0)
+        {
+            return "JAS";
+        }
+        if (strcmp(lbl, "HUE") == 0)
+        {
+            return "ODSTÍN";
+        }
+        if (strcmp(lbl, "BARVA") == 0)
+        {
+            return "BARVA";
+        }
+        if (strcmp(lbl, "MODE") == 0)
+        {
+            return "MODE";
+        }
+        if (strcmp(lbl, "LED") == 0)
+        {
+            return "LED";
+        }
+        return lbl;
     }
 
     void fit_text_size(LGFX_Sprite* canvas, const char* text, float start_size, float min_size, int max_width)
@@ -292,7 +374,7 @@ namespace
         const float start = n <= 1 ? 1.78f : (n <= 3 ? 1.46f : 1.16f);
         fit_text_size(canvas, label, start, 0.78f, static_cast<int>(r * 2 * 0.92f));
         canvas->setTextColor(on_color(color));
-        drawCenteredText(canvas, label, cx, cy);
+        drawCenteredText(canvas, label, cx, cy - 9);
     }
 
     float command_label_size(const char* label)
@@ -344,6 +426,16 @@ namespace
         if (strcmp(variant, "wait") == 0)
         {
             draw_wait_sweep(canvas, cx, cy, sc);
+            canvas->fillRoundRect(cx - 90, cy - 28, 180, 84, 18, mix(P_AMBER, BG_BASE, 0.42f));
+            canvas->setFont(GUI_FONT_CN_BIG);
+            canvas->setTextSize(0.58f);
+            canvas->setTextColor(mix(P_AMBER, COL_WHITE, 0.82f));
+            drawTrackedTopCenterText(canvas, "TX SENT", cx, cy - 22, 1.2f);
+            canvas->setTextSize(1.22f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "WAIT ACK", cx, cy - 7);
+            canvas->setTextSize(0.70f);
+            drawTrackedTopCenterText(canvas, "DO NOT PRESS", cx, cy + 30, 0.5f);
             return;
         }
         if (strcmp(variant, "ack") == 0)
@@ -353,36 +445,49 @@ namespace
         }
         if (strcmp(variant, "no_ack") == 0)
         {
-            draw_x_glyph(canvas, cx, cy, sc);
-            canvas->fillRoundRect(cx - 70, cy + 18, 140, 40, 14, mix(P_AMBER, COL_WHITE, 0.10f));
+            canvas->fillRoundRect(cx - 90, cy - 28, 180, 84, 18, mix(P_AMBER, BG_BASE, 0.42f));
             canvas->setFont(GUI_FONT_CN_BIG);
-            canvas->setTextSize(1.08f);
-            canvas->setTextColor(COL_DARK);
-            drawTopCenterText(canvas, "NO ACK", cx, cy + 24);
+            canvas->setTextSize(1.10f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "NO ACK", cx, cy - 16);
+            canvas->setTextSize(0.74f);
+            drawTrackedTopCenterText(canvas, "CHECK LINK", cx, cy + 25, 1.0f);
             return;
         }
         if (strcmp(variant, "locked_fire") == 0)
         {
             canvas->setFont(GUI_FONT_CN_BIG);
-            canvas->setTextSize(1.24f);
+            canvas->setTextSize(1.00f);
             canvas->setTextColor(TEXT_HI);
-            drawTopCenterText(canvas, "LOCKED OUT", cx, cy - 36);
-            canvas->fillRoundRect(cx - 82, cy + 20, 164, 26, 12, mix(P_AMBER, COL_WHITE, 0.10f));
-            canvas->setTextSize(0.72f);
-            canvas->setTextColor(COL_DARK);
-            drawTopCenterText(canvas, "ARM FIRST", cx, cy + 20);
+            drawTopCenterText(canvas, "FIRE LOCKED", cx, cy - 36);
+            canvas->fillRoundRect(cx - 84, cy + 8, 168, 38, 16, TEXT_DIM);
+            canvas->setTextSize(0.70f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "ARM REQUIRED", cx, cy + 15);
+            return;
+        }
+        if (strcmp(variant, "stop") == 0)
+        {
+            canvas->setFont(GUI_FONT_CN_BIG);
+            canvas->setTextSize(1.52f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "STOP", cx, cy - 39);
+            canvas->fillRoundRect(cx - 86, cy + 15, 172, 34, 16, mix(TEXT_DIM, BG_BASE, 0.35f));
+            canvas->setTextSize(0.84f);
+            canvas->setTextColor(TEXT_HI);
+            drawTopCenterText(canvas, "OUTPUT OFF", cx, cy + 18);
             return;
         }
         if (strcmp(variant, "preview") == 0)
         {
             canvas->setFont(GUI_FONT_CN_BIG);
-            canvas->setTextSize(1.48f);
+            canvas->setTextSize(1.52f);
             canvas->setTextColor(TEXT_HI);
-            drawTopCenterText(canvas, "NO FIRE", cx, cy - 38);
-            canvas->fillRoundRect(cx - 78, cy + 18, 156, 30, 15, mix(MODE_SETUP, COL_WHITE, 0.16f));
-            canvas->setTextSize(0.64f);
+            drawTopCenterText(canvas, "NO FIRE", cx, cy - 40);
+            canvas->fillRoundRect(cx - 86, cy + 15, 172, 34, 16, mix(MODE_SETUP, COL_WHITE, 0.16f));
+            canvas->setTextSize(0.84f);
             canvas->setTextColor(COL_DARK);
-            drawTopCenterText(canvas, "PREVIEW ONLY", cx, cy + 21);
+            drawTopCenterText(canvas, "OUTPUT OFF", cx, cy + 18);
             return;
         }
 
@@ -406,31 +511,25 @@ namespace
 
     void draw_armed_frame(LGFX_Sprite* canvas, const View_t& view)
     {
-        canvas->fillScreen(P_RED);
-        ring_band(canvas, CX, CY, 119, 111, 0, 360, COL_WHITE);
-        ring_band(canvas, CX, CY, 109, 106, 0, 360, mix(P_RED, COL_WHITE, 0.42f));
-        draw_warning_glyph(canvas, CX, 48, 14, COL_WHITE);
+        (void)view;
+        canvas->fillScreen(BG_BASE);
 
         canvas->setFont(GUI_FONT_CN_BIG);
-        canvas->setTextSize(1.72f);
+        canvas->fillRoundRect(40, 42, 160, 50, 20, P_RED);
+        canvas->setTextSize(1.42f);
         canvas->setTextColor(COL_WHITE);
-        drawTopCenterText(canvas, "ODPAL", CX, 84);
+        drawTopCenterText(canvas, "ARMED", CX, 50);
 
+        canvas->fillRoundRect(46, 108, 148, 96, 24, TEXT_HI);
         canvas->setTextSize(0.96f);
-        canvas->setTextColor(mix(P_RED, COL_WHITE, 0.92f));
-        drawTrackedTopCenterText(canvas, "ARMED", CX, 142, 5.0f);
-
-        // Count-driven colour chips (was hard-coded 4): the palette is 5 slots now, so the
-        // armed overlay must show LED#5 too. Re-centre on CX so any count stays symmetric.
-        const int chip_count = static_cast<int>(view.colors.size());
-        const int chip_spacing = 16;
-        const int chip_x0 = CX - ((chip_count - 1) * chip_spacing) / 2;
-        for (int i = 0; i < chip_count; ++i)
-        {
-            const int chx = chip_x0 + i * chip_spacing;
-            canvas->fillSmoothCircle(chx, 188, 7, mix(P_RED, COL_WHITE, 0.85f));
-            canvas->fillSmoothCircle(chx, 188, 5, led_rgb(view, i));
-        }
+        canvas->setTextColor(P_RED);
+        drawTrackedTopCenterText(canvas, "PRESS", CX, 114, 0.6f);
+        canvas->setTextSize(1.78f);
+        canvas->setTextColor(P_RED);
+        drawTrackedTopCenterText(canvas, "STOP", CX, 136, 0.0f);
+        canvas->setTextSize(0.68f);
+        canvas->setTextColor(COL_DARK);
+        drawTrackedTopCenterText(canvas, "TO DISARM", CX, 181, 0.6f);
     }
 
     void draw_leader(LGFX_Sprite* canvas, float angle_deg, uint32_t color)
@@ -440,6 +539,8 @@ namespace
         const float qx = -py, qy = px;
         const float bx = CX + px * (LED_R - 12);
         const float by = CY + py * (LED_R - 12);
+        // Preview parity note: the earlier ORB_R + 20 reach is intentionally
+        // pulled back so the leader touches the orb rim cleanly.
         const float ax = CX + px * (ORB_R + 9);
         const float ay = CY + py * (ORB_R + 9);
 
@@ -471,10 +572,10 @@ namespace
             {
                 draw_leader(canvas, ang, col);
             }
-            canvas->fillSmoothCircle(x, y, sock_r + 3, mix(BG_BASE, col, 0.30f));
+            canvas->fillSmoothCircle(x, y, sock_r + 5, mix(BG_BASE, col, 0.30f));
             canvas->fillSmoothCircle(x, y, sock_r, SOCKET);
             canvas->fillSmoothCircle(x, y, dot_r, col);
-            ring_band(canvas, x, y, sock_r + 2, sock_r, 0, 360, COL_WHITE);
+            ring_band(canvas, x, y, sock_r + 4, sock_r + 1, 0, 360, SEL_ACCENT);
             return;
         }
 
@@ -537,7 +638,7 @@ void GUI_PropTx::renderPage(const View_t& view)
     _canvas->setFont(GUI_FONT_CN_BIG);
     _canvas->setTextSize(0.58f);
     _canvas->setTextColor(command ? SEL_ACCENT : MODE_SETUP);
-    drawTrackedTopCenterText(_canvas, command ? "PRIKAZ" : "NASTAVENI", CX, 36, 4.0f);
+    drawTrackedTopCenterText(_canvas, command ? "PŘÍKAZ" : "NASTAVENÍ", CX, 36, 4.0f);
 
     if (command)
     {
@@ -559,13 +660,19 @@ void GUI_PropTx::renderPage(const View_t& view)
         {
             variant = "locked_fire";
         }
+        else if (is_stop_choice(view))
+        {
+            variant = "stop";
+        }
         else if (is_preview_choice(view))
         {
             variant = "preview";
         }
         draw_command_token(_canvas, CX, ORB_CY, sc, label, variant);
 
-        if (!view.awaiting_ack && strcmp(variant, "locked_fire") != 0 && strcmp(variant, "preview") != 0)
+        if (!view.awaiting_ack && strcmp(variant, "ack") != 0 &&
+            strcmp(variant, "no_ack") != 0 && strcmp(variant, "locked_fire") != 0 &&
+            strcmp(variant, "stop") != 0 && strcmp(variant, "preview") != 0)
         {
             const int chev = COMMAND_RING_R + 14;
             draw_chevron(_canvas, CX - chev, ORB_CY, 9, 9, sc);
@@ -575,7 +682,7 @@ void GUI_PropTx::renderPage(const View_t& view)
     else
     {
         char oval[24] = {0};   // must fit view.field_value (MODE text), not just the LED number
-        uint32_t orb_col = led_rgb(view, view.selected_led);
+        uint32_t orb_col = setup_orb_color();
         if (is_editing(view, 'H'))
         {
             snprintf(oval, sizeof(oval), "%s", view.field_value);
@@ -590,10 +697,15 @@ void GUI_PropTx::renderPage(const View_t& view)
             snprintf(oval, sizeof(oval), "%u", view.selected_led + 1);
         }
         draw_orb(_canvas, CX, ORB_CY, ORB_R, orb_col, MODE_SETUP, oval);
+        _canvas->setFont(GUI_FONT_CN_BIG);
+        _canvas->setTextSize(0.54f);
+        _canvas->setTextColor(on_color(orb_col));
+        drawTrackedTopCenterText(_canvas, field_caption(view), CX, ORB_CY + 14, 1.2f);
     }
 
+    const bool transient_command_state = command && (view.awaiting_ack || ack || no_ack);
     const int selected_led = static_cast<int>(view.selected_led);
-    const int slot_count = static_cast<int>(view.colors.size());
+    const int slot_count = transient_command_state ? 0 : static_cast<int>(view.colors.size());
     for (int i = 0; i < slot_count; ++i)
     {
         if (i != selected_led)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import re
 import sys
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -12,12 +13,20 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from shared.protocol.protocol import encode_led_payload, parse_led_payload  # noqa: E402
-from tools import preview_prop_tx as gui  # noqa: E402
+
+_PREVIEW_SPEC = importlib.util.spec_from_file_location(
+    "m5_preview_prop_tx", ROOT / "tools" / "preview_prop_tx.py"
+)
+assert _PREVIEW_SPEC is not None and _PREVIEW_SPEC.loader is not None
+gui = importlib.util.module_from_spec(_PREVIEW_SPEC)
+sys.modules[_PREVIEW_SPEC.name] = gui
+_PREVIEW_SPEC.loader.exec_module(gui)
 
 
 GUI_CPP = ROOT / "firmware/dial-tx/main/apps/app_prop_tx/gui/gui_prop_tx.cpp"
 GUI_THEME_H = ROOT / "firmware/dial-tx/main/apps/app_prop_tx/gui/ui_theme_dial_generated.h"
 APP_CPP = ROOT / "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp"
+ESPOS_ROOT = ROOT.parents[1]
 
 SAFE_CENTER = (120.0, 120.0)
 SAFE_RADIUS = 120.0
@@ -33,6 +42,33 @@ BASE_COLOR_NAMES = (
     "ACCENT",
     "WHITE",
 )
+
+COLOR_ANCHORS = {
+    "BG_BASE": 0x14171D,
+    "P_GREEN": 0x3FB36B,
+    "P_AMBER": 0xFF8C00,
+    "P_RED": 0xCC0000,
+    "TEXT_HI": 0xE7E9ED,
+    "TEXT_DIM": 0x767D89,
+    "MODE_SETUP": 0x59C6DC,
+    "WHITE": 0xFFFFFF,
+    "mix_BG_AMBER_010": 0x2B221A,
+    "mix_BG_AMBER_025": 0x4E3415,
+    "mix_AMBER_BG_042": 0x9C5A0C,
+    "mix_MODE_WHITE_018": 0x76D0E2,
+    "mix_TEXTDIM_BG_035": 0x535963,
+    "mix_RED_WHITE_042": 0xE16B6B,
+    "mix_BG_WHITE_012": 0x303238,
+}
+
+
+_VALIDATE_SPEC = importlib.util.spec_from_file_location(
+    "espos_validate_design", ESPOS_ROOT / "tools" / "validate_design.py"
+)
+assert _VALIDATE_SPEC is not None and _VALIDATE_SPEC.loader is not None
+_validate_design = importlib.util.module_from_spec(_VALIDATE_SPEC)
+sys.modules[_VALIDATE_SPEC.name] = _validate_design
+_VALIDATE_SPEC.loader.exec_module(_validate_design)
 
 
 def _fixture_colors() -> list[tuple[int, int, int]]:
@@ -156,6 +192,45 @@ def real_state_views() -> dict[str, gui.View]:
     }
 
 
+def test_dial_today_preview_has_no_setup_editor_scenes() -> None:
+    scenes = gui.scenes()
+    forbidden_name_fragments = ("edit", "palette")
+
+    assert all(
+        fragment not in name
+        for name in scenes
+        for fragment in forbidden_name_fragments
+    )
+    for name, view in scenes.items():
+        assert view.armed or gui.is_command_mode(view), name
+        assert (view.field_label or "").startswith("akce"), name
+        assert view.action_label not in {"LED3", "LED5"}, name
+        assert view.field_value not in {"LED3", "LED5"}, name
+        assert not gui.is_palette_count(view), name
+
+        frame = gui.render_frame(view)
+        assert not ops(frame, "setup_grid"), name
+        assert not ops(frame, "orb_lens"), name
+        assert not ops(frame, "orb_subtext"), name
+        assert not ops(frame, "led_leader"), name
+
+
+def test_preview_writer_removes_stale_setup_editor_pngs(tmp_path, monkeypatch) -> None:
+    fake_tool = tmp_path / "tools" / "preview_prop_tx.py"
+    fake_tool.parent.mkdir(parents=True)
+    out = tmp_path / "build" / "preview"
+    out.mkdir(parents=True)
+    stale = out / "07_edit_jas.png"
+    stale.write_bytes(b"stale")
+
+    monkeypatch.setattr(gui, "__file__", str(fake_tool))
+
+    gui.main()
+
+    assert not stale.exists()
+    assert (out / "07_stop.png").is_file()
+
+
 def ops(frame: gui.RenderedFrame, role: str) -> list[gui.DrawOp]:
     return [op for op in frame.ops if op.role == role]
 
@@ -224,6 +299,68 @@ def bbox_width(op: gui.DrawOp) -> float:
     return op.bbox[2] - op.bbox[0]
 
 
+def assert_horizontal_breathing_room(op: gui.DrawOp, left: float, right: float) -> None:
+    assert op.bbox is not None
+    actual_left, _, actual_right, _ = op.bbox
+    assert actual_left >= left and actual_right <= right, op
+
+
+def _int_bbox(op: gui.DrawOp, *, pad: int = 0) -> tuple[int, int, int, int]:
+    assert op.bbox is not None
+    left, top, right, bottom = op.bbox
+    x = math.floor(left) - pad
+    y = math.floor(top) - pad
+    width = math.ceil(right) - math.floor(left) + pad * 2
+    height = math.ceil(bottom) - math.floor(top) + pad * 2
+    return x, y, width, height
+
+
+def _m5_frame_as_espos_design(name: str, frame: gui.RenderedFrame) -> dict:
+    widgets = []
+    for index, op in enumerate(frame.ops):
+        if op.bbox is None or op.role in {"screen", "setup_grid"}:
+            continue
+        if op.kind == "text":
+            x, y, width, height = _int_bbox(op, pad=2)
+            widgets.append(
+                {
+                    "type": "label",
+                    "_widget_id": f"{op.role}_{index}",
+                    "x": x,
+                    "y": y,
+                    "width": width,
+                    "height": max(12, height),
+                    "text": op.text or "",
+                    "color_fg": "#FFFFFF",
+                    "color_bg": "#000000",
+                }
+            )
+        elif op.kind == "rect":
+            x, y, width, height = _int_bbox(op)
+            widgets.append(
+                {
+                    "type": "panel",
+                    "_widget_id": f"{op.role}_{index}",
+                    "x": x,
+                    "y": y,
+                    "width": width,
+                    "height": height,
+                    "visible": True,
+                }
+            )
+    return {
+        "scenes": {
+            name: {
+                "width": gui.SIZE,
+                "height": gui.SIZE,
+                "display_shape": "round",
+                "round_safe_margin": 8,
+                "widgets": widgets,
+            }
+        }
+    }
+
+
 def expected_palette_for(view: gui.View) -> set[int]:
     sc = gui.state_color(view)
     palette = {getattr(gui, name) for name in BASE_COLOR_NAMES}
@@ -236,10 +373,14 @@ def expected_palette_for(view: gui.View) -> set[int]:
     palette.add(gui.mix(gui.P_AMBER, gui.WHITE, 0.86))
     palette.add(gui.mix(gui.P_AMBER, gui.WHITE, 0.88))
     palette.add(gui.mix(gui.P_AMBER, gui.BG_BASE, 0.35))
+    palette.add(gui.mix(gui.BG_BASE, gui.P_AMBER, 0.18))
     palette.add(gui.mix(gui.P_AMBER, gui.BG_BASE, 0.42))
+    palette.add(gui.mix(gui.TEXT_DIM, gui.BG_BASE, 0.35))
+    palette.add(gui.mix(gui.TEXT_DIM, gui.BG_BASE, 0.62))
     palette.add(gui.mix(gui.P_RED, gui.WHITE, 0.42))
     palette.add(gui.mix(gui.P_RED, gui.WHITE, 0.85))
     palette.add(gui.mix(gui.P_RED, gui.WHITE, 0.92))
+    palette.add(gui.mix(gui.P_RED, gui.BG_BASE, 0.18))
     palette.add(gui.mix(gui.P_RED, gui.BG_BASE, 0.32))
     bg_tint = (
         0.25
@@ -249,6 +390,7 @@ def expected_palette_for(view: gui.View) -> set[int]:
     bg_src = sc if gui.is_command_mode(view) else gui.MODE_SETUP
     palette.add(gui.P_RED if view.armed else gui.mix(gui.BG_BASE, bg_src, bg_tint))
     palette.add(gui.mix(gui.BG_BASE, gui.MODE_SETUP, 0.26))
+    palette.add(gui.mix(gui.BG_BASE, sc, 0.18))
     palette.add(gui.mix(gui.BG_BASE, sc, 0.35))
     setup_orb_color = gui.setup_orb_color(view)
     for color in [gui.led_rgb(view, i) for i in range(4)]:
@@ -281,6 +423,30 @@ def expected_palette_for(view: gui.View) -> set[int]:
     return palette
 
 
+def test_palette_color_math_has_literal_anchors() -> None:
+    assert gui.BG_BASE == COLOR_ANCHORS["BG_BASE"]
+    assert gui.P_GREEN == COLOR_ANCHORS["P_GREEN"]
+    assert gui.P_AMBER == COLOR_ANCHORS["P_AMBER"]
+    assert gui.P_RED == COLOR_ANCHORS["P_RED"]
+    assert gui.TEXT_HI == COLOR_ANCHORS["TEXT_HI"]
+    assert gui.TEXT_DIM == COLOR_ANCHORS["TEXT_DIM"]
+    assert gui.MODE_SETUP == COLOR_ANCHORS["MODE_SETUP"]
+    assert gui.WHITE == COLOR_ANCHORS["WHITE"]
+
+    assert gui.mix(gui.BG_BASE, gui.P_AMBER, 0.10) == COLOR_ANCHORS["mix_BG_AMBER_010"]
+    assert gui.mix(gui.BG_BASE, gui.P_AMBER, 0.25) == COLOR_ANCHORS["mix_BG_AMBER_025"]
+    assert gui.mix(gui.P_AMBER, gui.BG_BASE, 0.42) == COLOR_ANCHORS["mix_AMBER_BG_042"]
+    assert gui.mix(gui.MODE_SETUP, gui.WHITE, 0.18) == COLOR_ANCHORS["mix_MODE_WHITE_018"]
+    assert gui.mix(gui.TEXT_DIM, gui.BG_BASE, 0.35) == COLOR_ANCHORS["mix_TEXTDIM_BG_035"]
+    assert gui.mix(gui.P_RED, gui.WHITE, 0.42) == COLOR_ANCHORS["mix_RED_WHITE_042"]
+    assert gui.mix(gui.BG_BASE, gui.WHITE, 0.12) == COLOR_ANCHORS["mix_BG_WHITE_012"]
+
+    assert gui.state_color(gui.scenes()["01_ready_action"]) == gui.TEXT_DIM
+    assert gui.state_color(gui.scenes()["04_wait_ack"]) == gui.P_AMBER
+    assert gui.state_color(gui.scenes()["06_no_ack"]) == gui.P_AMBER
+    assert gui.state_color(gui.scenes()["03_armed"]) == gui.P_RED
+
+
 @pytest.mark.parametrize("name,view", real_state_views().items())
 def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
     name: str, view: gui.View
@@ -289,14 +455,34 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
 
     assert frame.image.size == (240, 240)
     if view.armed:
-        assert one(frame, "screen").color == gui.P_RED
+        assert one(frame, "screen").color == gui.BG_BASE
         assert not ops(frame, "armed_outer_ring")
         assert not ops(frame, "armed_pulse_ring")
         assert not ops(frame, "armed_danger_text")
+        assert one(frame, "armed_live_plate").color == gui.P_RED
+        assert one(frame, "armed_cancel_plate").color == gui.TEXT_HI
         assert one(frame, "armed_state_text").text == "ARMED"
-        assert bbox_height(one(frame, "armed_state_text")) >= 33.0
+        assert bbox_height(one(frame, "armed_state_text")) >= 26.0
+        assert_bbox_contains(
+            one(frame, "armed_live_plate"), one(frame, "armed_state_text"), pad=3.0
+        )
         assert not ops(frame, "armed_live_text")
-        assert one(frame, "armed_fire_text").text == "FIRE ENABLED"
+        assert not ops(frame, "armed_fire_text")
+        assert one(frame, "armed_cancel_prompt_text").text == "PRESS"
+        assert one(frame, "armed_cancel_text").text == "STOP"
+        assert one(frame, "armed_cancel_subtext").text == "TO DISARM"
+        assert bbox_height(one(frame, "armed_cancel_prompt_text")) >= 18.0
+        assert bbox_height(one(frame, "armed_cancel_text")) >= 34.0
+        assert bbox_height(one(frame, "armed_cancel_subtext")) >= 13.0
+        assert_bbox_contains(
+            one(frame, "armed_cancel_plate"), one(frame, "armed_cancel_prompt_text"), pad=4.0
+        )
+        assert_bbox_contains(
+            one(frame, "armed_cancel_plate"), one(frame, "armed_cancel_text"), pad=4.0
+        )
+        assert_bbox_contains(
+            one(frame, "armed_cancel_plate"), one(frame, "armed_cancel_subtext"), pad=4.0
+        )
         assert not ops(frame, "armed_chip")
         assert not ops(frame, "armed_chip_rim")
         assert not ops(frame, "armed_chip_label")
@@ -312,7 +498,7 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
     assert one(frame, "screen").color == gui.mix(gui.BG_BASE, bg_src, bg_tint)
     assert one(frame, "brightness_track")
     assert one(frame, "mode_caption").text == (
-        "PRIKAZ" if gui.is_command_mode(view) else "NASTAVENI"
+        "PŘÍKAZ" if gui.is_command_mode(view) else "NASTAVENÍ"
     )
     assert not ops(frame, "status_text")
     slot_count = max(1, min(8, view.palette_count))
@@ -335,18 +521,26 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
             assert one(frame, "command_sent_text").text == "TX SENT"
             assert one(frame, "command_state_text").text == "WAIT ACK"
             assert one(frame, "command_state_badge").color == gui.mix(
-                gui.P_AMBER, gui.BG_BASE, 0.35
+                gui.P_AMBER, gui.BG_BASE, 0.42
             )
-            assert one(frame, "command_safe_text").text == "NOT ARMED"
+            assert one(frame, "command_safe_text").text == "DO NOT PRESS"
+            assert not ops(frame, "command_safe_badge")
+            assert bbox_height(one(frame, "command_safe_text")) >= 13.0
             assert bbox_height(one(frame, "command_state_text")) >= 22.0
             assert_bbox_contains(
                 one(frame, "command_state_badge"), one(frame, "command_state_text"), pad=4.0
+            )
+            assert_bbox_contains(
+                one(frame, "command_state_badge"), one(frame, "command_safe_text"), pad=8.0
             )
             assert "FIRE" not in {op.text for op in frame.ops if op.text}
             assert not ops(frame, "command_text")
             assert not [op for op in frame.ops if op.color == gui.P_RED]
         elif ack:
-            assert one(frame, "command_state_text").text == "ACK"
+            assert len(ops(frame, "ack_check")) == 1
+            assert len(ops(frame, "ack_check_highlight")) == 1
+            assert not ops(frame, "command_state_text")
+            assert not ops(frame, "command_ack_badge")
             assert not ops(frame, "command_text")
             assert not ops(frame, "command_chevron")
         elif (view.status or "") in ("no ack", "timeout"):
@@ -355,7 +549,11 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
             assert one(frame, "command_state_badge").color == gui.mix(
                 gui.P_AMBER, gui.BG_BASE, 0.42
             )
-            assert one(frame, "command_safe_text").text == "NOT ARMED"
+            assert one(frame, "command_safe_text").text == "CHECK LINK"
+            assert bbox_height(one(frame, "command_safe_text")) >= 14.0
+            assert_bbox_contains(
+                one(frame, "command_state_badge"), one(frame, "command_safe_text"), pad=4.0
+            )
             assert not ops(frame, "command_chevron")
             assert not ops(frame, "no_ack_x")
             assert bbox_width(one(frame, "command_state_badge")) >= 132.0
@@ -365,16 +563,19 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
             assert not ops(frame, "command_text")
         else:
             expected_command_text = (
-                "NOT ARMED"
+                "FIRE LOCKED"
                 if view.action_label == "ODPAL"
                 else ("NO FIRE" if view.action_label == "PREVIEW" else view.action_label)
             )
             assert one(frame, "command_text").text == expected_command_text
             if view.action_label == "PREVIEW":
-                assert one(frame, "command_preview_badge").text == "PREVIEW ONLY"
+                assert gui.state_color(view) == gui.TEXT_DIM
+                assert {op.color for op in ops(frame, "command_ring")} == {gui.TEXT_DIM}
+                assert one(frame, "command_preview_badge").text == "OUTPUT OFF"
                 assert bbox_height(one(frame, "command_text")) >= 28.0
+                assert_horizontal_breathing_room(one(frame, "command_text"), left=30.0, right=210.0)
                 assert bbox_height(one(frame, "command_preview_badge")) >= 15.0
-                assert bbox_width(one(frame, "command_preview_badge_plate")) >= 180.0
+                assert bbox_width(one(frame, "command_preview_badge_plate")) >= 168.0
                 assert_bbox_contains(
                     one(frame, "command_preview_badge_plate"),
                     one(frame, "command_preview_badge"),
@@ -382,18 +583,27 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
                 )
                 assert not ops(frame, "command_chevron")
             if view.action_label == "ODPAL":
-                assert gui.state_color(view) == gui.P_AMBER
-                assert one(frame, "fire_locked_badge").color == gui.mix(
-                    gui.P_AMBER, gui.BG_BASE, 0.35
-                )
+                assert gui.state_color(view) == gui.TEXT_DIM
+                assert one(frame, "fire_locked_badge").color == gui.TEXT_DIM
                 assert one(frame, "fire_locked_text").text == "ARM REQUIRED"
-                assert bbox_height(one(frame, "command_text")) >= 24.0
-                assert bbox_height(one(frame, "fire_locked_text")) >= 12.0
-                assert bbox_width(one(frame, "fire_locked_badge")) >= 164.0
+                assert bbox_height(one(frame, "command_text")) >= 18.0
+                assert bbox_height(one(frame, "fire_locked_text")) >= 15.0
+                assert bbox_width(one(frame, "fire_locked_badge")) >= 168.0
                 assert_bbox_contains(
                     one(frame, "fire_locked_badge"), one(frame, "fire_locked_text"), pad=4.0
                 )
-                assert {op.color for op in ops(frame, "command_ring")} == {gui.P_AMBER}
+                assert {op.color for op in ops(frame, "command_ring")} == {gui.TEXT_DIM}
+                assert not ops(frame, "command_chevron")
+            if view.action_label == "STOP":
+                assert gui.state_color(view) == gui.TEXT_DIM
+                assert one(frame, "command_stop_badge").text == "OUTPUT OFF"
+                assert bbox_height(one(frame, "command_stop_badge")) >= 15.0
+                assert_bbox_contains(
+                    one(frame, "command_stop_badge_plate"),
+                    one(frame, "command_stop_badge"),
+                    pad=4.0,
+                )
+                assert {op.color for op in ops(frame, "command_ring")} == {gui.TEXT_DIM}
                 assert not ops(frame, "command_chevron")
     else:
         expected_orb = gui.setup_orb_color(view)
@@ -406,13 +616,16 @@ def test_real_prop_tx_states_render_raw_240_canvas_with_required_elements(
         }
         if gui.is_palette_count(view):
             assert one(frame, "orb_text").text == str(view.palette_count)
+        assert one(frame, "orb_subtext").text == gui.field_caption(view)
+        assert bbox_height(one(frame, "orb_subtext")) >= 9.0
+        assert_bbox_contains(one(frame, "orb_lens"), one(frame, "orb_subtext"), pad=2.0)
         assert len(ops(frame, "led_selection")) == 1
-        assert {op.color for op in ops(frame, "led_selection")} == {gui.MODE_SETUP}
+        assert {op.color for op in ops(frame, "led_selection")} == {gui.ACCENT}
         assert len(ops(frame, "setup_grid")) > 0
         assert not ops(frame, "command_ring")
 
     if (view.status or "") in ("no ack", "timeout"):
-        assert bbox_height(one(frame, "command_state_text")) >= 22.0
+        assert bbox_height(one(frame, "command_state_text")) >= 20.0
 
 
 def test_armed_frame_has_no_ambiguous_channel_chips() -> None:
@@ -448,6 +661,117 @@ def test_palette_count_screen_displays_count_not_selected_led_index() -> None:
     assert one(frame, "orb_text").text != str(view.selected_led + 1)
 
 
+def test_fire_locked_command_keeps_text_away_from_round_edges() -> None:
+    view = gui.scenes()["02_action_fire"]
+
+    frame = gui.render_frame(view)
+
+    assert_horizontal_breathing_room(one(frame, "command_text"), left=30.0, right=210.0)
+    assert_horizontal_breathing_room(one(frame, "fire_locked_badge"), left=36.0, right=204.0)
+
+
+def test_wait_ack_status_panel_keeps_round_edge_breathing_room() -> None:
+    view = gui.scenes()["04_wait_ack"]
+
+    frame = gui.render_frame(view)
+
+    assert_horizontal_breathing_room(one(frame, "command_state_badge"), left=30.0, right=210.0)
+    assert_horizontal_breathing_room(one(frame, "command_safe_text"), left=47.0, right=193.0)
+
+
+def test_ack_confirmation_uses_checkmark_without_text_label() -> None:
+    frame = gui.render_frame(gui.scenes()["05_ack"])
+
+    assert len(ops(frame, "ack_check")) == 1
+    assert len(ops(frame, "ack_check_highlight")) == 1
+    assert not ops(frame, "command_state_text")
+    assert not ops(frame, "command_ack_badge")
+
+
+@pytest.mark.parametrize("scene", ["04_wait_ack", "06_no_ack"])
+def test_orange_status_panels_use_single_clear_stack(scene: str) -> None:
+    frame = gui.render_frame(gui.scenes()[scene])
+
+    assert len(ops(frame, "command_state_badge")) == 1
+    assert not ops(frame, "command_safe_badge")
+
+    panel = one(frame, "command_state_badge")
+    title = one(frame, "command_state_text")
+    detail = one(frame, "command_safe_text")
+    assert panel.bbox is not None and title.bbox is not None and detail.bbox is not None
+    assert_bbox_contains(panel, title, pad=8.0)
+    assert_bbox_contains(panel, detail, pad=8.0)
+    assert detail.bbox[1] >= title.bbox[3] + 8.0
+
+
+def test_visible_czech_ui_labels_use_diacritics() -> None:
+    command_frame = gui.render_frame(gui.scenes()["01_ready_action"])
+
+    assert one(command_frame, "mode_caption").text == "PŘÍKAZ"
+
+    forbidden = {"PRIKAZ", "NASTAVENI", "ODSTIN"}
+    rendered = {
+        op.text
+        for frame in (command_frame,)
+        for op in frame.ops
+        if op.kind == "text"
+    }
+    assert rendered.isdisjoint(forbidden)
+
+
+@pytest.mark.parametrize("name,view", gui.scenes().items())
+def test_prominent_text_keeps_horizontal_round_edge_margin(name: str, view: gui.View) -> None:
+    frame = gui.render_frame(view)
+    prominent_roles = {
+        "command_text",
+        "command_state_text",
+        "armed_state_text",
+        "armed_cancel_text",
+    }
+
+    for op in frame.ops:
+        if op.role not in prominent_roles:
+            continue
+        assert_horizontal_breathing_room(op, left=30.0, right=210.0)
+        assert bbox_width(op) <= 180.0
+
+
+@pytest.mark.parametrize("name,view", gui.scenes().items())
+def test_setup_orb_subtext_keeps_inner_bottom_padding(name: str, view: gui.View) -> None:
+    if gui.is_command_mode(view) or view.armed:
+        return
+
+    frame = gui.render_frame(view)
+    orb = one(frame, "orb_lens")
+    subtext = one(frame, "orb_subtext")
+
+    assert orb.bbox is not None and subtext.bbox is not None
+    assert orb.bbox[3] - subtext.bbox[3] >= 8.0
+
+
+@pytest.mark.parametrize("name,view", gui.scenes().items())
+def test_setup_orb_text_keeps_circular_lens_clearance(name: str, view: gui.View) -> None:
+    if gui.is_command_mode(view) or view.armed:
+        return
+
+    frame = gui.render_frame(view)
+    orb = one(frame, "orb_lens")
+    assert orb.bbox is not None
+    cx = (orb.bbox[0] + orb.bbox[2]) / 2.0
+    cy = (orb.bbox[1] + orb.bbox[3]) / 2.0
+    radius = (orb.bbox[2] - orb.bbox[0]) / 2.0
+
+    for role in ("orb_text", "orb_subtext"):
+        text = one(frame, role)
+        assert text.bbox is not None
+        left, top, right, bottom = text.bbox
+        max_corner_distance = max(
+            math.hypot(x - cx, y - cy)
+            for x, y in ((left, top), (right, top), (left, bottom), (right, bottom))
+        )
+        assert max_corner_distance <= radius - 2.0, text
+
+
 @pytest.mark.parametrize("field_label", ["jas", "LED", "HUE", "BARVY"])
 def test_setup_orb_uses_neutral_tuning_color_instead_of_selected_led_color(
     field_label: str,
@@ -464,6 +788,71 @@ def test_setup_orb_uses_neutral_tuning_color_instead_of_selected_led_color(
 
     assert one(frame, "orb_lens").color == gui.mix(gui.MODE_SETUP, gui.WHITE, 0.18)
     assert one(frame, "orb_lens").color != gui.led_rgb(view, view.selected_led)
+
+
+def test_firmware_renderer_keeps_safety_visuals_in_parity_with_preview() -> None:
+    cpp = GUI_CPP.read_text(encoding="utf-8")
+
+    assert "is_locked_fire_choice(view) || is_preview_choice(view) || is_stop_choice(view)" in cpp
+    assert "size_t utf8_glyph_len" in cpp
+    assert 'drawTrackedTopCenterText(_canvas, command ? "PŘÍKAZ" : "NASTAVENÍ", CX, 36, 4.0f)' in cpp
+    assert 'return "ODSTÍN";' in cpp
+    assert 'drawTopCenterText(canvas, "FIRE LOCKED", cx, cy - 36)' in cpp
+    assert 'drawTopCenterText(canvas, "ARM REQUIRED", cx, cy + 15)' in cpp
+    assert 'drawTopCenterText(canvas, "STOP", cx, cy - 39)' in cpp
+    assert 'drawTopCenterText(canvas, "NO FIRE", cx, cy - 40)' in cpp
+    assert "fillRoundRect(cx - 32, cy + 19, 64, 30, 12" not in cpp
+    assert 'drawTopCenterText(canvas, "ACK", cx, cy + 22)' not in cpp
+    assert cpp.count('drawTopCenterText(canvas, "OUTPUT OFF", cx, cy + 18)') == 2
+    assert "canvas->setTextSize(1.52f);" in cpp
+    assert "canvas->setTextSize(0.54f);" in cpp
+    assert "canvas->setTextSize(0.70f);" in cpp
+    assert "canvas->setTextSize(0.74f);" in cpp
+    assert 'drawTrackedTopCenterText(canvas, "DO NOT PRESS", cx, cy + 30, 0.5f)' in cpp
+    assert 'drawTrackedTopCenterText(canvas, "CHECK LINK", cx, cy + 25, 1.0f)' in cpp
+    assert "SEL_ACCENT" in cpp
+    assert 'strcmp(variant, "ack") != 0' in cpp
+    assert 'strcmp(variant, "no_ack") != 0' in cpp
+    assert "transient_command_state ? 0 : static_cast<int>(view.colors.size())" in cpp
+    assert "float span = count > 5 ? 110.0f : (count - 1) * 24.0f;" in cpp
+    assert "fillRoundRect(cx - 90, cy - 28, 180, 84, 18" in cpp
+    assert "fillRoundRect(cx - 78, cy + 30, 156, 32, 13" not in cpp
+    assert "fillRoundRect(cx - 84, cy + 8, 168, 38, 16" in cpp
+    assert cpp.count("fillRoundRect(cx - 86, cy + 15, 172, 34, 16") == 2
+    assert 'drawTopCenterText(canvas, "OUTPUT OFF", cx, cy + 22)' not in cpp
+    assert "uint32_t setup_orb_color()" in cpp
+    assert "uint32_t orb_col = setup_orb_color();" in cpp
+    assert "ORB_R + 20" in cpp
+    assert "drawCenteredText(canvas, label, cx, cy - 9);" in cpp
+    assert "drawTrackedTopCenterText(_canvas, field_caption(view), CX, ORB_CY + 14, 1.2f)" in cpp
+    assert 'drawTopCenterText(canvas, "ARMED", CX, 50)' in cpp
+    assert '"FIRE READY"' not in cpp
+    assert 'drawTrackedTopCenterText(canvas, "PRESS", CX, 114, 0.6f)' in cpp
+    assert 'drawTrackedTopCenterText(canvas, "STOP", CX, 136, 0.0f)' in cpp
+    assert 'drawTrackedTopCenterText(canvas, "TO DISARM", CX, 181, 0.6f)' in cpp
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        "KEY MISSING",
+        "BAD ACK",
+        "RX IGNORED",
+        "BLOKOVANO",
+        "ZAMITNUTO",
+        "FF BUSY",
+        "FF DUTY",
+        "PAL ENC FAIL",
+        "nvs err",
+    ],
+)
+def test_preview_status_classifier_matches_firmware_faults(status: str) -> None:
+    view = gui.View(action_label="PING", field_label="akce", status=status, field_value="PING")
+
+    frame = gui.render_frame(view)
+
+    assert gui.state_color(view) == gui.P_RED
+    assert {op.color for op in ops(frame, "command_ring")} == {gui.P_RED}
 
 
 @pytest.mark.parametrize("name,view", real_state_views().items())
@@ -483,6 +872,23 @@ def test_draws_stay_inside_canvas_and_round_safe_area(name: str, view: gui.View)
                 assert distance_from_safe_center(x, y) + op.width / 2 <= SAFE_RADIUS + 0.01, op
         elif op.kind == "text":
             assert_bbox_inside_round_safe_area(op)
+
+
+@pytest.mark.parametrize("name,view", gui.scenes().items())
+def test_m5_dial_preview_passes_espos_round_safe_area_rules(
+    name: str, view: gui.View
+) -> None:
+    frame = gui.render_frame(view)
+    design = _m5_frame_as_espos_design(name, frame)
+
+    issues = _validate_design.validate_data(
+        design,
+        file_label="m5_dial_preview",
+        warnings_as_errors=False,
+        strict_critical=True,
+    )
+
+    assert [i.message for i in issues if "round safe area" in i.message] == []
 
 
 @pytest.mark.parametrize("name,view", real_state_views().items())

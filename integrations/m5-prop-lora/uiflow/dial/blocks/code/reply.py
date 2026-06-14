@@ -1,2 +1,2 @@
 # type: ignore # noqa: F821
-((prop_uart.read() or b"").decode("utf-8", "ignore") if prop_uart.any() else "")
+((lambda _data: _data if isinstance(_data, str) else (_data or b"").decode("utf-8", "ignore"))(prop_uart.read()) if prop_uart.any() else "")

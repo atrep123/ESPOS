@@ -5,17 +5,60 @@
 
 #include "kernel/msgbus.h"
 
+static size_t ui_cmd_append_trunc(char *dst, size_t dst_cap, size_t pos, const char *src)
+{
+    if (dst == NULL || dst_cap == 0) {
+        return pos;
+    }
+    if (pos >= dst_cap) {
+        dst[dst_cap - 1U] = '\0';
+        return dst_cap - 1U;
+    }
+    if (src != NULL) {
+        while (*src != '\0' && (pos + 1U) < dst_cap) {
+            dst[pos] = *src;
+            pos++;
+            src++;
+        }
+    }
+    dst[pos] = '\0';
+    return pos;
+}
+
+static size_t ui_cmd_append_char_trunc(char *dst, size_t dst_cap, size_t pos, char ch)
+{
+    if (dst == NULL || dst_cap == 0) {
+        return pos;
+    }
+    if ((pos + 1U) < dst_cap) {
+        dst[pos] = ch;
+        pos++;
+    }
+    if (pos < dst_cap) {
+        dst[pos] = '\0';
+    } else {
+        dst[dst_cap - 1U] = '\0';
+        pos = dst_cap - 1U;
+    }
+    return pos;
+}
+
+static void ui_cmd_copy_trunc(char *dst, size_t dst_cap, const char *src)
+{
+    if (dst == NULL || dst_cap == 0) {
+        return;
+    }
+    dst[0] = '\0';
+    (void)ui_cmd_append_trunc(dst, dst_cap, 0, src);
+}
+
 static void ui_publish_cmd(ui_cmd_kind_t kind, const char *id, const char *text, int32_t value)
 {
     msg_t m = {0};
     m.topic = TOP_UI_CMD;
     m.u.ui_cmd.kind = (uint8_t)kind;
-    if (id != NULL) {
-        snprintf(m.u.ui_cmd.id, sizeof(m.u.ui_cmd.id), "%s", id);
-    }
-    if (text != NULL) {
-        snprintf(m.u.ui_cmd.text, sizeof(m.u.ui_cmd.text), "%s", text);
-    }
+    ui_cmd_copy_trunc(m.u.ui_cmd.id, sizeof(m.u.ui_cmd.id), id);
+    ui_cmd_copy_trunc(m.u.ui_cmd.text, sizeof(m.u.ui_cmd.text), text);
     m.u.ui_cmd.value = value;
     bus_publish(&m);
 }
@@ -77,13 +120,14 @@ void ui_cmd_listmodel_set_len(const char *root, int count)
 
 void ui_cmd_listmodel_set_item(const char *root, int index, const char *label, const char *value)
 {
-    char buf[64];
+    char buf[64] = {0};
+    size_t pos = 0;
     const char *lhs = (label != NULL) ? label : "";
     const char *rhs = (value != NULL) ? value : "";
+    pos = ui_cmd_append_trunc(buf, sizeof(buf), pos, lhs);
     if (*rhs != '\0') {
-        snprintf(buf, sizeof(buf), "%s\t%s", lhs, rhs);
-    } else {
-        snprintf(buf, sizeof(buf), "%s", lhs);
+        pos = ui_cmd_append_char_trunc(buf, sizeof(buf), pos, '\t');
+        (void)ui_cmd_append_trunc(buf, sizeof(buf), pos, rhs);
     }
     ui_publish_cmd(UI_CMD_LISTMODEL_SET_ITEM, root, buf, (int32_t)index);
 }

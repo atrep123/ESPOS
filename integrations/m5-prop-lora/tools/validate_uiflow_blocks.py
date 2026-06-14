@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import re
 import sys
@@ -12,6 +13,19 @@ from typing import NamedTuple
 PLACEHOLDER_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 VALID_BLOCK_TYPES = {"execute", "value"}
 VALID_PARAM_TYPES = {"label", "number", "variable"}
+LEGACY_TEMPLATE_TO_ALPHA2_METHOD = {
+    "init": "__init__",
+    "send_preview": "preview",
+    "send_fire": "fire",
+    "send_stop": "stop",
+    "send_arm": "arm",
+    "reply": "reply",
+    "default_colors": "default_colors",
+    "first_four": "first_four",
+    "rgb_color": "rgb_color",
+    "rgb888": "rgb888",
+}
+EXPECTED_ALPHA2_METHODS = set(LEGACY_TEMPLATE_TO_ALPHA2_METHOD.values())
 
 
 class BundleReport(NamedTuple):
@@ -31,6 +45,58 @@ def _rel(root: Path, path: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
+def _load_artifact_builder(repo: Path):
+    path = repo / "tools" / "build_uiflow_alpha2_artifact.py"
+    spec = importlib.util.spec_from_file_location(
+        "build_uiflow_alpha2_artifact_for_validation",
+        path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load {_rel(repo, path)}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def validate_legacy_alpha2_parity(
+    template_names: list[str],
+    alpha2_methods: set[str],
+) -> list[str]:
+    errors: list[str] = []
+    legacy_names = set(template_names)
+    expected_legacy_names = set(LEGACY_TEMPLATE_TO_ALPHA2_METHOD)
+    missing_legacy = expected_legacy_names - legacy_names
+    extra_legacy = legacy_names - expected_legacy_names
+    mapped_methods = {
+        LEGACY_TEMPLATE_TO_ALPHA2_METHOD[name]
+        for name in legacy_names & expected_legacy_names
+    }
+    missing_alpha2 = mapped_methods - alpha2_methods
+    extra_alpha2 = alpha2_methods - mapped_methods
+
+    if missing_legacy:
+        errors.append(
+            "manifest/templates missing legacy blocks mapped to Alpha-2 methods: "
+            f"{sorted(missing_legacy)}"
+        )
+    if extra_legacy:
+        errors.append(
+            "manifest/templates have blocks without Alpha-2 method mapping: "
+            f"{sorted(extra_legacy)}"
+        )
+    if missing_alpha2:
+        errors.append(
+            "Alpha-2 source missing methods required by legacy blocks: "
+            f"{sorted(missing_alpha2)}"
+        )
+    if extra_alpha2:
+        errors.append(
+            "Alpha-2 source has methods without legacy manifest/template blocks: "
+            f"{sorted(extra_alpha2)}"
+        )
+    return errors
+
+
 def validate_bundle(root: Path | str | None = None) -> BundleReport:
     repo = Path(root) if root is not None else Path(__file__).resolve().parents[1]
     repo = repo.resolve()
@@ -38,26 +104,7 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
     code_dir = blocks_dir / "code"
     manifest_path = blocks_dir / "prop_tx.json"
     errors: list[str] = []
-    expected_alpha2_methods = {
-        "__init__",
-        "preview",
-        "fire",
-        "stop",
-        "arm",
-        "remote_led",
-        "sync_palette",
-        "reply",
-        "hue_color",
-        "default_hues",
-        "default_colors",
-        "palette_from_hues",
-        "set_color",
-        "first_four",
-        "rgb_color",
-        "rgb888",
-        "remote_led3",
-        "remote_led5",
-    }
+    expected_alpha2_methods = EXPECTED_ALPHA2_METHODS
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -160,6 +207,7 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
     alpha2_path = repo / "uiflow" / "dial" / "blocks" / "alpha2" / "PropTx.py"
     alpha2_source = _rel(repo, alpha2_path)
     alpha2_method_count = 0
+    alpha2_methods: set[str] = set()
     if not alpha2_path.exists():
         errors.append(f"missing Alpha-2 source: {alpha2_source}")
     else:
@@ -179,6 +227,7 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
                 methods = {
                     node.name for node in classes[0].body if isinstance(node, ast.FunctionDef)
                 }
+                alpha2_methods = methods
                 alpha2_method_count = len(methods)
                 missing = expected_alpha2_methods - methods
                 extra = methods - expected_alpha2_methods
@@ -186,6 +235,8 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
                     errors.append(f"{alpha2_source} missing methods: {sorted(missing)}")
                 if extra:
                     errors.append(f"{alpha2_source} has unexpected methods: {sorted(extra)}")
+    if template_names and alpha2_methods:
+        errors.extend(validate_legacy_alpha2_parity(template_names, alpha2_methods))
 
     alpha2_artifact_path = repo / "uiflow" / "dial" / "blocks" / "dist" / "PropTx.m5b2"
     alpha2_artifact = _rel(repo, alpha2_artifact_path)
@@ -194,6 +245,14 @@ def validate_bundle(root: Path | str | None = None) -> BundleReport:
     if not alpha2_artifact_path.exists():
         errors.append(f"missing Alpha-2 artifact: {alpha2_artifact}")
     else:
+        try:
+            generated_artifact = _load_artifact_builder(repo).build_artifact_text()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{alpha2_artifact}: could not rebuild deterministic artifact: {exc}")
+        else:
+            tracked_artifact = alpha2_artifact_path.read_text(encoding="utf-8")
+            if tracked_artifact != generated_artifact:
+                errors.append(f"{alpha2_artifact}: must match deterministic builder output")
         try:
             artifact = json.loads(alpha2_artifact_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
@@ -333,7 +392,8 @@ def main(argv: list[str] | None = None) -> int:
         f"{report.alpha2_artifact_block_count} blocks)"
     )
     print(
-        "Upload libraries: uiflow/dial/prop_frame.py, uiflow/dial/prop_state.py, "
+        "Upload libraries: generated/provisioned /flash/prop_key.py, "
+        "uiflow/dial/prop_frame.py, uiflow/dial/prop_state.py, "
         "uiflow/dial/prop_ui.py, uiflow/dial/blocks/alpha2/PropTx.py"
     )
     print("Manual import: copy each code/<name>.py template into M5Stack Block Designer")

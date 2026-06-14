@@ -197,7 +197,7 @@ void test_toast_reset(void)
     ui_toast_reset(&toast);
 
     TEST_ASSERT_EQUAL_UINT(0, toast.active);
-    TEST_ASSERT_EQUAL_INT64(0, toast.expires_us);
+    TEST_ASSERT_TRUE(toast.expires_us == 0);
     TEST_ASSERT_EQUAL_STRING("", toast.root);
     TEST_ASSERT_EQUAL_UINT(0, toast.head);
     TEST_ASSERT_EQUAL_UINT(0, toast.count);

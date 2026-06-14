@@ -28,20 +28,26 @@ EXPECTED_ALPHA2_METHODS = [
     "fire",
     "stop",
     "arm",
-    "remote_led",
-    "sync_palette",
     "reply",
-    "hue_color",
-    "default_hues",
     "default_colors",
-    "palette_from_hues",
-    "set_color",
     "first_four",
     "rgb_color",
     "rgb888",
-    "remote_led3",
-    "remote_led5",
 ]
+TEST_PROP_KEY_HEX = "00112233445566778899aabbccddeeff"
+
+
+@pytest.fixture(autouse=True)
+def provision_test_prop_key(monkeypatch):
+    monkeypatch.setitem(
+        sys.modules,
+        "prop_key",
+        types.SimpleNamespace(
+            SHARED_KEY_HEX=TEST_PROP_KEY_HEX,
+            ALLOW_PROTOTYPE_SHARED_KEY=True,
+        ),
+    )
+    monkeypatch.delitem(sys.modules, "prop_frame", raising=False)
 
 
 def load_validator():
@@ -76,7 +82,7 @@ def test_uiflow_block_validator_cli_passes_and_reports_manual_bundle():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "OK: 18 UIFlow custom blocks validated" in result.stdout
+    assert "OK: 10 UIFlow custom blocks validated" in result.stdout
     assert "uiflow/dial/blocks/prop_tx.json" in result.stdout
     assert "uiflow/dial/blocks/code" in result.stdout
     assert "uiflow/dial/prop_frame.py" in result.stdout
@@ -91,22 +97,12 @@ def test_uiflow_block_manifest_templates_are_consistent():
 
     report = validator.validate_bundle(ROOT)
 
-    assert report.block_count == len(manifest["blocks"]) == 18
+    assert report.block_count == len(manifest["blocks"]) == 10
     assert report.category == "PropTx"
     assert report.color == "#2E9E72"
     manifest_names = {block["name"] for block in manifest["blocks"]}
     assert set(report.template_names) == manifest_names
-    assert {
-        "default_hues",
-        "default_colors",
-        "palette_from_hues",
-        "set_color",
-        "first_four",
-        "rgb_color",
-        "rgb888",
-        "remote_led3",
-        "remote_led5",
-    }.issubset(manifest_names)
+    assert {"default_colors", "first_four", "rgb_color", "rgb888"}.issubset(manifest_names)
     assert not report.errors
 
 
@@ -116,13 +112,47 @@ def test_manual_reply_template_uses_non_throwing_decode():
     assert '.decode("utf-8", "ignore")' in source
     assert ".decode()" not in source
 
+    class FakeUart:
+        def __init__(self, value):
+            self.value = value
+
+        def any(self):
+            return self.value is not False
+
+        def read(self):
+            return self.value
+
+    expression = source.splitlines()[-1]
+    assert eval(expression, {"prop_uart": FakeUart("OK\n")}) == "OK\n"
+    assert eval(expression, {"prop_uart": FakeUart(b"OK\xff\n")}) == "OK\n"
+    assert eval(expression, {"prop_uart": FakeUart(None)}) == ""
+    assert eval(expression, {"prop_uart": FakeUart(False)}) == ""
+
 
 def test_manual_send_fire_template_requires_delay_function():
     source = (BLOCKS / "code" / "send_fire.py").read_text(encoding="utf-8")
 
+    assert "import prop_frame" in source
     assert "time.sleep_ms or time.sleep is required for Prop FIRE burst timing" in source
-    assert "time.sleep(prop_frame.FIRE_BURST_GAP_MS / 1000)" in source
+    assert "_prop_delay_ms = lambda ms: time.sleep(ms / 1000)" in source
+    assert "_prop_delay_ms(prop_frame.FIRE_BURST_GAP_MS)" in source
     assert "raise RuntimeError" in source
+
+
+def test_manual_send_stop_template_retries_same_stop_frame():
+    source = (BLOCKS / "code" / "send_stop.py").read_text(encoding="utf-8")
+
+    assert "import prop_frame" in source
+    assert "prop_tx.stop_lines()" in source
+    assert "prop_frame.STOP_RETRY_GAP_MS" in source
+    assert "time.sleep_ms or time.sleep is required for Prop STOP retry timing" in source
+    assert "prop_tx.stop_line()" not in source
+
+
+def test_manual_remote_led_templates_are_not_exposed_in_command_only_bundle():
+    assert not (BLOCKS / "code" / "remote_led.py").exists()
+    assert not (BLOCKS / "code" / "remote_led3.py").exists()
+    assert not (BLOCKS / "code" / "remote_led5.py").exists()
 
 
 def test_uiflow_block_validator_reports_non_object_block(tmp_path):
@@ -176,6 +206,31 @@ def test_uiflow_block_validator_reports_non_object_alpha2_artifact(tmp_path):
     )
 
 
+def test_uiflow_block_validator_reports_legacy_alpha2_method_drift(tmp_path):
+    repo = copy_uiflow_tree(tmp_path)
+    blocks_dir = repo / "uiflow" / "dial" / "blocks"
+    manifest_path = blocks_dir / "prop_tx.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["blocks"].append(
+        {
+            "name": "diagnostic_ping",
+            "type": "execute",
+            "params": [{"name": "Prop diagnostic", "type": "label"}],
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    (blocks_dir / "code" / "diagnostic_ping.py").write_text("# diagnostic\n", encoding="utf-8")
+    validator = load_validator()
+
+    report = validator.validate_bundle(repo)
+
+    assert any(
+        "manifest/templates have blocks without Alpha-2 method mapping: ['diagnostic_ping']"
+        in error
+        for error in report.errors
+    )
+
+
 def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
     readme = (BLOCKS / "README.md").read_text(encoding="utf-8")
 
@@ -184,8 +239,7 @@ def test_uiflow_blocks_readme_documents_validation_and_manual_import_path():
         "Validated manual bundle",
         "Alpha-2 .m5b2",
         "UIFlow2 Block Designer Alpha-2",
-        "jscode_sha256",
-        "toolbox_sha256",
+        "checked by deterministic tests against the builder",
         "uiflow/dial/blocks/alpha2/PropTx.py",
         "uiflow/dial/blocks/dist/PropTx.m5b2",
         "tools/build_uiflow_alpha2_artifact.py",
@@ -223,37 +277,26 @@ def test_alpha2_prop_tx_source_covers_every_prop_block_method():
     assert "colors" in methods["fire"]
     assert "Prop STOP" in methods["stop"]
     assert "Prop ARM" in methods["arm"]
-    assert "Prop remote LED" in methods["remote_led"]
-    assert "Prop sync palette" in methods["sync_palette"]
     assert "Prop reply" in methods["reply"]
-    assert "Prop hue" in methods["hue_color"]
-    assert "Prop default hues" in methods["default_hues"]
     assert "Prop default colors" in methods["default_colors"]
-    assert "Prop colors from hues" in methods["palette_from_hues"]
-    assert "Prop set color" in methods["set_color"]
     assert "Prop first four" in methods["first_four"]
     assert "Prop RGB" in methods["rgb_color"]
     assert "Prop RGB888" in methods["rgb888"]
-    assert "Prop remote LED3" in methods["remote_led3"]
-    assert "Prop remote LED5" in methods["remote_led5"]
 
     for needle in [
         "import prop_frame",
         "import prop_ui",
         "self._tx = prop_frame.PropSender()",
-        "self._tx.preview_line(colors)",
-        "self._tx.fire_burst_lines(colors)",
-        "self._tx.stop_line()",
-        "self._tx.arm_line()",
-        "self._tx.remote_led_line(",
-        "self._tx.palette_line(1, False, colors, track_ack=False)",
-        "self._prop_ui.hsv(deg)",
+        "self._tx.preview_line(_first_four_for_frame(self, colors))",
+        "self._tx.fire_burst_lines(_first_four_for_frame(self, colors))",
+        "self._tx.stop_lines()",
+        "self._tx.arm_lines()",
+        "Prop STOP retry timing",
         "self._prop_ui.palette_from_hues",
         "self._prop_ui.rgb888(color)",
-        "self.remote_led(3)",
-        "self.remote_led(5)",
     ]:
         assert needle in source
+    assert "remote_led" not in source
 
 
 def test_alpha2_method_labels_include_designer_instance_placeholder():
@@ -268,19 +311,11 @@ def test_alpha2_method_labels_include_designer_instance_placeholder():
         "fire": 2,
         "stop": 1,
         "arm": 1,
-        "remote_led": 2,
-        "sync_palette": 2,
         "reply": 1,
-        "hue_color": 2,
-        "default_hues": 1,
         "default_colors": 1,
-        "palette_from_hues": 2,
-        "set_color": 4,
         "first_four": 2,
         "rgb_color": 4,
         "rgb888": 2,
-        "remote_led3": 1,
-        "remote_led5": 1,
     }
 
     for method in [node for node in prop_tx.body if isinstance(node, ast.FunctionDef)]:
@@ -296,11 +331,11 @@ def test_validator_reports_alpha2_prop_tx_source():
 
     report = validator.validate_bundle(ROOT)
 
-    assert report.alpha2_method_count == 18
+    assert report.alpha2_method_count == 10
     assert report.alpha2_source == "uiflow/dial/blocks/alpha2/PropTx.py"
     assert report.alpha2_artifact == "uiflow/dial/blocks/dist/PropTx.m5b2"
-    assert report.alpha2_artifact_method_count == 18
-    assert report.alpha2_artifact_block_count == 18
+    assert report.alpha2_artifact_method_count == 10
+    assert report.alpha2_artifact_block_count == 10
 
 
 def test_alpha2_dist_m5b2_is_exported_for_offline_import():
@@ -339,6 +374,19 @@ def test_alpha2_dist_import_module_category_and_source_match_manifest():
     assert data["pyCode"] == ALPHA2_SOURCE.read_text(encoding="utf-8")
     for member in data["data"]["members"]:
         assert member["source"].strip() in data["pyCode"]
+
+
+def test_alpha2_dist_embedded_ui_assets_match_deterministic_builder():
+    builder = load_artifact_builder()
+    data = json.loads(ALPHA2_DIST.read_text(encoding="utf-8"))
+
+    expected_jscode = builder.build_jscode(data["category"], data["color"])
+    expected_toolbox = builder.build_toolbox(data["category"], data["color"])
+    actual_jscode = data["uiflow2"]["jscode"]
+    actual_toolbox = data["uiflow2"]["toolbox"]
+
+    assert actual_jscode == expected_jscode
+    assert actual_toolbox == expected_toolbox
 
 
 def test_alpha2_dist_m5b2_matches_deterministic_builder_output():
@@ -401,35 +449,20 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
 
     tx = module.PropTx(13, 15)
     uart = FakeUART.instances[-1]
-    colors = [tx.hue_color(0), tx.hue_color(120), tx.hue_color(240), tx.hue_color(60)]
-    default_hues = tx.default_hues()
     default_colors = tx.default_colors()
-    updated_colors = tx.set_color(default_colors, 5, tx.rgb_color(-10, 260, 7))
+    colors = tx.first_four(default_colors)
 
     assert uart.kwargs["tx"] == 13
     assert uart.kwargs["rx"] == 15
-    assert colors[0] == (255, 0, 0)
-    assert default_hues == [0, 120, 240, 210, 60]
-    assert default_colors == tx.palette_from_hues(default_hues)
+    assert default_colors == [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 127, 255), (255, 255, 0)]
     assert tx.first_four(default_colors) == default_colors[:4]
     assert tx.rgb_color(-10, 260, 7) == (0, 255, 7)
     assert tx.rgb888((1, 2, 3)) == 0x010203
-    assert updated_colors[:4] == default_colors[:4]
-    assert updated_colors[4] == (0, 255, 7)
-    assert default_colors[4] != updated_colors[4]
 
     tx.preview(colors)
+    tx.arm()
     tx.fire(colors)
     tx.stop()
-    tx.arm()
-    tx.remote_led(3)
-    tx.remote_led(5)
-    writes_before_invalid_remote_led = len(uart.writes)
-    tx.remote_led(4)
-    assert len(uart.writes) == writes_before_invalid_remote_led
-    tx.remote_led3()
-    tx.remote_led5()
-    tx.sync_palette(default_colors)
     uart.reads.append(b"OK\n")
 
     assert tx.reply() == "OK\n"
@@ -449,26 +482,60 @@ def test_alpha2_prop_tx_runtime_methods_emit_decodable_frames(monkeypatch):
 
     assert [int(frame.frame_type) for frame in decoded] == [
         proto.FrameType.PREVIEW,
+        proto.FrameType.ARM,
+        proto.FrameType.ARM,
         proto.FrameType.FIRE,
         proto.FrameType.FIRE,
         proto.FrameType.FIRE,
         proto.FrameType.STOP,
-        proto.FrameType.ARM,
-        proto.FrameType.REMOTE_LED,
-        proto.FrameType.REMOTE_LED,
-        proto.FrameType.REMOTE_LED,
-        proto.FrameType.REMOTE_LED,
-        proto.FrameType.PALETTE_SET,
+        proto.FrameType.STOP,
+        proto.FrameType.STOP,
     ]
     assert proto.parse_led_payload(bytes(decoded[0].payload))["colors"] == colors
-    assert len(set(frame_lines[1:4])) == 1
-    assert all(line.startswith("FF ") for line in frame_lines[1:4])
-    assert decoded[1].sequence == decoded[2].sequence == decoded[3].sequence
-    assert decoded[1].nonce == decoded[2].nonce == decoded[3].nonce
-    assert proto.parse_remote_led(bytes(decoded[6].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED3
-    assert proto.parse_remote_led(bytes(decoded[7].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED5
-    assert proto.parse_remote_led(bytes(decoded[8].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED3
-    assert proto.parse_remote_led(bytes(decoded[9].payload)) == tx._prop_frame.REMOTE_LED_BIT_LED5
+    assert len(set(frame_lines[1:3])) == 1
+    assert all(line.startswith("FF ") for line in frame_lines[1:3])
+    assert len(set(frame_lines[3:6])) == 1
+    assert all(line.startswith("FF ") for line in frame_lines[3:6])
+    assert len(set(frame_lines[6:9])) == 1
+    assert all(line.startswith("SEND ") for line in frame_lines[6:9])
+    assert decoded[1].sequence == decoded[2].sequence
+    assert decoded[1].nonce == decoded[2].nonce
+    assert decoded[3].sequence == decoded[4].sequence == decoded[5].sequence
+    assert decoded[3].nonce == decoded[4].nonce == decoded[5].nonce
+    assert decoded[6].sequence == decoded[7].sequence == decoded[8].sequence
+    assert decoded[6].nonce == decoded[7].nonce == decoded[8].nonce
+    assert len(decoded) == 9
+
+
+def test_alpha2_prop_tx_reply_ignores_invalid_utf8_bytes(monkeypatch):
+    class FakeUART:
+        instances = []
+
+        def __init__(self, *args, **kwargs):
+            self.reads = []
+            FakeUART.instances.append(self)
+
+        def write(self, data):
+            return len(data)
+
+        def any(self):
+            return bool(self.reads)
+
+        def read(self):
+            return self.reads.pop(0)
+
+    monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
+    monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
+
+    spec = importlib.util.spec_from_file_location("alpha2_prop_tx_reply_utf8", ALPHA2_SOURCE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    tx = module.PropTx(13, 15)
+    FakeUART.instances[-1].reads.append(b"OK\xff\n")
+
+    assert tx.reply() == "OK\n"
 
 
 def test_alpha2_prop_tx_fire_sleeps_between_burst_frames(monkeypatch):
@@ -498,6 +565,8 @@ def test_alpha2_prop_tx_fire_sleeps_between_burst_frames(monkeypatch):
     spec.loader.exec_module(module)
 
     tx = module.PropTx(13, 15)
+    tx.arm()
+    FakeUART.instances[-1].writes.clear()
     tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
 
     fire_writes = [
@@ -510,6 +579,39 @@ def test_alpha2_prop_tx_fire_sleeps_between_burst_frames(monkeypatch):
     assert sleep_calls == [
         tx._prop_frame.FIRE_BURST_GAP_MS,
         tx._prop_frame.FIRE_BURST_GAP_MS,
+    ]
+
+
+def test_alpha2_prop_tx_fire_requires_local_arm(monkeypatch):
+    class FakeUART:
+        instances = []
+
+        def __init__(self, *args, **kwargs):
+            self.writes = []
+            FakeUART.instances.append(self)
+
+        def write(self, data):
+            self.writes.append(data)
+            return len(data)
+
+    monkeypatch.syspath_prepend(str(ROOT / "uiflow" / "dial"))
+    monkeypatch.setitem(sys.modules, "hardware", types.SimpleNamespace(UART=FakeUART))
+    monkeypatch.setitem(sys.modules, "time", types.SimpleNamespace(sleep_ms=lambda _value: None))
+
+    spec = importlib.util.spec_from_file_location("alpha2_prop_tx_fire_requires_arm", ALPHA2_SOURCE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    tx = module.PropTx(13, 15)
+    sequence_before = tx._tx.sequence
+    with pytest.raises(RuntimeError, match="Prop FIRE requires Prop ARM first"):
+        tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
+    assert tx._tx.sequence == sequence_before
+    assert not [
+        item
+        for item in FakeUART.instances[-1].writes
+        if isinstance(item, str) and item.startswith("FF ")
     ]
 
 
@@ -539,6 +641,7 @@ def test_alpha2_prop_tx_fire_falls_back_to_time_sleep(monkeypatch):
     spec.loader.exec_module(module)
 
     tx = module.PropTx(13, 15)
+    tx.arm()
     tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
 
     assert sleep_calls == [
@@ -569,8 +672,17 @@ def test_alpha2_prop_tx_fire_requires_delay_function(monkeypatch):
     spec.loader.exec_module(module)
 
     tx = module.PropTx(13, 15)
+    sequence_before = tx._tx.sequence
+    tx.arm()
+    FakeUART.instances[-1].writes.clear()
     with pytest.raises(RuntimeError, match="time.sleep_ms or time.sleep is required"):
         tx.fire([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 180, 0)])
+    assert tx._tx.sequence == sequence_before + 1
+    assert not [
+        item
+        for item in FakeUART.instances[-1].writes
+        if isinstance(item, str) and item.startswith("FF ")
+    ]
 
 
 def test_alpha2_prop_tx_instances_keep_independent_uart_state(monkeypatch):
@@ -657,14 +769,14 @@ def test_block_generated_smoke_example_matches_uiflow2_shape():
         "from PropTx import PropTx",
         "proptx_0 = PropTx(13, 15)",
         "colors = proptx_0.default_colors()",
-        "colors = proptx_0.set_color(colors, 5, proptx_0.hue_color(60))",
         "proptx_0.preview(proptx_0.first_four(colors))",
-        "proptx_0.remote_led3()",
-        "proptx_0.remote_led5()",
+        "proptx_0.arm()",
         "proptx_0.stop()",
         "reply = proptx_0.reply()",
     ]:
         assert needle in source
+    assert "set_color" not in source
+    assert "hue_color" not in source
 
 
 def test_block_generated_smoke_example_executes_and_emits_valid_frames(monkeypatch, capsys):
@@ -705,7 +817,11 @@ def test_block_generated_smoke_example_executes_and_emits_valid_frames(monkeypat
     from shared.protocol import protocol as proto
 
     keys = {1: bytes.fromhex("00112233445566778899aabbccddeeff")}
-    frame_lines = [item for item in uart.writes if isinstance(item, str) and item.startswith("FF ")]
+    frame_lines = [
+        item
+        for item in uart.writes
+        if isinstance(item, str) and (item.startswith("FF ") or item.startswith("SEND "))
+    ]
     decoded = [
         proto.decode_frame(bytes.fromhex(line.split(" ", 1)[1].strip()), keys)
         for line in frame_lines
@@ -713,8 +829,10 @@ def test_block_generated_smoke_example_executes_and_emits_valid_frames(monkeypat
 
     assert [int(frame.frame_type) for frame in decoded] == [
         proto.FrameType.PREVIEW,
-        proto.FrameType.REMOTE_LED,
-        proto.FrameType.REMOTE_LED,
+        proto.FrameType.ARM,
+        proto.FrameType.ARM,
+        proto.FrameType.STOP,
+        proto.FrameType.STOP,
         proto.FrameType.STOP,
     ]
     assert proto.parse_led_payload(bytes(decoded[0].payload))["colors"] == [
@@ -723,5 +841,7 @@ def test_block_generated_smoke_example_executes_and_emits_valid_frames(monkeypat
         (0, 0, 255),
         (0, 127, 255),
     ]
-    assert proto.parse_remote_led(bytes(decoded[1].payload)) == proto.REMOTE_LED_BIT_LED3
-    assert proto.parse_remote_led(bytes(decoded[2].payload)) == proto.REMOTE_LED_BIT_LED5
+    assert all(line.startswith("FF ") for line in frame_lines[1:3])
+    assert len(set(frame_lines[1:3])) == 1
+    assert all(line.startswith("SEND ") for line in frame_lines[3:6])
+    assert len(set(frame_lines[3:6])) == 1

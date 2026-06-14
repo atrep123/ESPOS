@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import sys
+import importlib.util
 from pathlib import Path
 
 
@@ -9,7 +10,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from shared.protocol.protocol import FrameType, PropFrame  # noqa: E402
-from tools import sim_link as sim  # noqa: E402
+
+_SIM_SPEC = importlib.util.spec_from_file_location("m5_sim_link", ROOT / "tools" / "sim_link.py")
+assert _SIM_SPEC is not None and _SIM_SPEC.loader is not None
+sim = importlib.util.module_from_spec(_SIM_SPEC)
+sys.modules[_SIM_SPEC.name] = sim
+_SIM_SPEC.loader.exec_module(sim)
 
 
 def _frame(frame_type: FrameType, *, epoch: int, sequence: int) -> PropFrame:

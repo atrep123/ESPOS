@@ -8,11 +8,10 @@
 //  USER KNOB. The companion file for the DinMeter receiver is
 //  firmware/din-rx/src/prop_config.h -- this header mirrors its layout.
 //
-//  Internal / SECURITY-critical constants deliberately STAY in app_prop_tx.cpp
-//  and are NOT exposed here -- editing them can break the radio link or its
-//  authentication:
-//    * SHARED_KEY[]                 -- the 16-byte HMAC secret (never move it)
-//    * PROP_NVS_NAMESPACE / _TAG    -- NVS blob namespace + log tag
+//  Internal / SECURITY-critical state deliberately STAYS out of this user-tuning
+//  header -- editing it can break the radio link or its authentication:
+//    * runtime HMAC key provider    -- provisioned from non-source storage
+//    * PROP_NVS_NAMESPACE / _TAG    -- settings namespace + log tag
 //    * the per-boot RANDOM session epoch + sequence handling
 //    * the 13-byte LED payload rule -- FIRE/Preview always send EXACTLY 4 RGB
 //      colours (first4_colors); LED#5's colour rides the separate PaletteSet
@@ -80,7 +79,8 @@
 //   * Two detents per selection step feels wrong (too coarse/fine):
 //       set  ENC_COUNTS_PER_DETENT  (M5Dial encoder = 2 counts/detent)    ([3])
 //
-//   * Hold-to-switch COMMAND<->SETUP feels too long/short:
+//   * Long press is reserved for feedback/cancel behaviour; setup editing now
+//     lives on the M5StickS3 Terminal:
 //       set  ENCODER_LONG_PRESS_MS                   (section [3])
 //
 //   * Keep the receiver armed longer between heartbeats (lower LoRa duty):
@@ -95,9 +95,9 @@ namespace prop_tx_config
 {
 
 // ============================ [1] STRIP / LEDS ==============================
-// Number of LED slots the Dial EDITS and TRANSMITS in a PaletteSet (the five
-// physical DinMeter LEDs: #1/#2 buttons, #3 switch, #4 odpal, #5 remote). The
-// SETUP colour editor (FIELD_LED) and the touch strip reach slots 0..4.
+// Number of LED slots the Dial TRANSMITS in a PaletteSet (the five physical
+// DinMeter LEDs: #1/#2 buttons, #3 switch, #4 odpal, #5 remote). Editing moved
+// to the M5StickS3 Terminal; the Dial keeps only fire-focused command controls.
 //   IMPORTANT: this is the PALETTE slot count, NOT the LED payload width. The
 //   13-byte FIRE/Preview LED payload ALWAYS carries exactly 4 colours
 //   (first4_colors in app_prop_tx.cpp); LED#5 (slot 4) is delivered only via the
@@ -131,7 +131,8 @@ constexpr int      PROP_UART_BAUD     = 115200;   // host<->modem line rate (mus
 // DETENT raw counts per physical detent; rotation also injects a brief glitch on
 // the BUTTON line, so a click-suppress window keyed to wall-clock time drains any
 // press handled within ENCODER_BUTTON_QUIET_MS of the last rotation.
-constexpr std::uint32_t ENCODER_LONG_PRESS_MS      = 600;  // hold encoder button >=0.6s = switch COMMAND<->SETUP
+constexpr bool          DIAL_SETUP_EDITOR_ENABLED  = false;  // Terminal owns setup editing; Dial stays fire-focused.
+constexpr std::uint32_t ENCODER_LONG_PRESS_MS      = 600;  // hold encoder button >=0.6s = setup handoff/status feedback
 constexpr std::uint32_t ENCODER_IDLE_FLUSH_MS      = 150;  // stale partial-detent accumulator flush after this idle gap
 constexpr std::uint32_t ENCODER_BUTTON_QUIET_MS    = 180;  // rotation->click suppress window (raise if a turn registers as a press)
 constexpr std::uint32_t ENCODER_RENDER_THROTTLE_MS = 35;   // min gap between encoder-driven redraws (~28 Hz cap)
@@ -183,8 +184,8 @@ constexpr std::uint8_t  RECENT_FF_RETRIES    = 1;    // resends allowed per reco
 
 // ============================== [7] TOUCH ZONES =============================
 // On-screen touch hit-rectangles (M5Dial 240x240 round LCD, pixel coords). The
-// LED strip row (SETUP) selects a colour slot; the ACTION button (COMMAND) runs
-// the selected action. The LED dots are laid out at START_X + n*SPACING.
+// ACTION button runs the selected action. The older setup LED-strip geometry is
+// retained here only as documented legacy geometry for preview/render parity.
 //   (Touch below y>220 is the BACK gesture, handled separately in onRunning.)
 constexpr int PROP_TX_LED_TOUCH_LEFT   = 52;
 constexpr int PROP_TX_LED_TOUCH_RIGHT  = 221;  // widened for the 5th LED column (linear map: 70 + 4*33 = 202)
@@ -256,8 +257,8 @@ constexpr std::array<std::uint16_t, PROP_TX_PALETTE_SLOTS> DEFAULT_HUES =
     {{0, 120, 240, 210, 60, 180, 300, 30}};
 
 // ========================= [C] NAMED LED ROLES ==============================
-// Human names for the five TRANSMITTED LED slots, so DEFAULT_COLORS / the touch
-// strip / the SETUP editor read clearly. The INDEX is the palette slot
+// Human names for the five TRANSMITTED LED slots, so DEFAULT_COLORS and the
+// Terminal setup UI read clearly. The INDEX is the palette slot
 // (0..PROP_TX_FIXED_LEDS-1); each maps to the same-numbered physical DinMeter LED.
 //
 //   index 0  LED_SLOT_BUTTON1 -- DinMeter LED #1 (local toggle button 1)

@@ -1,8 +1,8 @@
 # prop_ui.py -- tiny UI-side helpers for the UIFlow2 Dial (kept OUT of prop_frame.py
 # so that module stays protocol-only). Upload alongside prop_frame.py to /flash.
 #
-# Used by the custom "Prop TX" blocks (see blocks/prop_tx_blocks.md) for per-LED hue
-# editing and for turning a colour into the 0xRRGGBB the M5 display wants.
+# Used by the fire-focused Dial app/blocks for default colours and for turning a
+# colour into the 0xRRGGBB the M5 display wants. Terminal owns setup editing.
 
 def hsv(h, s=1.0, v=1.0):
     """Hue 0..359 deg (+ optional saturation/value 0..1) -> (r, g, b) 0..255."""

@@ -12,19 +12,39 @@
 
 #include "services/input/input.h"
 
+static void ui_app_copy_trunc(char *out, size_t out_cap, const char *src)
+{
+    size_t i = 0;
+
+    if (out == NULL || out_cap == 0) {
+        return;
+    }
+
+    if (src != NULL) {
+        while ((i + 1U) < out_cap && src[i] != '\0') {
+            out[i] = src[i];
+            i++;
+        }
+    }
+    out[i] = '\0';
+}
+
 void ui_app_format_heap(char *out, size_t out_cap, uint32_t bytes)
 {
+    char tmp[16];
+
     if (out == NULL || out_cap == 0) {
         return;
     }
 
     if (bytes >= (1024U * 1024U)) {
-        snprintf(out, out_cap, "%" PRIu32 "M", bytes / (1024U * 1024U));
+        snprintf(tmp, sizeof(tmp), "%" PRIu32 "M", bytes / (1024U * 1024U));
     } else if (bytes >= 1024U) {
-        snprintf(out, out_cap, "%" PRIu32 "K", bytes / 1024U);
+        snprintf(tmp, sizeof(tmp), "%" PRIu32 "K", bytes / 1024U);
     } else {
-        snprintf(out, out_cap, "%" PRIu32 "B", bytes);
+        snprintf(tmp, sizeof(tmp), "%" PRIu32 "B", bytes);
     }
+    ui_app_copy_trunc(out, out_cap, tmp);
 }
 
 const char *ui_app_input_name(uint8_t id)
