@@ -323,13 +323,14 @@ def test_din_rx_fire_respects_terminal_effect_mask_for_odpal_lane() -> None:
     assert "markLocalDirty();" in bad_payload_section
     assert bad_payload_section.index("_terminalPreviewUntilMs = 0;") < bad_payload_section.index('sendAckFrame(frame, "BAD_PAYLOAD")')
     assert "if (!triggerOdpal())" in fire_section
-    assert 'sendAckFrame(frame, "NO_EFFECT")' in fire_section
+    assert 'sendAckFrame(frame, xiaoOutputReady(millis()) ? "NO_EFFECT" : "NO_XIAO")' in fire_section
     assert "scheduleFireAck(frame)" in fire_section
     no_effect_section = fire_section[
         fire_section.index("if (!triggerOdpal())") :
         fire_section.index("scheduleFireAck(frame)")
     ]
-    assert 'sendAckFrame(frame, "NO_EFFECT")' in no_effect_section
+    assert '"NO_EFFECT"' in no_effect_section
+    assert '"NO_XIAO"' in no_effect_section
     assert "return;" in no_effect_section
     assert "triggerOdpal();   // generic placeholder odpal" not in fire_section
 
@@ -2163,6 +2164,7 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "Odpalovac / Dial",
         "M5StickS3 Terminal USB setup editor",
         "Prop electronics",
+        "docs/prop_xiao_electronics.md",
         "Do not connect live pyro or actuator outputs",
         "python -m esptool version",
         "python -m mpremote --help",
@@ -2172,8 +2174,17 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "<DIAL_COM>",
         "<TERMINAL_COM>",
         "<DIN_COM>",
+        "<XIAO_COM>",
         "<MODEM_DIAL_COM>",
         "<MODEM_PROP_COM>",
+        "xiao-prop-electronics-private",
+        "pio run -e seeed_xiao_rp2040",
+        "pio run -e seeed_xiao_rp2040 -t upload --upload-port <XIAO_COM>",
+        "HELLO",
+        "PING",
+        "PONG",
+        "STAT4",
+        "BARREL RED/OFF",
         "Runtime HMAC Key Preflight",
         "m5stack-c6l",
         "PROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=1",

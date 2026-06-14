@@ -82,12 +82,56 @@ Port A carries power, ground, and the UART pair for the Unit C6L. Keep TX/RX cro
 
 - Target name: `din-rx`
 - Expansion header: Port B
-- I2C: G1/G2 at 100 kHz
-- LED driver: M5 Unit NeoDriver at 0x60, driving 5x SK6812 RGBW
-- Local inputs: M5 Unit ByteButton at 0x47
-- Role: LED-only receiver feedback plus local button/switch inputs
+- Production Port B backend: UART to a Seeed Studio XIAO RP2040 prop-I/O board
+- DinMeter TX: Port B G2/yellow/GO -> XIAO D7/GPIO1 RX
+- DinMeter RX: Port B G1/white/GI <- XIAO D6/GPIO0 TX
+- UART: 115200 8N1, protocol in `shared/protocol/prop_xiao_link.h`
+- XIAO local inputs: 3 momentary buttons plus 1 maintained switch, all
+  `INPUT_PULLUP`, active-low to GND
+- XIAO outputs: one 4-pixel status LED data chain plus one 18x WS2812B barrel strip
+- Role: DinMeter remains safety/protocol/persistence authority; XIAO is only the
+  prop electronics coprocessor for local inputs and LED output
 
-Port B carries the I2C bus for the NeoDriver and ByteButton. The receiver slice is LED-only: it reports accepted controller state through the addressable LED path and does not drive any actuator output.
+Production Port B must not run I2C at the same time as the XIAO UART bridge.
+The legacy I2C path remains compiled as a bench fallback only: ByteButton at
+0x47 and NeoDriver at 0x60 on G1/G2. In the current prop build
+`PROP_IO_XIAO_UART_ENABLED = true`, so DinMeter leaves Port B I2C idle and uses
+UART2 for XIAO.
+
+XIAO wiring snapshot, 2026-06-14:
+
+| Function | XIAO RP2040 pin | Electrical note |
+| --- | --- | --- |
+| UART TX to DinMeter RX | D6 / GPIO0 | 3.3 V logic, no level shifter |
+| UART RX from DinMeter TX | D7 / GPIO1 | 3.3 V logic, no level shifter |
+| Button 1 | D0 / GPIO26 | `INPUT_PULLUP`, switch to GND |
+| Button 2 | D1 / GPIO27 | `INPUT_PULLUP`, switch to GND |
+| Button 3 / local fire | D2 / GPIO28 | `INPUT_PULLUP`, switch to GND |
+| Maintained switch | D3 / GPIO29 | `INPUT_PULLUP`, switch to GND |
+| Barrel strip data | D8 / GPIO2 | 18x WS2812B, red whole-barrel effect |
+| Four status LEDs data | D10 / GPIO3 | 4 logical status LEDs |
+| Reserved | D4/D5, D9 | keep free for future I2C/bench use |
+
+Power rules:
+
+- Do not power the LED strips from DinMeter Port B. The Port B 5 V rail is only
+  a low-current accessory rail and is not sized for the barrel.
+- Use an external regulated 5 V LED supply. Budget at least 2 A; 3 A gives
+  margin for the 18 WS2812B barrel plus four RGB/RGBW status LEDs.
+- Tie DinMeter GND, XIAO GND, LED supply GND, and level-shifter GND together.
+- Put a 74AHCT125/74HCT245-class level shifter between XIAO data pins and 5 V
+  WS2812/SK6812 data inputs.
+- Put 330-500 ohm series resistance near each first LED data input and
+  500-1000 uF bulk capacitance on the 5 V LED rail near the first LEDs.
+
+Logical mapping:
+
+- DinMeter still keeps five logical lanes so Terminal/Dial setup semantics stay
+  stable.
+- The four-pixel XIAO status LED chain receives logical LED1, LED2, switch, and
+  LED5 via `STAT4` on one data line.
+- Logical ODPAL is not a fifth status LED in this build. It drives the
+  18-pixel barrel as a single red intensity/effect group via `BARREL RED/OFF`.
 
 ## LoRa modem
 

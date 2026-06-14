@@ -388,12 +388,40 @@ def test_current_dinmeter_led_hardware_contract_matches_firmware_source() -> Non
 
     assert "constexpr int LED_COUNT = 5;" in config
     assert "constexpr int LED_STRIP_MAX = 30;" in config
+    assert "constexpr bool PROP_IO_XIAO_UART_ENABLED = true;" in config
+    assert "constexpr int           PROP_IO_UART_TX_PIN = 2;" in config
+    assert "constexpr int           PROP_IO_UART_RX_PIN = 1;" in config
+    assert "constexpr std::uint8_t  XIAO_BARREL_WS2812_COUNT = 18;" in config
+    assert "constexpr std::uint8_t  XIAO_STATUS_LED_COUNT    = 4;" in config
+    assert "XIAO_STATUS_LED_CHANNELS[XIAO_STATUS_LED_COUNT]" in config
+    assert "LED_ROLE_ODPAL" not in config.split("XIAO_STATUS_LED_CHANNELS", 1)[1].split("};", 1)[0]
     assert "constexpr std::uint8_t LED_ORDER[LED_COUNT] = {0, 2, 3, 4, 1};" in config
     order_match = re.search(r"LED_ORDER\[LED_COUNT\]\s*=\s*\{([^}]+)\}", config)
     assert order_match
     order = [int(value.strip()) for value in order_match.group(1).split(",")]
     assert sorted(order) == list(range(5))
 
+    assert '#include "prop_xiao_link.h"' in cpp
+    assert "HardwareSerial propIoSerial(2);" in cpp
+    assert "beginXiaoPropIo();" in cpp
+    assert "readXiaoPropIo();" in cpp
+    assert "applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, \"xiao\")" in cpp
+    assert "sendXiaoOutputFrame(scaled)" in cpp
+    assert "formatStat4Line(status)" in cpp
+    assert "formatBarrelRedLine(barrel)" in cpp
+    assert "formatBarrelOffLine()" in cpp
+    assert "nextXiaoPingSeq()" in cpp
+    assert "_xiaoPingSeq >= prop_xiao_link::MAX_SEQUENCE ? 1" in cpp
+    assert "xiaoFresh = xiaoLinkOk(hbNow)" in cpp
+    assert "currentXiaoLinkOk" in cpp
+    assert "_xiaoLinkOkVisible" in cpp
+    assert "markXiaoOutputMissing()" in cpp
+    assert '"NO_XIAO"' in cpp
+    assert 'xiaoOutputReady(millis()) ? "NO_EFFECT" : "NO_XIAO"' in cpp
+    assert cpp.index("beginXiaoPropIo();") < cpp.index("int sda = I2C_SDA_PIN")
+
+    # Legacy bench fallback remains compiled, but production mode must not be the
+    # Port-B I2C ByteButton/NeoDriver path.
     assert "seesaw_NeoPixel pixels(LED_STRIP_MAX, NEODRIVER_NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800, &Wire1)" in cpp
     assert "pixels.updateLength(LED_COUNT)" in cpp
     assert "const int phys = (i < LED_COUNT) ? LED_ORDER[i] : i;" in cpp

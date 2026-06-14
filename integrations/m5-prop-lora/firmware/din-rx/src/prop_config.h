@@ -128,14 +128,33 @@ constexpr std::uint8_t BB_FIRE_IDX     = 3;      // input 3 = local FIRE -> odpa
 constexpr std::uint8_t BB_PRESSED      = 0;      // getSwitchStatus() value meaning pressed (module is active-low: 1=released,0=pressed)
 
 // ============================== [4] I2C (PORT B) =============================
-// Prop I/O on Port B (G1/G2) via I2C1/Wire1. Pin order matches the factory I/O
-// test (Wire1.begin(2,1)): SDA=G2, SCL=G1. (Modem keeps Port A UART; onboard
-// RTC keeps the primary Wire bus G11/G12.)
+// Prop I/O backend on Port B (G1/G2).
+//
+// Production prop electronics now use a Seeed XIAO RP2040 coprocessor on Port B
+// UART. The legacy I2C backend (ByteButton + NeoDriver) is kept compiled for
+// bench fallback, but must not run at the same time because it uses the same
+// G1/G2 wires.
+constexpr bool PROP_IO_XIAO_UART_ENABLED = true;
+
+// Legacy Port B I2C pin order. Pin order matches the factory I/O test
+// (Wire1.begin(2,1)): SDA=G2, SCL=G1. (Modem keeps Port A UART; onboard RTC
+// keeps the primary Wire bus G11/G12.)
 constexpr int          I2C_SDA_PIN            = 2;       // Port B G2
 constexpr int          I2C_SCL_PIN            = 1;       // Port B G1
 constexpr std::uint32_t I2C_SPEED             = 100000;  // 100 kHz: robust over long Grove wiring / weak pull-ups
 constexpr std::uint8_t NEODRIVER_ADDR         = 0x60;    // Adafruit NeoDriver (seesaw) -> SK6812 RGBW
 constexpr int          NEODRIVER_NEOPIXEL_PIN = 15;      // NeoDriver's fixed seesaw NeoPixel output pin
+
+// XIAO UART on DinMeter Port B:
+//   DinMeter TX G2/yellow/GO -> XIAO RX D7/GPIO1
+//   DinMeter RX G1/white/GI  <- XIAO TX D6/GPIO0
+// Both sides are 3.3V UART logic. LEDs still need their own 5V supply and data
+// level shifting on the XIAO outputs.
+constexpr int           PROP_IO_UART_TX_PIN = 2;
+constexpr int           PROP_IO_UART_RX_PIN = 1;
+constexpr std::uint32_t PROP_IO_UART_BAUD   = 115200;
+constexpr std::uint8_t  XIAO_BARREL_WS2812_COUNT = 18;
+constexpr std::uint8_t  XIAO_STATUS_LED_COUNT    = 4;
 
 // =========================== [5] MODEM UART (PORT A) =========================
 constexpr int          UART1_TX_PIN = 13;       // Grove Port A TX -> modem RX
@@ -267,6 +286,15 @@ constexpr int LED_ROLE_SWITCH  = 2;
 constexpr int LED_ROLE_ODPAL   = 3;
 constexpr int LED_ROLE_REMOTE  = 4;
 
+// XIAO drives four discrete status LEDs plus the 18-pixel barrel. The barrel is
+// the ODPAL role; the four standalone LEDs keep the remaining visible roles.
+constexpr std::uint8_t XIAO_STATUS_LED_CHANNELS[XIAO_STATUS_LED_COUNT] = {
+    LED_ROLE_BUTTON1,
+    LED_ROLE_BUTTON2,
+    LED_ROLE_SWITCH,
+    LED_ROLE_REMOTE,
+};
+
 // ========================== [D] SANITY CHECKS ===============================
 // Compile-time validation of the knobs above. If you set something out of
 // range, the build FAILS HERE with the message below -- a typo is caught now,
@@ -320,5 +348,12 @@ static_assert(LED_ROLE_BUTTON1 < LED_COUNT && LED_ROLE_BUTTON2 < LED_COUNT &&
               LED_ROLE_SWITCH  < LED_COUNT && LED_ROLE_ODPAL   < LED_COUNT &&
               LED_ROLE_REMOTE  < LED_COUNT,
               "[C] every LED_ROLE_* must be < LED_COUNT (an addressable logical channel)");
+static_assert(XIAO_STATUS_LED_COUNT == 4,
+              "[4] XIAO_STATUS_LED_COUNT must stay 4 to match the STAT4 UART contract");
+static_assert(XIAO_BARREL_WS2812_COUNT == 18,
+              "[4] XIAO_BARREL_WS2812_COUNT must match the installed barrel strip");
+static_assert(XIAO_STATUS_LED_CHANNELS[0] < LED_COUNT && XIAO_STATUS_LED_CHANNELS[1] < LED_COUNT &&
+              XIAO_STATUS_LED_CHANNELS[2] < LED_COUNT && XIAO_STATUS_LED_CHANNELS[3] < LED_COUNT,
+              "[C] XIAO_STATUS_LED_CHANNELS must address real logical LED channels");
 
 }  // namespace prop_config

@@ -900,25 +900,47 @@ class ProjectSourceTests(unittest.TestCase):
             self.assertIn("_service_link_during_input_wait()", block)
             self.assertNotIn("delay(5);", block)
 
-    def test_din_prop_rx_app_drives_five_led_sequence_on_port_b(self):
+    def test_din_prop_rx_app_drives_five_logical_channels_through_xiao_port_b(self):
         # DinMeter redesign this session:
         #   * LED_COUNT 4->5 and the count moved into prop_config.h ([1] STRIP);
-        #   * output is now an Adafruit NeoDriver (seesaw NeoPixel over I2C), so the
-        #     old bit-banged Adafruit_NeoPixel + LED_PIN=2 are gone -- the strip object
-        #     is `seesaw_NeoPixel pixels(...)`;
+        #   * production Port B output/input is now a XIAO RP2040 UART bridge;
+        #   * the legacy Adafruit NeoDriver (seesaw NeoPixel over I2C) remains compiled as a
+        #     bench fallback, but must not be the production backend while XIAO mode is enabled;
         #   * the old EffectConfig (intensity/periodMs/ledDelayMs/preTrigger/shapeParam/
         #     repeat/shape) was replaced by the LED#4 OdpalEnvelope fire-flash engine
-        #     (ramp/hold/fade ms + a curve SHAPE: HRANA/LIN/SINUS).
+        #     (ramp/hold/fade ms + a curve SHAPE: HRANA/LIN/SINUS), sent to the 18-pixel barrel
+        #     as a red whole-prop effect rather than as a fifth discrete LED.
         # Read prop_rx.cpp + prop_config.h so the moved LED_COUNT is found.
         text = self.module_text(
             "firmware/din-rx/src/prop_rx.cpp",
             "firmware/din-rx/src/prop_config.h",
+            "shared/protocol/prop_xiao_link.h",
         )
         self.assert_text_contains_all(
             text,
             [
                 "LED_COUNT = 5",  # was 4, now in prop_config.h
-                "seesaw_NeoPixel pixels",  # was Adafruit_NeoPixel + LED_PIN=2 (removed)
+                "PROP_IO_XIAO_UART_ENABLED = true",
+                "PROP_IO_UART_TX_PIN = 2",
+                "PROP_IO_UART_RX_PIN = 1",
+                "PROP_IO_UART_BAUD   = 115200",
+                "XIAO_BARREL_WS2812_COUNT = 18",
+                "XIAO_STATUS_LED_COUNT    = 4",
+                "XIAO_STATUS_LED_CHANNELS",
+                "prop_xiao_link.h",
+                "HardwareSerial propIoSerial(2)",
+                "beginXiaoPropIo()",
+                "readXiaoPropIo()",
+                "sendXiaoOutputFrame",
+                "nextXiaoPingSeq",
+                "xiaoOutputReady",
+                "markXiaoOutputMissing",
+                "NO_XIAO",
+                "_xiaoLinkOkVisible",
+                "formatStat4Line",
+                "formatBarrelRedLine",
+                "formatBarrelOffLine",
+                "seesaw_NeoPixel pixels",  # legacy fallback; old bit-banged Adafruit_NeoPixel removed
                 "PREVIEW",
                 "FIRE",
                 "STOP",
@@ -1064,7 +1086,10 @@ class ProjectSourceTests(unittest.TestCase):
                 "G1/G2",
                 "NeoDriver",
                 "ByteButton",
-                "LED-only",
+                "XIAO RP2040",
+                "18x WS2812B barrel",
+                "PROP_IO_XIAO_UART_ENABLED = true",
+                "BARREL RED/OFF",
             ],
         )
         self.assert_contains_all("tools/build.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal"])

@@ -4,8 +4,12 @@ This is the operator runbook for the first bench uploads of the prop chain:
 
 - **Odpalovac / Dial:** M5 Dial ESP32-S3 fire controller plus its C6 modem.
 - **Terminal:** M5StickS3 Terminal USB setup editor.
-- **Prop electronics:** DinMeter/StampS3 receiver, receiver-side C6 modem, NeoDriver,
-  LED-only dummy load, ByteButton/input wiring, and the Terminal USB setup link.
+- **Prop electronics:** DinMeter/StampS3 receiver, receiver-side C6 modem,
+  DinMeter Port B UART to Seeed XIAO RP2040, XIAO buttons/switch, four status
+  LEDs, 18x WS2812B barrel dummy/load path, and the Terminal USB setup link.
+
+Detailed XIAO wiring, power, and signal-integrity notes live in
+`docs/prop_xiao_electronics.md`.
 
 Do not connect live pyro or actuator outputs during this run. First upload is a
 dummy/LED-only dry-smoke bench path until the hardware receipt proves matching
@@ -48,6 +52,7 @@ COM values.
 | Dial-side C6 modem | `<MODEM_DIAL_COM>` | COM7 | PlatformIO env `m5stack-c6l` / flash target `c6l-modem` |
 | Prop-side C6 modem | `<MODEM_PROP_COM>` | COM8 | PlatformIO env `m5stack-c6l` / flash target `c6l-modem` |
 | DinMeter / prop receiver | `<DIN_COM>` | COM9 | PlatformIO `din-rx` |
+| XIAO prop electronics | `<XIAO_COM>` | COM11 | PlatformIO standalone `xiao-prop-electronics` |
 | M5StickS3 Terminal | `<TERMINAL_COM>` | COM10 | PlatformIO `sticks3-terminal` |
 
 For each ESP32-S3 target, record identity before and after flashing:
@@ -58,6 +63,8 @@ python -m esptool --chip esp32s3 --port <DIAL_COM> read_mac
 ```
 
 For C6 modems use the same command with `--chip esp32c6`.
+For XIAO RP2040, record the COM port shown by `pio device list` after entering
+bootloader mode; do not use ESP32 `esptool` commands on it.
 
 ## Deterministic Gates Before Hardware
 
@@ -134,6 +141,15 @@ powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target sticks3-termina
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dial-tx -Port <DIAL_COM> -DryRun
 ```
 
+Build and flash the XIAO from its standalone repo after the DinMeter image is
+confirmed:
+
+```powershell
+cd C:\Users\atrep\Desktop\xiao-prop-electronics-private
+pio run -e seeed_xiao_rp2040
+pio run -e seeed_xiao_rp2040 -t upload --upload-port <XIAO_COM>
+```
+
 Then flash only the confirmed ports:
 
 ```powershell
@@ -160,11 +176,17 @@ python tools/uiflow_dial_offline.py deploy --port <DIAL_COM> --bundle build/uifl
 
 ## First Power-On Order
 
-1. Power the prop electronics with LED-only dummy load connected.
-2. Flash receiver-side C6 modem and DinMeter.
-3. Flash Dial-side C6 modem and Dial.
-4. Flash Terminal last, then connect Terminal USB setup link to DinMeter.
-5. Keep one serial reader per port at most. Use `tools/read_com.py`, not a
+1. Flash receiver-side C6 modem and DinMeter with XIAO disconnected.
+2. Confirm DinMeter shows `XIO` mode and `XIAO?`, proving Port B is not scanning
+   legacy I2C.
+3. Connect DinMeter Port B GND/TX/RX to XIAO only, then flash XIAO.
+4. Confirm XIAO `HELLO` / `PING` / `PONG` before adding LED power.
+5. Add button/switch wiring and verify local input logs.
+6. Add external 5 V LED power, level shifters, series resistors, and bulk
+   capacitance. Keep the barrel as dummy LED load only.
+7. Flash Dial-side C6 modem and Dial.
+8. Flash Terminal last, then connect Terminal USB setup link to DinMeter.
+9. Keep one serial reader per port at most. Use `tools/read_com.py`, not a
    default monitor that toggles DTR/RTS:
 
 ```powershell
@@ -187,4 +209,8 @@ python tools/read_com.py <TERMINAL_COM> 15 115200
   draft back to the last saved setup.
 - `SIM_FIRE <request_id>` previews enabled effect lanes only and does not commit
   setup or use the radio FIRE path.
+- DinMeter/XIAO UART link shows `HELLO` and `PONG`; DinMeter no longer attempts
+  Port B I2C ByteButton/NeoDriver in production mode.
+- XIAO status LEDs receive `STAT4`; the 18-pixel barrel responds as one red
+  `BARREL RED/OFF` group during local or radio FIRE.
 - Power-cycle DinMeter after accepted setup; accepted Terminal setup persists.

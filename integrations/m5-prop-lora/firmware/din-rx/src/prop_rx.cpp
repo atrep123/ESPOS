@@ -20,6 +20,7 @@
 #include "prop_colors.h"
 #include "prop_protocol.h"
 #include "prop_runtime_key.h"
+#include "prop_xiao_link.h"
 #include "terminal_setup_receiver.h"
 #include "prop_config.h"   // Marlin-style tuning/configuration (all user knobs)
 #include "fonts/din_bold_8.h"
@@ -98,6 +99,7 @@ constexpr std::uint8_t EFFECT_PALETTE_VERSION = 1;
 constexpr const char* EFFECT_PALETTE_KEY = "pal1";
 
 HardwareSerial propSerial(1);
+HardwareSerial propIoSerial(2);
 seesaw_NeoPixel pixels(LED_STRIP_MAX, NEODRIVER_NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800, &Wire1);
 UnitByte byteBtn;   // M5 Unit ByteButton on the Port B I2C bus
 Preferences preferences;
@@ -434,6 +436,12 @@ public:
         // ~3.8s with the swapped retry). The decision is also now based on TARGET hits, not total
         // device count, so an unrelated/spurious ACK no longer suppresses the swapped retry. A full
         // 126-address diagnostic scan still runs, but only when DIAG_DISPLAY is enabled.
+        if (PROP_IO_XIAO_UART_ENABLED)
+        {
+            beginXiaoPropIo();
+        }
+        else
+        {
         int sda = I2C_SDA_PIN, scl = I2C_SCL_PIN;
         Wire1.end();
         Wire1.begin(sda, scl, I2C_SPEED);
@@ -554,6 +562,7 @@ public:
         }
         else
             Serial.printf("[neo] no module at 0x%02X -> LED output disabled\n", NEODRIVER_ADDR);
+        }
 
         _lastEncoderPos = _ft ? _ft->_enc.getPosition() : 0;
         readBattery(true);
@@ -573,8 +582,13 @@ public:
         const std::int64_t loopStartUs = esp_timer_get_time();
 #endif
         readControls();
-        serviceByteButtonPresence();   // hot-plug: bring up a ByteButton connected after boot
-        readByteButton();    // prop switch + 2 buttons via the I2C ByteButton (module = primary input)
+        if (PROP_IO_XIAO_UART_ENABLED)
+            readXiaoPropIo();           // prop switch + 3 buttons via the Port B XIAO UART bridge
+        else
+        {
+            serviceByteButtonPresence();   // hot-plug: bring up a ByteButton connected after boot
+            readByteButton();    // prop switch + 2 buttons via the I2C ByteButton (module = primary input)
+        }
         readModem();
         flushPendingAck();   // transmit any deferred fire-and-forget ack once due
         readUsbSetup();
@@ -612,8 +626,11 @@ public:
             // led3 shows the EFFECTIVE #3 (live switch level OR remote-on), not the vestigial
             // _led3On latch; led5 = the remote-only #5 latch (no physical LED yet -> serial is
             // the only way to verify LED5). leds = #1 #2 #3eff; odpal = #4; led5 = #5.
+            const bool xiaoFresh = xiaoLinkOk(hbNow);
+            const bool ioIn = PROP_IO_XIAO_UART_ENABLED ? xiaoFresh : _byteBtnPresent;
+            const bool ioOut = PROP_IO_XIAO_UART_ENABLED ? xiaoFresh : _neoDriverPresent;
             Serial.printf("[hb] bb=%d neo=%d found=0x%02X leds=%d%d%d odpal=%d led5=%d vin=%d\n",
-                          _byteBtnPresent ? 1 : 0, _neoDriverPresent ? 1 : 0, _foundAddr & 0xFF,
+                          ioIn ? 1 : 0, ioOut ? 1 : 0, _foundAddr & 0xFF,
                           _led1On ? 1 : 0, _led2On ? 1 : 0, (_switchEngaged || _led3RemoteOn) ? 1 : 0,
                           _odpalActive ? 1 : 0, _led5RemoteOn ? 1 : 0, _row);
         }
@@ -996,6 +1013,188 @@ private:
         }
     }
 
+    void beginXiaoPropIo()
+    {
+        Wire1.end();   // Port B is UART in XIAO mode; leave the I2C backend electrically idle.
+        propIoSerial.setRxBufferSize(256);
+        propIoSerial.begin(PROP_IO_UART_BAUD, SERIAL_8N1, PROP_IO_UART_RX_PIN, PROP_IO_UART_TX_PIN);
+        gpio_pullup_en((gpio_num_t)PROP_IO_UART_TX_PIN);
+        gpio_pullup_en((gpio_num_t)PROP_IO_UART_RX_PIN);
+
+        _byteBtnPresent = false;
+        _neoDriverPresent = false;
+        _xiaoIoPresent = false;
+        _xiaoLine = "";
+        _xiaoLine.reserve(prop_xiao_link::MAX_LINE_LENGTH);
+        Serial.printf("[xiao] Port B UART enabled tx=G%d rx=G%d baud=%u barrel=%u stat=%u\n",
+                      PROP_IO_UART_TX_PIN, PROP_IO_UART_RX_PIN,
+                      static_cast<unsigned>(PROP_IO_UART_BAUD),
+                      static_cast<unsigned>(XIAO_BARREL_WS2812_COUNT),
+                      static_cast<unsigned>(XIAO_STATUS_LED_COUNT));
+        _xiaoPingSeq = 1;
+        sendXiaoLine(prop_xiao_link::formatHelloLine());
+        sendXiaoLine(prop_xiao_link::formatPingLine(nextXiaoPingSeq()));
+        _forceShow = true;
+        markLocalDirty();
+    }
+
+    void sendXiaoLine(const std::string& line)
+    {
+        propIoSerial.println(line.c_str());
+#if DEBUG_HUD
+        Serial.printf("[xiao tx] %s\n", line.c_str());
+#endif
+    }
+
+    bool xiaoLinkOk(std::uint32_t now) const
+    {
+        return _xiaoIoPresent && now - _xiaoLastSeenMs < 2500;
+    }
+
+    bool xiaoOutputReady(std::uint32_t now) const
+    {
+        return !PROP_IO_XIAO_UART_ENABLED || xiaoLinkOk(now);
+    }
+
+    std::uint16_t nextXiaoPingSeq()
+    {
+        const std::uint16_t sequence = _xiaoPingSeq;
+        _xiaoPingSeq = _xiaoPingSeq >= prop_xiao_link::MAX_SEQUENCE ? 1 : static_cast<std::uint16_t>(_xiaoPingSeq + 1);
+        return sequence;
+    }
+
+    void markXiaoOutputMissing()
+    {
+        _odpalActive = false;
+        _forceShow = true;
+        setStatus("XIAO?");
+        markStatusDirty();
+        markLocalDirty();
+    }
+
+    void readXiaoPropIo()
+    {
+        while (propIoSerial.available() > 0)
+        {
+            const char c = static_cast<char>(propIoSerial.read());
+            if (c == '\r')
+                continue;
+            if (c == '\n')
+            {
+                if (!_xiaoLineOverflow && _xiaoLine.length() > 0)
+                    handleXiaoLine(_xiaoLine);
+                _xiaoLine = "";
+                _xiaoLineOverflow = false;
+                continue;
+            }
+            if (_xiaoLineOverflow)
+                continue;
+            if (_xiaoLine.length() >= prop_xiao_link::MAX_LINE_LENGTH - 1)
+            {
+                _xiaoLine = "";
+                _xiaoLineOverflow = true;
+                continue;
+            }
+            _xiaoLine += c;
+        }
+
+        const std::uint32_t now = millis();
+        if (now - _xiaoLastPingMs >= 1000)
+        {
+            _xiaoLastPingMs = now;
+            sendXiaoLine(prop_xiao_link::formatPingLine(nextXiaoPingSeq()));
+        }
+    }
+
+    void handleXiaoLine(const String& line)
+    {
+        const auto parsed = prop_xiao_link::parseLine(line.c_str());
+        if (parsed.kind == prop_xiao_link::CommandKind::Error)
+        {
+#if DEBUG_HUD
+            Serial.printf("[xiao rx] bad line: %s\n", line.c_str());
+#endif
+            return;
+        }
+
+        _xiaoIoPresent = true;
+        _xiaoLastSeenMs = millis();
+#if DEBUG_HUD
+        Serial.printf("[xiao rx] %s\n", line.c_str());
+#endif
+
+        switch (parsed.kind)
+        {
+            case prop_xiao_link::CommandKind::Hello:
+                setStatus("XIAO OK");
+                markStatusDirty();
+                _forceShow = true;
+                markLocalDirty();
+                break;
+            case prop_xiao_link::CommandKind::Ping:
+                sendXiaoLine(prop_xiao_link::formatPongLine(parsed.sequence));
+                break;
+            case prop_xiao_link::CommandKind::Pong:
+                break;
+            case prop_xiao_link::CommandKind::Button:
+                if (parsed.input.index == 1) _xiaoBtn1 = parsed.input.active;
+                if (parsed.input.index == 2) _xiaoBtn2 = parsed.input.active;
+                if (parsed.input.index == 3) _xiaoFire = parsed.input.active;
+                applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, "xiao");
+                break;
+            case prop_xiao_link::CommandKind::Switch:
+                _xiaoSwitch = parsed.input.active;
+                applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, "xiao");
+                break;
+            case prop_xiao_link::CommandKind::Empty:
+            case prop_xiao_link::CommandKind::Stat4:
+            case prop_xiao_link::CommandKind::Barrel:
+            case prop_xiao_link::CommandKind::Error:
+                break;
+        }
+    }
+
+    void applyLocalInputLevels(bool sw, bool b1, bool b2, bool b3, const char* source)
+    {
+        // Release the configurable STOP master-off inhibit on ANY real local input/edge (button
+        // press or switch level change) -- cleared BEFORE the toggles below so this same edge then
+        // drives the LED normally. No-op unless _stopClearsAllLocal raised the inhibit on a STOP.
+        if (_masterOffInhibit &&
+            ((b1 && !_bbPrev1) || (b2 && !_bbPrev2) || (b3 && !_bbPrev3) || (sw != _bbPrevSw)))
+        {
+            _masterOffInhibit = false;
+            markLocalDirty();
+        }
+
+        // idx0 switch: LED#3 LOCAL follows the LIVE physical level (D3) -- #3 lights locally ONLY
+        // while the switch is actually engaged (sw HIGH); the render gate reads _switchEngaged.
+        // STRICT (D2): the LOW->HIGH (engage) edge clears any pending remote/menu-on for #3 so the
+        // physical switch always wins and a stale latch can't outlive it.
+        if (sw && !_bbPrevSw)     { _led3RemoteOn = false; markLocalDirty(); }   // engage edge: clear remote #3 (switch takes priority)
+        if (sw != _bbPrevSw)      markLocalDirty();       // level changed -> re-arbitrate #3 promptly
+        _switchEngaged = sw;                              // LIVE switch level (priority input for #3; remote ignored while HIGH)
+        if (b1 && !_bbPrev1)      { _led1On = !_led1On;    markLocalDirty(); }   // button 1: edge -> toggle
+        if (b2 && !_bbPrev2)      { _led2On = !_led2On;    markLocalDirty(); }   // button 2: edge -> toggle
+        if (b3 && !_bbPrev3)      tryLocalFire();          // local FIRE button: edge -> odpal unless STOP lockout is latched
+        _bbPrevSw = sw;
+        _bbPrev1 = b1;
+        _bbPrev2 = b2;
+        _bbPrev3 = b3;
+
+#if DEBUG_HUD
+        // Bring-up aid: log the (polarity-resolved) input + LED latches on any change, so
+        // press polarity and live-vs-latched button behaviour are visible on USB serial.
+        const int snap = (sw ? 1 : 0) | (b1 ? 2 : 0) | (b2 ? 4 : 0) | (b3 ? 8 : 0);
+        if (snap != _bbRawPrev)
+        {
+            Serial.printf("[%s] sw=%d b1=%d b2=%d fire=%d -> LED #1=%d #2=%d #3=%d odpal=%d\n",
+                          source, sw, b1, b2, b3, _led1On, _led2On,
+                          (_switchEngaged || _led3RemoteOn) ? 1 : 0, _odpalActive);
+            _bbRawPrev = snap;
+        }
+#endif
+    }
+
     // ---- Prop local controls (M5 Unit ByteButton) -> SK6812 #1..#3 -------------------
     // #1 <- button 1 (press toggles on/off), #2 <- button 2 (toggles), #3 <- switch level.
     // SK6812 #4 stays off here -- reserved for the LoRa "odpal"/Fire (TBD). Static colours
@@ -1074,44 +1273,7 @@ private:
         const bool b2 = (rb2 == BB_PRESSED);
         const bool b3 = (rb3 == BB_PRESSED);
 
-        // Release the configurable STOP master-off inhibit on ANY real local input/edge (button
-        // press or switch level change) -- cleared BEFORE the toggles below so this same edge then
-        // drives the LED normally. No-op unless _stopClearsAllLocal raised the inhibit on a STOP.
-        if (_masterOffInhibit &&
-            ((b1 && !_bbPrev1) || (b2 && !_bbPrev2) || (b3 && !_bbPrev3) || (sw != _bbPrevSw)))
-        {
-            _masterOffInhibit = false;
-            markLocalDirty();
-        }
-
-        // idx0 switch: LED#3 LOCAL follows the LIVE physical level (D3) -- #3 lights locally ONLY
-        // while the switch is actually engaged (sw HIGH); the render gate reads _switchEngaged.
-        // STRICT (D2): the LOW->HIGH (engage) edge clears any pending remote/menu-on for #3 so the
-        // physical switch always wins and a stale latch can't outlive it.
-        if (sw && !_bbPrevSw)     { _led3RemoteOn = false; markLocalDirty(); }   // engage edge: clear remote #3 (switch takes priority)
-        if (sw != _bbPrevSw)      markLocalDirty();       // level changed -> re-arbitrate #3 promptly
-        _switchEngaged = sw;                              // LIVE switch level (priority input for #3; remote ignored while HIGH)
-        if (b1 && !_bbPrev1)      { _led1On = !_led1On;    markLocalDirty(); }   // button 1: edge -> toggle
-        if (b2 && !_bbPrev2)      { _led2On = !_led2On;    markLocalDirty(); }   // button 2: edge -> toggle
-        if (b3 && !_bbPrev3)      tryLocalFire();          // local FIRE button: edge -> odpal unless STOP lockout is latched
-        _bbPrevSw = sw;
-        _bbPrev1 = b1;
-        _bbPrev2 = b2;
-        _bbPrev3 = b3;
-
-#if DEBUG_HUD
-        // Bring-up aid: log the (polarity-resolved) input + LED latches on any change, so
-        // press polarity (BB_PRESSED) and live-vs-latched button behaviour are visible on
-        // the USB serial. If a single press toggles a LED twice (or only on alternate
-        // presses) the unit latches internally -> drop the edge-toggle and use b1/b2 directly.
-        const int snap = (sw ? 1 : 0) | (b1 ? 2 : 0) | (b2 ? 4 : 0) | (b3 ? 8 : 0);
-        if (snap != _bbRawPrev)
-        {
-            Serial.printf("[bb] sw=%d b1=%d b2=%d fire=%d -> LED #1=%d #2=%d #3=%d odpal=%d\n",
-                          sw, b1, b2, b3, _led1On, _led2On, (_switchEngaged || _led3RemoteOn) ? 1 : 0, _odpalActive);
-            _bbRawPrev = snap;
-        }
-#endif
+        applyLocalInputLevels(sw, b1, b2, b3, "bb");
     }
 
     RenderColor localColor(int led) const
@@ -1414,6 +1576,11 @@ private:
             setStatus("ODPAL VYP");
             markStatusDirty();
             markLocalDirty();
+            return false;
+        }
+        if (!xiaoOutputReady(millis()))
+        {
+            markXiaoOutputMissing();
             return false;
         }
         _odpalStartMs = millis();
@@ -2204,7 +2371,7 @@ private:
                 //    both radios are half-duplex; ack-ing each copy makes our modem transmit
                 //    during the burst -> mutual deafness drops the remaining copies and floods
                 //    the return channel. The single deferred EXECUTE ack is the only successful
-                //    FIRE confirm; a Terminal-disabled odpal lane returns NO_EFFECT immediately.
+                //    FIRE confirm; disabled/no-output odpal returns NO_EFFECT/NO_XIAO immediately.
                 //  - ack-tracked / idempotent type (Stop/Ping/Status/Preview/PaletteSet/Arm):
                 //    the duplicate is the Dial RE-SENDING because our original ACK was lost. It
                 //    matches the ACK by (sequence,nonce)+payload, so we MUST re-emit that ACK or
@@ -2396,7 +2563,7 @@ private:
 #endif
             if (!triggerOdpal())   // Terminal setup mask disabled the odpal lane.
             {
-                sendAckFrame(frame, "NO_EFFECT");
+                sendAckFrame(frame, xiaoOutputReady(millis()) ? "NO_EFFECT" : "NO_XIAO");
                 return;
             }
             scheduleFireAck(frame);   // deferred best-effort ack (avoids burst collision)
@@ -2627,12 +2794,38 @@ private:
         return static_cast<std::uint8_t>(std::max<std::uint32_t>(1, std::min<std::uint32_t>(requested, scaled)));
     }
 
+    static std::uint8_t maxRgb(const RenderColor& c)
+    {
+        return std::max<std::uint8_t>(c.r, std::max<std::uint8_t>(c.g, c.b));
+    }
+
+    void sendXiaoOutputFrame(const RenderColor frame[LED_COUNT])
+    {
+        std::array<prop_xiao_link::Rgb, prop_xiao_link::STATUS_LED_COUNT> status = {};
+        for (std::size_t i = 0; i < status.size(); ++i)
+        {
+            const std::uint8_t logical = XIAO_STATUS_LED_CHANNELS[i];
+            const RenderColor& c = frame[logical];
+            status[i].r = c.r;
+            status[i].g = c.g;
+            status[i].b = c.b;
+        }
+        sendXiaoLine(prop_xiao_link::formatStat4Line(status));
+
+        const std::uint8_t barrel = maxRgb(frame[LED_ROLE_ODPAL]);
+        if (barrel == 0)
+            sendXiaoLine(prop_xiao_link::formatBarrelOffLine());
+        else
+            sendXiaoLine(prop_xiao_link::formatBarrelRedLine(barrel));
+        _xiaoLastTxMs = millis();
+    }
+
     // Drives the first _activeLeds physical LEDs from the LED_COUNT logical channels and
     // clears the rest of the (LED_STRIP_MAX-sized) buffer, so a longer physical
     // strip never shows stray power-on garbage beyond the active range.
     void showBudgetedFrame(const RenderColor frame[LED_COUNT])
     {
-        if (!_neoDriverPresent)   // NeoDriver absent at boot -> skip LED writes (never stall the loop)
+        if (!PROP_IO_XIAO_UART_ENABLED && !_neoDriverPresent)   // NeoDriver absent at boot -> skip LED writes (never stall the loop)
             return;
         RenderColor preBudget[LED_COUNT] = {};
         for (int i = 0; i < LED_COUNT; ++i)
@@ -2659,17 +2852,23 @@ private:
                 changed = true;
         if (!changed)
             return;
-        pixels.setBrightness(0);
-        for (int i = 0; i < _activeLeds; ++i)
+
+        if (PROP_IO_XIAO_UART_ENABLED)
+            sendXiaoOutputFrame(scaled);
+        else
         {
-            const RenderColor& c = scaled[channelForLed(i)];
-            // LED ORDER REMAP (D4): logical channel -> physical pixel. This is the ONE place the
-            // final frame[channel] is committed to the strip (odpal #4 and remote #5 included),
-            // so reordering which physical LED a channel drives is a single edit to LED_ORDER.
-            const int phys = (i < LED_COUNT) ? LED_ORDER[i] : i;
-            pixels.setPixelColor(phys, c.r, c.g, c.b, 0);   // RGBW; white channel unused (Dial sends RGB)
+            pixels.setBrightness(0);
+            for (int i = 0; i < _activeLeds; ++i)
+            {
+                const RenderColor& c = scaled[channelForLed(i)];
+                // LED ORDER REMAP (D4): logical channel -> physical pixel. This is the ONE place the
+                // final frame[channel] is committed to the strip (odpal #4 and remote #5 included),
+                // so reordering which physical LED a channel drives is a single edit to LED_ORDER.
+                const int phys = (i < LED_COUNT) ? LED_ORDER[i] : i;
+                pixels.setPixelColor(phys, c.r, c.g, c.b, 0);   // RGBW; white channel unused (Dial sends RGB)
+            }
+            pixels.show();
         }
-        pixels.show();
         for (int i = 0; i < LED_COUNT; ++i)
             _lastShown[i] = scaled[i];
         _lastShownBrightness = 0;
@@ -2833,7 +3032,7 @@ private:
     }
 
     // Deferred ack -- ONLY for a fire-and-forget FIRE that actually starts the odpal
-    // effect. Terminal-disabled odpal lanes reply NO_EFFECT immediately instead.
+    // effect. Disabled/no-output odpal lanes reply NO_EFFECT/NO_XIAO immediately instead.
     // The sender transmits FIRE as a
     // 3x redundancy burst (~70 ms) and both radios are half-duplex, so an immediate
     // ack would land while the sender's modem is still bursting (deaf) and be lost.
@@ -2940,7 +3139,9 @@ private:
             return {"STOP", COLOR_BAD, 0xFFFFFF};       // e-stop latched
         if (fireWouldArm())
             return {"NABITO", COLOR_WARN, 0x0A0C10};    // HOT: a Fire will trigger -> must be visible (Dial self-arms!)
-        if (!_neoDriverPresent)
+        if (PROP_IO_XIAO_UART_ENABLED && !xiaoLinkOk(now))
+            return {"XIAO?", COLOR_WARN, 0x0A0C10};
+        if (!PROP_IO_XIAO_UART_ENABLED && !_neoDriverPresent)
             return {"CHYBA", COLOR_BAD, 0xFFFFFF};
         if (_modemEverSeen && !linkOk(now))
             return {"SPOJ?", COLOR_WARN, 0x0A0C10};     // link lost AFTER first contact (not pure standalone)
@@ -2957,13 +3158,16 @@ private:
         const bool savedVisible = now < _savedUntilMs;
         const bool odpalVisible = _odpalActive;
         const bool currentLinkOk = linkOk(now);
+        const bool currentXiaoLinkOk = !PROP_IO_XIAO_UART_ENABLED || xiaoLinkOk(now);
         if (savedVisible != _savedVisible ||
             odpalVisible != _odpalVisible ||
-            currentLinkOk != _linkOkVisible)
+            currentLinkOk != _linkOkVisible ||
+            currentXiaoLinkOk != _xiaoLinkOkVisible)
         {
             _savedVisible = savedVisible;
             _odpalVisible = odpalVisible;
             _linkOkVisible = currentLinkOk;
+            _xiaoLinkOkVisible = currentXiaoLinkOk;
             markStatusDirty();
         }
 #if DEBUG_HUD
@@ -3062,8 +3266,8 @@ private:
         else
             canvas->drawCircle(dotX, barH / 2, 4, COLOR_BAD);
 
-        const char* mode = _byteBtnPresent ? "BB" : "EMU";
-        const std::uint32_t modeColor = _byteBtnPresent ? LABEL_DIM : COLOR_WARN;
+        const char* mode = PROP_IO_XIAO_UART_ENABLED ? "XIO" : (_byteBtnPresent ? "BB" : "EMU");
+        const std::uint32_t modeColor = PROP_IO_XIAO_UART_ENABLED ? LABEL_DIM : (_byteBtnPresent ? LABEL_DIM : COLOR_WARN);
         drawStringVCenter(canvas, mode, dotX + 8, barH / 2, modeColor, COLOR_BG, 1, true);
 
         const StateChip chip = dynamicStateChip();
@@ -3549,6 +3753,17 @@ private:
     bool _lineOverflow = false;   // true while discarding the tail of an over-long UART line
     String _usbSetupLine;
     bool _usbSetupOverflow = false;
+    String _xiaoLine;
+    bool _xiaoLineOverflow = false;
+    bool _xiaoIoPresent = false;
+    bool _xiaoBtn1 = false;
+    bool _xiaoBtn2 = false;
+    bool _xiaoFire = false;
+    bool _xiaoSwitch = false;
+    std::uint32_t _xiaoLastSeenMs = 0;
+    std::uint32_t _xiaoLastPingMs = 0;
+    std::uint32_t _xiaoLastTxMs = 0;
+    std::uint16_t _xiaoPingSeq = 1;
     String _lastLine = "-";
     String _lastStatus = "BOOT";
     std::uint32_t _modemLastSeenMs = 0;   // last OK/BOOT seen from modem (liveness)
@@ -3568,6 +3783,7 @@ private:
     bool _savedVisible = false;
     bool _odpalVisible = false;
     bool _linkOkVisible = true;
+    bool _xiaoLinkOkVisible = true;
     long _lastEncoderPos = 0;
     int _encAccum = 0;                              // raw encoder counts pending a full detent
     std::uint32_t _encLastCountMs = 0;              // last raw-count time (idle-flush of a stale half-detent)
