@@ -154,6 +154,8 @@ def build_report() -> tuple[str, list[str]]:
         lines.append(f"- {name}: {'OK' if ok else 'BLOCKED'} - {detail}")
         if name == "idf.py" and not ok:
             blockers.append("Load ESP-IDF before Dial C++ build/flash (`idf.py` is not available).")
+        elif name in {"pio", "esptool", "mpremote"} and not ok:
+            blockers.append(f"Install or fix `{name}` before first upload: {detail}")
 
     gemini_ok, gemini_detail = gemini_key_status()
     lines.append(f"- Gemini key source: {'OK' if gemini_ok else 'BLOCKED'} - {gemini_detail}")
