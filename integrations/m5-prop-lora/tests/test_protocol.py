@@ -8,8 +8,10 @@ from shared.protocol.protocol import (
     decode_frame,
     encode_frame,
     encode_led_payload,
+    encode_prop_action_payload,
     hex_to_bytes,
     parse_led_payload,
+    parse_prop_action_payload,
 )
 
 
@@ -96,6 +98,34 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(payload, bytes([150, 255, 0, 0, 0, 255, 0, 0, 0, 255, 16, 32, 48]))
         self.assertEqual(parsed["brightness"], 150)
         self.assertEqual(parsed["colors"], colors)
+
+    def test_prop_action_payload_encodes_idempotent_blue_set(self):
+        self.assertEqual(int(FrameType.PROP_ACTION), 12)
+
+        payload = encode_prop_action_payload(action=1, value=1, event_id=0x01020304)
+        parsed = parse_prop_action_payload(payload)
+
+        self.assertEqual(payload, bytes([1, 1, 0x01, 0x02, 0x03, 0x04]))
+        self.assertEqual(parsed, {"action": 1, "value": 1, "event_id": 0x01020304})
+
+    def test_prop_action_payload_encodes_barrel_effect(self):
+        payload = encode_prop_action_payload(action=2, value=0, event_id=7)
+        parsed = parse_prop_action_payload(payload)
+
+        self.assertEqual(payload, bytes([2, 0, 0, 0, 0, 7]))
+        self.assertEqual(parsed["action"], 2)
+        self.assertEqual(parsed["value"], 0)
+        self.assertEqual(parsed["event_id"], 7)
+
+    def test_prop_action_payload_rejects_bad_shape(self):
+        with self.assertRaisesRegex(ProtocolError, "prop action"):
+            encode_prop_action_payload(action=0, value=1, event_id=1)
+        with self.assertRaisesRegex(ProtocolError, "blue"):
+            encode_prop_action_payload(action=1, value=2, event_id=1)
+        with self.assertRaisesRegex(ProtocolError, "event"):
+            encode_prop_action_payload(action=2, value=0, event_id=0x1_0000_0000)
+        with self.assertRaisesRegex(ProtocolError, "prop action"):
+            parse_prop_action_payload(b"\x01\x01")
 
 
 if __name__ == "__main__":

@@ -34,6 +34,7 @@ class FrameType(IntEnum):
     ARM = 9
     LED_COLOR_SET = 10
     REMOTE_LED = 11
+    PROP_ACTION = 12
 
 
 @dataclass(frozen=True)
@@ -207,6 +208,43 @@ def parse_remote_led(payload: bytes) -> int:
     if len(payload) != REMOTE_LED_PAYLOAD_LENGTH:
         raise ProtocolError(f"remote LED payload must be {REMOTE_LED_PAYLOAD_LENGTH} bytes")
     return payload[0] & (REMOTE_LED_BIT_LED3 | REMOTE_LED_BIT_LED5)
+
+
+PROP_ACTION_PAYLOAD_LENGTH = 6
+PROP_ACTION_BLUE_SET = 1
+PROP_ACTION_BARREL_EFFECT = 2
+
+
+def _prop_action_value_valid(action: int, value: int) -> bool:
+    if action == PROP_ACTION_BLUE_SET:
+        return value in (0, 1)
+    if action == PROP_ACTION_BARREL_EFFECT:
+        return value == 0
+    return False
+
+
+def encode_prop_action_payload(action: int, value: int, event_id: int) -> bytes:
+    action = _byte(action, "prop action")
+    value = _byte(value, "prop action value")
+    event_id = _uint(event_id, 0xFFFFFFFF, "event id")
+    if not _prop_action_value_valid(action, value):
+        if action == PROP_ACTION_BLUE_SET:
+            raise ProtocolError("blue set value must be 0 or 1")
+        raise ProtocolError("prop action is not supported")
+    return bytes((action, value)) + struct.pack(">I", event_id)
+
+
+def parse_prop_action_payload(payload: bytes) -> dict[str, int]:
+    if len(payload) != PROP_ACTION_PAYLOAD_LENGTH:
+        raise ProtocolError(f"prop action payload must be {PROP_ACTION_PAYLOAD_LENGTH} bytes")
+    action = payload[0]
+    value = payload[1]
+    event_id = struct.unpack(">I", payload[2:6])[0]
+    if not _prop_action_value_valid(action, value):
+        if action == PROP_ACTION_BLUE_SET:
+            raise ProtocolError("blue set value must be 0 or 1")
+        raise ProtocolError("prop action is not supported")
+    return {"action": action, "value": value, "event_id": event_id}
 
 
 # PaletteSet (FrameType 8): byte-identical mirror of prop_protocol.h encodePalettePayload /

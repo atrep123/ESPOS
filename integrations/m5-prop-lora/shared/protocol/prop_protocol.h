@@ -50,6 +50,9 @@ enum class FrameType : uint8_t {
                      // Colour comes from the already-synced palette slots, NOT this frame.
                      // OFF is never sent here: STOP is the master clear. ON-only is RX policy.
                      // No version bump: modems relay by version byte; an un-upgraded RX drops the type.
+    PropAction = 12,  // DualKey broadcast prop action. Payload = 6 bytes:
+                      //   [0] action id, [1] value, [2..5] event id (u32be).
+                      // Used for idempotent BLUE_SET and duplicate-safe BARREL_EFFECT.
 };
 
 constexpr FrameType PREVIEW_FRAME_TYPE = FrameType::Preview;
@@ -97,6 +100,7 @@ inline bool isValidFrameType(uint8_t type) {
         case FrameType::Arm:
         case FrameType::LedColorSet:
         case FrameType::RemoteLed:
+        case FrameType::PropAction:
             return true;
         default:
             return false;
@@ -258,6 +262,49 @@ inline bool encodeRemoteLedPayload(uint8_t mask, std::vector<uint8_t>& out) {
 inline bool parseRemoteLedPayload(const std::vector<uint8_t>& in, uint8_t& mask) {
     if (in.size() != REMOTE_LED_PAYLOAD_LENGTH) return false;
     mask = in[0] & (REMOTE_LED_BIT_LED3 | REMOTE_LED_BIT_LED5);        // ignore reserved bits
+    return true;
+}
+
+constexpr size_t PROP_ACTION_PAYLOAD_LENGTH = 6;
+constexpr uint8_t PROP_ACTION_BLUE_SET = 1;
+constexpr uint8_t PROP_ACTION_BARREL_EFFECT = 2;
+
+struct PropActionPayload {
+    uint8_t action = 0;
+    uint8_t value = 0;
+    uint32_t eventId = 0;
+};
+
+inline bool propActionValueValid(uint8_t action, uint8_t value) {
+    switch (action) {
+        case PROP_ACTION_BLUE_SET:
+            return value <= 1;
+        case PROP_ACTION_BARREL_EFFECT:
+            return value == 0;
+        default:
+            return false;
+    }
+}
+
+inline bool encodePropActionPayload(uint8_t action, uint8_t value, uint32_t eventId,
+                                    std::vector<uint8_t>& out) {
+    if (!propActionValueValid(action, value)) return false;
+    out.clear();
+    out.reserve(PROP_ACTION_PAYLOAD_LENGTH);
+    out.push_back(action);
+    out.push_back(value);
+    putU32(out, eventId);
+    return out.size() == PROP_ACTION_PAYLOAD_LENGTH;
+}
+
+inline bool parsePropActionPayload(const std::vector<uint8_t>& in, PropActionPayload& out) {
+    if (in.size() != PROP_ACTION_PAYLOAD_LENGTH) return false;
+    PropActionPayload parsed;
+    parsed.action = in[0];
+    parsed.value = in[1];
+    parsed.eventId = readU32(in.data() + 2);
+    if (!propActionValueValid(parsed.action, parsed.value)) return false;
+    out = parsed;
     return true;
 }
 

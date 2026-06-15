@@ -1472,8 +1472,12 @@ private:
         if (terminalLaneFireOn(0)) frame[0] = localColor(0);   // SK6812 #1 <- button 1 toggle
         if (terminalLaneFireOn(1)) frame[1] = localColor(1);   // SK6812 #2 <- button 2 latch
         if (terminalLaneFireOn(2)) frame[2] = localColor(2);   // SK6812 #3 <- switch/Dial, ODP can invert state
-        if (_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE))
-            frame[3] = odpalColor(LED_ROLE_ODPAL);    // blue odpal/status LED, Terminal-toggleable
+        const bool odpalLaneChanges =
+            (_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE)) != 0U;
+        if (terminalLaneFireOn(TERMINAL_ODPAL_LANE))
+            frame[3] = (_odpalActive && odpalLaneChanges)
+                           ? odpalColor(LED_ROLE_ODPAL)
+                           : localColor(LED_ROLE_ODPAL);  // blue default LED, DualKey-toggleable
         frame[4] = odpalColor(LED_ROLE_BARREL);       // 18x WS2812 barrel, always ODP
         applyStaticColorTransitions(frame, now, !_odpalActive);  // channels 0..2 only; LED4 odpal + LED5 status own their channels
         showBudgetedFrame(frame);
@@ -1487,7 +1491,7 @@ private:
             case 0: return _led1On;
             case 1: return _led2On;
             case 2: return _switchEngaged || _led3RemoteOn;
-            case 3: return false;
+            case 3: return _led4On;
             case 4: return _led5RemoteOn;
             default: return false;
         }
@@ -2151,17 +2155,25 @@ private:
             setStatus("BAD KEY");
             return false;
         }
-        if (frame.source != PROP_DESTINATION)
+        if (frame.source != PROP_DESTINATION &&
+            !(frame.type == prop_protocol::FrameType::PropAction &&
+              frame.source == PROP_DUALKEY_SOURCE))
         {
             setStatus("BAD SRC");
             return false;
         }
-        if (frame.destination != PROP_SOURCE)
+        if (frame.destination != PROP_SOURCE && !isBroadcastPropAction(frame))
         {
             setStatus("BAD DST");
             return false;
         }
         return true;
+    }
+
+    bool isBroadcastPropAction(const prop_protocol::Frame& frame) const
+    {
+        return frame.type == prop_protocol::FrameType::PropAction &&
+               frame.destination == PROP_BROADCAST_DESTINATION;
     }
 
     bool loadRuntimeKeyFromPreferences()
@@ -2534,6 +2546,42 @@ private:
             setStatus("DALKOVE LED");
             markStatusDirty();
             sendAckFrame(frame, "REMOTE");
+            return;
+        }
+
+        if (frame.type == prop_protocol::FrameType::PropAction)
+        {
+            if (droppedByStopOrder(frame))
+            {
+                setStatus("STOP");
+                return;
+            }
+            prop_protocol::PropActionPayload action;
+            if (!prop_protocol::parsePropActionPayload(frame.payload, action))
+            {
+#if DEBUG_HUD
+                ++_debug.rxBad;
+#endif
+                setStatus("SPATNA DATA");
+                return;
+            }
+#if DEBUG_HUD
+            ++_debug.rxValid;
+#endif
+            if (action.action == prop_protocol::PROP_ACTION_BLUE_SET)
+            {
+                _led4On = action.value != 0;
+                setStatus(_led4On ? "MODRA ON" : "MODRA OFF");
+                markLocalDirty();
+                markStatusDirty();
+                return;
+            }
+            if (action.action == prop_protocol::PROP_ACTION_BARREL_EFFECT)
+            {
+                (void)triggerOdpal();
+                return;
+            }
+            setStatus("NEZNAME");
             return;
         }
 
@@ -3793,6 +3841,7 @@ private:
     bool _led1On = false;     // SK6812 #1 latch (button 1)
     bool _led2On = false;     // SK6812 #2 latch (remote/setup)
     bool _led3On = false;     // legacy switch-edge latch (Stav indicator / encoder-EMU only; no longer drives #3)
+    bool _led4On = false;     // DualKey default blue LED latch (effect lane can invert during odpal)
     bool _switchEngaged = false;  // LIVE level of the ByteButton switch (idx0), tracked every poll -> drives #3 locally (D3)
     bool _led3RemoteOn  = false;  // Dial wants LED#3 on (honoured ON-only, and only while the switch is OFF -- strict, D2)
     bool _led5RemoteOn  = false;  // Dial wants LED#5 on (always honoured; ON-only; cleared by STOP)

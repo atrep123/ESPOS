@@ -11,7 +11,11 @@ namespace {
 using LedColors = std::array<std::array<std::uint8_t, 3>, 4>;
 
 using prop_protocol::LED_PAYLOAD_LENGTH;
+using prop_protocol::PROP_ACTION_BARREL_EFFECT;
+using prop_protocol::PROP_ACTION_BLUE_SET;
 using prop_protocol::encodeLedPayload;
+using prop_protocol::encodePropActionPayload;
+using prop_protocol::parsePropActionPayload;
 
 bool applyLedPayload(const std::vector<std::uint8_t>& payload, LedColors& out) {
     if (payload.size() != LED_PAYLOAD_LENGTH) {
@@ -71,6 +75,37 @@ bool rejectsWrongLengthPayload() {
     return !applyLedPayload(std::vector<std::uint8_t>{0xC8}, out);
 }
 
+bool propActionPayloadRoundTripsBlueSet() {
+    std::vector<std::uint8_t> payload;
+    prop_protocol::PropActionPayload parsed;
+    return encodePropActionPayload(PROP_ACTION_BLUE_SET, 1, 0x01020304, payload) &&
+           payload == std::vector<std::uint8_t>({1, 1, 1, 2, 3, 4}) &&
+           parsePropActionPayload(payload, parsed) &&
+           parsed.action == PROP_ACTION_BLUE_SET &&
+           parsed.value == 1 &&
+           parsed.eventId == 0x01020304;
+}
+
+bool propActionPayloadRoundTripsBarrelEffect() {
+    std::vector<std::uint8_t> payload;
+    prop_protocol::PropActionPayload parsed;
+    return encodePropActionPayload(PROP_ACTION_BARREL_EFFECT, 0, 7, payload) &&
+           payload == std::vector<std::uint8_t>({2, 0, 0, 0, 0, 7}) &&
+           parsePropActionPayload(payload, parsed) &&
+           parsed.action == PROP_ACTION_BARREL_EFFECT &&
+           parsed.value == 0 &&
+           parsed.eventId == 7;
+}
+
+bool propActionPayloadRejectsInvalidValues() {
+    std::vector<std::uint8_t> payload;
+    prop_protocol::PropActionPayload parsed;
+    return !encodePropActionPayload(0, 0, 1, payload) &&
+           !encodePropActionPayload(PROP_ACTION_BLUE_SET, 2, 1, payload) &&
+           !encodePropActionPayload(PROP_ACTION_BARREL_EFFECT, 1, 1, payload) &&
+           !parsePropActionPayload(std::vector<std::uint8_t>{1, 1}, parsed);
+}
+
 bool runCase(const char* name, bool (*test)()) {
     const bool passed = test();
     std::cout << (passed ? "PASS " : "FAIL ") << name << '\n';
@@ -84,5 +119,8 @@ int main() {
     failures += runCase("LED payload byte order is reserved byte + 4 RGB", byteOrderMatchesDocumentedLayout) ? 0 : 1;
     failures += runCase("encode/apply round-trip preserves four RGB colours", encodeApplyRoundTripPreservesFourRgbColors) ? 0 : 1;
     failures += runCase("apply rejects wrong payload length", rejectsWrongLengthPayload) ? 0 : 1;
+    failures += runCase("prop action payload round-trips blue set", propActionPayloadRoundTripsBlueSet) ? 0 : 1;
+    failures += runCase("prop action payload round-trips barrel effect", propActionPayloadRoundTripsBarrelEffect) ? 0 : 1;
+    failures += runCase("prop action payload rejects invalid values", propActionPayloadRejectsInvalidValues) ? 0 : 1;
     return failures == 0 ? 0 : 1;
 }

@@ -1010,6 +1010,27 @@ class ProjectSourceTests(unittest.TestCase):
             ],
         )
 
+    def test_din_prop_rx_accepts_broadcast_only_for_prop_action(self):
+        text = self.read("firmware/din-rx/src/prop_rx.cpp")
+
+        route_section = text.split("bool validateFrameRoute(const prop_protocol::Frame& frame)", 1)[
+            1
+        ].split("bool loadRuntimeKeyFromPreferences()", 1)[0]
+        self.assertIn("isBroadcastPropAction(frame)", route_section)
+        self.assertIn("frame.destination == PROP_BROADCAST_DESTINATION", route_section)
+        self.assertIn("frame.type == prop_protocol::FrameType::PropAction", route_section)
+        self.assertIn("frame.destination != PROP_SOURCE && !isBroadcastPropAction(frame)", route_section)
+
+        prop_action_branch = text.split("if (frame.type == prop_protocol::FrameType::PropAction)", 1)[
+            1
+        ].split("if (frame.type == prop_protocol::FrameType::Arm)", 1)[0]
+        self.assertIn("prop_protocol::parsePropActionPayload", prop_action_branch)
+        self.assertIn("PROP_ACTION_BLUE_SET", prop_action_branch)
+        self.assertIn("PROP_ACTION_BARREL_EFFECT", prop_action_branch)
+        self.assertIn("_led4On = action.value != 0", prop_action_branch)
+        self.assertIn("triggerOdpal()", prop_action_branch)
+        self.assertNotIn("sendAckFrame", prop_action_branch)
+
     def test_din_prop_rx_stop_fence_is_monotonic_and_colorset_guarded(self):
         text = self.read("firmware/din-rx/src/prop_rx.cpp")
 

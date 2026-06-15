@@ -196,6 +196,8 @@ constexpr int           NUM_ODPAL_CURVES = 3;
 
 // =============================== [9] PROTOCOL ===============================
 constexpr std::uint8_t  PROP_KEY_ID            = 1;   // HMAC key id this receiver accepts
+constexpr std::uint8_t  PROP_DUALKEY_SOURCE    = 0x33; // Chain DualKey broadcast controller source
+constexpr std::uint8_t  PROP_BROADCAST_DESTINATION = 0xFF; // accepted only for PropAction frames
 constexpr std::uint32_t RX_REPLAY_WINDOW_BITS  = 32;  // sliding replay window size (frames)
 
 // ============================== [A] FEATURE FLAGS ===========================
