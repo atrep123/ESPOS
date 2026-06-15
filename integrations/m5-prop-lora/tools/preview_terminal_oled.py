@@ -75,11 +75,11 @@ class Row(NamedTuple):
 
 
 ROWS = (
-    Row(1, "CERVENA", 100, "100%", True, False, "---"),
-    Row(2, "ORANZ", 80, "80%", True, True, "ODP"),
-    Row(3, "TYRKYS", 45, "45%", True, False, "---"),
-    Row(4, "BILA", 0, "VYP", False, True, "ODP"),
-    Row(5, "MODRA", 75, "75%", True, False, "---"),
+    Row(1, "ZELENA", 100, "100%", True, False, "---"),
+    Row(2, "CERVENA", 100, "100%", True, False, "---"),
+    Row(3, "CERVENA", 100, "100%", True, False, "---"),
+    Row(4, "MODRA", 100, "100%", True, True, "ODP"),
+    Row(5, "CERVENA", 100, "100%", True, True, "ODP"),
 )
 
 

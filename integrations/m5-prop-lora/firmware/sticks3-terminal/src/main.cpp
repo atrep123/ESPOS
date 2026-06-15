@@ -10,6 +10,7 @@
 #include "drivers/terminal_chain_encoder_driver.h"
 #include "drivers/terminal_external_oled.h"
 #include "drivers/terminal_fader_driver.h"
+#include "drivers/terminal_fader_rgb.h"
 #include "drivers/terminal_switch_driver.h"
 #include "terminal_config.h"
 #include "terminal_control_surface.h"
@@ -17,6 +18,7 @@
 #include "terminal_app_logic.h"
 #include "terminal_physical_tick.h"
 #include "terminal_setup.h"
+#include "terminal_status_panel.h"
 #include "terminal_switch_dispatch.h"
 #include "terminal_switch_pipeline.h"
 #include "terminal_switches.h"
@@ -46,6 +48,17 @@
 #define TERMINAL_CHAIN_UART_SMOKE 0
 #endif
 
+#ifndef TERMINAL_PROP_LINK_SMOKE
+#define TERMINAL_PROP_LINK_SMOKE 0
+#endif
+#ifndef TERMINAL_PROP_LINK_SMOKE_TX_HELLO
+#define TERMINAL_PROP_LINK_SMOKE_TX_HELLO 1
+#endif
+
+#ifndef TERMINAL_PBHUB_SMOKE
+#define TERMINAL_PBHUB_SMOKE 0
+#endif
+
 #ifndef TERMINAL_LIVE_DEBUG
 #define TERMINAL_LIVE_DEBUG 0
 #endif
@@ -54,17 +67,18 @@
 #include <M5Chain.h>
 #endif
 
-#if (TERMINAL_G4_ADC_SMOKE + TERMINAL_EXTERNAL_OLED_DRAW_SMOKE + TERMINAL_CHAIN_UART_SMOKE) > 1
-#error "G4 ADC, Chain UART, and external OLED draw smoke are separate hardware tests"
+#if (TERMINAL_EXTERNAL_OLED_I2C_SCAN_SMOKE + TERMINAL_EXTERNAL_OLED_DRAW_SMOKE + TERMINAL_G4_ADC_SMOKE + TERMINAL_CHAIN_UART_SMOKE + TERMINAL_PROP_LINK_SMOKE + TERMINAL_PBHUB_SMOKE) > 1
+#error "OLED I2C scan, OLED draw, G4 ADC, Chain UART, prop link, and PbHUB smokes are separate hardware tests"
 #endif
 
-#if !TERMINAL_G4_ADC_SMOKE && !TERMINAL_EXTERNAL_OLED_DRAW_SMOKE && !TERMINAL_CHAIN_UART_SMOKE
+#if !TERMINAL_G4_ADC_SMOKE && !TERMINAL_EXTERNAL_OLED_DRAW_SMOKE && !TERMINAL_CHAIN_UART_SMOKE && !TERMINAL_PROP_LINK_SMOKE && !TERMINAL_PBHUB_SMOKE
 
 namespace {
 
 terminal_setup::TerminalSetupState g_setup;
 terminal_control_surface::ControlSurface g_controls;
 terminal_fader_driver::ConfiguredFaderDriver g_faders;
+terminal_fader_rgb::ConfiguredFaderRgbSink g_faderRgb;
 terminal_chain_encoder_driver::ConfiguredChainEncoderDriver g_encoders;
 terminal_external_oled::ConfiguredExternalOledDriver g_externalOled;
 terminal_switch_driver::SwitchDriver g_switchDriver;
@@ -75,6 +89,9 @@ std::uint32_t g_lastDrawMs = 0;
 std::uint32_t g_lastI2cScanMs = 0;
 terminal_external_display::DisplayFrame g_externalFrame;
 terminal_usb_link::UsbSetupLink g_usbLink(terminal_config::USB_LINE_MAX);
+terminal_status_panel::StatusPanelCache g_statusPanelCache;
+
+bool drawExternalSinks(const terminal_external_display::DisplayFrame& frame);
 
 std::uint16_t statusBackground(terminal_setup::Status status) {
     switch (status) {
@@ -94,17 +111,25 @@ std::uint16_t statusBackground(terminal_setup::Status status) {
     return TFT_BLACK;
 }
 
-void drawStatusPanel() {
+void drawStatusPanel(bool force = false) {
     // Secondary status examples: NAHRANO on accepted upload, PROBLEM on rollback.
-    M5.Display.fillScreen(statusBackground(g_setup.status()));
-    M5.Display.setTextColor(TFT_WHITE, statusBackground(g_setup.status()));
-    M5.Display.setTextDatum(top_left);
-    M5.Display.setTextSize(2);
-    M5.Display.setCursor(6, 8);
-    M5.Display.println("TERMINAL");
-    M5.Display.setTextSize(3);
-    M5.Display.setCursor(6, 36);
-    M5.Display.println(g_setup.statusText());
+    const int width = M5.Display.width();
+    const int height = M5.Display.height();
+    if (!terminal_status_panel::shouldDrawStatusPanel(
+            g_statusPanelCache, g_setup.status(), width, height, force)) {
+        return;
+    }
+
+    const std::uint16_t background = statusBackground(g_setup.status());
+    const terminal_status_panel::StatusPanelPlan plan =
+        terminal_status_panel::makeStatusPanelPlan(g_setup.status(), width, height);
+    M5.Display.fillScreen(background);
+    M5.Display.setTextColor(TFT_WHITE, background);
+    M5.Display.setTextSize(plan.title.textSize);
+    M5.Display.drawString(plan.title.text, plan.title.x, plan.title.y);
+    M5.Display.setTextSize(plan.statusLine.textSize);
+    M5.Display.drawString(plan.statusLine.text, plan.statusLine.x, plan.statusLine.y);
+    terminal_status_panel::rememberStatusPanelDraw(g_statusPanelCache, g_setup.status(), width, height);
 
     g_lastDrawMs = millis();
 }
@@ -112,11 +137,18 @@ void drawStatusPanel() {
 bool renderExternalDisplay() {
     const terminal_external_display::DisplayFrame nextFrame =
         terminal_external_display::makeFrame(g_setup);
-    if (!g_externalOled.draw(nextFrame)) {
-        return false;
+    return drawExternalSinks(nextFrame);
+}
+
+bool drawExternalSinks(const terminal_external_display::DisplayFrame& frame) {
+    const bool oledDrawn = g_externalOled.draw(frame);
+    g_faderRgb.draw(g_setup);
+    if (oledDrawn) {
+        g_externalFrame = frame;
+    } else {
+        g_externalFrame = {};
     }
-    g_externalFrame = nextFrame;
-    return true;
+    return oledDrawn;
 }
 
 struct I2cScanResult {
@@ -236,11 +268,7 @@ bool renderExternalDisplayIfChanged() {
     if (nextFrame == g_externalFrame) {
         return false;
     }
-    if (!g_externalOled.draw(nextFrame)) {
-        return false;
-    }
-    g_externalFrame = nextFrame;
-    return true;
+    return drawExternalSinks(nextFrame);
 }
 
 void logLiveDebugSnapshot(const terminal_control_surface::ControlSnapshot& snapshot) {
@@ -251,7 +279,8 @@ void logLiveDebugSnapshot(const terminal_control_surface::ControlSnapshot& snaps
         if (input.sliderPercent != terminal_control_surface::SLIDER_UNCHANGED ||
             input.encoderDelta != 0 ||
             input.encoderPressed ||
-            input.effectPressed) {
+            input.effectPressed ||
+            input.effectToggleEvent) {
             hasInput = true;
             break;
         }
@@ -266,15 +295,17 @@ void logLiveDebugSnapshot(const terminal_control_surface::ControlSnapshot& snaps
         if (input.sliderPercent == terminal_control_surface::SLIDER_UNCHANGED &&
             input.encoderDelta == 0 &&
             !input.encoderPressed &&
-            !input.effectPressed) {
+            !input.effectPressed &&
+            !input.effectToggleEvent) {
             continue;
         }
-        Serial.printf(" L%u:s=%d,d=%d,p=%u,e=%u",
+        Serial.printf(" L%u:s=%d,d=%d,p=%u,e=%u,t=%u",
                       static_cast<unsigned>(lane + 1U),
                       input.sliderPercent,
                       input.encoderDelta,
                       input.encoderPressed ? 1U : 0U,
-                      input.effectPressed ? 1U : 0U);
+                      input.effectPressed ? 1U : 0U,
+                      input.effectToggleEvent ? 1U : 0U);
     }
     Serial.println();
     Serial.flush();
@@ -283,9 +314,124 @@ void logLiveDebugSnapshot(const terminal_control_surface::ControlSnapshot& snaps
 #endif
 }
 
-void drainUsbSetupInput() {
-    while (Serial.available() > 0) {
-        Serial.read();
+#if TERMINAL_LIVE_DEBUG
+const char* switchActionName(terminal_switch_dispatch::SwitchAction action) {
+    switch (action) {
+        case terminal_switch_dispatch::SwitchAction::Upload:
+            return "upload";
+        case terminal_switch_dispatch::SwitchAction::SimFire:
+            return "sim_fire";
+        case terminal_switch_dispatch::SwitchAction::None:
+            return "none";
+    }
+    return "none";
+}
+
+const char* setupStatusName(terminal_setup::Status status) {
+    switch (status) {
+        case terminal_setup::Status::Ready:
+            return "ready";
+        case terminal_setup::Status::Dirty:
+            return "dirty";
+        case terminal_setup::Status::Uploading:
+            return "uploading";
+        case terminal_setup::Status::Uploaded:
+            return "uploaded";
+        case terminal_setup::Status::Problem:
+            return "problem";
+        case terminal_setup::Status::SimFire:
+            return "sim_fire";
+    }
+    return "ready";
+}
+
+void logLiveDebugSwitchFlow(const terminal_switches::SwitchSnapshot& raw,
+                            terminal_switch_dispatch::SwitchAction action,
+                            std::uint32_t nowMs) {
+    static std::uint32_t lastLogMs = 0;
+    static terminal_switches::SwitchSnapshot lastRaw;
+    static terminal_switches::SwitchSnapshot lastStable;
+    const terminal_switches::SwitchSnapshot stable = g_switchPipeline.stable();
+    const bool changed = raw.uploadPressed != lastRaw.uploadPressed ||
+                         raw.simFirePressed != lastRaw.simFirePressed ||
+                         raw.uploadEvent ||
+                         raw.simFireEvent ||
+                         stable.uploadPressed != lastStable.uploadPressed ||
+                         stable.simFirePressed != lastStable.simFirePressed ||
+                         action != terminal_switch_dispatch::SwitchAction::None;
+    if (!changed && nowMs - lastLogMs < 1000UL) {
+        return;
+    }
+    lastLogMs = nowMs;
+    lastRaw = raw;
+    lastStable = stable;
+    Serial.printf("SETUP_LINK SWITCH raw_u=%u raw_s=%u event_u=%u event_s=%u stable_u=%u stable_s=%u action=%s in_flight=%u status=%s dirty=%u\n",
+                  raw.uploadPressed ? 1U : 0U,
+                  raw.simFirePressed ? 1U : 0U,
+                  raw.uploadEvent ? 1U : 0U,
+                  raw.simFireEvent ? 1U : 0U,
+                  stable.uploadPressed ? 1U : 0U,
+                  stable.simFirePressed ? 1U : 0U,
+                  switchActionName(action),
+                  terminal_app_logic::uploadInFlight(g_setup, g_usbLink) ? 1U : 0U,
+                  setupStatusName(g_setup.status()),
+                  g_setup.dirty() ? 1U : 0U);
+    Serial.flush();
+}
+#endif
+
+void beginSetupTransport() {
+    if (terminal_config::SETUP_TRANSPORT_PROP_LINK) {
+        Serial2.begin(
+            terminal_config::PROP_LINK_BAUD,
+            SERIAL_8N1,
+            terminal_config::PROP_LINK_RX_PIN,
+            terminal_config::PROP_LINK_TX_PIN);
+#if TERMINAL_LIVE_DEBUG
+        Serial.printf("SETUP_LINK PROP rx=%d tx=%d baud=%d\n",
+                      terminal_config::PROP_LINK_RX_PIN,
+                      terminal_config::PROP_LINK_TX_PIN,
+                      terminal_config::PROP_LINK_BAUD);
+        Serial.flush();
+#endif
+    } else {
+#if TERMINAL_LIVE_DEBUG
+        Serial.println("SETUP_LINK USB");
+        Serial.flush();
+#endif
+    }
+}
+
+int setupLinkAvailable() {
+    if (terminal_config::SETUP_TRANSPORT_PROP_LINK) {
+        return Serial2.available();
+    }
+    return Serial.available();
+}
+
+int setupLinkRead() {
+    if (terminal_config::SETUP_TRANSPORT_PROP_LINK) {
+        return Serial2.read();
+    }
+    return Serial.read();
+}
+
+void writeSetupLine(const char* line) {
+    if (terminal_config::SETUP_TRANSPORT_PROP_LINK) {
+#if TERMINAL_LIVE_DEBUG
+        Serial.print("SETUP_LINK TX ");
+        Serial.println(line);
+        Serial.flush();
+#endif
+        Serial2.println(line);
+    } else {
+        Serial.println(line);
+    }
+}
+
+void drainSetupLinkInput() {
+    while (setupLinkAvailable() > 0) {
+        setupLinkRead();
     }
 }
 
@@ -303,17 +449,17 @@ void primeSwitches() {
 
 void performTerminalAction(const terminal_app_logic::TerminalAction& action) {
     if (action.drainUsbInput) {
-        drainUsbSetupInput();
+        drainSetupLinkInput();
     }
     if (action.sendLine) {
-        Serial.println(action.line.c_str());
+        writeSetupLine(action.line.c_str());
     }
     if (action.lockFadersToDraft) {
         g_faders.lockToDraft(g_setup);
     }
     if (action.redraw) {
         renderExternalDisplay();
-        drawStatusPanel();
+        drawStatusPanel(true);
     }
 }
 
@@ -325,9 +471,17 @@ void primeDirectControls() {
 
 void requestUpload() {
     if (!terminal_app_logic::canStartUpload(g_setup, g_usbLink)) {
+#if TERMINAL_LIVE_DEBUG
+        Serial.println("SETUP_LINK UPLOAD_BLOCKED busy");
+        Serial.flush();
+#endif
         return;
     }
-    drainUsbSetupInput();
+#if TERMINAL_LIVE_DEBUG
+    Serial.println("SETUP_LINK UPLOAD_REQUEST");
+    Serial.flush();
+#endif
+    drainSetupLinkInput();
     performTerminalAction(
         terminal_app_logic::startUploadAfterUsbDrain(g_setup, g_usbLink, millis(), terminal_config::UPLOAD_ACK_TIMEOUT_MS));
 }
@@ -371,8 +525,12 @@ void pollPhysicalTick() {
         logLiveDebugSnapshot(snapshot);
     }
     const std::uint32_t nowMs = millis();
+    const terminal_switches::SwitchSnapshot switchSnapshot = readSwitches();
     const terminal_switch_dispatch::SwitchAction action =
-        g_switchPipeline.update(readSwitches(), nowMs, uploadInFlight());
+        g_switchPipeline.update(switchSnapshot, nowMs, uploadInFlight());
+#if TERMINAL_LIVE_DEBUG
+    logLiveDebugSwitchFlow(switchSnapshot, action, nowMs);
+#endif
     const terminal_physical_tick::PhysicalTickResult result =
         terminal_physical_tick::runPhysicalTick(
             snapshot,
@@ -383,11 +541,9 @@ void pollPhysicalTick() {
             g_externalFrame,
             nowMs,
             terminal_config::UPLOAD_ACK_TIMEOUT_MS,
-            []() { drainUsbSetupInput(); });
+            []() { drainSetupLinkInput(); });
     if (result.frameChanged && !result.action.redraw) {
-        if (!g_externalOled.draw(result.frame)) {
-            g_externalFrame = {};
-        }
+        drawExternalSinks(result.frame);
     }
     performTerminalAction(result.action);
 }
@@ -397,6 +553,15 @@ bool uploadInFlight() {
 }
 
 void handleUsbEvent(terminal_usb_link::UploadEvent event) {
+#if TERMINAL_LIVE_DEBUG
+    if (event == terminal_usb_link::UploadEvent::Accepted) {
+        Serial.println("SETUP_LINK EVENT accepted");
+        Serial.flush();
+    } else if (event == terminal_usb_link::UploadEvent::Rejected) {
+        Serial.println("SETUP_LINK EVENT rejected");
+        Serial.flush();
+    }
+#endif
     const terminal_app_logic::TerminalAction action =
         terminal_app_logic::handleUploadEvent(g_setup, g_usbLink, event);
     performTerminalAction(action);
@@ -405,9 +570,9 @@ void handleUsbEvent(terminal_usb_link::UploadEvent event) {
     }
 }
 
-void pollUsbSetupAcks() {
-    while (Serial.available() > 0) {
-        const char ch = static_cast<char>(Serial.read());
+void pollSetupLinkAcks() {
+    while (setupLinkAvailable() > 0) {
+        const char ch = static_cast<char>(setupLinkRead());
         handleUsbEvent(g_usbLink.push(ch));
     }
 }
@@ -421,18 +586,22 @@ void pollUploadTimeout() {
 void setup() {
     auto cfg = M5.config();
     M5.begin(cfg);
+    M5.Power.setExtOutput(true);
     M5.Display.setRotation(1);
     M5.Display.setBrightness(160);
     Serial.begin(terminal_config::USB_SETUP_BAUD);
     runOledI2cScanSmoke();
     g_lastI2cScanMs = millis();
     const bool fadersAvailable = g_faders.begin();
+    const bool faderRgbAvailable = g_faderRgb.begin();
     const bool encodersAvailable = g_encoders.begin();
     const bool externalOledAvailable = g_externalOled.begin();
     g_switchDriver.begin();
+    beginSetupTransport();
 #if TERMINAL_LIVE_DEBUG
-    Serial.printf("TERMINAL_LIVE_DEBUG START faders=%u chain=%u oled=%u switch_pins=%d,%d\n",
+    Serial.printf("TERMINAL_LIVE_DEBUG START faders=%u fader_rgb=%u chain=%u oled=%u switch_pins=%d,%d\n",
                   fadersAvailable ? 1U : 0U,
+                  faderRgbAvailable ? 1U : 0U,
                   encodersAvailable ? 1U : 0U,
                   externalOledAvailable ? 1U : 0U,
                   terminal_config::UPLOAD_SWITCH_PIN,
@@ -442,18 +611,302 @@ void setup() {
     primeSwitches();
     primeDirectControls();
     renderExternalDisplay();
-    drawStatusPanel();
+    drawStatusPanel(true);
 }
 
 void loop() {
     M5.update();
     pollPhysicalTick();
+    pollSetupLinkAcks();
     pollUploadTimeout();
-    pollUsbSetupAcks();
     pollOledI2cScanSmoke();
     if (millis() - g_lastDrawMs > terminal_config::STATUS_REDRAW_MS) {
         renderExternalDisplayIfChanged();
-        drawStatusPanel();
+        drawStatusPanel(false);
+    }
+    delay(5);
+}
+
+#elif TERMINAL_PBHUB_SMOKE
+
+namespace {
+
+terminal_pbhub_client::ArduinoPbHubBus g_pbHubBus;
+terminal_pbhub_client::PbHubClient g_pbHub(
+    g_pbHubBus,
+    static_cast<std::uint8_t>(terminal_config::PBHUB_I2C_ADDRESS));
+std::uint32_t g_lastPbHubPollMs = 0;
+std::uint32_t g_pbHubPollCount = 0;
+bool g_pbHubOnline = false;
+
+void printPbHubConfig() {
+    Serial.printf("PBHUB_SMOKE START address=0x%02X sda=%d scl=%d freq=%d mux=0x%02X channel=%u ports=%u\n",
+                  terminal_config::PBHUB_I2C_ADDRESS,
+                  terminal_config::PBHUB_SDA_PIN,
+                  terminal_config::PBHUB_SCL_PIN,
+                  terminal_config::PBHUB_I2C_FREQ,
+                  terminal_config::PBHUB_PAHUB_ADDRESS,
+                  terminal_config::PBHUB_PAHUB_CHANNEL,
+                  terminal_hardware_topology::PBHUB_PORT_COUNT);
+}
+
+void configurePbHubRgbSmoke() {
+    const std::array<terminal_color_definitions::ColorRgb, terminal_setup::LANE_COUNT> colors = {{
+        {255, 0, 0},
+        {255, 128, 0},
+        {0, 255, 255},
+        {255, 255, 255},
+        {0, 0, 255},
+    }};
+    for (std::size_t lane = 0; lane < terminal_setup::LANE_COUNT; ++lane) {
+        const std::uint8_t port = terminal_config::PBHUB_FADER_PORTS[lane];
+        const terminal_color_definitions::ColorRgb& color = colors[lane];
+        const bool countOk = g_pbHub.setLedNum(port, terminal_hardware_topology::UNIT_FADER_RGB_LED_COUNT);
+        const bool brightnessOk = g_pbHub.setLedBrightness(
+            port,
+            static_cast<std::uint8_t>(terminal_config::PBHUB_RGB_MAX_BRIGHTNESS));
+        const bool colorOk = g_pbHub.fillLedColor(
+            port,
+            0,
+            terminal_hardware_topology::UNIT_FADER_RGB_LED_COUNT,
+            color.r,
+            color.g,
+            color.b);
+        Serial.printf("PBHUB_RGB lane=%u port=%u count=%u brightness=%u color=%u rgb=%u,%u,%u\n",
+                      static_cast<unsigned>(lane + 1U),
+                      port,
+                      countOk ? 1U : 0U,
+                      brightnessOk ? 1U : 0U,
+                      colorOk ? 1U : 0U,
+                      color.r,
+                      color.g,
+                      color.b);
+    }
+}
+
+void pollPbHubAdc() {
+    if (!g_pbHubOnline) {
+        return;
+    }
+    ++g_pbHubPollCount;
+    for (std::size_t lane = 0; lane < terminal_setup::LANE_COUNT; ++lane) {
+        const std::uint8_t port = terminal_config::PBHUB_FADER_PORTS[lane];
+        std::uint16_t raw = 0;
+        const bool ok = g_pbHub.readAnalog(port, raw);
+        Serial.printf("PBHUB_ADC lane=%u port=%u ok=%u raw=%u\n",
+                      static_cast<unsigned>(lane + 1U),
+                      port,
+                      ok ? 1U : 0U,
+                      raw);
+    }
+    if (g_pbHubPollCount % 10 == 0) {
+        Serial.printf("PBHUB_SMOKE HEARTBEAT count=%lu\n",
+                      static_cast<unsigned long>(g_pbHubPollCount));
+    }
+    Serial.flush();
+}
+
+}  // namespace
+
+void setup() {
+    auto cfg = M5.config();
+    M5.begin(cfg);
+    M5.Power.setExtOutput(true);
+    M5.Display.setRotation(1);
+    M5.Display.fillScreen(TFT_BLACK);
+    M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+    M5.Display.setTextSize(2);
+    M5.Display.setCursor(4, 8);
+    M5.Display.println("PBHUB");
+    M5.Display.setCursor(4, 34);
+    M5.Display.println("SMOKE");
+
+    Serial.begin(terminal_config::USB_SETUP_BAUD);
+    delay(250);
+    printPbHubConfig();
+    g_pbHubOnline = g_pbHub.ping();
+    Serial.printf("PBHUB_SMOKE ONLINE %u\n", g_pbHubOnline ? 1U : 0U);
+    if (g_pbHubOnline) {
+        configurePbHubRgbSmoke();
+        pollPbHubAdc();
+    }
+    g_lastPbHubPollMs = millis();
+    Serial.flush();
+}
+
+void loop() {
+    M5.update();
+    if (millis() - g_lastPbHubPollMs >= 500) {
+        g_lastPbHubPollMs = millis();
+        pollPbHubAdc();
+    }
+    delay(5);
+}
+
+#elif TERMINAL_PROP_LINK_SMOKE
+
+namespace {
+
+constexpr std::uint32_t PROP_LINK_HELLO_MS = 1000;
+constexpr std::uint32_t PROP_LINK_HEARTBEAT_MS = 5000;
+
+std::uint32_t g_lastPropHelloMs = 0;
+std::uint32_t g_lastPropHeartbeatMs = 0;
+std::uint32_t g_propHelloSeq = 0;
+std::uint32_t g_propRxLines = 0;
+String g_propLine;
+String g_consoleLine;
+bool g_propLineOverflow = false;
+bool g_consoleLineOverflow = false;
+
+void sendPropLine(const char* line) {
+    Serial2.println(line);
+    Serial.printf("PROP_LINK_SMOKE TX %s\n", line);
+    Serial.flush();
+}
+
+void sendHello() {
+    char line[24] = {};
+    ++g_propHelloSeq;
+    std::snprintf(line, sizeof(line), "HELLOT %lu", static_cast<unsigned long>(g_propHelloSeq));
+    sendPropLine(line);
+}
+
+void handlePropLine(const String& line) {
+    ++g_propRxLines;
+    Serial.print("PROP_LINK_SMOKE RX ");
+    Serial.println(line);
+    Serial.flush();
+}
+
+void pollPropLink() {
+    while (Serial2.available() > 0) {
+        const char c = static_cast<char>(Serial2.read());
+        if (c == '\r') {
+            continue;
+        }
+        if (c == '\n') {
+            if (!g_propLineOverflow && g_propLine.length() > 0) {
+                handlePropLine(g_propLine);
+            }
+            g_propLine = "";
+            g_propLineOverflow = false;
+            continue;
+        }
+        if (g_propLineOverflow) {
+            continue;
+        }
+        if (g_propLine.length() >= terminal_config::USB_LINE_MAX) {
+            g_propLine = "";
+            g_propLineOverflow = true;
+            Serial.println("PROP_LINK_SMOKE RX_OVERFLOW");
+            continue;
+        }
+        g_propLine += c;
+    }
+}
+
+void handleUsbLine(const String& line) {
+    String trimmed = line;
+    trimmed.trim();
+    if (trimmed.length() == 0) {
+        return;
+    }
+    if (trimmed.equalsIgnoreCase("HELLO")) {
+        sendHello();
+        return;
+    }
+    if (trimmed.length() > 3 && trimmed.substring(0, 3).equals("TX ")) {
+        const String payload = trimmed.substring(3);
+        Serial2.println(payload);
+        Serial.print("PROP_LINK_SMOKE USB_TX ");
+        Serial.println(payload);
+        Serial.flush();
+        return;
+    }
+    Serial.println("PROP_LINK_SMOKE USB_HELP HELLO | TX <line>");
+    Serial.flush();
+}
+
+void pollUsbCommands() {
+    while (Serial.available() > 0) {
+        const char c = static_cast<char>(Serial.read());
+        if (c == '\r') {
+            continue;
+        }
+        if (c == '\n') {
+            if (!g_consoleLineOverflow && g_consoleLine.length() > 0) {
+                handleUsbLine(g_consoleLine);
+            }
+            g_consoleLine = "";
+            g_consoleLineOverflow = false;
+            continue;
+        }
+        if (g_consoleLineOverflow) {
+            continue;
+        }
+        if (g_consoleLine.length() >= terminal_config::USB_LINE_MAX) {
+            g_consoleLine = "";
+            g_consoleLineOverflow = true;
+            Serial.println("PROP_LINK_SMOKE USB_OVERFLOW");
+            continue;
+        }
+        g_consoleLine += c;
+    }
+}
+
+}  // namespace
+
+void setup() {
+    Serial.begin(terminal_config::USB_SETUP_BAUD);
+    const std::uint32_t startMs = millis();
+    while (!Serial && millis() - startMs < 3000) {
+        delay(10);
+    }
+
+    auto cfg = M5.config();
+    M5.begin(cfg);
+    M5.Display.setRotation(1);
+    M5.Display.fillScreen(TFT_BLACK);
+    M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+    M5.Display.setTextSize(2);
+    M5.Display.setCursor(4, 8);
+    M5.Display.println("PROP LINK");
+    M5.Display.setCursor(4, 34);
+    M5.Display.println("SMOKE");
+
+    Serial2.begin(
+        terminal_config::PROP_LINK_BAUD,
+        SERIAL_8N1,
+        terminal_config::PROP_LINK_RX_PIN,
+        terminal_config::PROP_LINK_TX_PIN);
+    Serial.printf("PROP_LINK_SMOKE START rx=%d tx=%d baud=%d\n",
+                  terminal_config::PROP_LINK_RX_PIN,
+                  terminal_config::PROP_LINK_TX_PIN,
+                  terminal_config::PROP_LINK_BAUD);
+    Serial.println("PROP_LINK_SMOKE USB_HELP HELLO | TX <line>");
+    Serial.flush();
+    sendHello();
+    g_lastPropHelloMs = millis();
+    g_lastPropHeartbeatMs = millis();
+}
+
+void loop() {
+    M5.update();
+    pollUsbCommands();
+    pollPropLink();
+    const std::uint32_t now = millis();
+    if (TERMINAL_PROP_LINK_SMOKE_TX_HELLO &&
+        now - g_lastPropHelloMs >= PROP_LINK_HELLO_MS) {
+        g_lastPropHelloMs = now;
+        sendHello();
+    }
+    if (now - g_lastPropHeartbeatMs >= PROP_LINK_HEARTBEAT_MS) {
+        g_lastPropHeartbeatMs = now;
+        Serial.printf("PROP_LINK_SMOKE HEARTBEAT sent=%lu rx=%lu\n",
+                      static_cast<unsigned long>(g_propHelloSeq),
+                      static_cast<unsigned long>(g_propRxLines));
+        Serial.flush();
     }
     delay(5);
 }

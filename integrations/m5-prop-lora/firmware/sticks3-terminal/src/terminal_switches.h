@@ -5,6 +5,8 @@ namespace terminal_switches {
 struct SwitchSnapshot {
     bool uploadPressed = false;
     bool simFirePressed = false;
+    bool uploadEvent = false;
+    bool simFireEvent = false;
 };
 
 struct SwitchEvents {

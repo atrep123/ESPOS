@@ -132,6 +132,13 @@ bool formattedLinesFitBudget() {
            prop_xiao_link::formatBarrelFireLine(5000, 5000, 5000, 2).size() < prop_xiao_link::MAX_LINE_LENGTH;
 }
 
+bool terminalSetupPassthroughFitsBudget() {
+    const std::string setup =
+        "SETUP 777 L1:363,100,1,0 L2:360,100,1,1 L3:361,100,1,1 "
+        "L4:364,100,1,1 L5:360,100,1,1";
+    return setup.size() < prop_xiao_link::MAX_LINE_LENGTH;
+}
+
 bool runCase(const char* name, bool (*test)()) {
     const bool passed = test();
     std::cout << (passed ? "PASS " : "FAIL ") << name << '\n';
@@ -149,5 +156,6 @@ int main() {
     failures += runCase("parses BARREL commands", parsesBarrelCommands) ? 0 : 1;
     failures += runCase("rejects malformed lines", rejectsMalformedLines) ? 0 : 1;
     failures += runCase("formatted lines fit budget", formattedLinesFitBudget) ? 0 : 1;
+    failures += runCase("Terminal SETUP passthrough fits line budget", terminalSetupPassthroughFitsBudget) ? 0 : 1;
     return failures == 0 ? 0 : 1;
 }

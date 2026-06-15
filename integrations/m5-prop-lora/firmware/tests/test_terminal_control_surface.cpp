@@ -29,11 +29,11 @@ bool slidersSetBrightnessAndPowerFromZeroToHundredForFiveLanes() {
     surface.apply(snapshot, state);
     return state.draftLane(0).brightness == 0 &&
            state.draftLane(0).on == false &&
-           state.draftLane(1).brightness == 25 &&
+           state.draftLane(1).brightness == 26 &&
            state.draftLane(1).on == true &&
            state.draftLane(2).brightness == 50 &&
            state.draftLane(2).on == true &&
-           state.draftLane(3).brightness == 75 &&
+           state.draftLane(3).brightness == 76 &&
            state.draftLane(3).on == true &&
            state.draftLane(4).brightness == 100 &&
            state.draftLane(4).on == true;
@@ -46,8 +46,8 @@ bool encodersStepNamedPaletteWithWraparound() {
     snapshot.lanes[0].encoderDelta = -6;
     snapshot.lanes[1].encoderDelta = -6;
     surface.apply(snapshot, state);
-    return state.draftLane(0).hue == 368 &&
-           state.draftLane(1).hue == 364 &&
+    return state.draftLane(0).hue == 362 &&
+           state.draftLane(1).hue == 368 &&
            state.status() == Status::Dirty &&
            state.dirty();
 }
@@ -90,7 +90,21 @@ bool effectSelectRisingEdgeTogglesParticipationOnly() {
     snapshot.lanes[3].effectPressed = true;
     surface.apply(snapshot, state);
     const bool secondEffect = state.draftLane(3).effect;
-    return firstEffect == true && firstOn == true && heldEffect == true && secondEffect == false;
+    return firstEffect == false && firstOn == true && heldEffect == false && secondEffect == true;
+}
+
+bool barrelLaneEffectCannotBeDisabledByButtonOrEvent() {
+    TerminalSetupState state;
+    ControlSurface surface;
+    ControlSnapshot snapshot;
+    snapshot.lanes[4].encoderPressed = true;
+    snapshot.lanes[4].effectPressed = true;
+    snapshot.lanes[4].effectToggleEvent = true;
+    surface.apply(snapshot, state);
+    return state.draftLane(4).effect == true &&
+           state.draftLane(4).hue == 360 &&
+           state.status() == Status::Ready &&
+           !state.dirty();
 }
 
 bool simultaneousEncoderAndEffectEdgesToggleEffectOnlyOnce() {
@@ -121,6 +135,18 @@ bool effectSelectEdgesAreIndependentPerLane() {
     surface.apply(snapshot, state);
     return lane0Held == true && lane1First == true && state.draftLane(0).effect == false &&
            state.draftLane(1).effect == true;
+}
+
+bool effectToggleEventsAreNotSuppressedByHeldLevelState() {
+    TerminalSetupState state;
+    ControlSurface surface;
+    ControlSnapshot snapshot;
+    snapshot.lanes[0].effectToggleEvent = true;
+    surface.apply(snapshot, state);
+    const bool firstEffect = state.draftLane(0).effect;
+    surface.apply(snapshot, state);
+    const bool secondEffect = state.draftLane(0).effect;
+    return firstEffect == true && secondEffect == false;
 }
 
 bool primedHeldEncoderPressDoesNotToggleUntilReleaseAndRepress() {
@@ -175,7 +201,11 @@ int main() {
     failures += runCase("encoder press toggles effect without changing power",
                         encoderPressTogglesEffectWithoutChangingPower) ? 0 : 1;
     failures += runCase("effect select rising edge toggles participation only", effectSelectRisingEdgeTogglesParticipationOnly) ? 0 : 1;
+    failures += runCase("barrel lane effect cannot be disabled by button or event",
+                        barrelLaneEffectCannotBeDisabledByButtonOrEvent) ? 0 : 1;
     failures += runCase("effect select edges are independent per lane", effectSelectEdgesAreIndependentPerLane) ? 0 : 1;
+    failures += runCase("effect toggle events are not suppressed by held level state",
+                        effectToggleEventsAreNotSuppressedByHeldLevelState) ? 0 : 1;
     failures += runCase("simultaneous encoder and effect edges toggle effect only once",
                         simultaneousEncoderAndEffectEdgesToggleEffectOnlyOnce) ? 0 : 1;
     failures += runCase("primed held encoder press does not toggle until release and repress", primedHeldEncoderPressDoesNotToggleUntilReleaseAndRepress) ? 0 : 1;

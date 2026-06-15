@@ -55,11 +55,11 @@ std::uint8_t bottom(const terminal_external_display::DisplayRect& rect) {
 bool fiveFramedOperatorRowsExposeColorBrightnessAndEffect() {
     const auto frame = makeFrame(configuredState());
     return frame.rows.size() == DISPLAY_ROW_COUNT &&
-           hasRow(frame.rows[0], 1, "ORANZ", 0, "VYP", false, true, "ODP") &&
-           hasRow(frame.rows[1], 2, "MODRA", 25, "VYP", false, false, "---") &&
-           hasRow(frame.rows[2], 3, "ZELENA", 50, "50%", true, true, "ODP") &&
-           hasRow(frame.rows[3], 4, "BILA", 75, "VYP", false, false, "---") &&
-           hasRow(frame.rows[4], 5, "TYRKYS", 100, "100%", true, true, "ODP");
+           hasRow(frame.rows[0], 1, "TYRKYS", 0, "VYP", false, true, "ODP") &&
+           hasRow(frame.rows[1], 2, "CERVENA", 26, "VYP", false, false, "---") &&
+           hasRow(frame.rows[2], 3, "CERVENA", 50, "50%", true, true, "ODP") &&
+           hasRow(frame.rows[3], 4, "MODRA", 76, "VYP", false, true, "ODP") &&
+           hasRow(frame.rows[4], 5, "CERVENA", 100, "100%", true, true, "ODP");
 }
 
 bool rowsFitFramedDisplayFieldBudgets() {

@@ -19,9 +19,18 @@ bool terminalHasStatusOnlySwitchesAndNoRadioModule() {
 }
 
 bool pahubIsNotAllowedToRouteAnalogFaderReads() {
-    return topology::PAHUB_COUNT == 2 &&
+    return topology::PAHUB_COUNT == 1 &&
            topology::PAHUB_CAN_ROUTE_ANALOG_FADERS == false &&
            topology::PAHUB_CAN_ROUTE_UNIT_FADER_RGB_DATA == false;
+}
+
+bool pbhubOwnsFaderAdcAndRgbReflection() {
+    return topology::PBHUB_COUNT == 1 &&
+           topology::PBHUB_PORT_COUNT == 6 &&
+           topology::PBHUB_I2C_ADDRESS == 0x61 &&
+           topology::UNIT_FADERS_USE_PBHUB_FOR_ADC_AND_RGB == true &&
+           topology::UNIT_FADER_RGB_REFLECTION_ENABLED == true &&
+           topology::UNIT_FADER_RGB_CONTROL_DEFERRED_FOR_FIRST_SLICE == false;
 }
 
 bool groveAndOledRolesStayExplicitlyUnfinalized() {
@@ -43,14 +52,14 @@ bool faderModulesAreAnalogB10kWithSk6812Rgb() {
            topology::UNIT_FADER_RGB_LED_COUNT == 14;
 }
 
-bool faderSliderOnlySliceNeedsExternalAdcOrVerifiedSharedPin() {
+bool pbhubFaderSliceKeepsPahubAsBranchSelectorOnly() {
     return topology::STICKS3_HAT2_EXPOSES_TEN_GPIO_LABELS == true &&
            topology::STICKS3_HAT2_G1_TO_G4_SHARE_INTERNAL_FUNCTIONS == true &&
            topology::STICKS3_GROVE_G9_G10_RESERVED_FOR_REMAINING_TOPOLOGY == true &&
-           topology::UNIT_FADER_RGB_CONTROL_DEFERRED_FOR_FIRST_SLICE == true &&
            topology::UNIT_FADERS_CAN_USE_FIVE_SAFE_DIRECT_STICKS3_ADC_WITH_REST_UNCHANGED == false &&
            topology::UNIT_FADERS_REQUIRE_EXTERNAL_ADC_OR_VERIFIED_SHARED_PIN == true &&
            topology::UNIT_FADERS_USE_PAHUB_PORTS_FOR_SIGNALS == false &&
+           topology::UNIT_FADERS_USE_PBHUB_FOR_ADC_AND_RGB == true &&
            topology::REQUIRED_FADER_ADC_COUNT_FOR_SLIDER_ONLY == 5 &&
            topology::SAFE_DIRECT_ADC_BUDGET_WITH_REST_UNCHANGED == 4;
 }
@@ -69,15 +78,24 @@ bool g4AdcSmokeAcceptsG4AsSharedFaderAdcCandidate() {
            topology::STICKS3_G4_ADC_SMOKE_PHYSICAL_TOP_RAW == 0;
 }
 
-bool benchWiringUsesPrimaryAndSecondaryPahubPorts() {
+bool benchWiringUsesPrimaryPahubAndPbhubPorts() {
     return topology::PRIMARY_PAHUB_PORT_CHAIN_BRANCH == 0 &&
-           topology::PRIMARY_PAHUB_PORT_POT5 == 1 &&
-           topology::PRIMARY_PAHUB_PORT_POT4 == 2 &&
            topology::PRIMARY_PAHUB_PORT_EXTERNAL_DISPLAY == 3 &&
-           topology::PRIMARY_PAHUB_PORT_SECONDARY_PAHUB == 5 &&
-           topology::SECONDARY_PAHUB_PORT_POT3 == 2 &&
-           topology::SECONDARY_PAHUB_PORT_POT2 == 3 &&
-           topology::SECONDARY_PAHUB_PORT_POT1 == 4;
+           topology::PRIMARY_PAHUB_PORT_PBHUB == 5 &&
+           topology::PBHUB_PORT_POT5 == 0 &&
+           topology::PBHUB_PORT_POT4 == 1 &&
+           topology::PBHUB_PORT_POT3 == 2 &&
+           topology::PBHUB_PORT_POT2 == 3 &&
+           topology::PBHUB_PORT_POT1 == 4 &&
+           topology::PBHUB_PORT_XIAO_GROVE2USB_C == 5 &&
+           topology::PBHUB_PORT5_RESERVED_FOR_XIAO_LINK == true;
+}
+
+bool pbhubPort5DoesNotCarrySerial2PropLink() {
+    return topology::PBHUB_PORT_XIAO_GROVE2USB_C == 5 &&
+           topology::PBHUB_PORT5_RESERVED_FOR_XIAO_LINK == true &&
+           topology::PBHUB_PORT5_IS_SERIAL2_UART_ROUTE == false &&
+           topology::PROP_LINK_REQUIRES_DIRECT_STICKS3_UART == true;
 }
 
 bool chainPhysicalOrderIsLed5ToLed1ThenUploadAndSimFireSwitch() {
@@ -109,12 +127,14 @@ int main() {
     failures += runCase("planned hardware has one fader and one encoder per lane", plannedHardwareHasOneFaderAndOneEncoderPerLane) ? 0 : 1;
     failures += runCase("terminal has status-only switches and no radio module", terminalHasStatusOnlySwitchesAndNoRadioModule) ? 0 : 1;
     failures += runCase("PaHUB is not allowed to route analog fader reads", pahubIsNotAllowedToRouteAnalogFaderReads) ? 0 : 1;
+    failures += runCase("PbHUB owns fader ADC and RGB reflection", pbhubOwnsFaderAdcAndRgbReflection) ? 0 : 1;
     failures += runCase("Grove and OLED roles stay explicitly unfinalized", groveAndOledRolesStayExplicitlyUnfinalized) ? 0 : 1;
     failures += runCase("lane controls are direct physical controls", laneControlsAreDirectPhysicalControls) ? 0 : 1;
     failures += runCase("fader modules are analog B10K with SK6812 RGB", faderModulesAreAnalogB10kWithSk6812Rgb) ? 0 : 1;
-    failures += runCase("fader slider-only slice needs external ADC or verified shared pin", faderSliderOnlySliceNeedsExternalAdcOrVerifiedSharedPin) ? 0 : 1;
+    failures += runCase("PbHUB fader slice keeps PaHUB as branch selector only", pbhubFaderSliceKeepsPahubAsBranchSelectorOnly) ? 0 : 1;
     failures += runCase("G4 ADC smoke accepts G4 as shared fader ADC candidate", g4AdcSmokeAcceptsG4AsSharedFaderAdcCandidate) ? 0 : 1;
-    failures += runCase("bench wiring uses primary and secondary PaHUB ports", benchWiringUsesPrimaryAndSecondaryPahubPorts) ? 0 : 1;
+    failures += runCase("bench wiring uses primary PaHUB and PbHUB ports", benchWiringUsesPrimaryPahubAndPbhubPorts) ? 0 : 1;
+    failures += runCase("PbHUB port 5 does not carry Serial2 prop-link UART", pbhubPort5DoesNotCarrySerial2PropLink) ? 0 : 1;
     failures += runCase("chain physical order is LED5 to LED1 then upload and sim-fire switch", chainPhysicalOrderIsLed5ToLed1ThenUploadAndSimFireSwitch) ? 0 : 1;
     failures += runCase("last chain switch is sim-fire", lastChainSwitchIsSimFire) ? 0 : 1;
     return failures == 0 ? 0 : 1;

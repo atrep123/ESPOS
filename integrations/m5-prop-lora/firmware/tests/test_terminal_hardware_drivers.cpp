@@ -9,6 +9,7 @@ namespace {
 
 using terminal_chain_encoder_driver::ChainEncoderDriver;
 using terminal_chain_encoder_driver::ChainEncoderRawReader;
+using terminal_chain_encoder_driver::applyChainKeyButtonEvents;
 using terminal_chain_encoder_driver::applyChainKeyButtonLevels;
 using terminal_chain_encoder_driver::chainEncoderIdForLane;
 using terminal_chain_encoder_driver::classifyChainPress;
@@ -162,7 +163,7 @@ bool faderLockToDraftSuppressesMismatchUntilPickup() {
     ControlSnapshot moved;
     faders.read(moved);
     surface.apply(moved, state);
-    return state.draftLane(0).brightness == 23;
+    return state.draftLane(0).brightness == 24;
 }
 
 bool chainEncoderStubLeavesColorOnAndEffectStateUnchanged() {
@@ -175,7 +176,7 @@ bool chainEncoderStubLeavesColorOnAndEffectStateUnchanged() {
     snapshot.lanes[1].effectPressed = true;
     encoders.read(snapshot);
     surface.apply(snapshot, state);
-    return state.draftLane(1).hue == 365 &&
+    return state.draftLane(1).hue == 360 &&
            state.draftLane(1).on == true &&
            state.draftLane(1).effect == false &&
            !state.dirty();
@@ -195,9 +196,33 @@ bool fakeChainEncoderRawReaderPublishesMovementAndButtons() {
     surface.apply(snapshot, state);
     return reader.began &&
            encoders.available() &&
-           state.draftLane(0).hue == 363 &&
+           state.draftLane(0).hue == 366 &&
            state.draftLane(0).on == true &&
            state.draftLane(0).effect == true;
+}
+
+bool chainEncoderButtonEventsToggleOnConsecutivePolls() {
+    FakeChainEncoderRawReader reader;
+    ChainEncoderDriver encoders(reader);
+    encoders.begin();
+
+    TerminalSetupState state;
+    ControlSurface surface;
+    ControlSnapshot snapshot;
+    reader.samples[0] = terminal_encoder_filter::EncoderSample{
+        terminal_encoder_filter::ENCODER_POSITION_MISSING,
+        false,
+        true};
+
+    encoders.read(snapshot);
+    surface.apply(snapshot, state);
+    const bool afterFirstEvent = state.draftLane(0).effect;
+
+    encoders.read(snapshot);
+    surface.apply(snapshot, state);
+    const bool afterSecondEvent = state.draftLane(0).effect;
+
+    return afterFirstEvent == true && afterSecondEvent == false;
 }
 
 bool chainEncoderBeginPrimesCurrentPositionWithoutPublishingDelta() {
@@ -211,7 +236,7 @@ bool chainEncoderBeginPrimesCurrentPositionWithoutPublishingDelta() {
     ControlSnapshot snapshot;
     encoders.read(snapshot);
     surface.apply(snapshot, state);
-    return state.draftLane(0).hue == 360 &&
+    return state.draftLane(0).hue == 363 &&
            state.draftLane(0).on == true &&
            state.draftLane(0).effect == false &&
            !state.dirty();
@@ -289,6 +314,17 @@ bool chainKeyLevelsMapUploadAndLastSwitchToActions() {
     }
     applyChainKeyButtonLevels(false, true, snapshot);
     return snapshot.uploadPressed && snapshot.simFirePressed;
+}
+
+bool chainKeyEventsMapUploadAndLastSwitchToOneShotActions() {
+    terminal_switches::SwitchSnapshot snapshot;
+    applyChainKeyButtonEvents(true, false, snapshot);
+    if (!snapshot.uploadEvent || snapshot.simFireEvent) {
+        return false;
+    }
+    applyChainKeyButtonEvents(false, true, snapshot);
+    return snapshot.uploadEvent && snapshot.simFireEvent &&
+           !snapshot.uploadPressed && !snapshot.simFirePressed;
 }
 
 bool externalOledStubRejectsDisplayFrameWithoutIoCache() {
@@ -393,6 +429,8 @@ int main() {
     failures += runCase("chain encoder stub leaves color on and effect state unchanged",
                         chainEncoderStubLeavesColorOnAndEffectStateUnchanged) ? 0 : 1;
     failures += runCase("fake chain encoder raw reader publishes movement and buttons", fakeChainEncoderRawReaderPublishesMovementAndButtons) ? 0 : 1;
+    failures += runCase("chain encoder button events toggle on consecutive polls",
+                        chainEncoderButtonEventsToggleOnConsecutivePolls) ? 0 : 1;
     failures += runCase("chain encoder begin primes current position without publishing delta", chainEncoderBeginPrimesCurrentPositionWithoutPublishingDelta) ? 0 : 1;
     failures += runCase("chain encoder driver preserves slider input", chainEncoderDriverPreservesSliderInput) ? 0 : 1;
     failures += runCase("chain encoder single press classifies as effect toggle",
@@ -405,6 +443,8 @@ int main() {
     failures += runCase("chain encoder IDs map physical LED5 to logical LED1", chainEncoderIdsMapPhysicalLed5ToLogicalLed1) ? 0 : 1;
     failures += runCase("chain key levels map upload and last switch to actions",
                         chainKeyLevelsMapUploadAndLastSwitchToActions) ? 0 : 1;
+    failures += runCase("chain key events map upload and last switch to one-shot actions",
+                        chainKeyEventsMapUploadAndLastSwitchToOneShotActions) ? 0 : 1;
     failures += runCase("chain encoder disabled bus reports unavailable", chainEncoderDisabledBusReportsUnavailable) ? 0 : 1;
     failures += runCase("external OLED stub rejects display frame without IO cache", externalOledStubRejectsDisplayFrameWithoutIoCache) ? 0 : 1;
     failures += runCase("fake external OLED sink receives render plan and frame", fakeExternalOledSinkReceivesRenderPlanAndFrame) ? 0 : 1;

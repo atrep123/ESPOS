@@ -28,6 +28,25 @@ bool invertedRawToPercentMapsHighRawToLowBrightness() {
            rawToPercent(-25, calibration) == 100;
 }
 
+bool endpointSnapSuppressesOnePercentAtPhysicalStops() {
+    const FaderCalibration normal{0, 4095, 1};
+    const FaderCalibration inverted{4095, 0, 1};
+    return rawToPercent(41, normal) == 0 &&
+           rawToPercent(4054, normal) == 100 &&
+           rawToPercent(4054, inverted) == 0 &&
+           rawToPercent(41, inverted) == 100;
+}
+
+bool brightnessQuantizesToTwoPercentSteps() {
+    const FaderCalibration normal{0, 1000, 1};
+    const FaderCalibration inverted{1000, 0, 1};
+    return rawToPercent(20, normal) == 2 &&
+           rawToPercent(230, normal) == 24 &&
+           rawToPercent(990, normal) == 100 &&
+           rawToPercent(770, inverted) == 24 &&
+           rawToPercent(10, inverted) == 100;
+}
+
 bool firstValidSampleAlwaysPublishes() {
     FaderFilter filter(FaderCalibration{0, 1000, 2});
     return filter.update(0, 0) == 0 &&
@@ -42,7 +61,7 @@ bool missingSampleDoesNotOverwriteLastValue() {
     if (filter.update(0, RAW_SAMPLE_MISSING) != SLIDER_UNCHANGED) {
         return false;
     }
-    return filter.update(0, 410) == SLIDER_UNCHANGED;
+    return filter.update(0, 404) == SLIDER_UNCHANGED;
 }
 
 bool deadbandSuppressesSmallPercentJitter() {
@@ -53,7 +72,7 @@ bool deadbandSuppressesSmallPercentJitter() {
     if (filter.update(0, 520) != SLIDER_UNCHANGED) {
         return false;
     }
-    return filter.update(0, 530) == 53;
+    return filter.update(0, 530) == 54;
 }
 
 bool lanesFilterIndependently() {
@@ -61,10 +80,10 @@ bool lanesFilterIndependently() {
     if (filter.update(0, 100) != 10 || filter.update(1, 900) != 90) {
         return false;
     }
-    if (filter.update(0, 110) != SLIDER_UNCHANGED) {
+    if (filter.update(0, 104) != SLIDER_UNCHANGED) {
         return false;
     }
-    return filter.update(1, 870) == 87;
+    return filter.update(1, 870) == 88;
 }
 
 bool resetMakesNextSamplePublishAgain() {
@@ -82,10 +101,10 @@ bool primeRecordsPositionWithoutPublishing() {
     if (filter.update(0, 500) != SLIDER_UNCHANGED) {
         return false;
     }
-    if (filter.update(0, 510) != SLIDER_UNCHANGED) {
+    if (filter.update(0, 504) != SLIDER_UNCHANGED) {
         return false;
     }
-    return filter.update(0, 530) == 53;
+    return filter.update(0, 530) == 54;
 }
 
 bool lockUntilPickupSuppressesRollbackMismatch() {
@@ -103,7 +122,7 @@ bool lockUntilPickupSuppressesRollbackMismatch() {
     if (filter.update(0, 200) != SLIDER_UNCHANGED) {
         return false;
     }
-    return filter.update(0, 230) == 23;
+    return filter.update(0, 230) == 24;
 }
 
 bool zeroDeadbandFollowsChangedPercentOnly() {
@@ -114,7 +133,7 @@ bool zeroDeadbandFollowsChangedPercentOnly() {
     if (filter.update(0, 100) != SLIDER_UNCHANGED) {
         return false;
     }
-    return filter.update(0, 110) == 11;
+    return filter.update(0, 110) == 12;
 }
 
 bool invalidLaneIsNoOp() {
@@ -134,6 +153,10 @@ int main() {
     int failures = 0;
     failures += runCase("raw to percent clamps and rounds", rawToPercentClampsAndRounds) ? 0 : 1;
     failures += runCase("inverted raw maps high raw to low brightness", invertedRawToPercentMapsHighRawToLowBrightness) ? 0 : 1;
+    failures += runCase("endpoint snap suppresses one percent at physical stops",
+                        endpointSnapSuppressesOnePercentAtPhysicalStops) ? 0 : 1;
+    failures += runCase("brightness quantizes to two percent steps",
+                        brightnessQuantizesToTwoPercentSteps) ? 0 : 1;
     failures += runCase("first valid sample always publishes", firstValidSampleAlwaysPublishes) ? 0 : 1;
     failures += runCase("missing sample does not overwrite last value", missingSampleDoesNotOverwriteLastValue) ? 0 : 1;
     failures += runCase("deadband suppresses small percent jitter", deadbandSuppressesSmallPercentJitter) ? 0 : 1;

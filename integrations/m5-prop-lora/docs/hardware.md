@@ -1,10 +1,13 @@
 # M5 Prop LoRa Controller Hardware
 
-Current Terminal setup slice: **M5StickS3 Terminal** owns setup editing over the
-local USB setup link. Terminal owns setup editing, Terminal has no radio module,
-no radio modem path, and no radio protocol sender. Dial remains the radio fire
-controller only through the C6 modem pair. DinMeter remains the receiver-side
-safety authority, setup persistence owner, and LED execution/indication surface.
+Current Terminal setup slice: **M5StickS3 Terminal** owns setup editing.
+Terminal owns setup editing, Terminal has no radio module, no radio modem path,
+and no radio protocol sender. The default bench firmware uses the local USB
+setup link; the first prop-side route uses
+`sticks3-terminal-prop-link-g43-g44-600` over a private A140 cable to XIAO. Dial
+remains the radio fire controller only through the C6 modem pair. DinMeter
+remains the receiver-side safety authority, setup persistence owner, and LED
+execution/indication surface.
 Terminal sends only `SETUP` / `SIM_FIRE` setup-link commands; setup uploads use
 `SETUP <request_id>` with request-scoped `SETUP_OK <request_id>` /
 `SETUP_ERR <request_id>` replies.
@@ -17,16 +20,18 @@ This plan uses an M5 Dial as the handheld transmitter, an M5 DIN-style receiver,
   by default until the bench wiring is chosen.
 - The chain encoder UART branch has compile coverage, but the final RX/TX lane
   order and connector orientation still need on-device bring-up.
-- The fader ADC path is guarded behind build flags; PaHUB must not be used as an
-  analog fader router.
+- The fader ADC/RGB path is guarded behind Pb.HUB build flags; PaHUB must not
+  be used as an analog fader router.
 - The external OLED controller and address are not confirmed. The LaskaKit 2.42
   inch module may need a dedicated sink after I2C scan/display bring-up.
 - Use `sticks3-terminal-oled-i2c-scan-smoke` with real SDA/SCL overrides and
   `tools/read_com.py` to capture `OLED_I2C_SCAN FOUND`,
   `OLED_I2C_SCAN EXPECTED_FOUND 1`, and `OLED_I2C_SCAN DONE` before enabling
   any display sink.
-- Grove2USB-C role is not finalized: it may be only the setup cable path, a
-  setup-link adapter, a UART bridge, or removed from final wiring.
+- Grove2USB-C role is not finalized for final enclosure/power routing. A140 is
+  now the first private prop-link candidate: StickS3 RX G44 reads XIAO D4/GPIO6
+  and StickS3 TX G43 drives XIAO D5/GPIO7. It is not USB protocol; do not plug
+  this private cable into a PC or phone.
 
 Current Terminal bench wiring snapshot, 2026-06-14:
 
@@ -34,16 +39,27 @@ Current Terminal bench wiring snapshot, 2026-06-14:
   the primary Pa.HUB v2.1.
 - Primary Pa.HUB port 0 is the serial branch:
   `Encoder LED5 -> Encoder LED4 -> Encoder LED3 -> Encoder LED2 -> Encoder LED1 -> U206 upload switch -> U206 sim-fire switch`.
-- Pot1..Pot5 do not use Pa.HUB as their signal path. A bare StickS3 direct
-  10-signal fader+RGB map is rejected because StickS3 `G1..G4` share internal
-  PMIC/speaker/IMU functions and Grove `G9/G10` remains reserved for the rest of
-  Terminal.
-- First fader slice is slider-only: use 5 ADC channels for Pot1..Pot5 and leave
-  the Unit Fader SK6812 LEDs disabled/deferred.
-- Bare StickS3 still does not expose five clean direct ADC channels while the
-  rest of Terminal remains attached. Safe direct ADC budget is four candidates
-  (`G5/G6/G7/G8`); the fifth slider needs an external ADC/mux or one explicitly
-  verified shared pin from `G1..G4`.
+- Pot1..Pot5 do not use Pa.HUB as their final signal path. Pa.HUB only selects
+  the downstream I2C branch.
+- Pb.HUB #1 at address 0x61 is behind primary Pa.HUB port 5.
+- Pb.HUB reads the five Unit Fader ADC channels and drives their SK6812 RGB
+  reflection.
+- Pb.HUB port 0 -> Pot5.
+- Pb.HUB port 1 -> Pot4.
+- Pb.HUB port 2 -> Pot3.
+- Pb.HUB port 3 -> Pot2.
+- Pb.HUB port 4 -> Pot1.
+- Pb.HUB port 5 -> Grove2USB-C/C module branch toward XIAO. This port is
+  reserved for that link and must not be used as a sixth fader port.
+- PB.HUB port 5 is not a transparent Serial2 UART route. The current
+  `sticks3-terminal-prop-link-g43-g44-600` smoke uses direct StickS3 RX G44 / TX
+  G43 wiring outside PB.HUB; a PB.HUB-hosted XIAO branch needs a separate
+  low-speed GPIO/I2C transport design.
+- Runtime fader mapping intentionally reverses this physical Pb.HUB order:
+  logical LED1..LED5 use Pot1..Pot5.
+- A bare StickS3 direct 10-signal fader+RGB map remains rejected because
+  StickS3 `G1..G4` share internal PMIC/speaker/IMU functions and Grove `G9/G10`
+  remains reserved for the Pa.HUB/Pb.HUB topology.
 - G4 ADC smoke on 2026-06-14 built, uploaded, and ran on the connected StickS3.
   Runtime serial output tracked fader movement from raw 0 to 4095, so G4 is
   accepted as the verified shared-pin candidate for the fifth slider ADC. This
@@ -51,20 +67,15 @@ Current Terminal bench wiring snapshot, 2026-06-14:
   IMU wake features in the Terminal build. The observed direction is inverted:
   physical bottom is raw 4095 and physical top is raw 0, so the fader calibration
   must use rawMin greater than rawMax for this lane if bottom means 0 percent.
-- Primary Pa.HUB port 1 and port 2 are reserved for now; do not connect Pot5/Pot4
-  there for signal reads. Port 3 is the external 2.4 inch display branch, and
-  port 5 goes to the secondary Pa.HUB v2.1.
-- Secondary Pa.HUB ports 2, 3, and 4 are reserved for now; do not connect
-  Pot3/Pot2/Pot1 there for signal reads.
+- Primary Pa.HUB port 3 is the external 2.4 inch display branch, and primary
+  Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch.
 - Logical lane names stay LED1..LED5 even though the physical encoder branch
   starts at LED5 and ends at LED1 before the two switches.
 - The first U206 switch is the upload switch. The second U206 switch is the global SIM_FIRE preview switch; it sends preview only and does not commit setup values.
 - Pot1..Pot5 are confirmed M5Stack Unit Fader U123 modules: B10K analog slider
   plus 14x SK6812 programmable RGB LEDs. Pa.HUB channel ownership is documented
-  only for remaining non-fader paths. First hardware slice reads only the analog
-  slider outputs and leaves fader LEDs disabled/deferred; bare StickS3 still
-  needs an external ADC/mux or one explicitly verified shared pin to reach five
-  clean slider ADCs.
+  only for branch selection. Pb.HUB owns the fader ADC reads and fader RGB
+  reflection; Pa.HUB does not read slider positions or drive fader LEDs.
 
 ## Dial transmitter
 
@@ -104,13 +115,15 @@ XIAO wiring snapshot, 2026-06-14:
 | --- | --- | --- |
 | UART TX to DinMeter RX | D6 / GPIO0 | 3.3 V logic, no level shifter |
 | UART RX from DinMeter TX | D7 / GPIO1 | 3.3 V logic, no level shifter |
-| Button 1 | D0 / GPIO26 | `INPUT_PULLUP`, switch to GND |
-| Button 2 | D1 / GPIO27 | `INPUT_PULLUP`, switch to GND |
-| Button 3 / local fire | D2 / GPIO28 | `INPUT_PULLUP`, switch to GND |
-| Maintained switch | D3 / GPIO29 | `INPUT_PULLUP`, switch to GND |
+| Switch 1 | D0 / GPIO26 | `INPUT_PULLUP`, switch to GND |
+| Switch 2 | D1 / GPIO27 | `INPUT_PULLUP`, switch to GND |
+| Switch 3 / local fire | D2 / GPIO28 | `INPUT_PULLUP`, switch to GND |
+| Maintained toggle switch | D3 / GPIO29 | `INPUT_PULLUP`, switch to GND |
+| Terminal private link TX | D4 / GPIO6 | XIAO to Terminal via Grove2USB-C A140 data pin |
+| Terminal private link RX | D5 / GPIO7 | Terminal to XIAO via Grove2USB-C A140 data pin |
 | Barrel strip data | D8 / GPIO2 | 18x WS2812B, red whole-barrel effect |
 | Four status LEDs data | D10 / GPIO3 | 4 logical status LEDs |
-| Reserved | D4/D5, D9 | keep free for future I2C/bench use |
+| Reserved | D9 / GPIO4 | keep free for future bench use |
 
 Power rules:
 
@@ -129,9 +142,9 @@ Logical mapping:
 - DinMeter still keeps five logical lanes so Terminal/Dial setup semantics stay
   stable.
 - The four-pixel XIAO status LED chain receives logical LED1, LED2, switch, and
-  LED5 via `STAT4` on one data line.
-- Logical ODPAL is not a fifth status LED in this build. It drives the
-  18-pixel barrel as a single red intensity/effect group via `BARREL RED/OFF`.
+  LED4/ODPAL via `STAT4` on one data line.
+- Logical ODPAL also drives the 18-pixel barrel as a single red
+  intensity/effect group via `BARREL RED/OFF`.
 
 ## LoRa modem
 

@@ -10,16 +10,18 @@ Dial does not own setup editing.
 
 Hardware bring-up is still staged. The current firmware has tested setup,
 USB-link, switch, fader-filter, encoder-filter, M5Chain dependency, and display
-format boundaries, but final fader ADC wiring, chain lane order, encoder-button
-fire-change mapping, and external OLED IO still need bench proof.
+format boundaries. The next Terminal bench step is Pb.HUB fader ADC/RGB smoke,
+then the full chain/OLED/fader build.
 
 ## Bench Wiring Snapshot 2026-06-14
 
 This snapshot records the intended physical bench wiring. It is not yet proof
 that every module behind the hubs can be read by the current firmware.
 
-- M5StickS3 connects by USB-C to the PC for build, flash, USB diagnostics, and
-  the local setup-link role.
+- M5StickS3 connects by USB-C to the PC for build, flash, and USB diagnostics.
+  The default firmware uses USB as the setup-link transport for bench testing;
+  `sticks3-terminal-prop-link-g43-g44-600` switches production setup traffic to the
+  private XIAO link.
 - M5StickS3 Grove cable goes to the primary Pa.HUB v2.1.
 - Primary Pa.HUB port 0 carries the serial chain branch:
   `Encoder LED5 -> Encoder LED4 -> Encoder LED3 -> Encoder LED2 -> Encoder LED1 -> U206 upload switch -> U206 sim-fire switch`.
@@ -28,35 +30,41 @@ that every module behind the hubs can be read by the current firmware.
   UART direction timed out.
 - The first U207 Chain Encoder in that branch belongs to LED 5. The last U207
   encoder before the switches belongs to LED 1.
-- The first U206 switch uploads the staged values to the prop over the USB-C
-  setup-link path.
+- The first U206 switch uploads the staged values to the prop over the selected
+  setup-link transport. Current bench default is USB; the first XIAO route is
+  prop-link UART on StickS3 RX G44 / TX G43 through the A140 private cable.
 - The second U206 switch is the global SIM_FIRE preview switch. It emits a
   setup-link preview edge only; it must not commit setup values or call the
   radio fire path.
-- Pot1..Pot5 do not use Pa.HUB as their signal path. A bare StickS3 direct
-  10-signal fader+RGB map is rejected because StickS3 `G1..G4` share internal
-  PMIC/speaker/IMU functions and Grove `G9/G10` remains reserved for the rest of
-  Terminal.
-- First fader slice is slider-only: use 5 ADC channels for Pot1..Pot5 and leave
-  the Unit Fader SK6812 LEDs disabled/deferred.
-- Bare StickS3 still does not expose five clean direct ADC channels while the
-  rest of Terminal remains attached. Safe direct ADC budget is four candidates
-  (`G5/G6/G7/G8`); the fifth slider needs an external ADC/mux or one explicitly
-  verified shared pin from `G1..G4`.
+- Pot1..Pot5 do not use Pa.HUB as their final signal path. Pa.HUB only selects
+  the downstream I2C branch.
+- Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch.
+- Pb.HUB #1 at address `0x61` is behind primary Pa.HUB port 5.
+- Pb.HUB reads the five Unit Fader ADC channels and drives their SK6812 RGB reflection.
+- Pb.HUB port 0 -> Pot5.
+- Pb.HUB port 1 -> Pot4.
+- Pb.HUB port 2 -> Pot3.
+- Pb.HUB port 3 -> Pot2.
+- Pb.HUB port 4 -> Pot1.
+- Pb.HUB port 5 -> Grove2USB-C/C module branch toward XIAO. This port is
+  reserved for that link and must not be used as a sixth fader port.
+- PB.HUB port 5 is not a transparent Serial2 UART route. The current
+  `sticks3-terminal-prop-link-g43-g44-600` smoke uses direct StickS3 RX G44 / TX
+  G43 wiring outside PB.HUB; a PB.HUB-hosted XIAO branch needs a separate
+  low-speed GPIO/I2C transport design.
+- Runtime fader mapping intentionally reverses this physical Pb.HUB order:
+  logical LED1..LED5 use Pot1..Pot5.
+- A bare StickS3 direct 10-signal fader+RGB map remains rejected because
+  StickS3 `G1..G4` share internal PMIC/speaker/IMU functions and Grove `G9/G10`
+  remains reserved for the Pa.HUB/Pb.HUB topology.
 - G4 ADC smoke on 2026-06-14 built, uploaded, and ran on the connected StickS3.
   The runtime serial output tracked fader movement from raw 0 to 4095, so G4 is
   accepted as the verified shared-pin candidate for the fifth slider ADC. This
   consumes the StickS3 IMU interrupt pin; do not use IMU interrupt or low-power
   IMU wake features in the Terminal build. The observed direction is inverted:
   physical bottom is raw 4095 and physical top is raw 0.
-- Primary Pa.HUB port 1 is reserved for now; do not connect Pot5 there for
-  signal reads.
-- Primary Pa.HUB port 2 is reserved for now; do not connect Pot4 there for
-  signal reads.
 - Primary Pa.HUB port 3 is the external 2.4 inch display branch.
-- Primary Pa.HUB port 5 goes to the secondary Pa.HUB v2.1.
-- Secondary Pa.HUB ports 2, 3, and 4 are reserved for now; do not connect
-  Pot3, Pot2, or Pot1 there for signal reads.
+- Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch.
 
 Lane numbers are logical Terminal lane IDs. `LED1` through `LED5` remain stable
 logical names used by configuration, effects, UI, setup upload lines, and logs.
@@ -72,26 +80,27 @@ Confirmed module facts:
 - The Unit Fader Grove pin map is `GND / 5V / RGB / Analog Input`, so each
   module has two non-I2C signals that matter for Terminal: one analog slider
   output and one digital SK6812 RGB data input.
-- Pa.HUB port ownership in this document records the remaining bench layout, not a final electrical solution for the Unit Faders. Pa.HUB must not be used as the final route for the analog slider output or the SK6812 RGB data line.
+- Pa.HUB port ownership records I2C branch selection only. Pa.HUB must not be
+  used as the final route for the analog slider output or the SK6812 RGB data
+  line; Pb.HUB owns that fader backplane role.
 
 Open bench checks before driver finalization:
 
 - Do not use the rejected direct RGB map `ADC G1/G2/G4/G7/G8` plus
   `RGB G3/G5/G6/G43/G44` for production.
-- Choose the fifth slider ADC strategy before real fader upload: external
-  ADC/mux for all five sliders, a small fader MCU that reports values over
-  I2C/UART, or one measured and accepted shared StickS3 pin from `G1..G4`.
-  The 2026-06-14 G4 smoke accepted G4 as that measured shared StickS3 pin: it
-  observed raw 0 and raw 4095 endpoints plus intermediate movement while the
-  fader was moved.
-- Confirm the primary/secondary Pa.HUB I2C addresses and whether the second
-  Pa.HUB is cascaded through primary port 5 exactly as listed above.
+- Run `sticks3-terminal-pbhub-smoke` before real fader upload. Acceptance:
+  serial shows `PBHUB_SMOKE ONLINE 1`, five independent `PBHUB_ADC` lines, and
+  visible `PBHUB_RGB` reflection on all five Unit Faders.
+- If a second Pb.HUB is ever added, it must either sit on a separate Pa.HUB
+  channel or use a distinct I2C address. Two default `0x61` Pb.HUB devices must
+  not be visible on the same I2C branch.
 - Confirm whether Pa.HUB port numbers mean the printed labels `0..5`; firmware
   constants use those printed zero-based labels.
 - Confirm the exact external 2.4 inch display controller, I2C address, and
   reset/backlight wiring before enabling a real display sink.
-- Confirm the Grove2USB-C setup-link path electrically. Do not treat Grove2USB-C
-  as normal I2C/UART until the adapter role is measured.
+- Confirm the Grove2USB-C setup-link path electrically. Do not treat a
+  Grove2USB-C adapter behind PB.HUB as normal UART; PB.HUB is an I2C-controlled
+  IO expander, not a direct `Serial2` wire.
 - Confirm shared 5V/common-ground power, current limit, no backfeed into
   StickS3 power, and 3.3V-safe GPIO/ADC levels.
 
@@ -107,17 +116,20 @@ Open bench checks before driver finalization:
   the restored value, so stale physical positions do not immediately overwrite
   the saved draft.
 - M5Stack Unit Fader is an analog slider input plus separate SK6812 RGB data.
-  The Terminal fader ADC path reads brightness only; RGB routing for the fader's
-  own 14 SK6812 LEDs is separate hardware work.
+  The Pb.HUB fader backend reads brightness and writes RGB reflection for the
+  fader's own 14 SK6812 LEDs. RGB reflection mirrors staged color,
+  brightness/on-off, and the per-lane fire-change marker; it is not a setup
+  source of truth.
 - Each lane has one encoder for stepping through the named color palette.
 - Raw chain-encoder positions pass through a pure encoder filter before they
   become `encoderDelta` updates. The first absolute position primes without a
   color jump, then detent movement steps through the palette.
 - Encoder button toggles whether that lane changes state during fire: a
   normally on lane turns off during fire, and a normally off lane turns on.
-- Fire-change participation is stored per LED. The control model also keeps a
-  per-lane `effectPressed` compatibility edge for older tests and adapters; both
-  edges toggle the same per-lane fire-change flag without page navigation.
+- Fire-change participation is stored per LED. The control model keeps
+  per-lane `effectPressed` level edges for older tests/adapters and
+  `effectToggleEvent` one-shot events for the M5Chain press-status queue; both
+  inputs toggle the same per-lane fire-change flag without page navigation.
 - Double-click is intentionally ignored until hardware testing proves it is
   needed.
 - There is no menu navigation. The operator should not need a page button, mode
@@ -128,6 +140,11 @@ Open bench checks before driver finalization:
 - The large external display shows one framed row per LED: LED number, color
   name, brightness or `VYP`, a small brightness bar, and `ODP`/`---` fire-change
   participation.
+- Lane 4 is the blue odpal/status LED. It starts with `ODP` enabled, and the
+  encoder button may toggle that fire-change participation.
+- Lane 5 is the 18-pixel WS2812 barrel group. It starts red and keeps `ODP`
+  forced on; the Terminal must not allow its fire-change participation to be
+  disabled.
 - Brightness, normal on/off state, and fire-change participation are visible on
   the large display, because there is no page navigation or hidden focus
   movement.
@@ -178,6 +195,10 @@ Open bench checks before driver finalization:
 ## USB Setup Link
 
 - Shared parser and formatter live in `shared/terminal/terminal_setup_link.h`.
+- Transport is selected at build time. `sticks3-terminal` keeps USB CDC as the
+  default debug/bench path. `sticks3-terminal-prop-link-g43-g44-600` uses
+  `Serial2` on RX G44 / TX G43, matching the A140 straight-through data pair to
+  XIAO D4/D5. Do not plug that private A140 cable into a PC or phone.
 - Terminal sends one complete setup line:
   `SETUP <request_id> L1:color,brightness,on,effect L2:color,brightness,on,effect L3:color,brightness,on,effect L4:color,brightness,on,effect L5:color,brightness,on,effect`.
 - The first field accepts legacy hue `0..359` for compatibility and named
@@ -187,21 +208,25 @@ Open bench checks before driver finalization:
   Terminal must not accept generic modem-style `OK` or `ERR` debug lines,
   bare setup replies, or replies with a mismatched request id as setup
   confirmation.
-- Terminal waits `UPLOAD_ACK_TIMEOUT_MS = 1500` ms. Timeout rejects the upload
+- The confirmed private XIAO link uses the 600-baud build
+  `sticks3-terminal-prop-link-g43-g44-600`; Terminal waits
+  `UPLOAD_ACK_TIMEOUT_MS = 8000` ms on that slow link. Timeout rejects the upload
   and rolls the staged draft back to the last saved values.
 - Terminal accepts at most `USB_LINE_MAX = 160` bytes per reply line. Line
   overflow during upload is treated as link failure and rolls back.
 - Before starting a new upload, Terminal drains stale setup replies already
-  buffered on USB so an old `SETUP_OK <request_id>` cannot confirm the next
-  staged draft.
-- Timeout is polled before reply bytes in the main loop, so a late ACK after
-  `UPLOAD_ACK_TIMEOUT_MS` rolls back instead of committing stale state.
+  buffered on the selected setup link so an old `SETUP_OK <request_id>` cannot
+  confirm the next staged draft.
+- Reply bytes are polled before timeout in the main loop, so a slow 600-baud
+  prop-link ACK already in the UART buffer is consumed before the timeout check.
+  A reply that arrives after `UPLOAD_ACK_TIMEOUT_MS` still rolls back instead
+  of committing stale state.
 - `SETUP <request_id>` is atomic on DinMeter for parsing, validation, and
   persistence failures. Terminal request-id mismatch, line overflow, or timeout
   rolls Terminal's staged draft back to the last saved values; if DinMeter
   already processed and persisted the line before the reply was lost, the
   receiver-side setup may already be committed.
-- `SIM_FIRE` is a local USB setup-link preview command. It must not call the
+- `SIM_FIRE` is a local setup-link preview command. It must not call the
   radio frame parser, authenticated fire path, or live fire trigger helpers.
 
 ## Boundaries
@@ -222,7 +247,7 @@ Open bench checks before driver finalization:
 | Fader driver | Implemented with a raw-reader seam: default missing-reader mode is safe no-op, while `ArduinoAdcFaderRawReader` can be enabled later with five ADC pins. |
 | Encoder filter | Implemented as a pure encoder filter for absolute position priming, missing samples, signed movement deltas, per-lane last positions, and button/effect level passthrough. |
 | Chain encoder driver | Implemented with a raw-reader seam: disabled config uses `MissingChainEncoderRawReader` as a safe no-op, while configured Arduino builds can use `M5ChainEncoderRawReader` through `ConfiguredChainEncoderDriver` after Chain UART RX/TX pins are set together. |
-| Physical input mapper | Implemented as `ControlSurface`: five filtered slider percentages, five encoder deltas, encoder press rising edges, `effectPressed` rising edges, and post-upload edge priming can mutate the staged draft without menu navigation. |
+| Physical input mapper | Implemented as `ControlSurface`: five filtered slider percentages, five encoder deltas, encoder press rising edges, `effectPressed` rising edges, M5Chain `effectToggleEvent` one-shots, and post-upload edge priming can mutate the staged draft without menu navigation. |
 | App logic | Implemented as a pure app logic layer for upload requests, software preview requests, ACK/ERR handling, and rollback decisions. |
 | Switch pipeline | Implemented as a pure pipeline that debounces raw switch samples, converts stable presses into edges, and dispatches at most one action per poll. |
 | Switch dispatch | Implemented as a pure policy layer used by the switch pipeline. Upload has priority over the software preview/aux input from debounced switch edges. |
@@ -243,19 +268,19 @@ Open bench checks before driver finalization:
 - Planned lane controls: 5 Unit Faders and 5 Chain Encoders, one of each per
   LED lane.
 - Planned command switches: 2 mechanical switches, upload and sim-fire preview.
-- Planned adapters: 2 PaHUB modules and 2 Grove2USB-C adapters.
+- Planned adapters: 1 PaHUB module, 1 Pb.HUB fader backplane, and 2 Grove2USB-C
+  adapters.
 - Planned external display: 1 external 128x64 OLED.
 - Terminal has no radio module. Dial remains the radio fire controller.
-- PaHUB must not be assumed to route Unit Fader reads or LEDs. The first slice
-  reads slider values only and leaves fader LEDs disabled/deferred, but bare
-  StickS3 still does not safely provide five clean direct ADC lines while the
-  rest of Terminal remains attached.
+- PaHUB must not be assumed to route Unit Fader reads or LEDs. It selects the
+  Pb.HUB branch; Pb.HUB owns Unit Fader ADC reads and SK6812 RGB reflection.
 - Grove2USB-C and external OLED roles are explicitly not finalized until hardware
   bring-up proves the cable topology, controller, address, and pins.
 
-- The fader driver has an ADC reader seam that is disabled by default. Real
-  hardware work needs final ADC/backplane wiring, raw calibration, and separate
-  SK6812 RGB data routing for the 14 onboard LEDs on each fader.
+- The fader driver has both direct ADC and Pb.HUB raw-reader seams. Production
+  Terminal uses the Pb.HUB reader; direct ADC remains a bench fallback. Fader
+  RGB reflection is a separate sink so RGB output never becomes a setup source
+  of truth.
 - The configured chain encoder driver has an M5Chain raw-reader hook that is
   disabled until RX/TX pins are configured. Real hardware work needs bus
   ordering, lane IDs, detent direction, and press debounce validation.
@@ -267,9 +292,9 @@ Open bench checks before driver finalization:
   `OLED_I2C_SCAN FOUND 0x..` over USB, and only then decide whether the panel is M5UnitGLASS2-compatible or needs its own sink.
 - The Grove2USB-C role is still open: native USB cable, setup-link adapter, UART
   bridge, or removed from the final wiring.
-- PaHUB channel ownership is now recorded only for the remaining non-fader bench
-  paths. PaHUB must still not be assumed to solve analog fader reads or SK6812
-  fader LED data.
+- PaHUB channel ownership is now recorded only for branch selection. PaHUB must
+  still not be assumed to solve analog fader reads or SK6812 fader LED data;
+  Pb.HUB solves those fader backplane signals.
 
 ## Hardware Stub Contracts
 
@@ -277,10 +302,13 @@ Open bench checks before driver finalization:
   `SLIDER_UNCHANGED`, so stale or disconnected faders do not overwrite the
   staged draft. `terminal_fader_filter.h` owns raw ADC clamping, percent mapping,
   deadband, priming, rollback pickup locks, and per-lane last values before the
-  driver writes `sliderPercent`. `TERMINAL_FADER_ADC_ENABLED` must stay disabled
-  until all five final ADC pins are configured.
+  driver writes `sliderPercent`. `TERMINAL_FADER_ADC_ENABLED` and
+  `TERMINAL_FADER_PBHUB_ENABLED` are mutually exclusive.
+- `ConfiguredFaderRgbSink` mirrors staged color, brightness/on-off, and the
+  per-lane fire-change marker to Unit Fader SK6812 LEDs through Pb.HUB. It must
+  not mutate `TerminalSetupState`.
 - `ChainEncoderDriver` writes only `encoderDelta`, `encoderPressed`, and
-  `effectPressed`. `terminal_encoder_filter.h` owns absolute position priming,
+  `effectToggleEvent` for queued M5Chain button events. `terminal_encoder_filter.h` owns absolute position priming,
   missing samples, signed movement deltas, and per-lane last positions before
   the driver writes `encoderDelta`. `ControlSurface` owns named-palette stepping
   and both rising-edge press toggles. After upload completion, `main.cpp` primes direct
@@ -343,7 +371,9 @@ Open bench checks before driver finalization:
   pins or enable hardware sampling. Inverted wiring is supported by setting
   rawMin greater than rawMax; for the verified G4 fader orientation, physical
   bottom is raw 4095 and should map to 0 percent brightness, while physical top
-  is raw 0 and should map to 100 percent brightness.
+  is raw 0 and should map to 100 percent brightness. The fader filter snaps the
+  brightness to 2% steps and snaps the endpoints to exact `0`/`100`, so a
+  physical stop displays `VYP` instead of a noisy low-percent value.
 - Encoder bus order for this bench snapshot is LED5, LED4, LED3, LED2, LED1,
   then upload U206, then sim-fire U206. Production maps this physical order
   back to logical LED1..LED5 with `CHAIN_ENCODER_IDS = {5, 4, 3, 2, 1}`.

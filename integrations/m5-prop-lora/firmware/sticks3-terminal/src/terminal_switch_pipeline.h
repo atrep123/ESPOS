@@ -21,7 +21,9 @@ class SwitchPipeline {
                                                   std::uint32_t nowMs,
                                                   bool uploadInFlight) {
         const terminal_switches::SwitchSnapshot stable = debouncer_.update(raw, nowMs);
-        const terminal_switches::SwitchEvents events = edges_.update(stable);
+        terminal_switches::SwitchEvents events = edges_.update(stable);
+        events.upload = events.upload || raw.uploadEvent;
+        events.simFire = events.simFire || raw.simFireEvent;
         return terminal_switch_dispatch::chooseAction(events, uploadInFlight);
     }
 

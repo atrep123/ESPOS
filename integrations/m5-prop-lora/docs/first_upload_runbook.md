@@ -52,8 +52,8 @@ COM values.
 | Dial-side C6 modem | `<MODEM_DIAL_COM>` | COM7 | PlatformIO env `m5stack-c6l` / flash target `c6l-modem` |
 | Prop-side C6 modem | `<MODEM_PROP_COM>` | COM8 | PlatformIO env `m5stack-c6l` / flash target `c6l-modem` |
 | DinMeter / prop receiver | `<DIN_COM>` | COM9 | PlatformIO `din-rx` |
-| XIAO prop electronics | `<XIAO_COM>` | COM11 | PlatformIO standalone `xiao-prop-electronics` |
-| M5StickS3 Terminal | `<TERMINAL_COM>` | COM10 | PlatformIO `sticks3-terminal` |
+| XIAO prop electronics | `<XIAO_COM>` | COM11 | PlatformIO standalone `seeed_xiao_rp2040_terminal_link_600` |
+| M5StickS3 Terminal | `<TERMINAL_COM>` | COM10 | PlatformIO `sticks3-terminal-prop-link-g43-g44-600` |
 
 For each ESP32-S3 target, record identity before and after flashing:
 
@@ -74,6 +74,7 @@ Run from `integrations/m5-prop-lora` unless noted:
 python -m pytest -q --tb=short tests
 powershell -ExecutionPolicy Bypass -File tools/run_host_tests.ps1 -Compiler build\toolchains\winlibs-gcc-16.1.0-msvcrt-r3\mingw64\bin\g++.exe
 pio run -d firmware/sticks3-terminal -e sticks3-terminal
+pio run -d firmware/sticks3-terminal -e sticks3-terminal-prop-link-g43-g44-600
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
 pio run -d firmware/din-rx -e esp32-s3-devkitc-1
@@ -146,8 +147,9 @@ confirmed:
 
 ```powershell
 cd C:\Users\atrep\Desktop\xiao-prop-electronics-private
-pio run -e seeed_xiao_rp2040
-pio run -e seeed_xiao_rp2040 -t upload --upload-port <XIAO_COM>
+python -m pytest -q tests
+pio run -e seeed_xiao_rp2040_terminal_link_600
+pio run -e seeed_xiao_rp2040_terminal_link_600 -t upload --upload-port <XIAO_COM>
 ```
 
 Then flash only the confirmed ports:
@@ -185,7 +187,9 @@ python tools/uiflow_dial_offline.py deploy --port <DIAL_COM> --bundle build/uifl
 6. Add external 5 V LED power, level shifters, series resistors, and bulk
    capacitance. Keep the barrel as dummy LED load only.
 7. Flash Dial-side C6 modem and Dial.
-8. Flash Terminal last, then connect Terminal USB setup link to DinMeter.
+8. Flash Terminal last, then connect the private Terminal setup link to XIAO.
+   Terminal G43/G44 uses the A140 data pair to XIAO D5/D4; it is not a PC USB
+   or direct DinMeter cable.
 9. Keep one serial reader per port at most. Use `tools/read_com.py`, not a
    default monitor that toggles DTR/RTS:
 
@@ -209,8 +213,12 @@ python tools/read_com.py <TERMINAL_COM> 15 115200
   draft back to the last saved setup.
 - `SIM_FIRE <request_id>` previews enabled effect lanes only and does not commit
   setup or use the radio FIRE path.
+- XIAO D2 local FIRE is a visual DinMeter-local trigger; it does not require LoRa ARM
+  and does not send or consume the authenticated radio FIRE path.
+  STOP/lockout blocks XIAO D2 until a fresh LoRa ARM or DinMeter reboot.
 - DinMeter/XIAO UART link shows `HELLO` and `PONG`; DinMeter no longer attempts
   Port B I2C ByteButton/NeoDriver in production mode.
-- XIAO status LEDs receive `STAT4`; the 18-pixel barrel responds as one red
+- XIAO status LEDs receive `STAT4` in physical order: button 1, ODPAL/status,
+  button 2, switch; the 18-pixel barrel also responds as one red
   `BARREL RED/OFF` group during local or radio FIRE.
 - Power-cycle DinMeter after accepted setup; accepted Terminal setup persists.

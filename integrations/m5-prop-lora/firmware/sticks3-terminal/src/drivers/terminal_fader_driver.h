@@ -5,12 +5,19 @@
 #include "../terminal_config.h"
 #include "../terminal_control_surface.h"
 #include "../terminal_fader_filter.h"
+#include "terminal_pbhub_client.h"
 
 #if defined(ARDUINO) && TERMINAL_FADER_ADC_ENABLED
 #include <Arduino.h>
 #define TERMINAL_FADER_HAS_ARDUINO_ADC 1
 #else
 #define TERMINAL_FADER_HAS_ARDUINO_ADC 0
+#endif
+
+#if defined(ARDUINO) && TERMINAL_FADER_PBHUB_ENABLED
+#define TERMINAL_FADER_HAS_PBHUB 1
+#else
+#define TERMINAL_FADER_HAS_PBHUB 0
 #endif
 
 namespace terminal_fader_driver {
@@ -36,6 +43,56 @@ class MissingFaderRawReader : public FaderRawReader {
     }
 };
 
+class PbHubFaderRawReader : public FaderRawReader {
+   public:
+    explicit PbHubFaderRawReader(terminal_pbhub_client::PbHubClient& client)
+        : client_(client) {}
+
+    bool begin() override {
+        available_ = client_.ping();
+        return available_;
+    }
+
+    int readRaw(std::size_t lane) override {
+        if (!available_ || lane >= terminal_config::PBHUB_FADER_PORTS.size()) {
+            return terminal_fader_filter::RAW_SAMPLE_MISSING;
+        }
+        std::uint16_t raw = 0;
+        if (!client_.readAnalog(terminal_config::PBHUB_FADER_PORTS[lane], raw)) {
+            return terminal_fader_filter::RAW_SAMPLE_MISSING;
+        }
+        return static_cast<int>(raw);
+    }
+
+   private:
+    terminal_pbhub_client::PbHubClient& client_;
+    bool available_ = false;
+};
+
+#if TERMINAL_FADER_HAS_PBHUB
+class ArduinoPbHubFaderRawReader : public FaderRawReader {
+   public:
+    ArduinoPbHubFaderRawReader()
+        : client_(bus_, static_cast<std::uint8_t>(terminal_config::PBHUB_I2C_ADDRESS)),
+          reader_(client_) {}
+
+    bool begin() override {
+        return reader_.begin();
+    }
+
+    int readRaw(std::size_t lane) override {
+        return reader_.readRaw(lane);
+    }
+
+   private:
+    terminal_pbhub_client::ArduinoPbHubBus bus_;
+    terminal_pbhub_client::PbHubClient client_;
+    PbHubFaderRawReader reader_;
+};
+#else
+class ArduinoPbHubFaderRawReader : public MissingFaderRawReader {};
+#endif
+
 #if TERMINAL_FADER_HAS_ARDUINO_ADC
 class ArduinoAdcFaderRawReader : public FaderRawReader {
    public:
@@ -60,7 +117,9 @@ class ArduinoAdcFaderRawReader : public FaderRawReader {
 class ArduinoAdcFaderRawReader : public MissingFaderRawReader {};
 #endif
 
-#if TERMINAL_FADER_HAS_ARDUINO_ADC
+#if TERMINAL_FADER_HAS_PBHUB
+using ConfiguredFaderRawReader = ArduinoPbHubFaderRawReader;
+#elif TERMINAL_FADER_HAS_ARDUINO_ADC
 using ConfiguredFaderRawReader = ArduinoAdcFaderRawReader;
 #else
 using ConfiguredFaderRawReader = MissingFaderRawReader;
@@ -145,5 +204,6 @@ class ConfiguredFaderDriver {
 };
 
 #undef TERMINAL_FADER_HAS_ARDUINO_ADC
+#undef TERMINAL_FADER_HAS_PBHUB
 
 }  // namespace terminal_fader_driver

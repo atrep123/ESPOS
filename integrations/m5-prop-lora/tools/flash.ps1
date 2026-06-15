@@ -81,7 +81,7 @@ switch ($Target) {
             exit 1
         }
 
-        Invoke-PlatformIOUpload -ProjectPath $ProjectPath -Environment "sticks3-terminal" -Port $Port
+        Invoke-PlatformIOUpload -ProjectPath $ProjectPath -Environment "sticks3-terminal-prop-link-g43-g44-600" -Port $Port
     }
 
     "dial-tx" {

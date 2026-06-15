@@ -32,7 +32,6 @@ PhysicalTickResult runPhysicalTick(const terminal_control_surface::ControlSnapsh
     PhysicalTickResult result;
     result.frame = terminal_external_display::makeFrame(setup);
     result.frameChanged = result.frame != cachedFrame;
-    cachedFrame = result.frame;
 
     switch (switchAction) {
         case terminal_switch_dispatch::SwitchAction::Upload:

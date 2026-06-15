@@ -58,20 +58,21 @@ using prop_colors::NUM_COLOR_PRESETS;
 
 constexpr std::uint32_t LED_COLORS_MAGIC  = 0x4C454443;   // 'LEDC'
 constexpr std::uint8_t  LED_COLORS_VERSION_V1 = 1;
-constexpr std::uint8_t  LED_COLORS_VERSION = 4;   // v4: re-defaulted ch0=green/ch1=red for the wired LED order; v3 was the 4->5 blob grow
+constexpr std::uint8_t  LED_COLORS_VERSION = 5;   // v5: LED5 is red barrel lane; v4 re-defaulted ch0=green/ch1=red
 constexpr const char*   LED_COLORS_KEY    = "ledc1";
 constexpr std::uint32_t LED_BRIGHTNESS_MAGIC = 0x4C425254; // 'LBRT'
 constexpr std::uint8_t  LED_BRIGHTNESS_VERSION = 2;   // v2: LED_COUNT 4->5 grew the blob (value[]), discard old 4-wide blob
 constexpr const char*   LED_BRIGHTNESS_KEY = "ledbrite";
 constexpr std::uint32_t TERMINAL_SETUP_MAGIC = 0x54534554; // 'TSET'
-constexpr std::uint8_t  TERMINAL_SETUP_VERSION = 1;
+constexpr std::uint8_t  TERMINAL_SETUP_VERSION = 2;
 constexpr const char*   TERMINAL_SETUP_KEY = "tset1";
 constexpr std::uint32_t ODPAL_CFG_MAGIC   = 0x4F44504C;   // 'ODPL'
 constexpr std::uint8_t  ODPAL_CFG_VERSION = 1;
 constexpr const char*   ODPAL_CFG_KEY     = "odpl1";
 constexpr std::uint8_t TERMINAL_ODPAL_LANE = 3;
+constexpr std::uint8_t TERMINAL_BARREL_LANE = 4;
 constexpr std::uint8_t DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK =
-    static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE);
+    static_cast<std::uint8_t>((1U << TERMINAL_ODPAL_LANE) | (1U << TERMINAL_BARREL_LANE));
 constexpr std::uint8_t PROP_SOURCE = 0x22;
 constexpr std::uint8_t PROP_DESTINATION = 0x11;
 constexpr int SCREEN_W = 240;
@@ -103,6 +104,16 @@ HardwareSerial propIoSerial(2);
 seesaw_NeoPixel pixels(LED_STRIP_MAX, NEODRIVER_NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800, &Wire1);
 UnitByte byteBtn;   // M5 Unit ByteButton on the Port B I2C bus
 Preferences preferences;
+
+constexpr std::uint8_t terminalBarrelEffectBit()
+{
+    return static_cast<std::uint8_t>(1U << TERMINAL_BARREL_LANE);
+}
+
+constexpr std::uint8_t forceTerminalBarrelEffect(std::uint8_t mask)
+{
+    return static_cast<std::uint8_t>(mask | terminalBarrelEffectBit());
+}
 
 void useUiFont(LGFX_Sprite* canvas, int tier, bool bold)
 {
@@ -803,7 +814,7 @@ private:
         _led2On = (blob.onMask & (1U << 1)) != 0;
         _led3RemoteOn = (blob.onMask & (1U << 2)) != 0;
         _led5RemoteOn = (blob.onMask & (1U << 4)) != 0;
-        _terminalEffectMask = blob.effectMask & validMask;
+        _terminalEffectMask = forceTerminalBarrelEffect(blob.effectMask & validMask);
         _terminalPreviewMask = _terminalEffectMask;
     }
 
@@ -813,7 +824,7 @@ private:
         blob.magic = TERMINAL_SETUP_MAGIC;
         blob.version = TERMINAL_SETUP_VERSION;
         blob.onMask = setup.onMask;
-        blob.effectMask = setup.effectMask;
+        blob.effectMask = forceTerminalBarrelEffect(setup.effectMask);
         for (int i = 0; i < LED_COUNT; ++i)
         {
             const terminal_setup_apply::AppliedLane& lane = setup.lanes[i];
@@ -1026,11 +1037,13 @@ private:
         _xiaoIoPresent = false;
         _xiaoLine = "";
         _xiaoLine.reserve(prop_xiao_link::MAX_LINE_LENGTH);
+#if DEBUG_HUD
         Serial.printf("[xiao] Port B UART enabled tx=G%d rx=G%d baud=%u barrel=%u stat=%u\n",
                       PROP_IO_UART_TX_PIN, PROP_IO_UART_RX_PIN,
                       static_cast<unsigned>(PROP_IO_UART_BAUD),
                       static_cast<unsigned>(XIAO_BARREL_WS2812_COUNT),
                       static_cast<unsigned>(XIAO_STATUS_LED_COUNT));
+#endif
         _xiaoPingSeq = 1;
         sendXiaoLine(prop_xiao_link::formatHelloLine());
         sendXiaoLine(prop_xiao_link::formatPingLine(nextXiaoPingSeq()));
@@ -1108,6 +1121,12 @@ private:
 
     void handleXiaoLine(const String& line)
     {
+        if (line.startsWith("SETUP") || line.startsWith("SIM_FIRE"))
+        {
+            handleTerminalSetupLine(line, propIoSerial);
+            return;
+        }
+
         const auto parsed = prop_xiao_link::parseLine(line.c_str());
         if (parsed.kind == prop_xiao_link::CommandKind::Error)
         {
@@ -1140,11 +1159,14 @@ private:
                 if (parsed.input.index == 1) _xiaoBtn1 = parsed.input.active;
                 if (parsed.input.index == 2) _xiaoBtn2 = parsed.input.active;
                 if (parsed.input.index == 3) _xiaoFire = parsed.input.active;
-                applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, "xiao");
+                {
+                    bool firePulse = parsed.input.index == 3 && parsed.input.active;
+                    applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, firePulse, "xiao");
+                }
                 break;
             case prop_xiao_link::CommandKind::Switch:
                 _xiaoSwitch = parsed.input.active;
-                applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, "xiao");
+                applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, false, "xiao");
                 break;
             case prop_xiao_link::CommandKind::Empty:
             case prop_xiao_link::CommandKind::Stat4:
@@ -1154,13 +1176,18 @@ private:
         }
     }
 
-    void applyLocalInputLevels(bool sw, bool b1, bool b2, bool b3, const char* source)
+    void applyLocalInputLevels(bool sw, bool b1, bool b2, bool b3, bool firePulse, const char* source)
     {
+        const bool b1Edge = b1 && !_bbPrev1;
+        const bool b2Edge = b2 && !_bbPrev2;
+        const bool fireEdge = b3 && !_bbPrev3;
+        const bool fireRequest = firePulse || fireEdge;
+
         // Release the configurable STOP master-off inhibit on ANY real local input/edge (button
         // press or switch level change) -- cleared BEFORE the toggles below so this same edge then
         // drives the LED normally. No-op unless _stopClearsAllLocal raised the inhibit on a STOP.
         if (_masterOffInhibit &&
-            ((b1 && !_bbPrev1) || (b2 && !_bbPrev2) || (b3 && !_bbPrev3) || (sw != _bbPrevSw)))
+            (b1Edge || b2Edge || fireRequest || (sw != _bbPrevSw)))
         {
             _masterOffInhibit = false;
             markLocalDirty();
@@ -1173,9 +1200,10 @@ private:
         if (sw && !_bbPrevSw)     { _led3RemoteOn = false; markLocalDirty(); }   // engage edge: clear remote #3 (switch takes priority)
         if (sw != _bbPrevSw)      markLocalDirty();       // level changed -> re-arbitrate #3 promptly
         _switchEngaged = sw;                              // LIVE switch level (priority input for #3; remote ignored while HIGH)
-        if (b1 && !_bbPrev1)      { _led1On = !_led1On;    markLocalDirty(); }   // button 1: edge -> toggle
-        if (b2 && !_bbPrev2)      { _led2On = !_led2On;    markLocalDirty(); }   // button 2: edge -> toggle
-        if (b3 && !_bbPrev3)      tryLocalFire();          // local FIRE button: edge -> odpal unless STOP lockout is latched
+        if (b1Edge)               { _led1On = !_led1On;    markLocalDirty(); }   // button 1: edge -> toggle
+        if (b2Edge)               { _led2On = !_led2On;    markLocalDirty(); }   // button 2: edge -> toggle standalone slot 3
+        if (fireRequest && acceptLocalFirePulse(millis()))
+            tryLocalFire();                                // FIRE: ByteButton edge or XIAO DOWN event -> odpal
         _bbPrevSw = sw;
         _bbPrev1 = b1;
         _bbPrev2 = b2;
@@ -1196,7 +1224,7 @@ private:
     }
 
     // ---- Prop local controls (M5 Unit ByteButton) -> SK6812 #1..#3 -------------------
-    // #1 <- button 1 (press toggles on/off), #2 <- button 2 (toggles), #3 <- switch level.
+    // #1 <- button 1, #2 <- button 2, #3 <- switch level / remote latch.
     // SK6812 #4 stays off here -- reserved for the LoRa "odpal"/Fire (TBD). Static colours
     // come from the Dial (Preview -> _dialColors) when available, else defaults red/red/green.
     // Hot-plug: the ByteButton may be connected AFTER boot (Filip plugs it in before the
@@ -1273,7 +1301,7 @@ private:
         const bool b2 = (rb2 == BB_PRESSED);
         const bool b3 = (rb3 == BB_PRESSED);
 
-        applyLocalInputLevels(sw, b1, b2, b3, "bb");
+        applyLocalInputLevels(sw, b1, b2, b3, false, "bb");
     }
 
     RenderColor localColor(int led) const
@@ -1313,7 +1341,7 @@ private:
         return f.current;
     }
 
-    void applyStaticColorTransitions(RenderColor frame[LED_COUNT], std::uint32_t now)
+    void applyStaticColorTransitions(RenderColor frame[LED_COUNT], std::uint32_t now, bool allowFade)
     {
         for (int i = 0; i < 3; ++i)
         {
@@ -1321,7 +1349,7 @@ private:
             StaticColorFade& f = _staticFade[i];
             const RenderColor current = currentStaticFadeColor(i, now);
 
-            if (!_paletteFade)
+            if (!allowFade || !_paletteFade)
             {
                 f.start = target;
                 f.target = target;
@@ -1441,16 +1469,13 @@ private:
             return;
         }
 
-        if (_led1On) frame[0] = localColor(0);   // SK6812 #1 <- button 1 toggle
-        if (_led2On) frame[1] = localColor(1);   // SK6812 #2 <- button 2 toggle
-        // SK6812 #3: LOCAL SWITCH HAS HARD PRIORITY (D3, live physical level).
-        //   switch engaged (HIGH) -> #3 = localColor(2); the switch owns it, remote is ignored.
-        //   switch released (LOW)  -> #3 = remote-on ? localColor(2) : off.
-        if (_switchEngaged)        frame[2] = localColor(2);   // live switch level owns #3
-        else if (_led3RemoteOn)    frame[2] = localColor(2);   // switch OFF only: Dial may light #3
-        frame[3] = odpalColor();                 // SK6812 #4 <- generic odpal flash (off when idle)
-        if (_led5RemoteOn)         frame[4] = localColor(4);   // SK6812 #5 <- remote ON-only status LED
-        applyStaticColorTransitions(frame, now);  // channels 0..2 only; LED4 odpal + LED5 status own their channels
+        if (terminalLaneFireOn(0)) frame[0] = localColor(0);   // SK6812 #1 <- button 1 toggle
+        if (terminalLaneFireOn(1)) frame[1] = localColor(1);   // SK6812 #2 <- button 2 latch
+        if (terminalLaneFireOn(2)) frame[2] = localColor(2);   // SK6812 #3 <- switch/Dial, ODP can invert state
+        if (_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE))
+            frame[3] = odpalColor(LED_ROLE_ODPAL);    // blue odpal/status LED, Terminal-toggleable
+        frame[4] = odpalColor(LED_ROLE_BARREL);       // 18x WS2812 barrel, always ODP
+        applyStaticColorTransitions(frame, now, !_odpalActive);  // channels 0..2 only; LED4 odpal + LED5 status own their channels
         showBudgetedFrame(frame);
         _lastStaticFadeDrawMs = now;
     }
@@ -1466,6 +1491,17 @@ private:
             case 4: return _led5RemoteOn;
             default: return false;
         }
+    }
+
+    bool terminalLaneFireOn(int led) const
+    {
+        const bool baseOn = terminalLaneBaseOn(led);
+        if (!_odpalActive)
+            return baseOn;
+
+        const bool changesState =
+            (_terminalEffectMask & static_cast<std::uint8_t>(1U << led)) != 0U;
+        return baseOn != changesState;
     }
 
     // Drives the local-control frame whenever no Dial-driven effect owns the LEDs.
@@ -1547,6 +1583,14 @@ private:
         markStatusDirty();
     }
 
+    bool acceptLocalFirePulse(std::uint32_t now)
+    {
+        if (_lastLocalFireMs != 0 && now - _lastLocalFireMs < LOCAL_FIRE_RETRIGGER_MIN_MS)
+            return false;
+        _lastLocalFireMs = now;
+        return true;
+    }
+
     void tryLocalFire()
     {
         if (_lockout)
@@ -1560,7 +1604,7 @@ private:
 
     bool terminalEffectAllowsOdpal() const
     {
-        return (_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE)) != 0U;
+        return (_terminalEffectMask & terminalBarrelEffectBit()) != 0U;
     }
 
     // Generic placeholder "odpal" on SK6812 #4: a LoRa Fire triggers a single bright flash
@@ -1600,16 +1644,16 @@ private:
     // Curve shape for a RISING progress p (0..1); the fade phase inverts it. No side effects.
     static float curveShape(float p, std::uint8_t curve)
     {
+        if (curve == 0) return 1.0f;                       // HRANA: instant full (square pulse)
         if (p <= 0.0f) return 0.0f;
         if (p >= 1.0f) return 1.0f;
-        if (curve == 0) return 1.0f;                       // HRANA: instant full (square pulse)
         if (curve == 2) return std::sin(p * 1.57079633f);  // SINUS: smooth ease 0 -> 1
         return p;                                          // LIN: linear
     }
 
     // PURE brightness compute (the end-of-odpal lifecycle now lives in update(), not here, so
     // this getter can be called every frame without double-firing the end transition).
-    RenderColor odpalColor()
+    RenderColor odpalColor(int lane)
     {
         if (!_odpalActive)
             return RenderColor(0, 0, 0);
@@ -1628,7 +1672,7 @@ private:
         }
         if (amt < 0.0f) amt = 0.0f;
         if (amt > 1.0f) amt = 1.0f;
-        const RenderColor base = localColor(3);
+        const RenderColor base = localColor(lane);
         return RenderColor(static_cast<std::uint8_t>(base.r * amt),
                            static_cast<std::uint8_t>(base.g * amt),
                            static_cast<std::uint8_t>(base.b * amt));
@@ -1952,7 +1996,7 @@ private:
         return static_cast<PropRxApp*>(ctx)->previewTerminalSimFire();
     }
 
-    void handleUsbSetupLine(String line)
+    void handleTerminalSetupLine(String line, Print& out)
     {
         line.trim();
         terminal_setup_receiver::ReceiverCallbacks callbacks{
@@ -1964,7 +2008,12 @@ private:
             terminal_setup_receiver::handleLineResult(line.c_str(), callbacks);
         const std::string replyLine = terminal_setup_receiver::replyLine(reply);
         if (!replyLine.empty())
-            Serial.println(replyLine.c_str());
+            out.println(replyLine.c_str());
+    }
+
+    void handleUsbSetupLine(String line)
+    {
+        handleTerminalSetupLine(line, Serial);
     }
 
     bool terminalSetupSafeToCommit() const
@@ -2006,8 +2055,8 @@ private:
         _led2On = setup.lanes[1].on;
         _led3RemoteOn = setup.lanes[2].on;
         _led5RemoteOn = setup.lanes[4].on;
-        _terminalEffectMask = setup.effectMask;
-        _terminalPreviewMask = setup.effectPreviewMask;
+        _terminalEffectMask = forceTerminalBarrelEffect(setup.effectMask);
+        _terminalPreviewMask = forceTerminalBarrelEffect(setup.effectPreviewMask);
         _dialColorsValid = false;
         _localColorEditPending = false;
 
@@ -2812,7 +2861,7 @@ private:
         }
         sendXiaoLine(prop_xiao_link::formatStat4Line(status));
 
-        const std::uint8_t barrel = maxRgb(frame[LED_ROLE_ODPAL]);
+        const std::uint8_t barrel = maxRgb(frame[LED_ROLE_BARREL]);
         if (barrel == 0)
             sendXiaoLine(prop_xiao_link::formatBarrelOffLine());
         else
@@ -3221,7 +3270,11 @@ private:
         if (_dirtyAll)
             canvas->fillScreen(COLOR_BG);
 
-        switch (_page)
+        if (DINMETER_INFO_SCREEN_ONLY)
+        {
+            drawInfoScreen(canvas);
+        }
+        else switch (_page)
         {
             case UiPage::Stav:  drawStav(canvas); break;
             case UiPage::Barvy: drawBarvy(canvas); break;
@@ -3236,6 +3289,50 @@ private:
 
         clearDirtyFlags();
         _ft->_canvas_update();
+    }
+
+    void drawInfoScreen(LGFX_Sprite* canvas)
+    {
+        canvas->fillScreen(COLOR_BG);
+        drawStatusBar(canvas);
+
+        drawCenterString(canvas, "Prop RX", SCREEN_W / 2, 27, COLOR_TEXT, COLOR_BG, 2, true);
+        canvas->fillRect(12, 46, SCREEN_W - 24, 1, dimRgb(COLOR_MUTED, 110));
+
+        const std::uint32_t now = millis();
+        const bool xiaoOk = xiaoLinkOk(now);
+        const bool modemOk = _modemEverSeen && linkOk(now);
+        const bool led3Effective = _switchEngaged || (!_switchEngaged && _led3RemoteOn);
+        char leds[28] = {0};
+        snprintf(leds, sizeof(leds), "1:%d 2:%d S:%d H:%d 5:%d",
+                 _led1On ? 1 : 0,
+                 _led2On ? 1 : 0,
+                 led3Effective ? 1 : 0,
+                 _odpalActive ? 1 : 0,
+                 _led5RemoteOn ? 1 : 0);
+
+        drawInfoRow(canvas, 55, "XIAO", xiaoOk ? "OK" : "CEKA", xiaoOk ? COLOR_GOOD : COLOR_WARN, 2);
+        drawInfoRow(canvas, 75, "MODEM", modemOk ? "OK" : (_modemEverSeen ? "SPOJ?" : "CEKA"), modemOk ? COLOR_GOOD : COLOR_WARN, 2);
+        const StateChip chip = dynamicStateChip();
+        drawInfoRow(canvas, 95, "ODPAL", chip.text, chip.fill == COLOR_BAD ? COLOR_BAD : chip.textColor, 2);
+        drawInfoRow(canvas, 115, "LED", leds, COLOR_TEXT, 1);
+    }
+
+    void drawInfoRow(
+        LGFX_Sprite* canvas,
+        int y,
+        const char* label,
+        const char* value,
+        std::uint32_t valueColor,
+        int valueTier)
+    {
+        constexpr int x = 10;
+        constexpr int w = SCREEN_W - 20;
+        constexpr int h = 17;
+        canvas->fillRect(x, y - 2, w, h, COLOR_BG);
+        canvas->drawFastHLine(x, y + h - 2, w, dimRgb(COLOR_MUTED, 55));
+        drawStringVCenter(canvas, label, x, y + 6, LABEL_DIM, COLOR_BG, 1, true);
+        drawRightString(canvas, value, x + w, y, valueColor, COLOR_BG, valueTier, true);
     }
 
     void drawStav(LGFX_Sprite* canvas)
@@ -3694,7 +3791,7 @@ private:
     std::uint32_t _txEpoch = 0;      // DinMeter TX epoch (random per boot; top 32 bits of nonce)
     // Local prop controls (ByteButton) -> SK6812 #1-3 state; #4 reserved for odpal (TBD).
     bool _led1On = false;     // SK6812 #1 latch (button 1)
-    bool _led2On = false;     // SK6812 #2 latch (button 2)
+    bool _led2On = false;     // SK6812 #2 latch (remote/setup)
     bool _led3On = false;     // legacy switch-edge latch (Stav indicator / encoder-EMU only; no longer drives #3)
     bool _switchEngaged = false;  // LIVE level of the ByteButton switch (idx0), tracked every poll -> drives #3 locally (D3)
     bool _led3RemoteOn  = false;  // Dial wants LED#3 on (honoured ON-only, and only while the switch is OFF -- strict, D2)
@@ -3742,6 +3839,7 @@ private:
     bool _neoDriverPresent = false;   // NeoDriver 0x60 answered the boot scan (else skip LED writes)
     bool _odpalActive = false;        // generic odpal flash on SK6812 #4 in progress
     std::uint32_t _odpalStartMs = 0;
+    std::uint32_t _lastLocalFireMs = 0;
     std::uint32_t _lastOdpalDrawMs = 0;   // throttle for the odpal animation redraw
     RenderColor _palette[prop_protocol::MAX_PALETTE_COLORS] = {};
     std::uint8_t _paletteCount = 0;

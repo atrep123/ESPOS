@@ -83,11 +83,11 @@ bool uploadSetupLineCommitsThroughReceiverReply() {
         terminal_setup_receiver::replyLine(reply) != "SETUP_OK 1" ||
         receiver.commits != 1 ||
         receiver.lastSetup.lanes[0].brightness != terminal_setup_apply::percentToByte(42) ||
-        receiver.lastSetup.lanes[0].color != terminal_setup_apply::Rgb{255, 128, 0} ||
+        receiver.lastSetup.lanes[0].color != terminal_setup_apply::Rgb{0, 255, 255} ||
         receiver.lastSetup.lanes[0].effect != true ||
         receiver.lastSetup.lanes[1].on != false ||
         receiver.lastSetup.lanes[1].effect != true ||
-        receiver.lastSetup.effectPreviewMask != 0x03) {
+        receiver.lastSetup.effectPreviewMask != 0x1B) {
         return false;
     }
 
@@ -98,7 +98,7 @@ bool uploadSetupLineCommitsThroughReceiverReply() {
            !link.inFlight() &&
            state.status() == Status::Uploaded &&
            state.savedLane(0).brightness == 42 &&
-           state.savedLane(0).hue == 361 &&
+           state.savedLane(0).hue == 364 &&
            state.savedLane(0).effect == true;
 }
 

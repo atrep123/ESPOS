@@ -23,25 +23,33 @@ Terminal sends only `SETUP` / `SIM_FIRE` setup-link commands; setup uploads use
 `SETUP <request_id>` and DinMeter echoes `SETUP_OK <request_id>` or
 `SETUP_ERR <request_id>`.
 
-- [ ] Build/flash `firmware/sticks3-terminal`.
-- [ ] Connect Terminal to DinMeter over the USB setup link; no C6 modem is
-      required for Terminal setup bring-up.
+- [ ] Build/flash `firmware/sticks3-terminal` env
+      `sticks3-terminal-prop-link-g43-g44-600`.
+- [ ] Connect Terminal to XIAO over the private A140 setup link; XIAO forwards
+      `SETUP` / `SIM_FIRE` to DinMeter. No C6 modem is required for Terminal
+      setup bring-up.
 - [ ] Wire the Terminal bench snapshot exactly: StickS3 USB-C to PC; StickS3
       Grove to primary Pa.HUB v2.1; primary port 0 to
       `Encoder LED5 -> Encoder LED4 -> Encoder LED3 -> Encoder LED2 -> Encoder LED1 -> U206 upload switch -> U206 sim-fire switch`;
-      primary port 3 to the external 2.4 inch display branch; primary port 5 to the secondary Pa.HUB v2.1. Primary ports 1/2 and secondary ports 2/3/4 are
-      reserved for now and must not be used for Pot1..Pot5 signal reads.
+      primary port 3 to the external 2.4 inch display branch; primary port 5
+      to Pb.HUB #1 at address 0x61. Pb.HUB port 0 -> Pot5, port 1 -> Pot4,
+      port 2 -> Pot3, port 3 -> Pot2, port 4 -> Pot1, port 5 -> Grove2USB-C/C
+      module branch toward XIAO.
 - [ ] Treat LED1..LED5 as logical lane names. The physical encoder branch starts
       at LED5 and ends at LED1 before the two U206 switches; do not renumber
-      setup lanes from the daisy-chain order.
+      setup lanes from the daisy-chain order. The runtime fader mapping is
+      reversed from the physical Pb.HUB port order, so LED1..LED5 use Pot1..Pot5.
 - [ ] Pot1..Pot5 are M5Stack Unit Fader U123 modules: B10K analog slider plus
-      14x SK6812 programmable RGB LEDs. Do not expect Pa.HUB to read slider position or drive fader LEDs.
-- [ ] First fader slice is slider-only: leave Unit Fader SK6812 LEDs
-      disabled/deferred and read only 5 ADC slider channels.
+      14x SK6812 programmable RGB LEDs. Do not expect Pa.HUB to read slider
+      position or drive fader LEDs; Pb.HUB does both through its PORT.B channels.
+      The fader filter snaps endpoint noise so a physical bottom stop displays
+      `VYP` rather than `1%`.
+- [ ] Flash `sticks3-terminal-pbhub-smoke`; require `PBHUB_SMOKE ONLINE 1`,
+      five independent `PBHUB_ADC` lanes, and visible `PBHUB_RGB` reflection
+      before accepting the fader bank.
 - [ ] Do not use the rejected bare StickS3 fader+RGB map: ADC `LED1/G1 LED2/G2 LED3/G4 LED4/G7 LED5/G8`, RGB data `LED1/G3 LED2/G5 LED3/G6 LED4/G43 LED5/G44`. Official StickS3 docs mark `G1..G4` as shared internal PMIC/speaker/IMU signals, and `G9/G10` stays reserved for remaining Grove/I2C topology.
-- [ ] Choose and document the fifth slider ADC strategy before real fader upload:
-      external ADC/mux, small fader backplane MCU, or one explicitly verified
-      shared StickS3 pin from `G1..G4`.
+- [ ] Keep the direct StickS3 ADC strategy as fallback only. The active fader
+      strategy is Pb.HUB ADC/RGB behind Pa.HUB port 5.
 - [x] G4 ADC smoke on 2026-06-14: `sticks3-terminal-g4-adc-smoke` built,
       uploaded, and ran on the connected StickS3. Serial output tracked fader
       movement across raw 0 and raw 4095 endpoints with intermediate values, so
@@ -69,9 +77,9 @@ Terminal sends only `SETUP` / `SIM_FIRE` setup-link commands; setup uploads use
       display SDA/SCL were swapped. After correcting the display wiring, the
       same scan repeatedly found `0x3C DOWNSTREAM` on primary Pa.HUB port 3 at
       both 400 kHz and 100 kHz.
-      If a second Pa.HUB is cascaded on primary port 5, it must use a different
-      PCA9548 address than the primary `0x70`; two muxes at `0x70` on the same
-      selected path are ambiguous and not a valid final topology.
+      Primary port 5 now carries Pb.HUB address `0x61`. If a second Pb.HUB is
+      ever added, it must use a different address or a different Pa.HUB branch;
+      two default `0x61` Pb.HUB devices on one selected path are ambiguous.
 - [ ] Flash `sticks3-terminal-oled-draw-smoke` and visually confirm the large
       OLED shows the smoke text frame. This is still a diagnostic SSD1306/SSD1309
       compatible draw path, not the production Terminal external display sink.
@@ -170,7 +178,7 @@ receiver reboot clears STOP latch as a local reset; lastSeq/epoch replay high-wa
 | c6l-modem B | `firmware/c6l-modem`    | COM8  | `m5stack-c6l`            |
 | din-rx      | `firmware/din-rx`       | COM9  | `esp32-s3-devkitc-1`     |
 | dial-tx     | `firmware/dial-tx`      | COM6  | ESP-IDF (idf.py)         |
-| Terminal    | `firmware/sticks3-terminal` | COM10 | `sticks3-terminal`    |
+| Terminal    | `firmware/sticks3-terminal` | COM10 | `sticks3-terminal-prop-link-g43-g44-600` |
 
 Flash with the actual ports detected on this PC; the COM values below are examples
 from one bench. For the first combined upload, follow

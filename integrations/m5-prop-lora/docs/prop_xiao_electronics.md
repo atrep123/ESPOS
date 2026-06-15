@@ -41,21 +41,27 @@ them as `INPUT_PULLUP`, so active means `digitalRead(pin) == LOW`.
 
 | Function | XIAO pin | Behavior in DinMeter |
 | --- | --- | --- |
-| Button 1 | D0 / GPIO26 | edge toggles logical LED1 |
-| Button 2 | D1 / GPIO27 | edge toggles logical LED2 |
+| Button 1 | D1 / GPIO27 | edge toggles logical LED1 |
+| Button 2 | D0 / GPIO26 | edge toggles its own red status slot |
 | Button 3 | D2 / GPIO28 | local FIRE / ODPAL request |
 | Maintained switch | D3 / GPIO29 | live level owns logical switch LED |
+
+Button 3 / XIAO D2 is a local visual ODPAL trigger handled by DinMeter. It does
+not require LoRa ARM and does not send or consume the authenticated radio FIRE
+path. It is still blocked by DinMeter STOP/lockout; a fresh LoRa ARM or a
+DinMeter reboot clears that local lockout for bench operation.
 
 ## XIAO LED outputs
 
 | Output | XIAO pin | Count | Behavior |
 | --- | --- | ---: | --- |
 | Barrel WS2812B data | D8 / GPIO2 | 18 | one whole red ODPAL effect group |
-| Status LED data | D10 / GPIO3 | 4 | `STAT4`: LED1, LED2, switch, LED5 |
+| Status SK6812 RGBW data | D10 / GPIO3 | 4 | `STAT4`: button1 green, odpal blue, button2 red, switch red |
 
-The barrel is not a fifth status LED. DinMeter computes the ODPAL
-envelope and sends `BARREL RED <intensity>` or `BARREL OFF`; XIAO applies that
-to all 18 barrel pixels.
+The second status pixel mirrors ODPAL. The barrel is a separate 18-pixel
+ODPAL effect group: DinMeter computes the same ODPAL envelope and sends
+`BARREL RED <intensity>` or `BARREL OFF`; XIAO applies that to all 18 barrel
+pixels.
 
 ## Power and signal integrity
 

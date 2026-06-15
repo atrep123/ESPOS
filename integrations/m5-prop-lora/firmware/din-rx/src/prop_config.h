@@ -123,7 +123,7 @@ constexpr std::uint8_t  LOCAL_BRIGHTNESS      = 200;  // static-colour brightnes
 constexpr std::uint8_t BYTEBUTTON_ADDR = 0x47;   // ByteButton I2C address
 constexpr std::uint8_t BB_SWITCH_IDX   = 0;      // input 0 = prepinac (level) -> SK6812 #3
 constexpr std::uint8_t BB_BTN1_IDX     = 1;      // input 1 = tlacitko 1 (edge->toggle) -> SK6812 #1
-constexpr std::uint8_t BB_BTN2_IDX     = 2;      // input 2 = tlacitko 2 (edge->toggle) -> SK6812 #2
+constexpr std::uint8_t BB_BTN2_IDX     = 2;      // input 2 = tlacitko 2 (edge->toggle) -> standalone slot 3
 constexpr std::uint8_t BB_FIRE_IDX     = 3;      // input 3 = local FIRE -> odpal (immediate, lockout-only)
 constexpr std::uint8_t BB_PRESSED      = 0;      // getSwitchStatus() value meaning pressed (module is active-low: 1=released,0=pressed)
 
@@ -179,6 +179,7 @@ constexpr std::uint32_t BATTERY_READ_MS          = 3000;  // battery sample inte
 constexpr std::uint32_t FIRE_ACK_DELAY_MS        = 90;    // defer the FIRE ack past the sender's ~70ms 3x burst (half-duplex)
 constexpr std::uint32_t FIRE_ACK_JITTER_MS       = 40;    // random spread added to the FIRE ack delay
 constexpr std::uint32_t ODPAL_FRAME_MS           = 25;    // odpal redraw pacing (~40 Hz) -> bounded Wire1 traffic
+constexpr std::uint32_t LOCAL_FIRE_RETRIGGER_MIN_MS = 90; // suppress duplicate FIRE DOWN lines, but allow quick re-presses
 constexpr std::uint32_t PREVIEW_OVERLAY_MS       = 1800;  // Dial Preview: visible, non-arming full-strip overlay time
 constexpr std::uint32_t STATIC_COLOR_FADE_MS     = 400;   // PaletteSet fade mode: crossfade duration for static channels
 constexpr std::uint32_t STATIC_COLOR_FRAME_MS    = 25;    // redraw pacing for non-blocking static-channel fades
@@ -206,6 +207,9 @@ constexpr std::uint32_t RX_REPLAY_WINDOW_BITS  = 32;  // sliding replay window s
 //           edits live on the M5StickS3 Terminal and arrive over USB.
 //   true  = legacy local encoder editor is enabled for bench/debug builds.
 constexpr bool DINMETER_LOCAL_SETUP_EDITOR_ENABLED = false;
+// For first XIAO/DinMeter bring-up the receiver LCD is an information panel
+// only. Terminal remains the sole setup editor; this screen has no menu/pages.
+constexpr bool DINMETER_INFO_SCREEN_ONLY = true;
 //
 // ----- Boot LED self-test (the power-on "chase") -----------------------------
 // On boot the firmware walks EACH pixel individually through R, G, B, W (a
@@ -251,10 +255,10 @@ constexpr std::uint32_t BOOT_SELFTEST_DWELL_MS = 40;
 //
 // ----- Factory per-channel colour (prop_colors preset index per channel) -----
 // Index into prop_colors::COLOR_PRESETS (see [C]/the recipe list for the names).
-// Current factory mapping = green / red / green / white / green:
-//   ch0 (button1) = 1 ZELENA | ch1 (button2) = 0 CERVENA | ch2 (switch) = 1 ZELENA
-//   ch3 (odpal)   = 3 BILA   | ch4 (remote)  = 1 ZELENA
-constexpr std::uint8_t DEFAULT_LED_PRESET_IDX[LED_COUNT] = {1, 0, 1, 3, 1};
+// Current factory mapping = green / red / red / blue / red:
+//   ch0 (button1) = 1 ZELENA | ch1 (button2) = 0 CERVENA | ch2 (switch) = 0 CERVENA
+//   ch3 (odpal indicator) = 2 MODRA | ch4 (barrel 18x WS2812) = 0 CERVENA
+constexpr std::uint8_t DEFAULT_LED_PRESET_IDX[LED_COUNT] = {1, 0, 0, 2, 0};
 
 // ----- Factory per-channel brightness (0..255) -------------------------------
 // Every channel starts at this brightness on a fresh flash (the Jas page edits
@@ -277,22 +281,23 @@ constexpr std::uint8_t  DEFAULT_ODPAL_CURVE   = 0;     // index into ODPAL_CURVE
 //
 //   index 0  LED_ROLE_BUTTON1 -- local toggle button 1   (edge -> on/off)
 //   index 1  LED_ROLE_BUTTON2 -- local toggle button 2   (edge -> on/off)
-//   index 2  LED_ROLE_SWITCH  -- physical switch level + Dial remote-#3
-//   index 3  LED_ROLE_ODPAL   -- odpal / FIRE flash       (envelope in [B]/[8])
-//   index 4  LED_ROLE_REMOTE  -- Dial remote-only status LED (#5)
+//   index 2  LED_ROLE_SWITCH  -- physical switch level + Dial remote-#3 latch
+//   index 3  LED_ROLE_ODPAL   -- blue odpal / FIRE status LED, Terminal-toggleable
+//   index 4  LED_ROLE_BARREL  -- 18x WS2812 barrel group, red fire effect, always ODP
 constexpr int LED_ROLE_BUTTON1 = 0;
 constexpr int LED_ROLE_BUTTON2 = 1;
 constexpr int LED_ROLE_SWITCH  = 2;
 constexpr int LED_ROLE_ODPAL   = 3;
-constexpr int LED_ROLE_REMOTE  = 4;
+constexpr int LED_ROLE_BARREL  = 4;
 
-// XIAO drives four discrete status LEDs plus the 18-pixel barrel. The barrel is
-// the ODPAL role; the four standalone LEDs keep the remaining visible roles.
+// XIAO drives four discrete status LEDs plus the 18-pixel barrel:
+//   slot 1 = button 1 / green, slot 2 = odpal / blue,
+//   slot 3 = button 2 / red,   slot 4 = switch / red.
 constexpr std::uint8_t XIAO_STATUS_LED_CHANNELS[XIAO_STATUS_LED_COUNT] = {
     LED_ROLE_BUTTON1,
+    LED_ROLE_ODPAL,
     LED_ROLE_BUTTON2,
     LED_ROLE_SWITCH,
-    LED_ROLE_REMOTE,
 };
 
 // ========================== [D] SANITY CHECKS ===============================
@@ -346,7 +351,7 @@ static_assert(DEFAULT_ODPAL_CURVE < NUM_ODPAL_CURVES,
 // Named roles must address real channels.
 static_assert(LED_ROLE_BUTTON1 < LED_COUNT && LED_ROLE_BUTTON2 < LED_COUNT &&
               LED_ROLE_SWITCH  < LED_COUNT && LED_ROLE_ODPAL   < LED_COUNT &&
-              LED_ROLE_REMOTE  < LED_COUNT,
+              LED_ROLE_BARREL  < LED_COUNT,
               "[C] every LED_ROLE_* must be < LED_COUNT (an addressable logical channel)");
 static_assert(XIAO_STATUS_LED_COUNT == 4,
               "[4] XIAO_STATUS_LED_COUNT must stay 4 to match the STAT4 UART contract");

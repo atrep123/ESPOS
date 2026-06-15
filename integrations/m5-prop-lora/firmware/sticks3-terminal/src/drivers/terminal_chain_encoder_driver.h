@@ -31,8 +31,8 @@ using terminal_control_surface::ControlSnapshot;
 constexpr std::array<std::uint8_t, terminal_setup::LANE_COUNT> CHAIN_ENCODER_IDS = {5, 4, 3, 2, 1};
 constexpr std::uint8_t CHAIN_KEY_UPLOAD_ID = 6;
 constexpr std::uint8_t CHAIN_KEY_SIM_FIRE_ID = 7;
-constexpr unsigned long CHAIN_ENCODER_QUERY_TIMEOUT_MS = 20;
-constexpr unsigned long CHAIN_KEY_QUERY_TIMEOUT_MS = 20;
+constexpr unsigned long CHAIN_ENCODER_QUERY_TIMEOUT_MS = 50;
+constexpr unsigned long CHAIN_KEY_QUERY_TIMEOUT_MS = 50;
 
 constexpr std::uint8_t chainEncoderIdForLane(std::size_t lane) {
     return lane < CHAIN_ENCODER_IDS.size() ? CHAIN_ENCODER_IDS[lane] : 0;
@@ -83,6 +83,13 @@ inline void applyChainKeyButtonLevels(bool uploadButtonPressed,
                                       terminal_switches::SwitchSnapshot& snapshot) {
     snapshot.uploadPressed = snapshot.uploadPressed || uploadButtonPressed;
     snapshot.simFirePressed = snapshot.simFirePressed || lastSwitchPressed;
+}
+
+inline void applyChainKeyButtonEvents(bool uploadButtonEvent,
+                                      bool lastSwitchEvent,
+                                      terminal_switches::SwitchSnapshot& snapshot) {
+    snapshot.uploadEvent = snapshot.uploadEvent || uploadButtonEvent;
+    snapshot.simFireEvent = snapshot.simFireEvent || lastSwitchEvent;
 }
 
 class ChainEncoderRawReader {
@@ -154,7 +161,7 @@ class M5ChainEncoderRawReader : public ChainEncoderRawReader {
     }
 
     terminal_encoder_filter::EncoderSample readSample(std::size_t lane) override {
-        if (!prepareReadCycle() || lane >= terminal_setup::LANE_COUNT) {
+        if (lane >= terminal_setup::LANE_COUNT) {
             return terminal_encoder_filter::EncoderSample{
                 terminal_encoder_filter::ENCODER_POSITION_MISSING,
                 false,
@@ -220,9 +227,45 @@ class M5ChainEncoderRawReader : public ChainEncoderRawReader {
         const bool simFireOk =
             chain_.getKeyButtonStatus(CHAIN_KEY_SIM_FIRE_ID, &simFireButton, CHAIN_KEY_QUERY_TIMEOUT_MS) == CHAIN_OK;
 
+        bool uploadPressEvent = false;
+        bool simFirePressEvent = false;
+        chain_button_press_type_t pressType = CHAIN_BUTTON_PRESS_SINGLE;
+        while (chain_.getKeyButtonPressStatus(CHAIN_KEY_UPLOAD_ID, &pressType)) {
+            uploadPressEvent = true;
+        }
+        while (chain_.getKeyButtonPressStatus(CHAIN_KEY_SIM_FIRE_ID, &pressType)) {
+            simFirePressEvent = true;
+        }
+
+#if TERMINAL_LIVE_DEBUG
+        const unsigned long nowMs = millis();
+        const bool changed = uploadOk != lastUploadOk_ ||
+                             uploadButton != lastUploadButton_ ||
+                             simFireOk != lastSimFireOk_ ||
+                             simFireButton != lastSimFireButton_ ||
+                             uploadPressEvent ||
+                             simFirePressEvent;
+        if (changed || nowMs - lastKeyDiagnosticMs_ >= 1000UL) {
+            lastKeyDiagnosticMs_ = nowMs;
+            lastUploadOk_ = uploadOk;
+            lastUploadButton_ = uploadButton;
+            lastSimFireOk_ = simFireOk;
+            lastSimFireButton_ = simFireButton;
+            Serial.printf("TERMINAL_CHAIN_KEYS upload_status=%u upload=%u upload_event=%u sim_status=%u sim=%u sim_event=%u\n",
+                          uploadOk ? 1U : 0U,
+                          static_cast<unsigned>(uploadButton),
+                          uploadPressEvent ? 1U : 0U,
+                          simFireOk ? 1U : 0U,
+                          static_cast<unsigned>(simFireButton),
+                          simFirePressEvent ? 1U : 0U);
+            Serial.flush();
+        }
+#endif
+
         applyChainKeyButtonLevels(uploadOk && uploadButton != 0,
                                   simFireOk && simFireButton != 0,
                                   snapshot);
+        applyChainKeyButtonEvents(uploadPressEvent, simFirePressEvent, snapshot);
     }
 
    private:
@@ -269,6 +312,11 @@ class M5ChainEncoderRawReader : public ChainEncoderRawReader {
 #if TERMINAL_LIVE_DEBUG
     unsigned long lastDiagnosticMs_ = 0;
     bool diagnosticCycle_ = false;
+    unsigned long lastKeyDiagnosticMs_ = 0;
+    bool lastUploadOk_ = false;
+    std::uint8_t lastUploadButton_ = 0;
+    bool lastSimFireOk_ = false;
+    std::uint8_t lastSimFireButton_ = 0;
 #endif
 };
 #else
@@ -312,12 +360,13 @@ class ChainEncoderDriver {
             snapshot.lanes[lane].encoderDelta = 0;
             snapshot.lanes[lane].encoderPressed = false;
             snapshot.lanes[lane].effectPressed = false;
+            snapshot.lanes[lane].effectToggleEvent = false;
             const terminal_control_surface::LaneInput input = cycleReady
                 ? filter_.update(lane, rawReader_.readSample(lane))
                 : terminal_control_surface::LaneInput{};
             snapshot.lanes[lane].encoderDelta = input.encoderDelta;
             snapshot.lanes[lane].encoderPressed = input.encoderPressed;
-            snapshot.lanes[lane].effectPressed = input.effectPressed;
+            snapshot.lanes[lane].effectToggleEvent = input.effectPressed || input.effectToggleEvent;
         }
     }
 

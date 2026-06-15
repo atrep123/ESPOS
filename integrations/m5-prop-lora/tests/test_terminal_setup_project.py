@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 
@@ -16,12 +17,16 @@ def terminal_guard_text() -> str:
         ROOT / "docs/terminal_architecture.md",
     ]
     terminal_root = ROOT / "firmware/sticks3-terminal"
-    for path in terminal_root.rglob("*"):
-        if path.is_file() and path.suffix in {".cpp", ".h", ".ini", ".md", ".py"}:
-            parts = path.relative_to(terminal_root).parts
-            if parts[0].startswith(".") or parts[0] in {"build"}:
-                continue
-            paths.append(path)
+    for current, dirs, files in os.walk(terminal_root):
+        dirs[:] = [
+            name
+            for name in dirs
+            if not name.startswith(".") and name not in {"build"}
+        ]
+        for name in files:
+            path = Path(current) / name
+            if path.suffix in {".cpp", ".h", ".ini", ".md", ".py"}:
+                paths.append(path)
     return "\n".join(path.read_text(encoding="utf-8") for path in sorted(paths))
 
 
@@ -34,6 +39,8 @@ def test_sticks3_terminal_setup_project_files_exist() -> None:
         "firmware/sticks3-terminal/src/drivers/terminal_chain_encoder_driver.h",
         "firmware/sticks3-terminal/src/drivers/terminal_external_oled.h",
         "firmware/sticks3-terminal/src/drivers/terminal_fader_driver.h",
+        "firmware/sticks3-terminal/src/drivers/terminal_fader_rgb.h",
+        "firmware/sticks3-terminal/src/drivers/terminal_pbhub_client.h",
         "firmware/sticks3-terminal/src/drivers/terminal_switch_driver.h",
         "firmware/sticks3-terminal/src/terminal_config.h",
         "firmware/sticks3-terminal/src/terminal_control_surface.h",
@@ -42,6 +49,7 @@ def test_sticks3_terminal_setup_project_files_exist() -> None:
         "firmware/sticks3-terminal/src/terminal_fader_filter.h",
         "firmware/sticks3-terminal/src/terminal_app_logic.h",
         "firmware/sticks3-terminal/src/terminal_physical_tick.h",
+        "firmware/sticks3-terminal/src/terminal_status_panel.h",
         "firmware/sticks3-terminal/src/terminal_hardware_topology.h",
         "firmware/sticks3-terminal/src/terminal_setup.h",
         "firmware/sticks3-terminal/src/terminal_switch_debounce.h",
@@ -54,6 +62,7 @@ def test_sticks3_terminal_setup_project_files_exist() -> None:
         "shared/terminal/terminal_setup_link.h",
         "shared/terminal/terminal_setup_apply.h",
         "shared/terminal/terminal_setup_receiver.h",
+        "firmware/tests/test_terminal_pbhub_client.cpp",
     ]
     for relative_path in required:
         assert (ROOT / relative_path).exists(), relative_path
@@ -168,16 +177,20 @@ def test_terminal_setup_receiver_adapter_is_radio_free_and_host_tested() -> None
         assert needle not in combined, needle
 
 
-def test_din_rx_consumes_terminal_usb_setup_parser_without_radio_path() -> None:
+def test_din_rx_consumes_terminal_setup_parser_without_radio_path() -> None:
     cpp = read("firmware/din-rx/src/prop_rx.cpp")
     ini = read("firmware/din-rx/platformio.ini")
 
     assert "-I../../shared/terminal" in ini
     assert '#include "terminal_setup_receiver.h"' in cpp
     assert "readUsbSetup()" in cpp
+    assert "void handleTerminalSetupLine(String line, Print& out)" in cpp
     assert "terminal_setup_receiver::handleLineResult" in cpp
     assert "terminal_setup_receiver::replyLine" in cpp
-    assert "Serial.println(replyLine.c_str())" in cpp
+    assert "out.println(replyLine.c_str())" in cpp
+    assert "handleTerminalSetupLine(line, Serial)" in cpp
+    assert "handleTerminalSetupLine(line, propIoSerial)" in cpp
+    assert "handleTerminalSetupLine(line, Serial1)" not in cpp
     assert "readUsbSetup();" in cpp
     assert "_usbSetupLine" in cpp
     assert "_usbSetupOverflow" in cpp
@@ -218,7 +231,7 @@ def test_din_rx_terminal_setup_persists_single_blob_with_on_effect_masks() -> No
     assert "_led2On = (blob.onMask & (1U << 1)) != 0" in load_section
     assert "_led3RemoteOn = (blob.onMask & (1U << 2)) != 0" in load_section
     assert "_led5RemoteOn = (blob.onMask & (1U << 4)) != 0" in load_section
-    assert "_terminalEffectMask = blob.effectMask & validMask" in load_section
+    assert "_terminalEffectMask = forceTerminalBarrelEffect(blob.effectMask & validMask)" in load_section
     assert "_terminalPreviewMask = _terminalEffectMask" in load_section
 
     commit_start = cpp.index("bool commitTerminalSetup(const")
@@ -254,8 +267,8 @@ def test_din_rx_terminal_setup_persists_single_blob_with_on_effect_masks() -> No
 def test_din_rx_terminal_sim_fire_uses_preview_mask_without_live_fire_path() -> None:
     cpp = read("firmware/din-rx/src/prop_rx.cpp")
 
-    assert "_terminalEffectMask = setup.effectMask" in cpp
-    assert "_terminalPreviewMask = setup.effectPreviewMask" in cpp
+    assert "_terminalEffectMask = forceTerminalBarrelEffect(setup.effectMask)" in cpp
+    assert "_terminalPreviewMask = forceTerminalBarrelEffect(setup.effectPreviewMask)" in cpp
     assert "_terminalPreviewUntilMs" in cpp
     assert "_terminalPreviewMask" in cpp
 
@@ -288,17 +301,51 @@ def test_din_rx_terminal_sim_fire_uses_preview_mask_without_live_fire_path() -> 
     assert local_control.index("if (_masterOffInhibit)") < local_control.index("_terminalPreviewUntilMs != 0")
 
 
-def test_din_rx_fire_respects_terminal_effect_mask_for_odpal_lane() -> None:
+def test_din_rx_real_fire_applies_terminal_effect_mask_to_static_lanes() -> None:
+    cpp = read("firmware/din-rx/src/prop_rx.cpp")
+
+    assert "bool terminalLaneFireOn(int led) const" in cpp
+    fire_helper = cpp[
+        cpp.index("bool terminalLaneFireOn(int led) const") :
+        cpp.index("void applyLocalControlIfIdle()")
+    ]
+    assert "const bool baseOn = terminalLaneBaseOn(led)" in fire_helper
+    assert "if (!_odpalActive)" in fire_helper
+    assert "_terminalEffectMask" in fire_helper
+    assert "baseOn != changesState" in fire_helper
+
+    local_control = cpp[
+        cpp.index("void applyLocalControl()") :
+        cpp.index("bool terminalLaneBaseOn(int led) const")
+    ]
+    assert "if (terminalLaneFireOn(0)) frame[0] = localColor(0);" in local_control
+    assert "if (terminalLaneFireOn(1)) frame[1] = localColor(1);" in local_control
+    assert "if (terminalLaneFireOn(2)) frame[2] = localColor(2);" in local_control
+    assert "if (_switchEngaged)        frame[2] = localColor(2);" not in local_control
+    assert "else if (_led3RemoteOn)    frame[2] = localColor(2);" not in local_control
+    assert "applyStaticColorTransitions(frame, now, !_odpalActive)" in local_control
+
+    transition_section = cpp[
+        cpp.index("void applyStaticColorTransitions") :
+        cpp.index("bool staticChannelOn(int i) const")
+    ]
+    assert "bool allowFade" in transition_section
+    assert "if (!allowFade || !_paletteFade)" in transition_section
+
+
+def test_din_rx_fire_respects_forced_terminal_barrel_effect_lane() -> None:
     cpp = read("firmware/din-rx/src/prop_rx.cpp")
 
     assert "TERMINAL_ODPAL_LANE = 3" in cpp
+    assert "TERMINAL_BARREL_LANE = 4" in cpp
     assert "DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK" in cpp
+    assert "forceTerminalBarrelEffect" in cpp
     assert "bool terminalEffectAllowsOdpal() const" in cpp
     allows_section = cpp[
         cpp.index("bool terminalEffectAllowsOdpal() const") :
         cpp.index("bool triggerOdpal()")
     ]
-    assert "_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE)" in allows_section
+    assert "_terminalEffectMask & terminalBarrelEffectBit()" in allows_section
     assert "_terminalPreviewMask" not in allows_section
 
     trigger_section = cpp[
@@ -371,17 +418,24 @@ def test_terminal_hardware_topology_matches_planned_control_surface() -> None:
     assert "CHAIN_ENCODER_COUNT = CONTROL_LANE_COUNT" in header
     assert "MECHANICAL_SWITCH_COUNT = 2" in header
     assert "GROVE2USB_C_ADAPTER_COUNT = 2" in header
-    assert "PAHUB_COUNT = 2" in header
+    assert "PAHUB_COUNT = 1" in header
+    assert "PBHUB_COUNT = 1" in header
+    assert "PBHUB_PORT_COUNT = 6" in header
+    assert "PBHUB_I2C_ADDRESS = 0x61" in header
     assert "EXTERNAL_OLED_COUNT = 1" in header
     assert "TERMINAL_HAS_LORA_MODULE = false" in header
     assert "PAHUB_CAN_ROUTE_ANALOG_FADERS = false" in header
     assert "GROVE2USB_ROLE_FINALIZED = false" in header
     assert "EXTERNAL_OLED_ROLE_FINALIZED = false" in header
+    assert "PBHUB_PORT5_IS_SERIAL2_UART_ROUTE = false" in header
+    assert "PROP_LINK_REQUIRES_DIRECT_STICKS3_UART = true" in header
     assert "LANE_CONTROLS_ARE_DIRECT_PHYSICAL_CONTROLS = true" in header
     assert "UNIT_FADERS_ARE_M5STACK_U123_B10K_SK6812 = true" in header
     assert "UNIT_FADER_SLIDER_OUTPUT_IS_ANALOG = true" in header
     assert "UNIT_FADER_RGB_OUTPUT_IS_SK6812_DATA = true" in header
-    assert "UNIT_FADER_RGB_CONTROL_DEFERRED_FOR_FIRST_SLICE = true" in header
+    assert "UNIT_FADER_RGB_CONTROL_DEFERRED_FOR_FIRST_SLICE = false" in header
+    assert "UNIT_FADERS_USE_PBHUB_FOR_ADC_AND_RGB = true" in header
+    assert "UNIT_FADER_RGB_REFLECTION_ENABLED = true" in header
     assert "UNIT_FADER_RGB_LED_COUNT = 14" in header
     assert "STICKS3_HAT2_EXPOSES_TEN_GPIO_LABELS = true" in header
     assert "STICKS3_HAT2_G1_TO_G4_SHARE_INTERNAL_FUNCTIONS = true" in header
@@ -403,13 +457,15 @@ def test_terminal_hardware_topology_matches_planned_control_surface() -> None:
     assert "REQUIRED_FADER_ADC_COUNT_FOR_SLIDER_ONLY = 5" in header
     assert "SAFE_DIRECT_ADC_BUDGET_WITH_REST_UNCHANGED = 4" in header
     assert "PRIMARY_PAHUB_PORT_CHAIN_BRANCH = 0" in header
-    assert "PRIMARY_PAHUB_PORT_POT5 = 1" in header
-    assert "PRIMARY_PAHUB_PORT_POT4 = 2" in header
     assert "PRIMARY_PAHUB_PORT_EXTERNAL_DISPLAY = 3" in header
-    assert "PRIMARY_PAHUB_PORT_SECONDARY_PAHUB = 5" in header
-    assert "SECONDARY_PAHUB_PORT_POT3 = 2" in header
-    assert "SECONDARY_PAHUB_PORT_POT2 = 3" in header
-    assert "SECONDARY_PAHUB_PORT_POT1 = 4" in header
+    assert "PRIMARY_PAHUB_PORT_PBHUB = 5" in header
+    assert "PBHUB_PORT_POT5 = 0" in header
+    assert "PBHUB_PORT_POT4 = 1" in header
+    assert "PBHUB_PORT_POT3 = 2" in header
+    assert "PBHUB_PORT_POT2 = 3" in header
+    assert "PBHUB_PORT_POT1 = 4" in header
+    assert "PBHUB_PORT_XIAO_GROVE2USB_C = 5" in header
+    assert "PBHUB_PORT5_RESERVED_FOR_XIAO_LINK = true" in header
     assert "CHAIN_BRANCH_POSITION_ENCODER_LED5 = 0" in header
     assert "CHAIN_BRANCH_POSITION_ENCODER_LED1 = 4" in header
     assert "CHAIN_BRANCH_POSITION_UPLOAD_SWITCH = 5" in header
@@ -418,47 +474,64 @@ def test_terminal_hardware_topology_matches_planned_control_surface() -> None:
     assert "LAST_CHAIN_SWITCH_IS_SIM_FIRE = true" in header
     assert '#include "terminal_hardware_topology.h"' in config
     assert "terminal_hardware_topology::CONTROL_LANE_COUNT" in config
+    assert "TERMINAL_FADER_PBHUB_ENABLED" in config
+    assert "TERMINAL_FADER_PBHUB_RGB_ENABLED" in config
+    assert "TERMINAL_PBHUB_I2C_ADDRESS" in config
+    assert "TERMINAL_PBHUB_PAHUB_CHANNEL" in config
+    assert "PBHUB_FADER_PORTS" in config
+    assert "PbHUB port 5 is reserved for XIAO Grove2USB-C" in header
     assert "planned hardware has one fader and one encoder per lane" in host_test
     assert "PaHUB is not allowed to route analog fader reads" in host_test
-    assert "bench wiring uses primary and secondary PaHUB ports" in host_test
+    assert "PbHUB owns fader ADC and RGB reflection" in host_test
+    assert "bench wiring uses primary PaHUB and PbHUB ports" in host_test
+    assert "PbHUB port 5 does not carry Serial2 prop-link UART" in host_test
     assert "chain physical order is LED5 to LED1 then upload and sim-fire switch" in host_test
     assert "last chain switch is sim-fire" in host_test
     assert "fader modules are analog B10K with SK6812 RGB" in host_test
-    assert "fader slider-only slice needs external ADC or verified shared pin" in host_test
+    assert "PbHUB fader slice keeps PaHUB as branch selector only" in host_test
     assert "G4 ADC smoke accepts G4 as shared fader ADC candidate" in host_test
     assert "Terminal hardware topology contract" in doc
     assert "Bench Wiring Snapshot 2026-06-14" in doc
     assert "Primary Pa.HUB port 0 carries the serial chain branch" in doc
     assert "Encoder LED5 -> Encoder LED4 -> Encoder LED3 -> Encoder LED2 -> Encoder LED1 -> U206 upload switch -> U206 sim-fire switch" in doc
-    assert "Primary Pa.HUB port 5 goes to the secondary Pa.HUB v2.1" in doc
-    assert "Pot1..Pot5 do not use Pa.HUB as their signal path" in doc
+    assert "Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch" in doc
+    assert "Pb.HUB reads the five Unit Fader ADC channels and drives their SK6812 RGB reflection" in doc
+    assert "Pot1..Pot5 do not use Pa.HUB as their final signal path" in doc
     assert "bare StickS3 direct" in doc
-    assert "10-signal fader+RGB map is rejected" in doc
+    assert "10-signal fader+RGB map remains rejected" in doc
     assert "G1..G4` share internal" in doc
-    assert "First fader slice is slider-only" in doc
-    assert "Safe direct ADC budget is four candidates" in doc
+    assert "Pb.HUB port 4 -> Pot1" in doc
+    assert "Pb.HUB port 5 -> Grove2USB-C/C module branch toward XIAO" in doc
+    assert "PB.HUB port 5 is not a transparent Serial2 UART route" in doc
+    assert "logical LED1..LED5 use Pot1..Pot5" in doc
+    assert "Run `sticks3-terminal-pbhub-smoke` before real fader upload" in doc
     assert "G4 ADC smoke on 2026-06-14" in doc
     assert "tracked fader movement from raw 0 to 4095" in doc
     assert "verified shared-pin candidate" in doc
     assert "do not use IMU interrupt" in doc
-    assert "Secondary Pa.HUB ports 2, 3, and 4 are reserved for now" in doc
     assert "LED1` through `LED5` remain stable" in doc
     assert "Pot1..Pot5 are M5Stack Unit Fader U123 modules" in doc
     assert "14x SK6812 programmable RGB LEDs" in doc
     assert "GND / 5V / RGB / Analog Input" in doc
-    assert "must not be used as the final route for the analog slider output or the SK6812 RGB data line" in doc
+    assert "Pb.HUB owns that fader backplane role" in doc
     assert "5 Unit Faders" in doc
     assert "5 Chain Encoders" in doc
-    assert "2 PaHUB" in doc
+    assert "1 PaHUB module, 1 Pb.HUB fader backplane" in doc
     assert "2 Grove2USB-C" in doc
     assert "Terminal has no radio module" in doc
     assert "Terminal hardware topology contract" in readme
     assert "Current bench wiring snapshot, 2026-06-14" in readme
     assert "Primary Pa.HUB port 0 is the serial chain branch" in readme
-    assert "Pot1..Pot5 do not use Pa.HUB as their signal path" in readme
-    assert "10-signal fader+RGB map is rejected" in readme
-    assert "First fader slice is slider-only" in readme
-    assert "Safe direct ADC budget is four candidates" in readme
+    assert "Pot1..Pot5 do not use Pa.HUB as their final signal path" in readme
+    assert "sticks3-terminal-pbhub-smoke" in readme
+    assert "PBHUB_ADC" in readme
+    assert "PBHUB_RGB" in readme
+    assert "10-signal fader+RGB map remains rejected" in readme
+    assert "Pb.HUB #1 at address `0x61` reads the five Unit Fader ADC channels" in readme
+    assert "Pb.HUB port 4 -> Pot1" in readme
+    assert "Pb.HUB port 5 -> Grove2USB-C/C module branch toward XIAO" in readme
+    assert "PB.HUB port 5 is not a transparent Serial2 UART route" in readme
+    assert "logical LED1..LED5 use Pot1..Pot5" in readme
     assert "G4 ADC smoke on 2026-06-14" in readme
     assert "tracked fader movement from raw 0 to 4095" in readme
     assert "verified shared-pin candidate" in readme
@@ -469,10 +542,15 @@ def test_terminal_hardware_topology_matches_planned_control_surface() -> None:
     assert "M5StickS3 Terminal hardware status" in hardware
     assert "Current Terminal bench wiring snapshot, 2026-06-14" in hardware
     assert "Primary Pa.HUB port 0 is the serial branch" in hardware
-    assert "Pot1..Pot5 do not use Pa.HUB as their signal path" in hardware
-    assert "10-signal fader+RGB map is rejected" in hardware
-    assert "First fader slice is slider-only" in hardware
-    assert "Safe direct ADC budget is four candidates" in hardware
+    assert "Pot1..Pot5 do not use Pa.HUB as their final signal path" in hardware
+    assert "Pb.HUB #1 at address 0x61 is behind primary Pa.HUB port 5" in hardware
+    assert "Pb.HUB port 0 -> Pot5" in hardware
+    assert "10-signal fader+RGB map remains rejected" in hardware
+    assert "Pb.HUB reads the five Unit Fader ADC channels and drives their SK6812 RGB" in hardware
+    assert "Pb.HUB port 4 -> Pot1" in hardware
+    assert "Pb.HUB port 5 -> Grove2USB-C/C module branch toward XIAO" in hardware
+    assert "PB.HUB port 5 is not a transparent Serial2 UART route" in hardware
+    assert "logical LED1..LED5 use Pot1..Pot5" in hardware
     assert "G4 ADC smoke on 2026-06-14" in hardware
     assert "tracked fader movement from raw 0 to 4095" in hardware
     assert "verified shared-pin candidate" in hardware
@@ -566,11 +644,13 @@ def test_terminal_physical_control_surface_is_edge_based_and_radio_free() -> Non
     assert "encoderDelta" in header
     assert "encoderPressed" in header
     assert "effectPressed" in header
+    assert "effectToggleEvent" in header
     assert "previousPressed_" in header
     assert "previousEffectPressed_" in header
     assert "encoder press toggles effect without changing power" in host_test
     assert "effect select rising edge toggles participation only" in host_test
     assert "effect select edges are independent per lane" in host_test
+    assert "effect toggle events are not suppressed by held level state" in host_test
     assert "primed held encoder press does not toggle until release and repress" in host_test
     assert "empty snapshot does not dirty setup" in host_test
     assert '#include "terminal_control_surface.h"' in main
@@ -598,6 +678,7 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     host_test = read("firmware/tests/test_terminal_fader_filter.cpp")
     driver = read("firmware/sticks3-terminal/src/drivers/terminal_fader_driver.h")
     config = read("firmware/sticks3-terminal/src/terminal_config.h")
+    platformio = read("firmware/sticks3-terminal/platformio.ini")
     doc = read("docs/terminal_architecture.md")
     readme = read("firmware/sticks3-terminal/README.md")
 
@@ -606,6 +687,7 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     assert "struct FaderCalibration" in header
     assert "class FaderFilter" in header
     assert "rawToPercent" in header
+    assert "snapEndpointPercent" in header
     assert "span == 0" in header
     assert "reverseSpan" in header
     assert "prime(std::size_t lane" in header
@@ -616,6 +698,11 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     assert "pickupPercent_" in header
     assert "raw to percent clamps and rounds" in host_test
     assert "inverted raw maps high raw to low brightness" in host_test
+    assert "endpoint snap suppresses one percent at physical stops" in host_test
+    assert "brightness quantizes to two percent steps" in host_test
+    assert "quantizePercent" in header
+    assert "BRIGHTNESS_STEP_PERCENT = 2" in header
+    assert "endpointSnapPercent" in header
     assert "FaderCalibration calibration{4095, 0, 1}" in host_test
     assert "first valid sample always publishes" in host_test
     assert "missing sample does not overwrite last value" in host_test
@@ -633,12 +720,16 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     assert "FADER_DEADBAND_PERCENT" in config
     assert "FADER_RAW_MIN != FADER_RAW_MAX" in config
     assert "fader raw calibration must have non-zero span" in config
+    assert "-DTERMINAL_FADER_RAW_MIN=4095" in platformio
+    assert "-DTERMINAL_FADER_RAW_MAX=0" in platformio
     assert "fader filter" in doc
     assert "rawMin greater than rawMax" in doc
     assert "physical bottom is raw 4095" in doc
+    assert "physical stop displays" in doc
     assert "fader filter" in readme
     assert "rawMin greater than rawMax" in readme
     assert "physical bottom is raw 4095" in readme
+    assert "physical stop shows `VYP`" in readme
 
     forbidden = [
         "Arduino.h",
@@ -1172,8 +1263,19 @@ def test_terminal_hardware_driver_stubs_are_safe_noop_boundaries() -> None:
     assert "CHAIN_BUTTON_REPORT_MODE" in encoders
     assert "setEncoderABDirect" in encoders
     assert "ENCODER_AB" in encoders
-    assert "CHAIN_ENCODER_QUERY_TIMEOUT_MS = 20" in encoders
-    assert "CHAIN_KEY_QUERY_TIMEOUT_MS = 20" in encoders
+    assert "CHAIN_ENCODER_QUERY_TIMEOUT_MS = 50" in encoders
+    assert "CHAIN_KEY_QUERY_TIMEOUT_MS = 50" in encoders
+    read_sample_start = encoders.index(
+        "terminal_encoder_filter::EncoderSample readSample(std::size_t lane) override",
+        encoders.index("class M5ChainEncoderRawReader"),
+    )
+    read_sample_end = encoders.index(
+        "void readSwitches(terminal_switches::SwitchSnapshot&",
+        read_sample_start,
+    )
+    read_sample_section = encoders[read_sample_start:read_sample_end]
+    assert "if (lane >= terminal_setup::LANE_COUNT)" in read_sample_section
+    assert "prepareReadCycle()" not in read_sample_section
     assert "struct ChainPressEdges" in encoders
     assert "classifyChainPress" in encoders
     assert "sawSinglePress || sawLongPress" in encoders
@@ -1242,7 +1344,8 @@ def test_terminal_hardware_driver_stubs_are_safe_noop_boundaries() -> None:
     assert "terminal_external_oled::ConfiguredExternalOledDriver g_externalOled" in main
     assert "g_faders.read(snapshot)" in main
     assert "g_encoders.read(snapshot)" in main
-    assert "g_externalOled.draw(nextFrame)" in main
+    assert "drawExternalSinks(nextFrame)" in main
+    assert "g_externalOled.draw(frame)" in main
     assert "runOledI2cScanSmoke()" in main
     assert "runOledI2cScanPass" in main
     assert "TERMINAL_EXTERNAL_OLED_DRAW_SMOKE" in main
@@ -1322,6 +1425,8 @@ def test_terminal_hardware_driver_stubs_are_safe_noop_boundaries() -> None:
     assert "EXTERNAL_OLED_I2C_CONFIGURED" in config
     assert "EXTERNAL_OLED_DRIVER_M5UNITGLASS2" in config
     assert "EXTERNAL_OLED_LIVE_SINK_CONFIRMED" in config
+    assert "configuredPahubChannelsAreUnique()" in config
+    assert "configured PaHUB-routed devices must use unique channels" in config
     assert "external OLED I2C scan smoke must not enable the display sink" in config
     assert "external OLED draw smoke must not enable the display sink" in config
     assert "external OLED draw smoke requires SDA/SCL pins" in config
@@ -1341,6 +1446,8 @@ def test_terminal_hardware_driver_stubs_are_safe_noop_boundaries() -> None:
     assert "-DTERMINAL_LIVE_DEBUG=1" in platformio
     assert "TERMINAL_LIVE_DEBUG" in config
     assert "TERMINAL_LIVE_DEBUG" in main
+    assert "TERMINAL_EXTERNAL_OLED_I2C_SCAN_SMOKE + TERMINAL_EXTERNAL_OLED_DRAW_SMOKE" in main
+    assert "OLED I2C scan, OLED draw, G4 ADC, Chain UART, prop link, and PbHUB smokes are separate hardware tests" in main
     assert "TERMINAL_LIVE_INPUT" in main
     assert "TERMINAL_CHAIN_RAW" in encoders
     assert "[env:sticks3-terminal-chain-uart-smoke]" in platformio
@@ -1508,6 +1615,8 @@ def test_terminal_live_build_enables_bench_chain_and_external_oled() -> None:
     assert "EXTERNAL_OLED_SELECT_PAHUB" in config
     assert "configured shared Grove pins require explicit PaHUB routing" in config
     assert "configuredPinsShareAllowed" in config
+    assert "configuredPahubChannelFor" in config
+    assert "configuredPahubChannelsShare" in config
 
     assert "terminal_grove_route.h" in encoders
     assert "selectChainPahub" in encoders
@@ -1736,16 +1845,16 @@ def test_terminal_physical_tick_is_pure_and_host_tested() -> None:
     assert "same-tick physical edits are uploaded and shown on OLED" in host_test
     assert "SwitchAction::Upload" in host_test
     for needle in [
-        "L1:361,12,1,1",
-        "L2:364,34,1,1",
-        "L3:364,56,1,1",
-        "L4:367,78,1,1",
-        "L5:366,99,1,0",
-        '"ORANZ", 12, "12%", true, true, "ODP"',
-        '"TYRKYS", 34, "34%", true, true, "ODP"',
-        '"TYRKYS", 56, "56%", true, true, "ODP"',
-        '"RUZOVA", 78, "78%", true, true, "ODP"',
-        '"FIALOVA", 99, "99%", true, false, "---"',
+        "L1:364,12,1,1",
+        "L2:368,34,1,1",
+        "L3:361,56,1,1",
+        "L4:364,78,1,0",
+        "L5:360,100,1,1",
+        '"TYRKYS", 12, "12%", true, true, "ODP"',
+        '"BILA", 34, "34%", true, true, "ODP"',
+        '"ORANZ", 56, "56%", true, true, "ODP"',
+        '"TYRKYS", 78, "78%", true, false, "---"',
+        '"CERVENA", 100, "100%", true, true, "ODP"',
         "same-tick sim-fire is blocked by dirty draft but still shows fresh OLED draft",
     ]:
         assert needle in host_test, needle
@@ -1754,7 +1863,7 @@ def test_terminal_physical_tick_is_pure_and_host_tested() -> None:
     assert "pollPhysicalTick" in main
     loop_section = main[main.index("void loop()") :]
     assert loop_section.index("pollPhysicalTick();") < loop_section.index("pollUploadTimeout();")
-    assert loop_section.index("pollPhysicalTick();") < loop_section.index("pollUsbSetupAcks();")
+    assert loop_section.index("pollPhysicalTick();") < loop_section.index("pollSetupLinkAcks();")
 
     forbidden = [
         "Arduino.h",
@@ -1778,32 +1887,54 @@ def test_terminal_physical_tick_is_pure_and_host_tested() -> None:
 def test_terminal_status_panel_uses_m5_display_only_as_secondary() -> None:
     main = read("firmware/sticks3-terminal/src/main.cpp")
     setup = read("firmware/sticks3-terminal/src/terminal_setup.h")
+    panel = read("firmware/sticks3-terminal/src/terminal_status_panel.h")
+    host_test = read("firmware/tests/test_terminal_status_panel.cpp")
 
     assert "drawStatusPanel" in main
     assert "NAHRANO" in main
     assert "PROBLEM" in main
-    assert "M5.Display.fillScreen" in main
     assert "renderExternalDisplay" in main
     assert "TFT_DARKGREEN" in main
     assert "TFT_RED" in main
+    assert '#include "terminal_status_panel.h"' in main
+    assert "namespace terminal_status_panel" in panel
+    assert "struct StatusPanelText" in panel
+    assert "struct StatusPanelPlan" in panel
+    assert "struct StatusPanelCache" in panel
+    assert "makeStatusPanelPlan" in panel
+    assert "shouldDrawStatusPanel" in panel
+    assert "rememberStatusPanelDraw" in panel
+    assert "textPixelWidth" in panel
+    assert "textPixelHeight" in panel
+    assert "status panel centers text inside StickS3 landscape pixels" in host_test
+    assert "status panel cache suppresses unchanged redraws" in host_test
 
-    status_background = main[main.index("std::uint16_t statusBackground") : main.index("void drawStatusPanel()")]
-    status_panel = main[main.index("void drawStatusPanel()") : main.index("bool renderExternalDisplay()")]
+    status_background = main[
+        main.index("std::uint16_t statusBackground") :
+        main.index("void drawStatusPanel(bool force = false)")
+    ]
+    status_panel = main[
+        main.index("void drawStatusPanel(bool force = false)") :
+        main.index("bool renderExternalDisplay()")
+    ]
     for needle in [
-        "M5.Display.fillScreen(statusBackground(g_setup.status()))",
-        "M5.Display.setTextColor(TFT_WHITE, statusBackground(g_setup.status()))",
-        "M5.Display.setTextDatum(top_left)",
-        "M5.Display.setTextSize(2)",
-        "M5.Display.setCursor(6, 8)",
-        'M5.Display.println("TERMINAL")',
-        "M5.Display.setTextSize(3)",
-        "M5.Display.setCursor(6, 36)",
-        "M5.Display.println(g_setup.statusText())",
+        "terminal_status_panel::makeStatusPanelPlan",
+        "terminal_status_panel::shouldDrawStatusPanel",
+        "terminal_status_panel::rememberStatusPanelDraw",
+        "M5.Display.width()",
+        "M5.Display.height()",
+        "M5.Display.drawString(plan.title.text, plan.title.x, plan.title.y)",
+        "M5.Display.drawString(plan.statusLine.text, plan.statusLine.x, plan.statusLine.y)",
     ]:
         assert needle in status_panel, needle
-    assert status_panel.count("M5.Display.println(") == 2
-    assert status_panel.count("M5.Display.setTextSize(") == 2
-    assert status_panel.count("M5.Display.setCursor(") == 2
+    assert "M5.Display.setTextDatum(top_left)" not in status_panel
+    assert "M5.Display.println(" not in status_panel
+    assert "M5.Display.setCursor(" not in status_panel
+    assert status_panel.count("M5.Display.fillScreen(") == 1
+    loop_section = main[main.index("void loop()") :]
+    periodic_status_section = loop_section[loop_section.index("if (millis() - g_lastDrawMs") :]
+    assert "drawStatusPanel(false)" in periodic_status_section
+    assert "drawStatusPanel(true)" in main
     uploaded_case = status_background[
         status_background.index("case terminal_setup::Status::Uploaded:") :
         status_background.index("case terminal_setup::Status::Problem:")
@@ -1815,7 +1946,10 @@ def test_terminal_status_panel_uses_m5_display_only_as_secondary() -> None:
     assert "return TFT_DARKGREEN;" in uploaded_case
     assert "return TFT_RED;" in problem_case
 
-    status_text = setup[setup.index("const char* statusText() const") : setup.index("std::string largeDisplayLine")]
+    status_text = setup[
+        setup.index("inline const char* statusText(Status status)") :
+        setup.index("inline int quantizePercent")
+    ]
     values = re.findall(r'return "([^"]+)";', status_text)
     assert {"PRIPRAVEN", "ZMENY", "NAHRAVAM", "NAHRANO", "PROBLEM", "SIM FIRE"} <= set(values)
     assert all(len(value) <= 9 for value in values)
@@ -1838,7 +1972,6 @@ def test_terminal_status_panel_uses_m5_display_only_as_secondary() -> None:
         "ZAP",
         "VYP",
         "MENU",
-        "drawString",
         "printf",
         "M5.Display.print(",
     ]:
@@ -1863,10 +1996,10 @@ def test_upload_and_sim_fire_switches_drive_usb_setup_link() -> None:
     assert "terminal_app_logic::startUploadAfterUsbDrain" in main
     assert "terminal_app_logic::requestSimFire" in main
     assert "terminal_app_logic::handleUploadEvent" in main
-    assert "Serial.println(action.line.c_str())" in main
+    assert "writeSetupLine(action.line.c_str())" in main
     assert '"SIM_FIRE"' in read("firmware/sticks3-terminal/src/terminal_app_logic.h")
     assert "uploadInFlight()" in main
-    assert "pollUsbSetupAcks" in main
+    assert "pollSetupLinkAcks" in main
     assert "handleUsbEvent" in main
     assert "readStringUntil" not in main
     assert "static_assert" in main
@@ -1877,25 +2010,73 @@ def test_upload_and_sim_fire_switches_drive_usb_setup_link() -> None:
     assert "if (uploadInFlight())" in sim_section
 
 
-def test_terminal_upload_drains_stale_ack_and_times_out_before_late_ack() -> None:
+def test_terminal_setup_transport_can_target_xiao_prop_link() -> None:
     main = read("firmware/sticks3-terminal/src/main.cpp")
+    config = read("firmware/sticks3-terminal/src/terminal_config.h")
+    platformio = read("firmware/sticks3-terminal/platformio.ini")
+
+    assert "[platformio]" in platformio
+    assert "default_envs = sticks3-terminal-prop-link-g43-g44-600" in platformio
+    assert "TERMINAL_SETUP_TRANSPORT_USB" in config
+    assert "TERMINAL_SETUP_TRANSPORT_PROP_LINK" in config
+    assert "SETUP_TRANSPORT_USB" in config
+    assert "SETUP_TRANSPORT_PROP_LINK" in config
+    assert "setup transport must select exactly one transport" in config
+    assert "prop-link setup transport requires RX/TX pins" in config
+
+    assert "beginSetupTransport" in main
+    assert "drainSetupLinkInput" in main
+    assert "writeSetupLine" in main
+    assert "pollSetupLinkAcks" in main
+    assert "Serial2.begin(" in main
+    assert "Serial2.println(line)" in main
+
+    action_section = main[main.index("void performTerminalAction") : main.index("void primeDirectControls()")]
+    assert "drainSetupLinkInput();" in action_section
+    assert "writeSetupLine(action.line.c_str());" in action_section
+    assert action_section.index("drainSetupLinkInput();") < action_section.index("writeSetupLine(action.line.c_str());")
+    assert "Serial.println(action.line.c_str())" not in action_section
+
+    assert "sticks3-terminal-prop-link-g43-g44" in platformio
+    assert "-DTERMINAL_SETUP_TRANSPORT_USB=0" in platformio
+    assert "-DTERMINAL_SETUP_TRANSPORT_PROP_LINK=1" in platformio
+    assert "-DTERMINAL_PROP_LINK_RX_PIN=44" in platformio
+    assert "-DTERMINAL_PROP_LINK_TX_PIN=43" in platformio
+
+
+def test_terminal_upload_reads_ack_before_timeout_on_slow_prop_link() -> None:
+    main = read("firmware/sticks3-terminal/src/main.cpp")
+    config = read("firmware/sticks3-terminal/src/terminal_config.h")
     doc = read("docs/terminal_architecture.md")
     readme = read("firmware/sticks3-terminal/README.md")
 
-    assert "drainUsbSetupInput" in main
-    drain_section = main[main.index("void drainUsbSetupInput()") : main.index("bool uploadInFlight();")]
-    assert "Serial.available()" in drain_section
-    assert "Serial.read()" in drain_section
+    assert "drainSetupLinkInput" in main
+    drain_section = main[main.index("void drainSetupLinkInput()") : main.index("bool uploadInFlight();")]
+    assert "setupLinkAvailable()" in drain_section
+    assert "setupLinkRead()" in drain_section
 
     upload_section = main[main.index("void requestUpload()") : main.index("void requestSimFire()")]
     assert "terminal_app_logic::canStartUpload" in upload_section
     assert "terminal_app_logic::startUploadAfterUsbDrain" in upload_section
-    assert upload_section.index("drainUsbSetupInput();") < upload_section.index("terminal_app_logic::startUploadAfterUsbDrain")
+    assert upload_section.index("drainSetupLinkInput();") < upload_section.index("terminal_app_logic::startUploadAfterUsbDrain")
     action_section = main[main.index("void performTerminalAction") : main.index("void pollSwitches()")]
-    assert action_section.index("drainUsbSetupInput();") < action_section.index("Serial.println(action.line.c_str())")
+    assert action_section.index("drainSetupLinkInput();") < action_section.index("writeSetupLine(action.line.c_str())")
+
+    platformio = read("firmware/sticks3-terminal/platformio.ini")
+    timeout_default = re.search(r"#define TERMINAL_UPLOAD_ACK_TIMEOUT_MS (\d+)", config)
+    slow_link_timeout = re.search(
+        r"\[env:sticks3-terminal-prop-link-g43-g44-600\].*?"
+        r"-DTERMINAL_UPLOAD_ACK_TIMEOUT_MS=(\d+)",
+        platformio,
+        re.S,
+    )
+    assert timeout_default is not None
+    assert slow_link_timeout is not None
+    assert int(timeout_default.group(1)) >= 3000
+    assert int(slow_link_timeout.group(1)) >= 8000
 
     loop_section = main[main.index("void loop()") :]
-    assert loop_section.index("pollUploadTimeout();") < loop_section.index("pollUsbSetupAcks();")
+    assert loop_section.index("pollSetupLinkAcks();") < loop_section.index("pollUploadTimeout();")
     assert "stale setup replies" in doc
     assert "mismatched request id" in doc
     assert "late ACK" in readme
@@ -1972,20 +2153,21 @@ def test_terminal_docs_track_current_slice_and_open_hardware_drivers() -> None:
     assert "Switch Edge Model" in doc
     assert "active-low" in doc
     assert "Holding a switch must not repeat" in doc
-    assert "UPLOAD_ACK_TIMEOUT_MS = 1500" in doc
+    assert "UPLOAD_ACK_TIMEOUT_MS = 8000" in doc
+    assert "Reply bytes are polled before timeout" in doc
     assert "USB_LINE_MAX = 160" in doc
     assert "Bench Wiring Snapshot 2026-06-14" in doc
-    assert "Primary Pa.HUB port 1 is reserved for now" in doc
-    assert "Primary Pa.HUB port 2 is reserved for now" in doc
     assert "Primary Pa.HUB port 3 is the external 2.4 inch display branch" in doc
-    assert "Secondary Pa.HUB ports 2, 3, and 4 are reserved" in doc
+    assert "Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch" in doc
+    assert "Pb.HUB port 0 -> Pot5" in doc
     assert "The second U206 switch is the global SIM_FIRE preview switch" in doc
     assert "Do not use the rejected direct RGB map" in doc
-    assert "Choose the fifth slider ADC strategy before real fader upload" in doc
+    assert "Run `sticks3-terminal-pbhub-smoke` before real fader upload" in doc
     assert "overflow" in doc
     assert "sliderPercent" in doc
     assert "encoderDelta" in doc
     assert "effectPressed" in doc
+    assert "effectToggleEvent" in doc
     assert "Fader brightness 0 means the lane is normally off" in doc
     assert "Encoder button toggles whether that lane changes state during fire" in doc
     assert "final physical source for `effectPressed` is still open" not in doc
@@ -2024,21 +2206,25 @@ def test_terminal_docs_track_current_slice_and_open_hardware_drivers() -> None:
     assert "TERMINAL_EXTERNAL_OLED_SDA_PIN" in readme
     assert "TERMINAL_EXTERNAL_OLED_SCL_PIN" in readme
     assert "Controller, bus address, and pins are hardware bring-up checks" in readme
-    assert "1 CERVENA 100% ---" in readme
-    assert "4 BILA    VYP  ODP" in readme
+    assert "1 ZELENA  100% ---" in readme
+    assert "4 MODRA   100% ODP" in readme
+    assert "5 CERVENA 100% ODP" in readme
     assert "Switch edge bring-up" in readme
     assert "Hold switch: no repeated command" in readme
     assert "Switch boot priming" in doc
     assert "Switch held while Terminal boots" in readme
     assert "no action is queued" in readme
-    assert "UPLOAD_ACK_TIMEOUT_MS = 1500" in readme
+    assert "UPLOAD_ACK_TIMEOUT_MS = 8000" in readme
+    assert "ACK bytes are parsed before the timeout check" in readme
     assert "USB_LINE_MAX = 160" in readme
     assert "Current bench wiring snapshot, 2026-06-14" in readme
-    assert "Primary Pa.HUB port 5 goes to the secondary Pa.HUB v2.1" in readme
+    assert "Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch" in readme
     assert "The first U206 uploads the staged values" in readme
     assert "The second U206 is the global SIM_FIRE preview switch" in readme
     assert "Rejected direct fader+RGB map" in readme
-    assert "Use an external ADC/mux or explicitly verified shared pin strategy before real fader upload" in readme
+    assert "Use the Pb.HUB fader branch before real fader upload" in readme
+    assert "does not yet include real fader sampling" not in readme
+    assert "PaHUB driver logic" not in readme
 
 
 def test_top_level_docs_mark_terminal_setup_transition() -> None:
@@ -2083,18 +2269,22 @@ def test_top_level_docs_mark_terminal_setup_transition() -> None:
     assert "SETUP_ERR <request_id>" in bench
     assert "Wire the Terminal bench snapshot exactly" in bench
     assert "Encoder LED5 -> Encoder LED4 -> Encoder LED3 -> Encoder LED2 -> Encoder LED1 -> U206 upload switch -> U206 sim-fire switch" in bench
-    assert "primary port 5 to the secondary Pa.HUB" in bench
-    assert "Primary ports 1/2 and secondary ports 2/3/4 are" in bench
-    assert "reserved for now and must not be used for Pot1..Pot5 signal reads" in bench
+    assert "primary port 5" in bench
+    assert "Pb.HUB #1 at address 0x61" in bench
+    assert "port 4 -> Pot1" in bench
+    assert "port 5 -> Grove2USB-C/C" in bench
+    assert "LED1..LED5 use Pot1..Pot5" in bench
     assert "Treat LED1..LED5 as logical lane names" in bench
     assert "last U206 switch emits one SIM_FIRE preview edge" in bench
     assert "Pot1..Pot5 are M5Stack Unit Fader U123 modules" in bench
-    assert "Do not expect Pa.HUB to read slider position or drive fader LEDs" in bench
-    assert "First fader slice is slider-only" in bench
-    assert "leave Unit Fader SK6812 LEDs" in bench
+    bench_normalized = " ".join(bench.split())
+    assert "Do not expect Pa.HUB to read slider position or drive fader LEDs" in bench_normalized
+    assert "physical bottom stop displays" in bench
+    assert "sticks3-terminal-pbhub-smoke" in bench
+    assert "PBHUB_SMOKE ONLINE 1" in bench
     assert "Do not use the rejected bare StickS3 fader+RGB map" in bench
     assert "Official StickS3 docs mark `G1..G4` as shared internal" in bench
-    assert "Choose and document the fifth slider ADC strategy before real fader upload" in bench
+    assert "active fader strategy is Pb.HUB ADC/RGB behind Pa.HUB port 5" in bench_normalized
     assert "G4 ADC smoke on 2026-06-14" in bench
     assert "tracked fader" in bench
     assert "raw 0 and raw 4095 endpoints" in bench
@@ -2178,8 +2368,8 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "<MODEM_DIAL_COM>",
         "<MODEM_PROP_COM>",
         "xiao-prop-electronics-private",
-        "pio run -e seeed_xiao_rp2040",
-        "pio run -e seeed_xiao_rp2040 -t upload --upload-port <XIAO_COM>",
+        "pio run -e seeed_xiao_rp2040_terminal_link_600",
+        "pio run -e seeed_xiao_rp2040_terminal_link_600 -t upload --upload-port <XIAO_COM>",
         "HELLO",
         "PING",
         "PONG",
@@ -2200,6 +2390,9 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "SETUP_OK <request_id>",
         "SETUP_ERR <request_id>",
         "SIM_FIRE <request_id>",
+        "XIAO D2 local FIRE is a visual DinMeter-local trigger",
+        "does not require LoRa ARM",
+        "STOP/lockout blocks XIAO D2 until a fresh LoRa ARM or DinMeter reboot",
     ]:
         assert needle in runbook, needle
 
@@ -2208,6 +2401,7 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
     assert "docs/first_upload_runbook.md" in checklist
     assert 'ValidateSet("dial-tx", "din-rx", "c6l-modem", "sticks3-terminal")' in flash
     assert '"sticks3-terminal"' in flash
+    assert '-Environment "sticks3-terminal-prop-link-g43-g44-600"' in flash
     assert "[switch]$DryRun" in flash
     assert "DRY RUN:" in flash
     assert "DRY RUN: idf.py -p $Port flash" in flash
@@ -2225,6 +2419,19 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         assert needle in preflight, needle
 
 
+def test_terminal_fader_rgb_draw_is_not_blocked_by_oled_failure() -> None:
+    main = read("firmware/sticks3-terminal/src/main.cpp")
+
+    assert "bool drawExternalSinks(" in main
+    helper = main.split(
+        "bool drawExternalSinks(const terminal_external_display::DisplayFrame& frame) {",
+        1,
+    )[1].split("\n}\n", 1)[0]
+    assert "const bool oledDrawn = g_externalOled.draw(frame);" in helper
+    assert "g_faderRgb.draw(g_setup);" in helper
+    assert helper.index("g_faderRgb.draw(g_setup);") < helper.index("if (oledDrawn)")
+
+
 def test_terminal_external_oled_preview_tool_renders_review_png() -> None:
     import importlib.util
 
@@ -2239,11 +2446,12 @@ def test_terminal_external_oled_preview_tool_renders_review_png() -> None:
     assert image.mode == "RGB"
     assert image.size == (512, 256)
     assert len(image.getcolors(maxcolors=image.width * image.height)) > 2
-    assert module.ROWS[0].color == "CERVENA"
+    assert module.ROWS[0].color == "ZELENA"
     assert module.ROWS[0].label == "100%"
-    assert module.ROWS[1].effect_label == "ODP"
-    assert module.ROWS[3].label == "VYP"
-    assert module.ROWS[4].color == "MODRA"
+    assert module.ROWS[1].color == "CERVENA"
+    assert module.ROWS[3].effect_label == "ODP"
+    assert module.ROWS[4].color == "CERVENA"
+    assert module.ROWS[4].effect_label == "ODP"
 
 
 def test_terminal_external_oled_preview_has_espos_pixel_guardrails() -> None:

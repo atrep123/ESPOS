@@ -8,14 +8,24 @@
 namespace terminal_fader_filter {
 
 constexpr int RAW_SAMPLE_MISSING = -1;
+constexpr int BRIGHTNESS_STEP_PERCENT = 2;
+static_assert(BRIGHTNESS_STEP_PERCENT == terminal_setup::BRIGHTNESS_STEP_PERCENT,
+              "fader brightness step must match setup state");
 
 struct FaderCalibration {
-    constexpr FaderCalibration(int rawMinValue = 0, int rawMaxValue = 4095, int deadbandPercentValue = 1)
-        : rawMin(rawMinValue), rawMax(rawMaxValue), deadbandPercent(deadbandPercentValue) {}
+    constexpr FaderCalibration(int rawMinValue = 0,
+                               int rawMaxValue = 4095,
+                               int deadbandPercentValue = 1,
+                               int endpointSnapPercentValue = 1)
+        : rawMin(rawMinValue),
+          rawMax(rawMaxValue),
+          deadbandPercent(deadbandPercentValue),
+          endpointSnapPercent(endpointSnapPercentValue) {}
 
     int rawMin = 0;
     int rawMax = 4095;
     int deadbandPercent = 1;
+    int endpointSnapPercent = 1;
 };
 
 inline int clampInt(int value, int lower, int upper) {
@@ -28,6 +38,21 @@ inline int absoluteDelta(int lhs, int rhs) {
     return lhs > rhs ? lhs - rhs : rhs - lhs;
 }
 
+inline int snapEndpointPercent(int percent, const FaderCalibration& calibration) {
+    const int snap = clampInt(calibration.endpointSnapPercent, 0, 50);
+    if (percent <= snap) {
+        return 0;
+    }
+    if (percent >= 100 - snap) {
+        return 100;
+    }
+    return percent;
+}
+
+inline int quantizePercent(int percent) {
+    return terminal_setup::quantizePercent(percent);
+}
+
 inline int rawToPercent(int raw, const FaderCalibration& calibration) {
     const int span = calibration.rawMax - calibration.rawMin;
     if (span == 0) {
@@ -35,11 +60,15 @@ inline int rawToPercent(int raw, const FaderCalibration& calibration) {
     }
     if (span > 0) {
         const int clamped = clampInt(raw, calibration.rawMin, calibration.rawMax);
-        return ((clamped - calibration.rawMin) * 100 + span / 2) / span;
+        return quantizePercent(
+            snapEndpointPercent(((clamped - calibration.rawMin) * 100 + span / 2) / span,
+                                calibration));
     }
     const int reverseSpan = calibration.rawMin - calibration.rawMax;
     const int clamped = clampInt(raw, calibration.rawMax, calibration.rawMin);
-    return ((calibration.rawMin - clamped) * 100 + reverseSpan / 2) / reverseSpan;
+    return quantizePercent(
+        snapEndpointPercent(((calibration.rawMin - clamped) * 100 + reverseSpan / 2) / reverseSpan,
+                            calibration));
 }
 
 class FaderFilter {

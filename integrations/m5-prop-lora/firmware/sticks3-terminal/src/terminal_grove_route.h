@@ -15,6 +15,7 @@ enum class GroveRoute {
     None,
     ChainUart,
     ExternalOledI2c,
+    PbHubI2c,
 };
 
 inline GroveRoute& currentRoute() {
@@ -28,6 +29,10 @@ inline bool chainSelected() {
 
 inline bool externalOledSelected() {
     return currentRoute() == GroveRoute::ExternalOledI2c;
+}
+
+inline bool pbHubSelected() {
+    return currentRoute() == GroveRoute::PbHubI2c;
 }
 
 #if defined(ARDUINO)
@@ -101,6 +106,40 @@ inline bool selectExternalOledPahub() {
     return selected;
 #else
     currentRoute() = GroveRoute::ExternalOledI2c;
+    return true;
+#endif
+}
+
+inline bool selectPbHubPahub() {
+#if defined(ARDUINO)
+    if (!terminal_config::PBHUB_SELECT_PAHUB) {
+        currentRoute() = GroveRoute::PbHubI2c;
+        return true;
+    }
+    if (pbHubSelected()) {
+        return true;
+    }
+
+    currentRoute() = GroveRoute::None;
+    Serial1.end();
+    delay(2);
+    TwoWire& bus = terminal_config::PBHUB_I2C_PORT == 1 ? Wire1 : Wire;
+    bus.begin(
+        terminal_config::PBHUB_SDA_PIN,
+        terminal_config::PBHUB_SCL_PIN,
+        terminal_config::PBHUB_I2C_FREQ);
+    const bool selected = selectPahubChannel(
+        bus,
+        static_cast<std::uint8_t>(terminal_config::PBHUB_PAHUB_ADDRESS),
+        static_cast<std::uint8_t>(terminal_config::PBHUB_PAHUB_CHANNEL));
+    if (selected) {
+        currentRoute() = GroveRoute::PbHubI2c;
+    } else {
+        bus.end();
+    }
+    return selected;
+#else
+    currentRoute() = GroveRoute::PbHubI2c;
     return true;
 #endif
 }

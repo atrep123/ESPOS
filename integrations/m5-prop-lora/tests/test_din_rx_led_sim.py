@@ -394,7 +394,27 @@ def test_current_dinmeter_led_hardware_contract_matches_firmware_source() -> Non
     assert "constexpr std::uint8_t  XIAO_BARREL_WS2812_COUNT = 18;" in config
     assert "constexpr std::uint8_t  XIAO_STATUS_LED_COUNT    = 4;" in config
     assert "XIAO_STATUS_LED_CHANNELS[XIAO_STATUS_LED_COUNT]" in config
-    assert "LED_ROLE_ODPAL" not in config.split("XIAO_STATUS_LED_CHANNELS", 1)[1].split("};", 1)[0]
+    default_presets_match = re.search(r"DEFAULT_LED_PRESET_IDX\[LED_COUNT\]\s*=\s*\{([^}]+)\}", config)
+    assert default_presets_match
+    default_presets = [int(value.strip()) for value in default_presets_match.group(1).split(",")]
+    assert default_presets[0] == 1  # Slot 1 / button 1 is green.
+    assert default_presets[1] == 0  # Slot 3 / button 2 is red.
+    assert default_presets[2] == 0  # Slot 4 / switch is red.
+    assert default_presets[3] == 2  # Slot 2 / odpal indicator is blue.
+    assert default_presets[4] == 0  # Barrel lane / 18x WS2812 is red.
+    status_channels = config.split("XIAO_STATUS_LED_CHANNELS", 1)[1].split("};", 1)[0]
+    assert "LED_ROLE_BUTTON1" in status_channels
+    assert "LED_ROLE_BUTTON2" in status_channels
+    assert "LED_ROLE_SWITCH" in status_channels
+    assert "LED_ROLE_ODPAL" in status_channels
+    assert "LED_ROLE_BARREL" not in status_channels
+    status_role_order = re.findall(r"LED_ROLE_[A-Z0-9_]+", status_channels)
+    assert status_role_order == [
+        "LED_ROLE_BUTTON1",
+        "LED_ROLE_ODPAL",
+        "LED_ROLE_BUTTON2",
+        "LED_ROLE_SWITCH",
+    ]
     assert "constexpr std::uint8_t LED_ORDER[LED_COUNT] = {0, 2, 3, 4, 1};" in config
     order_match = re.search(r"LED_ORDER\[LED_COUNT\]\s*=\s*\{([^}]+)\}", config)
     assert order_match
@@ -405,9 +425,23 @@ def test_current_dinmeter_led_hardware_contract_matches_firmware_source() -> Non
     assert "HardwareSerial propIoSerial(2);" in cpp
     assert "beginXiaoPropIo();" in cpp
     assert "readXiaoPropIo();" in cpp
-    assert "applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, \"xiao\")" in cpp
+    assert "LOCAL_FIRE_RETRIGGER_MIN_MS" in config
+    assert "acceptLocalFirePulse" in cpp
+    assert "bool firePulse = parsed.input.index == 3 && parsed.input.active;" in cpp
+    assert "applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, firePulse, \"xiao\")" in cpp
+    assert "applyLocalInputLevels(_xiaoSwitch, _xiaoBtn1, _xiaoBtn2, _xiaoFire, false, \"xiao\")" in cpp
+    assert "applyLocalInputLevels(sw, b1, b2, b3, false, \"bb\")" in cpp
+    input_levels_body = cpp.split("void applyLocalInputLevels", 1)[1].split("void tickByteButton", 1)[0]
+    assert "const bool fireEdge = b3 && !_bbPrev3;" in input_levels_body
+    assert "const bool fireRequest = firePulse || fireEdge;" in input_levels_body
+    assert "if (fireRequest && acceptLocalFirePulse(millis()))" in input_levels_body
+    btn2_branch = re.search(r"if \(b2Edge\)\s*\{([^}]+)\}", input_levels_body)
+    assert btn2_branch
+    assert "_led2On = !_led2On" in btn2_branch.group(1)
+    assert "_led3RemoteOn = !_led3RemoteOn" not in btn2_branch.group(1)
     assert "sendXiaoOutputFrame(scaled)" in cpp
     assert "formatStat4Line(status)" in cpp
+    assert "frame[LED_ROLE_BARREL]" in cpp
     assert "formatBarrelRedLine(barrel)" in cpp
     assert "formatBarrelOffLine()" in cpp
     assert "nextXiaoPingSeq()" in cpp
@@ -429,6 +463,35 @@ def test_current_dinmeter_led_hardware_contract_matches_firmware_source() -> Non
     assert "#include <Adafruit_NeoPixel" not in cpp
     assert "Adafruit_NeoPixel pixels(" not in cpp
     assert "constexpr int LED_PIN" not in cpp
+
+
+def test_xiao_d2_local_fire_is_lockout_only_not_lora_arm_gated() -> None:
+    cpp = PROP_RX_CPP.read_text(encoding="utf-8")
+    local_fire = cpp.split("void tryLocalFire()", 1)[1].split("bool terminalEffectAllowsOdpal", 1)[0]
+
+    assert "if (_lockout)" in local_fire
+    assert 'setStatus("STOP")' in local_fire
+    assert "triggerOdpal();" in local_fire
+    assert "_armed" not in local_fire
+    assert "fireWouldArm" not in local_fire
+
+    arm_handler = cpp.split("if (frame.type == prop_protocol::FrameType::Arm)", 1)[1].split(
+        "if (frame.type == prop_protocol::FrameType::Fire)",
+        1,
+    )[0]
+    stop_handler = cpp.split("if (frame.type == prop_protocol::FrameType::Stop)", 1)[1].split(
+        "if (frame.type == prop_protocol::FrameType::Ping",
+        1,
+    )[0]
+    assert "_lockout = false" in arm_handler
+    assert "_lockout = true" in stop_handler
+
+
+def test_dinmeter_hrana_odpal_curve_is_full_on_at_trigger_start() -> None:
+    cpp = PROP_RX_CPP.read_text(encoding="utf-8")
+    curve_body = cpp.split("static float curveShape", 1)[1].split("RenderColor odpalColor", 1)[0]
+
+    assert curve_body.index("if (curve == 0) return 1.0f;") < curve_body.index("if (p <= 0.0f) return 0.0f;")
 
 
 def test_current_dinmeter_display_source_is_indication_not_legacy_setup_editor() -> None:

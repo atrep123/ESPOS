@@ -115,6 +115,41 @@ bool simultaneousDebouncedPressPrefersUpload() {
     return pipeline.update(raw, 30, false) == SwitchAction::Upload;
 }
 
+bool uploadEventDispatchesWithoutDebounceWindow() {
+    SwitchPipeline pipeline(30);
+    SwitchSnapshot raw;
+    pipeline.prime(raw, 0);
+
+    raw.uploadEvent = true;
+    if (pipeline.update(raw, 1, false) != SwitchAction::Upload) {
+        return false;
+    }
+    raw.uploadEvent = false;
+    return pipeline.update(raw, 2, false) == SwitchAction::None;
+}
+
+bool simFireEventDispatchesWithoutDebounceWindow() {
+    SwitchPipeline pipeline(30);
+    SwitchSnapshot raw;
+    pipeline.prime(raw, 0);
+
+    raw.simFireEvent = true;
+    return pipeline.update(raw, 1, false) == SwitchAction::SimFire;
+}
+
+bool uploadEventStillSuppressedWhileUploadInFlight() {
+    SwitchPipeline pipeline(30);
+    SwitchSnapshot raw;
+    pipeline.prime(raw, 0);
+
+    raw.uploadEvent = true;
+    if (pipeline.update(raw, 1, true) != SwitchAction::None) {
+        return false;
+    }
+    raw.uploadEvent = false;
+    return pipeline.update(raw, 2, false) == SwitchAction::None;
+}
+
 bool runCase(const char* name, bool (*test)()) {
     const bool passed = test();
     std::cout << (passed ? "PASS " : "FAIL ") << name << '\n';
@@ -142,5 +177,11 @@ int main() {
         ? 0
         : 1;
     failures += runCase("simultaneous debounced press prefers upload", simultaneousDebouncedPressPrefersUpload) ? 0 : 1;
+    failures += runCase("upload event dispatches without debounce window",
+                        uploadEventDispatchesWithoutDebounceWindow) ? 0 : 1;
+    failures += runCase("sim-fire event dispatches without debounce window",
+                        simFireEventDispatchesWithoutDebounceWindow) ? 0 : 1;
+    failures += runCase("upload event still suppressed while upload in flight",
+                        uploadEventStillSuppressedWhileUploadInFlight) ? 0 : 1;
     return failures == 0 ? 0 : 1;
 }

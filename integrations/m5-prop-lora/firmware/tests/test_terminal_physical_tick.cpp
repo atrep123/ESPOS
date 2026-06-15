@@ -83,26 +83,26 @@ bool sameTickPhysicalEditsAreUploadedAndShownOnOled() {
            result.action.sendLine &&
            result.action.redraw &&
            result.action.line.rfind("SETUP 1 ", 0) == 0 &&
-           hasFragment(result.action.line, "L1:361,12,1,1") &&
-           hasFragment(result.action.line, "L2:364,34,1,1") &&
-           hasFragment(result.action.line, "L3:364,56,1,1") &&
-           hasFragment(result.action.line, "L4:367,78,1,1") &&
-           hasFragment(result.action.line, "L5:366,99,1,0") &&
+           hasFragment(result.action.line, "L1:364,12,1,1") &&
+           hasFragment(result.action.line, "L2:368,34,1,1") &&
+           hasFragment(result.action.line, "L3:361,56,1,1") &&
+           hasFragment(result.action.line, "L4:364,78,1,0") &&
+           hasFragment(result.action.line, "L5:360,100,1,1") &&
            parsed.kind == CommandKind::Setup &&
            parsed.setup.requestId == 1 &&
-           parsed.setup.lanes[0].hue == 361 &&
+           parsed.setup.lanes[0].hue == 364 &&
            parsed.setup.lanes[0].brightness == 12 &&
            parsed.setup.lanes[0].effect == true &&
            parsed.setup.lanes[1].on == true &&
            parsed.setup.lanes[1].effect == true &&
            parsed.setup.lanes[3].on == true &&
-           parsed.setup.lanes[3].effect == true &&
-           hasRow(result.frame.rows[0], 1, "ORANZ", 12, "12%", true, true, "ODP") &&
-           hasRow(result.frame.rows[1], 2, "TYRKYS", 34, "34%", true, true, "ODP") &&
-           hasRow(result.frame.rows[2], 3, "TYRKYS", 56, "56%", true, true, "ODP") &&
-           hasRow(result.frame.rows[3], 4, "RUZOVA", 78, "78%", true, true, "ODP") &&
-           hasRow(result.frame.rows[4], 5, "FIALOVA", 99, "99%", true, false, "---") &&
-           frame == result.frame &&
+           parsed.setup.lanes[3].effect == false &&
+           hasRow(result.frame.rows[0], 1, "TYRKYS", 12, "12%", true, true, "ODP") &&
+           hasRow(result.frame.rows[1], 2, "BILA", 34, "34%", true, true, "ODP") &&
+           hasRow(result.frame.rows[2], 3, "ORANZ", 56, "56%", true, true, "ODP") &&
+           hasRow(result.frame.rows[3], 4, "TYRKYS", 78, "78%", true, false, "---") &&
+           hasRow(result.frame.rows[4], 5, "CERVENA", 100, "100%", true, true, "ODP") &&
+           frame != result.frame &&
            state.status() == Status::Uploading &&
            link.inFlight();
 }
@@ -131,7 +131,7 @@ bool sameTickUploadBlockedWhileInFlightStillShowsFreshDraft() {
            !result.drainedUsbBeforeUpload &&
            !result.action.sendLine &&
            result.frameChanged &&
-           hasRow(result.frame.rows[0], 1, "ORANZ", 12, "12%", true, true, "ODP") &&
+           hasRow(result.frame.rows[0], 1, "TYRKYS", 12, "12%", true, true, "ODP") &&
            state.status() == Status::Dirty &&
            link.inFlight();
 }
@@ -158,10 +158,34 @@ bool sameTickSimFireIsBlockedByDirtyDraftButStillShowsFreshOledDraft() {
            !result.action.drainUsbInput &&
            !result.action.sendLine &&
            result.action.line.empty() &&
-           hasRow(result.frame.rows[4], 5, "FIALOVA", 99, "99%", true, false, "---") &&
-           frame == result.frame &&
+           hasRow(result.frame.rows[4], 5, "CERVENA", 100, "100%", true, true, "ODP") &&
+           frame != result.frame &&
            state.status() == Status::Dirty &&
            !link.inFlight();
+}
+
+bool physicalTickDoesNotAdvanceOledCacheBeforeHardwareDrawSucceeds() {
+    TerminalSetupState state;
+    ControlSurface controls;
+    UsbSetupLink link(160);
+    DisplayFrame cachedFrame;
+
+    const DisplayFrame before = cachedFrame;
+    const auto result = runPhysicalTick(
+        fiveLaneEditSnapshot(),
+        SwitchAction::None,
+        state,
+        controls,
+        link,
+        cachedFrame,
+        100,
+        1500,
+        []() {});
+
+    return result.frameChanged &&
+           result.frame != before &&
+           cachedFrame == before &&
+           state.status() == Status::Dirty;
 }
 
 bool runCase(const char* name, bool (*test)()) {
@@ -180,5 +204,7 @@ int main() {
                         sameTickUploadBlockedWhileInFlightStillShowsFreshDraft) ? 0 : 1;
     failures += runCase("same-tick sim-fire is blocked by dirty draft but still shows fresh OLED draft",
                         sameTickSimFireIsBlockedByDirtyDraftButStillShowsFreshOledDraft) ? 0 : 1;
+    failures += runCase("physical tick does not advance OLED cache before hardware draw succeeds",
+                        physicalTickDoesNotAdvanceOledCacheBeforeHardwareDrawSucceeds) ? 0 : 1;
     return failures == 0 ? 0 : 1;
 }

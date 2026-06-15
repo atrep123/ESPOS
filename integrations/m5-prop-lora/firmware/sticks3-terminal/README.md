@@ -1,6 +1,6 @@
 # M5StickS3 Terminal
 
-USB setup terminal for ESPOS prop configuration.
+USB/proplink setup terminal for ESPOS prop configuration.
 
 This Terminal has no radio module, no radio modem path, and no radio protocol
 sender. Dial remains the radio fire controller and does not own setup editing.
@@ -8,9 +8,9 @@ Terminal owns setup editing. DinMeter remains the receiver-side safety
 authority and LED execution/indication surface.
 
 Hardware bring-up is not complete yet. The current firmware has tested setup,
-USB, switch, filter, M5Chain dependency, and display-format boundaries, but real
-fader ADC wiring, real chain encoder sampling, and real external OLED IO still
-need bench proof.
+USB, switch, filter, M5Chain dependency, and display-format boundaries. The next
+Terminal bench step is Pb.HUB fader ADC/RGB smoke, then the full chain/OLED/fader
+build.
 
 M1 control model:
 
@@ -25,11 +25,14 @@ M1 control model:
   whether the lane changes state during fire as `ODP` or `---`.
 - There is no menu navigation and no hidden button-driven UI movement.
 - A stable upload switch press asks app logic to send the staged values over the
-  USB setup link.
+  selected setup link. The default `sticks3-terminal` build uses USB CDC for
+  bench/debug. The first XIAO route is
+  `sticks3-terminal-prop-link-g43-g44-600`, using `Serial2` RX G44 / TX G43 through
+  the private A140 Grove2USB-C cable.
 - If the prop accepts the upload, the M5StickS3 status screen shows `NAHRANO`
   on a green background.
-- If the upload fails or the USB setup link does not answer before timeout, the
-  M5StickS3 status screen shows `PROBLEM` on a red background and the staged
+- If the upload fails or the selected setup link does not answer before timeout,
+  the M5StickS3 status screen shows `PROBLEM` on a red background and the staged
   values revert to the last saved values. `PROBLEM` stays visible across later
   physical control movement until the next upload changes status.
 - The last physical U206 switch drives SIM_FIRE preview over the setup link.
@@ -43,30 +46,35 @@ Current bench wiring snapshot, 2026-06-14:
 - M5StickS3 Grove cable goes to the primary Pa.HUB v2.1.
 - Primary Pa.HUB port 0 is the serial chain branch:
   `Encoder LED5 -> Encoder LED4 -> Encoder LED3 -> Encoder LED2 -> Encoder LED1 -> U206 upload switch -> U206 sim-fire switch`.
-- Pot1..Pot5 do not use Pa.HUB as their signal path. A bare StickS3 direct
-  10-signal fader+RGB map is rejected because StickS3 `G1..G4` share internal
-  PMIC/speaker/IMU functions and Grove `G9/G10` remains reserved for the rest of
-  Terminal.
-- First fader slice is slider-only: use 5 ADC channels for Pot1..Pot5 and leave
-  the Unit Fader SK6812 LEDs disabled/deferred.
-- Bare StickS3 still does not expose five clean direct ADC channels while the
-  rest of Terminal remains attached. Safe direct ADC budget is four candidates
-  (`G5/G6/G7/G8`); the fifth slider needs an external ADC/mux or one explicitly
-  verified shared pin from `G1..G4`.
+- Pot1..Pot5 do not use Pa.HUB as their final signal path. Pa.HUB only selects
+  the downstream I2C branch.
+- Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch.
+- Pb.HUB #1 at address `0x61` reads the five Unit Fader ADC channels and drives
+  their SK6812 RGB reflection.
+- Pb.HUB port 0 -> Pot5.
+- Pb.HUB port 1 -> Pot4.
+- Pb.HUB port 2 -> Pot3.
+- Pb.HUB port 3 -> Pot2.
+- Pb.HUB port 4 -> Pot1.
+- Pb.HUB port 5 -> Grove2USB-C/C module branch toward XIAO. This port is
+  reserved for that link and must not be used as a sixth fader port.
+- PB.HUB port 5 is not a transparent Serial2 UART route. The current
+  `sticks3-terminal-prop-link-g43-g44-600` smoke uses direct StickS3 RX G44 / TX
+  G43 wiring outside PB.HUB; a PB.HUB-hosted XIAO branch needs a separate
+  low-speed GPIO/I2C transport design.
+- Runtime fader mapping intentionally reverses this physical Pb.HUB order:
+  logical LED1..LED5 use Pot1..Pot5.
+- A bare StickS3 direct 10-signal fader+RGB map remains rejected because
+  StickS3 `G1..G4` share internal PMIC/speaker/IMU functions and Grove `G9/G10`
+  remains reserved for the Pa.HUB/Pb.HUB topology.
 - G4 ADC smoke on 2026-06-14 built, uploaded, and ran on the connected StickS3.
   Serial output tracked fader movement from raw 0 to 4095, so G4 is accepted as
   the verified shared-pin candidate for the fifth slider ADC. This consumes the
   StickS3 IMU interrupt pin; do not use IMU interrupt or low-power IMU wake
   features in the Terminal build. The observed direction is inverted: physical
   bottom is raw 4095 and physical top is raw 0.
-- Primary Pa.HUB port 1 is reserved for now; do not connect Pot5 there for
-  signal reads.
-- Primary Pa.HUB port 2 is reserved for now; do not connect Pot4 there for
-  signal reads.
 - Primary Pa.HUB port 3 is the external 2.4 inch display branch.
-- Primary Pa.HUB port 5 goes to the secondary Pa.HUB v2.1.
-- Secondary Pa.HUB ports 2, 3, and 4 are reserved for now; do not connect Pot3,
-  Pot2, or Pot1 there for signal reads.
+- Primary Pa.HUB port 5 goes to the Pb.HUB v1.1 fader branch.
 - Logical lane names remain LED1..LED5 for setup lines, effects, display rows,
   and logs. The physical encoder branch order is
   `DATA IN -> LED5 -> LED4 -> LED3 -> LED2 -> LED1 -> upload switch -> sim-fire switch`.
@@ -75,10 +83,8 @@ Current bench wiring snapshot, 2026-06-14:
   setup-link preview edge when pressed.
 - Pot1..Pot5 are confirmed M5Stack Unit Fader U123 modules: B10K analog slider
   plus 14x SK6812 programmable RGB LEDs. Pa.HUB port ownership is recorded only
-  for the remaining non-fader paths; Pa.HUB still must not be treated as a fader
-  signal router. First hardware slice reads only the analog slider outputs and
-  leaves fader LEDs disabled/deferred; bare StickS3 still needs an external
-  ADC/mux or one explicitly verified shared pin to reach five clean slider ADCs.
+  for branch selection; Pa.HUB still must not be treated as a fader signal
+  router. Pb.HUB owns the fader ADC reads and fader RGB reflection.
 
 Build:
 
@@ -88,6 +94,7 @@ pio run -d integrations/m5-prop-lora/firmware/sticks3-terminal -e sticks3-termin
 pio run -d integrations/m5-prop-lora/firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
 pio run -d integrations/m5-prop-lora/firmware/sticks3-terminal -e sticks3-terminal-grove-i2c-scan-smoke
 pio run -d integrations/m5-prop-lora/firmware/sticks3-terminal -e sticks3-terminal-oled-draw-smoke
+pio run -d integrations/m5-prop-lora/firmware/sticks3-terminal -e sticks3-terminal-pbhub-smoke
 ```
 
 The PlatformIO board is intentionally `esp32-s3-devkitc-1` with `qio_opi` and
@@ -116,8 +123,9 @@ channel selects returned `err=0`, and both 400 kHz and 100 kHz scans reported
 `downstream=0` / `DOWNSTREAM_EMPTY` on every channel. That proves the primary
 Pa.HUB and StickS3 Grove pins, but not the OLED branch. A working external OLED
 branch should add a non-0x70 downstream address, typically `0x3C` or `0x3D`.
-Do not cascade a second Pa.HUB at the same `0x70` address behind primary port 5;
-give the secondary mux a different PCA9548 address or remove the cascade.
+Do not place a second default-address Pb.HUB on the same I2C branch. If a second
+Pb.HUB is ever added, give it a distinct address or isolate it on another Pa.HUB
+channel.
 After the external display SDA/SCL wiring was corrected on 2026-06-14, the same
 scan repeatedly found `0x3C DOWNSTREAM` on primary Pa.HUB port 3 at both
 400 kHz and 100 kHz. The `sticks3-terminal-oled-draw-smoke` environment is the
@@ -130,6 +138,10 @@ smoke frame was not visible on the physical OLED. The current draw smoke first
 sends `OLED_DRAW_SMOKE ALL_ON_BOOT`; this should briefly light the whole panel
 only at boot, then keep a stable text frame. The bench panel was observed
 rotated, so the smoke firmware uses `0xA1/0xC8` segment/COM scan orientation.
+The `sticks3-terminal-pbhub-smoke` environment selects primary Pa.HUB port 5
+and probes Pb.HUB address `0x61`. Acceptance is `PBHUB_SMOKE ONLINE 1`, five
+independent `PBHUB_ADC lane=... raw=...` lines while the sliders move, and
+visible `PBHUB_RGB` reflection on all five Unit Faders.
 
 USB setup link contract:
 
@@ -141,15 +153,29 @@ USB setup link contract:
 - Simulate-fire line: `SIM_FIRE`.
 - Accepted reply: `SETUP_OK <request_id>`.
 - Rejected reply: `SETUP_ERR <request_id>`.
+- Transport builds:
+  - `sticks3-terminal`: USB CDC setup link and serial diagnostics.
+  - `sticks3-terminal-prop-link-g43-g44-600`: production candidate to XIAO over
+    A140; Terminal RX G44 reads XIAO D4/GPIO6 and Terminal TX G43 drives XIAO
+    D5/GPIO7.
+  - `sticks3-terminal-prop-link-smoke-g43-g44`: link-only smoke; emits
+    `HELLOT <seq>` and expects `HELLOT_OK <seq>` from the XIAO smoke build.
+- The private A140 prop link is not USB protocol. Do not connect that cable to a
+  PC, phone, or normal USB device.
+- For the current UART smoke, the A140 must be wired to the direct StickS3
+  RX/TX path. If the A140 is plugged into PB.HUB port 5, `Serial2` on G43/G44
+  will not reach XIAO.
 - Generic `OK`/`ERR` serial diagnostics are ignored while waiting for upload
   confirmation.
-- Before each new upload, stale setup replies already waiting in the USB RX
-  buffer are drained.
-- Upload waits `UPLOAD_ACK_TIMEOUT_MS = 1500` ms and reads reply lines up to
-  `USB_LINE_MAX = 160` bytes. Timeout is checked before ACK parsing in each
-  loop, so a late ACK after the deadline rolls the draft back.
+- Before each new upload, stale setup replies already waiting in the selected
+  setup-link RX buffer are drained.
+- The confirmed private XIAO link uses `sticks3-terminal-prop-link-g43-g44-600`.
+- Upload waits `UPLOAD_ACK_TIMEOUT_MS = 8000` ms and reads reply lines up to
+  `USB_LINE_MAX = 160` bytes. ACK bytes are parsed before the timeout check in
+  each loop, so a slow 600-baud reply already in the UART buffer can still
+  commit before the deadline. A late ACK after the deadline rolls the draft back.
 - `SETUP <request_id>` is atomic on DinMeter for malformed lines,
-  out-of-range values, and persistence failure. A wrong request id, USB line
+  out-of-range values, and persistence failure. A wrong request id, setup line
   overflow, or timeout rolls the Terminal draft back; if DinMeter already
   processed and persisted the line before the reply was lost, the receiver-side
   setup may already be committed.
@@ -174,7 +200,7 @@ Terminal hardware topology contract:
 - 1 M5StickS3 controller.
 - 5 Unit Faders and 5 Chain Encoders, one of each per LED lane.
 - 2 mechanical switches: upload and sim-fire preview.
-- 2 PaHUB modules and 2 Grove2USB-C adapters.
+- 1 PaHUB module, 1 Pb.HUB fader backplane, and 2 Grove2USB-C adapters.
 - 1 external 128x64 OLED.
 - Terminal has no radio module. Dial remains the radio fire controller.
 - PaHUB must not be treated as an analog fader router or as a SK6812 fader LED
@@ -183,13 +209,14 @@ Terminal hardware topology contract:
   proves the cable topology, controller, address, and pins.
 
 M5Stack Unit Fader U123 is an analog input path for the slider plus a separate
-SK6812 RGB data path for 14 onboard LEDs. The ADC driver only reads brightness;
-Unit Fader RGB routing is separate bring-up work and must not be routed through
-Pa.HUB as if it were I2C.
+SK6812 RGB data path for 14 onboard LEDs. The Pb.HUB driver reads brightness and
+the `ConfiguredFaderRgbSink` mirrors staged color, brightness/on-off, and the
+per-lane fire-change marker. This RGB reflection is output only; it must not
+become a setup source of truth.
 Rejected direct fader+RGB map: ADC `G1/G2/G4/G7/G8` plus SK6812 data
 `G3/G5/G6/G43/G44`. Do not use it for production; `G1..G4` share internal
 PMIC/speaker/IMU functions on StickS3, and `G9/G10` stays reserved for the
-remaining Grove/I2C topology. Use an external ADC/mux or explicitly verified shared pin strategy before real fader upload.
+remaining Grove/I2C topology. Use the Pb.HUB fader branch before real fader upload.
 The 2026-06-14 `sticks3-terminal-g4-adc-smoke` run is the shared-pin acceptance
 for G4: it observed raw 0 and raw 4095 endpoints plus intermediate movement
 while the fader was moved.
@@ -204,15 +231,17 @@ small jitter. Bring-up can tune `-DTERMINAL_FADER_RAW_MIN=<raw>`,
 `-DTERMINAL_FADER_DEADBAND_PERCENT=<percent>`. Inverted wiring is supported by
 setting rawMin greater than rawMax; for the verified G4 fader orientation,
 physical bottom is raw 4095 and maps to 0 percent brightness, while physical top
-is raw 0 and maps to 100 percent brightness.
+is raw 0 and maps to 100 percent brightness. Brightness is quantized to 2%
+steps, and the endpoint snap still forces exact `0`/`100` so the physical stop shows `VYP` instead of a noisy low-percent value.
 The real fader driver can prime current raw positions at boot. After rollback,
 it locks each fader until the physical slider reaches the restored brightness,
 so stale physical positions do not immediately overwrite the saved draft.
-The fader ADC reader is disabled by default. Enable it only after all five final
-ADC GPIOs are known by setting `-DTERMINAL_FADER_ADC_ENABLED=1` plus
-`-DTERMINAL_FADER_LANE1_ADC_PIN=<pin>` through
-`-DTERMINAL_FADER_LANE5_ADC_PIN=<pin>`. The raw min/max/deadband flags calibrate
-readings; they do not select pins and do not enable sampling.
+The direct fader ADC reader is a fallback and must not be enabled together with
+Pb.HUB. The production Terminal build uses `-DTERMINAL_FADER_PBHUB_ENABLED=1`
+and `-DTERMINAL_FADER_PBHUB_RGB_ENABLED=1`; direct ADC bring-up still exists
+behind `-DTERMINAL_FADER_ADC_ENABLED=1` plus lane pin flags. The raw
+min/max/deadband flags calibrate readings; they do not select pins and do not
+enable sampling.
 The encoder filter maps raw absolute chain-encoder positions to color-step deltas. The
 first valid position primes without a color jump, and bring-up can tune
 `-DTERMINAL_ENCODER_DEGREES_PER_DETENT=<degrees>`.
@@ -232,10 +261,10 @@ Enabling the Chain UART only selects the reader. It does not prove lane order,
 detent direction, encoder-button fire-change semantics, or press debounce; those
 remain hardware bring-up checks.
 The current firmware has the setup state model, USB link, switch pipeline,
-switch driver, M5Chain dependency, built-in status panel, and an optional
-M5UnitGLASS2 external OLED sink; it does not yet include real fader sampling,
-PaHUB driver logic, Grove2USB-C bridge proof, or a validated LaskaKit 2.42 inch
-OLED sink.
+switch driver, M5Chain dependency, Pb.HUB fader ADC/RGB reflection, built-in
+status panel, and the validated LaskaKit SSD1309 2.42 inch OLED sink. The
+Grove2USB-C/XIAO bridge remains a reserved topology path, not a proven setup
+transport.
 The app logic layer is pure C++: it decides upload, simulate-fire, ACK accept,
 ERR/timeout rollback, and redraw/send-line actions. `main.cpp` keeps the
 hardware side of those actions: it drains stale USB input before starting an
@@ -254,7 +283,7 @@ Hardware bring-up checklist:
 | --- | --- | --- |
 | fader filter | Host-style test covers raw-to-percent mapping, missing samples, deadband, per-lane filtering, reset, priming, rollback pickup lock, and invalid lanes. | Tune raw min/max/deadband on the actual fader rail. |
 | encoder filter | Host-style test covers first-position priming, detent scaling, missing samples, per-lane tracking, reset, invalid lanes, and button/effect passthrough. | Tune detent scale and verify lane order/direction on the real chain. |
-| control surface mapper | Host-style test covers sliders, encoder deltas, encoder press edges, and effectPressed edges. | Feed real fader and encoder-button fire-change samples into the mapper. |
+| control surface mapper | Host-style test covers sliders, encoder deltas, encoder press edges, effectPressed edges, and queued effectToggleEvent one-shots. | Feed real fader and encoder-button fire-change samples into the mapper. |
 | switch pipeline | Host-style test covers debounce, boot-held priming, upload priority, and in-flight suppression together. | Confirm the complete physical switch path on the backplane. |
 | switch debounce | Host-style test covers press bounce, release bounce, independent channels, and boot priming. | Tune debounce timing against the real mechanical switches. |
 | switch dispatch | Host-style test covers upload priority, in-flight suppression, and release/repress after held software preview input. | Confirm simultaneous physical switch behavior on hardware. |
@@ -287,11 +316,11 @@ not confirmed defaults. OLED bring-up may select hardware; it must not change
 the lane-only display contract.
 
 ```text
-1 CERVENA 100% ---
-2 ORANZ   80%  ODP
-3 TYRKYS  45%  ---
-4 BILA    VYP  ODP
-5 MODRA   75%  ---
+1 ZELENA  100% ---
+2 CERVENA 100% ---
+3 CERVENA 100% ---
+4 MODRA   100% ODP
+5 CERVENA 100% ODP
 ```
 
 Switch edge bring-up:

@@ -71,10 +71,11 @@ compiler path if needed.
 
 GitHub Actions currently runs deterministic M5 gates: Python source tests,
 `tools/build.ps1 -ReleaseGatesOnly`, UIFlow dry-smoke bundle/verify, host C++
-logic tests, and Terminal PlatformIO firmware builds (`sticks3-terminal`,
-`sticks3-terminal-chain-uart-smoke`, `sticks3-terminal-oled-i2c-scan-smoke`, and
-`sticks3-terminal-g4-adc-smoke`).
-It still does not compile Dial ESP-IDF or non-Terminal PlatformIO firmware images. A production release still requires
+logic tests, Terminal PlatformIO firmware builds (`sticks3-terminal`,
+`sticks3-terminal-prop-link-g43-g44-600`, `sticks3-terminal-chain-uart-smoke`,
+`sticks3-terminal-oled-i2c-scan-smoke`, and `sticks3-terminal-g4-adc-smoke`),
+plus DinMeter and C6 modem PlatformIO builds.
+It still does not compile Dial ESP-IDF. A production release still requires
 `./tools/build.ps1 -Release` on a machine with PlatformIO and ESP-IDF installed,
 plus hardware key provisioning and on-device acceptance.
 
@@ -90,10 +91,13 @@ python tools/uiflow_dial_offline.py bundle --dry-smoke --out build/m5_uiflow_dia
 python tools/uiflow_dial_offline.py verify --bundle build/m5_uiflow_dial_offline
 ./tools/run_host_tests.ps1
 pio run -d firmware/sticks3-terminal -e sticks3-terminal
+pio run -d firmware/sticks3-terminal -e sticks3-terminal-prop-link-g43-g44-600
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-grove-i2c-scan-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-g4-adc-smoke
+pio run -d firmware/din-rx -e esp32-s3-devkitc-1
+pio run -d firmware/c6l-modem -e m5stack-c6l
 ```
 
 ## Build + flash

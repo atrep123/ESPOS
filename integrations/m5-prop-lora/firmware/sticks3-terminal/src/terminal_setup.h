@@ -14,6 +14,9 @@ namespace terminal_setup {
 constexpr std::size_t LANE_COUNT = 5;
 constexpr std::size_t OLED_LINE_MAX_CHARS = 21;
 constexpr int ENCODER_DEGREES_PER_PALETTE_STEP = 6;
+constexpr int BRIGHTNESS_STEP_PERCENT = 2;
+constexpr std::size_t BARREL_LANE_INDEX = 4;
+constexpr std::uint16_t BARREL_COLOR_CODE = 360;
 
 struct LedLane {
     constexpr LedLane() = default;
@@ -50,10 +53,35 @@ enum class Status {
     SimFire,
 };
 
-inline std::uint8_t clampPercent(int value) {
+inline const char* statusText(Status status) {
+    switch (status) {
+        case Status::Ready:
+            return "PRIPRAVEN";
+        case Status::Dirty:
+            return "ZMENY";
+        case Status::Uploading:
+            return "NAHRAVAM";
+        case Status::Uploaded:
+            return "NAHRANO";
+        case Status::Problem:
+            return "PROBLEM";
+        case Status::SimFire:
+            return "SIM FIRE";
+    }
+    return "PRIPRAVEN";
+}
+
+inline int quantizePercent(int value, int step = BRIGHTNESS_STEP_PERCENT) {
     if (value < 0) return 0;
     if (value > 100) return 100;
-    return static_cast<std::uint8_t>(value);
+    if (step <= 1) return value;
+    const int rounded = ((value + step / 2) / step) * step;
+    if (rounded > 100) return 100;
+    return rounded;
+}
+
+inline std::uint8_t clampPercent(int value) {
+    return static_cast<std::uint8_t>(quantizePercent(value));
 }
 
 inline std::uint16_t wrapHue(int value) {
@@ -93,11 +121,11 @@ inline std::size_t wrapPaletteIndex(int value) {
 
 inline std::array<LedLane, LANE_COUNT> defaultLanes() {
     return {{
-        LedLane{360, 100, true, false},
-        LedLane{365, 100, true, false},
         LedLane{363, 100, true, false},
-        LedLane{terminal_color_definitions::WHITE_WIRE_CODE, 100, true, false},
-        LedLane{365, 100, true, false},
+        LedLane{360, 100, true, false},
+        LedLane{360, 100, true, false},
+        LedLane{365, 100, true, true},
+        LedLane{BARREL_COLOR_CODE, 100, true, true},
     }};
 }
 
@@ -120,6 +148,7 @@ class TerminalSetupState {
 
     void rotateHue(std::size_t lane, int deltaDegrees) {
         if (!editableLane(lane)) return;
+        if (isBarrelLane(lane)) return;
         LedLane& target = draft_[lane];
         const int steps = paletteStepsFromEncoderDelta(deltaDegrees);
         if (steps == 0) return;
@@ -142,6 +171,7 @@ class TerminalSetupState {
 
     void setEffectLed(std::size_t lane, bool enabled) {
         if (!editableLane(lane)) return;
+        if (isBarrelLane(lane) && !enabled) return;
         if (draft_[lane].effect == enabled) return;
         draft_[lane].effect = enabled;
         refreshDraftStatus();
@@ -174,21 +204,7 @@ class TerminalSetupState {
     }
 
     const char* statusText() const {
-        switch (status_) {
-            case Status::Ready:
-                return "PRIPRAVEN";
-            case Status::Dirty:
-                return "ZMENY";
-            case Status::Uploading:
-                return "NAHRAVAM";
-            case Status::Uploaded:
-                return "NAHRANO";
-            case Status::Problem:
-                return "PROBLEM";
-            case Status::SimFire:
-                return "SIM FIRE";
-        }
-        return "PRIPRAVEN";
+        return terminal_setup::statusText(status_);
     }
 
     std::string largeDisplayLine(std::size_t lane) const {
@@ -239,7 +255,7 @@ class TerminalSetupState {
         const std::array<LedLane, LANE_COUNT>& source =
             status_ == Status::Uploading ? uploadDraft_ : draft_;
         for (std::size_t i = 0; i < LANE_COUNT; ++i) {
-            const LedLane& item = source[i];
+            const LedLane item = normalizedLane(i, source[i]);
             command.lanes[i].hue = terminal_color_definitions::canonicalWireCode(item.hue);
             command.lanes[i].brightness = item.brightness;
             command.lanes[i].on = item.on;
@@ -259,6 +275,18 @@ class TerminalSetupState {
 
     static std::size_t safeLane(std::size_t lane) {
         return lane < LANE_COUNT ? lane : LANE_COUNT - 1;
+    }
+
+    static bool isBarrelLane(std::size_t lane) {
+        return lane == BARREL_LANE_INDEX;
+    }
+
+    static LedLane normalizedLane(std::size_t lane, LedLane item) {
+        if (isBarrelLane(lane)) {
+            item.hue = BARREL_COLOR_CODE;
+            item.effect = true;
+        }
+        return item;
     }
 
     void refreshDraftStatus() {

@@ -14,6 +14,7 @@ struct LaneInput {
     int encoderDelta = 0;
     bool encoderPressed = false;
     bool effectPressed = false;
+    bool effectToggleEvent = false;
 };
 
 struct ControlSnapshot {
@@ -45,7 +46,7 @@ class ControlSurface {
             }
             const bool encoderButtonEdge = input.encoderPressed && !previousPressed_[lane];
             const bool effectButtonEdge = input.effectPressed && !previousEffectPressed_[lane];
-            if (encoderButtonEdge || effectButtonEdge) {
+            if (encoderButtonEdge || effectButtonEdge || input.effectToggleEvent) {
                 setup.setEffectLed(lane, !setup.draftLane(lane).effect);
             }
             previousPressed_[lane] = input.encoderPressed;

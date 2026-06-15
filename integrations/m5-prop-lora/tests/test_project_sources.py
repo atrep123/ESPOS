@@ -1138,8 +1138,11 @@ class ProjectSourceTests(unittest.TestCase):
                 "./tools/run_host_tests.ps1",
                 "M5 Terminal firmware build",
                 "pio run -d firmware/sticks3-terminal -e sticks3-terminal",
+                "pio run -d firmware/sticks3-terminal -e sticks3-terminal-prop-link-g43-g44-600",
                 "pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke",
                 "pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke",
+                "pio run -d firmware/din-rx -e esp32-s3-devkitc-1",
+                "pio run -d firmware/c6l-modem -e m5stack-c6l",
             ],
             ".github/workflows/ci.yml",
         )
@@ -1150,6 +1153,22 @@ class ProjectSourceTests(unittest.TestCase):
                 "idf.py -C firmware/dial-tx",
             ],
             ".github/workflows/ci.yml",
+        )
+
+    def test_xiao_protocol_header_matches_vendored_main_copy(self):
+        xiao_root = Path(
+            os.environ.get(
+                "XIAO_PROP_ELECTRONICS_REPO",
+                str(ROOT.parents[2] / "xiao-prop-electronics-private"),
+            )
+        )
+        xiao_header = xiao_root / "include" / "prop_xiao_link.h"
+        if not xiao_header.exists():
+            self.skipTest(f"XIAO repo not present at {xiao_root}")
+
+        self.assertEqual(
+            (ROOT / "shared/protocol/prop_xiao_link.h").read_bytes(),
+            xiao_header.read_bytes(),
         )
 
     def test_build_docs_explain_host_safety_test_compiler_prereq(self):
@@ -1173,7 +1192,7 @@ class ProjectSourceTests(unittest.TestCase):
                 "Terminal PlatformIO firmware builds",
                 "sticks3-terminal-chain-uart-smoke",
                 "sticks3-terminal-oled-i2c-scan-smoke",
-                "does not compile Dial ESP-IDF or non-Terminal PlatformIO firmware images",
+                "It still does not compile Dial ESP-IDF",
                 "./tools/build.ps1 -Release",
                 "hardware key provisioning",
             ],

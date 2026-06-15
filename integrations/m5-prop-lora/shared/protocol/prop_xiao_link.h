@@ -10,7 +10,7 @@
 
 namespace prop_xiao_link {
 
-constexpr std::size_t MAX_LINE_LENGTH = 48;
+constexpr std::size_t MAX_LINE_LENGTH = 160;
 constexpr std::uint8_t PROTOCOL_VERSION = 1;
 constexpr std::uint8_t STATUS_LED_COUNT = 4;
 constexpr std::uint8_t BARREL_WS2812_COUNT = 18;
