@@ -50,7 +50,9 @@ function Invoke-PlatformIOUpload {
     }
 
     $oldCoreDir = $env:PLATFORMIO_CORE_DIR
+    $oldPythonIoEncoding = $env:PYTHONIOENCODING
     $env:PLATFORMIO_CORE_DIR = Join-Path $PioCoreRoot $Target
+    $env:PYTHONIOENCODING = "utf-8"
     try {
         $args = @("run", "--project-dir", $ProjectPath, "-e", $Environment, "--target", "upload", "--upload-port", $Port)
         if ($DryRun) {
@@ -66,6 +68,12 @@ function Invoke-PlatformIOUpload {
         }
         else {
             $env:PLATFORMIO_CORE_DIR = $oldCoreDir
+        }
+        if ($null -eq $oldPythonIoEncoding) {
+            Remove-Item Env:\PYTHONIOENCODING -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:PYTHONIOENCODING = $oldPythonIoEncoding
         }
     }
 }

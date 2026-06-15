@@ -2407,6 +2407,8 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
     assert '"sticks3-terminal"' in flash
     assert '-Environment "sticks3-terminal-prop-link-g43-g44-600"' in flash
     assert '-Environment "chain-dualkey-c147"' in flash
+    assert "PYTHONIOENCODING" in flash
+    assert "utf-8" in flash
     assert "[switch]$DryRun" in flash
     assert "DRY RUN:" in flash
     assert "DRY RUN: idf.py -p $Port flash" in flash
