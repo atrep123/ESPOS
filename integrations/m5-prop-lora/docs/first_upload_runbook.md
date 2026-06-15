@@ -20,14 +20,19 @@ runtime keys, safe ARM/FIRE behavior, STOP, and Terminal setup rollback.
 
 ## Current PC Preflight
 
-Checked on 2026-06-14 from `C:\Users\atrep\Desktop\ESPOS`:
+Checked on 2026-06-15 from `C:\Users\atrep\Desktop\ESPOS`:
 
 - `pio` is available.
 - `python -m esptool version` works.
 - `python -m mpremote --help` works.
-- `idf.py` is not on PATH in the current shell. Load ESP-IDF v5.1.3 before Dial
-  C++ build/flash.
-- `pio device list` currently shows only `COM1`; no M5 boards are attached.
+- ESP-IDF v5.1.3 is installed at
+  `C:\Users\atrep\esp\esp-idf-v5.1.3\export.ps1`; load it before Dial C++
+  build/flash.
+- After ESP-IDF export, `python` changes to the IDF venv. That venv currently
+  does not have `mpremote`, so run UIFlow/mpremote upload commands from the
+  normal Python shell or install `mpremote` into the IDF venv intentionally.
+- Current enumeration on 2026-06-15 showed `COM10`, `COM23`, and `COM29` plus
+  legacy `COM1`. Re-enumerate before flashing and do not assume these roles.
 
 Generate the current non-secret rehearsal report before every first-upload
 attempt:
@@ -91,8 +96,7 @@ Remove-Item Env:\PLATFORMIO_CORE_DIR
 Load ESP-IDF v5.1.3 before Dial:
 
 ```powershell
-# Example only; use the actual ESP-IDF install path on this PC.
-& C:\Espressif\frameworks\esp-idf-v5.1.3\export.ps1
+& C:\Users\atrep\esp\esp-idf-v5.1.3\export.ps1
 idf.py -C firmware/dial-tx build
 ```
 
