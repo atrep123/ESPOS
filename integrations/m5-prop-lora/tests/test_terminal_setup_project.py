@@ -2365,6 +2365,7 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "<TERMINAL_COM>",
         "<DIN_COM>",
         "<XIAO_COM>",
+        "<DUALKEY_COM>",
         "<MODEM_DIAL_COM>",
         "<MODEM_PROP_COM>",
         "xiao-prop-electronics-private",
@@ -2377,6 +2378,7 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "BARREL RED/OFF",
         "Runtime HMAC Key Preflight",
         "m5stack-c6l",
+        "chain-dualkey-c147",
         "PROP_ALLOW_DRY_SMOKE_RUNTIME_KEY=1",
         "Dial NVS partition is `0x9000` size `0x6000`",
         "derive the actual `data,nvs` offset/size",
@@ -2386,6 +2388,7 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "tools/flash.ps1 -Target c6l-modem",
         "tools/flash.ps1 -Target din-rx",
         "tools/flash.ps1 -Target sticks3-terminal",
+        "tools/flash.ps1 -Target dualkey-tx",
         "tools/flash.ps1 -Target dial-tx",
         "SETUP_OK <request_id>",
         "SETUP_ERR <request_id>",
@@ -2399,9 +2402,10 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
     assert "docs/first_upload_runbook.md" in build
     assert "docs/first_upload_runbook.md" in readme
     assert "docs/first_upload_runbook.md" in checklist
-    assert 'ValidateSet("dial-tx", "din-rx", "c6l-modem", "sticks3-terminal")' in flash
+    assert 'ValidateSet("dial-tx", "din-rx", "c6l-modem", "sticks3-terminal", "dualkey-tx")' in flash
     assert '"sticks3-terminal"' in flash
     assert '-Environment "sticks3-terminal-prop-link-g43-g44-600"' in flash
+    assert '-Environment "chain-dualkey-c147"' in flash
     assert "[switch]$DryRun" in flash
     assert "DRY RUN:" in flash
     assert "DRY RUN: idf.py -p $Port flash" in flash
@@ -2414,6 +2418,7 @@ def test_first_upload_runbook_covers_dial_terminal_and_prop_electronics() -> Non
         "PENDING_HARDWARE",
         "<DIAL_COM>",
         "<TERMINAL_COM>",
+        "<DUALKEY_COM>",
         "<DIN_COM>",
     ]:
         assert needle in preflight, needle

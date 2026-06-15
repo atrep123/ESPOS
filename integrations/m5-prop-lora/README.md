@@ -23,6 +23,7 @@ Bezdrátový ovladač rekvizit na M5Stack: **M5 Dial** (ruční vysílač) dálk
 |---|---|---|---|
 | **din-rx** | M5 DinMeter (ESP32-S3) — UI + 5 LED + vstupy | `firmware/din-rx` | PlatformIO |
 | **dial-tx** | M5 Dial (ESP32-S3) — ruční vysílač | `firmware/dial-tx` | ESP-IDF v5.1.3 |
+| **dualkey-tx** | M5Stack Chain DualKey C147 — broadcast odpalovač | `firmware/dualkey-tx` | PlatformIO |
 | **sticks3-terminal** | M5StickS3 Terminal — USB setup editor, no radio | `firmware/sticks3-terminal` + `shared/terminal` | PlatformIO + host `g++` tests |
 | **c6l-modem** | 2× ESP32-C6 LoRa modem | `firmware/c6l-modem` | PlatformIO |
 | **shared/protocol** | společný rámcový protokol (HMAC-SHA256) | `shared/protocol` | — |

@@ -178,6 +178,7 @@ receiver reboot clears STOP latch as a local reset; lastSeq/epoch replay high-wa
 | c6l-modem B | `firmware/c6l-modem`    | COM8  | `m5stack-c6l`            |
 | din-rx      | `firmware/din-rx`       | COM9  | `esp32-s3-devkitc-1`     |
 | dial-tx     | `firmware/dial-tx`      | COM6  | ESP-IDF (idf.py)         |
+| dualkey-tx  | `firmware/dualkey-tx`   | COM12 | `chain-dualkey-c147`     |
 | Terminal    | `firmware/sticks3-terminal` | COM10 | `sticks3-terminal-prop-link-g43-g44-600` |
 
 Flash with the actual ports detected on this PC; the COM values below are examples
@@ -189,6 +190,7 @@ powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port COM8
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target din-rx -Port COM9
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target sticks3-terminal -Port COM10
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dualkey-tx -Port COM12
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dial-tx -Port COM6
 ```
 

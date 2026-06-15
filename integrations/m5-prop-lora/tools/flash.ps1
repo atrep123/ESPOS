@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("dial-tx", "din-rx", "c6l-modem", "sticks3-terminal")]
+    [ValidateSet("dial-tx", "din-rx", "c6l-modem", "sticks3-terminal", "dualkey-tx")]
     [string]$Target,
 
     [Parameter(Mandatory = $true)]
@@ -82,6 +82,15 @@ switch ($Target) {
         }
 
         Invoke-PlatformIOUpload -ProjectPath $ProjectPath -Environment "sticks3-terminal-prop-link-g43-g44-600" -Port $Port
+    }
+
+    "dualkey-tx" {
+        if (-not (Test-Path (Join-Path $ProjectPath "platformio.ini"))) {
+            Write-Error "$Target has no platformio.ini at $ProjectPath."
+            exit 1
+        }
+
+        Invoke-PlatformIOUpload -ProjectPath $ProjectPath -Environment "chain-dualkey-c147" -Port $Port
     }
 
     "dial-tx" {

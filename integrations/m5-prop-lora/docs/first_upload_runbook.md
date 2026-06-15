@@ -3,6 +3,9 @@
 This is the operator runbook for the first bench uploads of the prop chain:
 
 - **Odpalovac / Dial:** M5 Dial ESP32-S3 fire controller plus its C6 modem.
+- **Odpalovac / DualKey:** M5Stack Chain DualKey C147 broadcast controller plus
+  a C6L modem. Key 1 toggles the default blue prop lane, key 2 triggers the
+  one-shot red barrel effect.
 - **Terminal:** M5StickS3 Terminal USB setup editor.
 - **Prop electronics:** DinMeter/StampS3 receiver, receiver-side C6 modem,
   DinMeter Port B UART to Seeed XIAO RP2040, XIAO buttons/switch, four status
@@ -54,6 +57,7 @@ COM values.
 | DinMeter / prop receiver | `<DIN_COM>` | COM9 | PlatformIO `din-rx` |
 | XIAO prop electronics | `<XIAO_COM>` | COM11 | PlatformIO standalone `seeed_xiao_rp2040_terminal_link_600` |
 | M5StickS3 Terminal | `<TERMINAL_COM>` | COM10 | PlatformIO `sticks3-terminal-prop-link-g43-g44-600` |
+| Chain DualKey odpalovac | `<DUALKEY_COM>` | COM12 | PlatformIO `chain-dualkey-c147` / flash target `dualkey-tx` |
 
 For each ESP32-S3 target, record identity before and after flashing:
 
@@ -78,6 +82,7 @@ pio run -d firmware/sticks3-terminal -e sticks3-terminal-prop-link-g43-g44-600
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
 pio run -d firmware/din-rx -e esp32-s3-devkitc-1
+pio run -d firmware/dualkey-tx -e chain-dualkey-c147
 $env:PLATFORMIO_CORE_DIR = "C:\.pio-m5-prop-lora\c6l-modem"
 pio run -d firmware/c6l-modem -e m5stack-c6l
 Remove-Item Env:\PLATFORMIO_CORE_DIR
@@ -139,6 +144,7 @@ powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port <MODEM_PROP_COM> -DryRun
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target din-rx -Port <DIN_COM> -DryRun
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target sticks3-terminal -Port <TERMINAL_COM> -DryRun
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dualkey-tx -Port <DUALKEY_COM> -DryRun
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dial-tx -Port <DIAL_COM> -DryRun
 ```
 
@@ -159,6 +165,7 @@ powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target c6l-modem -Port <MODEM_PROP_COM>
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target din-rx -Port <DIN_COM>
 powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target sticks3-terminal -Port <TERMINAL_COM>
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dualkey-tx -Port <DUALKEY_COM>
 ```
 
 Dial C++ fire controller after ESP-IDF export:
@@ -221,4 +228,7 @@ python tools/read_com.py <TERMINAL_COM> 15 115200
 - XIAO status LEDs receive `STAT4` in physical order: button 1, ODPAL/status,
   button 2, switch; the 18-pixel barrel also responds as one red
   `BARREL RED/OFF` group during local or radio FIRE.
+- DualKey sends authenticated broadcast `PropAction` frames through its C6L
+  modem: key 1 toggles the blue lane on/off, key 2 triggers exactly one red
+  barrel effect burst per press.
 - Power-cycle DinMeter after accepted setup; accepted Terminal setup persists.

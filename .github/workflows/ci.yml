@@ -93,7 +93,8 @@ jobs:
           pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke
           pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
           pio run -d firmware/din-rx -e esp32-s3-devkitc-1
-          pio run -d firmware/c6l-modem -e m5stack-c6l
+          pio run -d firmware/dualkey-tx -e chain-dualkey-c147
+          PLATFORMIO_CORE_DIR="$RUNNER_TEMP/pio-c6l-modem" pio run -d firmware/c6l-modem -e m5stack-c6l
       - name: Run tests
         env:
           PYTHONIOENCODING: "utf-8"

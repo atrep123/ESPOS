@@ -3,6 +3,7 @@
 Sestava ovládače rekvizit:
 - **din-rx** — M5 **DinMeter** (StampS3 / ESP32-S3), PŘIJÍMAČ: 5× SK6812 RGBW (Adafruit NeoDriver, I2C) + M5 Unit ByteButton (vstupy) + LCD UI. → `firmware/din-rx` (PlatformIO)
 - **dial-tx** — M5 **Dial** (ESP32-S3), VYSÍLAČ. → `firmware/dial-tx` (ESP-IDF v5.1.3)
+- **dualkey-tx** — M5Stack **Chain DualKey C147** broadcast odpalovač. → `firmware/dualkey-tx` (PlatformIO)
 - **c6l-modem** — 2× **C6 LoRa modem** (ESP32-C6), dual-band LoRa 868 + ESP-NOW 2.4 GHz. → `firmware/c6l-modem` (PlatformIO)
 - **shared/protocol** — sdílený rámcový protokol (HMAC-SHA256), společný pro vysílač i přijímač.
 
@@ -97,7 +98,10 @@ pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-grove-i2c-scan-smoke
 pio run -d firmware/sticks3-terminal -e sticks3-terminal-g4-adc-smoke
 pio run -d firmware/din-rx -e esp32-s3-devkitc-1
+pio run -d firmware/dualkey-tx -e chain-dualkey-c147
+$env:PLATFORMIO_CORE_DIR = "C:\.pio-m5-prop-lora\c6l-modem"
 pio run -d firmware/c6l-modem -e m5stack-c6l
+Remove-Item Env:\PLATFORMIO_CORE_DIR
 ```
 
 ## Build + flash
@@ -114,6 +118,15 @@ pio run -d firmware/din-rx -e esp32-s3-devkitc-1                                
 pio run -d firmware/din-rx -e esp32-s3-devkitc-1 -t upload --upload-port COMx     # flash
 ```
 StampS3 = native USB (HWCDC). `COMx` = port DinMeteru.
+
+### dualkey-tx (Chain DualKey odpalovač) — PlatformIO
+```powershell
+pio run -d firmware/dualkey-tx -e chain-dualkey-c147                              # build
+powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Target dualkey-tx -Port COMd
+```
+DualKey uses the same runtime HMAC key contract as Dial/DinMeter. Without
+`prop_key/shared` in NVS it shows a local problem state and sends no valid
+authenticated `PropAction` frames.
 
 ### c6l-modem (oba LoRa modemy) — PlatformIO
 ```bash

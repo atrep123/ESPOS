@@ -1113,8 +1113,8 @@ class ProjectSourceTests(unittest.TestCase):
                 "BARREL RED/OFF",
             ],
         )
-        self.assert_contains_all("tools/build.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal"])
-        self.assert_contains_all("tools/flash.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal"])
+        self.assert_contains_all("tools/build.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal", "dualkey-tx"])
+        self.assert_contains_all("tools/flash.ps1", ["dial-tx", "din-rx", "c6l-modem", "sticks3-terminal", "dualkey-tx"])
         self.assert_contains_all("firmware/dial-tx/main/CMakeLists.txt", ["gui_prop_tx.cpp"])
 
     def test_build_helper_runs_pytest_and_gates_release_toolchains(self):
@@ -1135,6 +1135,8 @@ class ProjectSourceTests(unittest.TestCase):
                 "Runtime HMAC key provider is incomplete",
                 "C++ firmware must use the runtime HMAC key provider",
                 "C++ firmware still uses a source-embedded HMAC key",
+                "DualKey firmware must use the runtime HMAC key provider",
+                "Join-Path $PioCoreRoot $Target",
                 '$Release -or ($env:CI -eq "true")',
             ],
         )
@@ -1163,6 +1165,8 @@ class ProjectSourceTests(unittest.TestCase):
                 "pio run -d firmware/sticks3-terminal -e sticks3-terminal-chain-uart-smoke",
                 "pio run -d firmware/sticks3-terminal -e sticks3-terminal-oled-i2c-scan-smoke",
                 "pio run -d firmware/din-rx -e esp32-s3-devkitc-1",
+                "pio run -d firmware/dualkey-tx -e chain-dualkey-c147",
+                'PLATFORMIO_CORE_DIR="$RUNNER_TEMP/pio-c6l-modem"',
                 "pio run -d firmware/c6l-modem -e m5stack-c6l",
             ],
             ".github/workflows/ci.yml",

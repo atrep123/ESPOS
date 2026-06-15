@@ -220,9 +220,11 @@ function Invoke-ReleaseGates {
     $providerPath = Join-Path $RepoRoot "shared/protocol/prop_runtime_key.h"
     $txPath = Join-Path $RepoRoot "firmware/dial-tx/main/apps/app_prop_tx/app_prop_tx.cpp"
     $rxPath = Join-Path $RepoRoot "firmware/din-rx/src/prop_rx.cpp"
+    $dualKeyPath = Join-Path $RepoRoot "firmware/dualkey-tx/src/main.cpp"
     $provider = Get-Content -Raw -Path $providerPath
     $tx = Get-Content -Raw -Path $txPath
     $rx = Get-Content -Raw -Path $rxPath
+    $dualKey = Get-Content -Raw -Path $dualKeyPath
     if ($provider -notmatch "RuntimeKey" -or
         $provider -notmatch "NVS_NAMESPACE" -or
         $provider -notmatch "NVS_KEY" -or
@@ -259,10 +261,19 @@ function Invoke-ReleaseGates {
         Write-Error "C++ firmware must use the runtime HMAC key provider." -ErrorAction Continue
         $script:HadFailure = $true
     }
+    if ($dualKey -notmatch 'prop_runtime_key\.h' -or
+        $dualKey -notmatch "loadRuntimeKey" -or
+        $dualKey -notmatch "runtimeKey\.data\(\)" -or
+        $dualKey -notmatch "runtimeKey\.size\(\)") {
+        Write-Error "DualKey firmware must use the runtime HMAC key provider." -ErrorAction Continue
+        $script:HadFailure = $true
+    }
     if ($tx -match "SHARED_KEY\s*\[\]" -or
         $rx -match "SHARED_KEY\s*\[\]" -or
+        $dualKey -match "SHARED_KEY\s*\[\]" -or
         $tx -match "sizeof\s*\(\s*SHARED_KEY\s*\)" -or
-        $rx -match "sizeof\s*\(\s*SHARED_KEY\s*\)") {
+        $rx -match "sizeof\s*\(\s*SHARED_KEY\s*\)" -or
+        $dualKey -match "sizeof\s*\(\s*SHARED_KEY\s*\)") {
         Write-Error "C++ firmware still uses a source-embedded HMAC key." -ErrorAction Continue
         $script:HadFailure = $true
     }
@@ -381,6 +392,7 @@ if ($ReleaseGatesOnly) {
 }
 Invoke-PythonTests
 Invoke-PlatformIOBuild -Target "c6l-modem" -ProjectPath (Join-Path $FirmwareRoot "c6l-modem")
+Invoke-PlatformIOBuild -Target "dualkey-tx" -ProjectPath (Join-Path $FirmwareRoot "dualkey-tx")
 Invoke-PlatformIOBuild -Target "sticks3-terminal" -ProjectPath (Join-Path $FirmwareRoot "sticks3-terminal")
 Invoke-PlatformIOBuild -Target "din-rx" -ProjectPath (Join-Path $FirmwareRoot "din-rx")
 Invoke-EspIdfBuild -Target "dial-tx" -ProjectPath (Join-Path $FirmwareRoot "dial-tx")

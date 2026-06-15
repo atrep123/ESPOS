@@ -21,6 +21,7 @@ PLACEHOLDER_PORTS = {
     "c6l-modem-prop": "COM8",
     "din-rx": "COM9",
     "sticks3-terminal": "COM10",
+    "dualkey-tx": "COM12",
 }
 
 RENDER_ARTIFACTS = [
@@ -107,6 +108,7 @@ def dry_run_flash_commands() -> list[tuple[str, bool, str]]:
         ("c6l-modem-prop", "c6l-modem", PLACEHOLDER_PORTS["c6l-modem-prop"]),
         ("din-rx", "din-rx", PLACEHOLDER_PORTS["din-rx"]),
         ("sticks3-terminal", "sticks3-terminal", PLACEHOLDER_PORTS["sticks3-terminal"]),
+        ("dualkey-tx", "dualkey-tx", PLACEHOLDER_PORTS["dualkey-tx"]),
         ("dial-tx", "dial-tx", PLACEHOLDER_PORTS["dial-tx"]),
     ]
     rows: list[tuple[str, bool, str]] = []
@@ -189,7 +191,7 @@ def build_report() -> tuple[str, list[str]]:
         [
             "",
             "## Required Before Real Upload",
-            "- Fill fresh `<DIAL_COM>`, `<TERMINAL_COM>`, `<DIN_COM>`, `<MODEM_DIAL_COM>`, `<MODEM_PROP_COM>` from actual enumeration.",
+            "- Fill fresh `<DIAL_COM>`, `<TERMINAL_COM>`, `<DUALKEY_COM>`, `<DIN_COM>`, `<MODEM_DIAL_COM>`, `<MODEM_PROP_COM>` from actual enumeration.",
             "- Complete `prop_key_receipt.template.json`; `PENDING_HARDWARE` blocks positive PREVIEW/ARM/FIRE acceptance.",
             "- Keep live pyro/actuator outputs disconnected; first smoke is LED-only dummy load.",
             "- Run Gemini visual/code gates only from an ignored local key source; rotate any key pasted into chat before production.",
