@@ -10,20 +10,8 @@ $PioCoreRoot = Join-Path ([System.IO.Path]::GetPathRoot($RepoRoot)) ".pio-m5-pro
 $HadFailure = $false
 $RequireFirmwareToolchains = ($Release -or ($env:CI -eq "true")) -and -not $ReleaseGatesOnly
 
-function Find-Command {
-    param([Parameter(Mandatory = $true)][string]$Name)
-    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
-    if ($cmd) {
-        return $cmd
-    }
-    if ($Name -eq "pio") {
-        $localPio = Join-Path $env:USERPROFILE ".platformio\penv\Scripts\pio.exe"
-        if (Test-Path $localPio) {
-            return Get-Command $localPio
-        }
-    }
-    return $null
-}
+# Shared helpers (Find-Command, Arduino framework integrity gate) live in build_common.ps1
+. (Join-Path $PSScriptRoot "build_common.ps1")
 
 function Invoke-Step {
     param(
@@ -329,6 +317,7 @@ function Invoke-PlatformIOBuild {
         $oldReleaseFlags = Set-ReleaseBuildFlagsEnv
         $env:PLATFORMIO_CORE_DIR = Join-Path $PioCoreRoot $Target
         try {
+            Confirm-ArduinoFrameworkVariants -Target $Target -ProjectPath $ProjectPath -CoreDir $env:PLATFORMIO_CORE_DIR
             & $pio.Source run --project-dir $ProjectPath
         }
         finally {
