@@ -79,18 +79,18 @@ bool effectSelectRisingEdgeTogglesParticipationOnly() {
     TerminalSetupState state;
     ControlSurface surface;
     ControlSnapshot snapshot;
-    snapshot.lanes[3].effectPressed = true;
+    snapshot.lanes[2].effectPressed = true;
     surface.apply(snapshot, state);
-    const bool firstEffect = state.draftLane(3).effect;
-    const bool firstOn = state.draftLane(3).on;
+    const bool firstEffect = state.draftLane(2).effect;
+    const bool firstOn = state.draftLane(2).on;
     surface.apply(snapshot, state);
-    const bool heldEffect = state.draftLane(3).effect;
-    snapshot.lanes[3].effectPressed = false;
+    const bool heldEffect = state.draftLane(2).effect;
+    snapshot.lanes[2].effectPressed = false;
     surface.apply(snapshot, state);
-    snapshot.lanes[3].effectPressed = true;
+    snapshot.lanes[2].effectPressed = true;
     surface.apply(snapshot, state);
-    const bool secondEffect = state.draftLane(3).effect;
-    return firstEffect == false && firstOn == true && heldEffect == false && secondEffect == true;
+    const bool secondEffect = state.draftLane(2).effect;
+    return firstEffect == true && firstOn == true && heldEffect == true && secondEffect == false;
 }
 
 bool barrelLaneEffectCannotBeDisabledByButtonOrEvent() {

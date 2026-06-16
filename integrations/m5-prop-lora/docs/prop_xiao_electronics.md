@@ -56,12 +56,13 @@ DinMeter reboot clears that local lockout for bench operation.
 | Output | XIAO pin | Count | Behavior |
 | --- | --- | ---: | --- |
 | Barrel WS2812B data | D8 / GPIO2 | 18 | one whole red ODPAL effect group |
-| Status SK6812 RGBW data | D10 / GPIO3 | 4 | `STAT4`: button1 green, odpal blue, button2 red, switch red |
+| Status SK6812 RGBW data | D10 / GPIO3 | 4 | `STAT4`: button1 green, remote blue latch, button2 red, switch red |
 
-The second status pixel mirrors ODPAL. The barrel is a separate 18-pixel
-ODPAL effect group: DinMeter computes the same ODPAL envelope and sends
-`BARREL RED <intensity>` or `BARREL OFF`; XIAO applies that to all 18 barrel
-pixels.
+The second status pixel is the remote blue latch. It is toggled by its own
+DualKey command and keeps whatever state it had when the barrel effect starts.
+The barrel is a separate 18-pixel ODPAL effect group: DinMeter computes the
+ODPAL envelope and sends `BARREL RED <intensity>` or `BARREL OFF`; XIAO applies
+that to all 18 barrel pixels.
 
 ## Power and signal integrity
 

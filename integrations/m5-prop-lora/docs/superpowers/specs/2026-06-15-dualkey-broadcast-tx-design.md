@@ -13,7 +13,7 @@ The controller is not a replacement for the M5 Dial fire UI. It is a two-action 
 
 Hardware references:
 
-- Chain DualKey C147: ESP32-S3FN8, two keys on G0/G17, two WS2812B LEDs on G21, LED power enable on G40, two UART HY2.0 ports.
+- Chain DualKey C147: ESP32-S3FN8, two keys on G0/G17, two WS2812B LEDs on G21, LED power enable on G40, two UART HY2.0 ports. The selected C6L link uses HY2.0-4P_1 with the M5 Chain Bus example mapping: RX = G47 and TX = G48.
 - Unit C6L: ESP32-C6 + SX1262 LoRa, 64x48 SSD1306 OLED, WS2812C RGB LED, buzzer, Grove UART on G5/G4.
 
 ## Confirmed Behavior
@@ -144,6 +144,16 @@ Receiver ACKs may still be emitted with random jitter later for diagnostics, but
 - STOP behavior for the existing Dial path is unchanged.
 - This controller does not replace the Dial's safety-oriented firing path unless explicitly approved later.
 
+## Bench Provisioning
+
+The DualKey project keeps release and bench paths separate:
+
+- `chain-dualkey-c147` is the release build and does not allow the known dry-smoke runtime key.
+- `chain-dualkey-c147-key-provision-dry-smoke` writes the ignored local bench key from `build/prop_key_provisioning_dry_smoke/prop_key_bytes.h` into NVS and verifies readback.
+- `chain-dualkey-c147-dry-smoke` is the bench app used for first hardware tests with the dry-smoke key allowed.
+
+Do not flash the release env after provisioning the dry-smoke key unless a real runtime key has been provisioned first; the release build will reject the dry-smoke key by design.
+
 ## Test Plan
 
 Host tests before hardware upload:
@@ -182,4 +192,3 @@ These are intentionally left for the implementation plan:
 - UART port selection on C147: HY2.0 port 1 or port 2
 - local C147 LED feedback colors
 - whether C6L OLED action labels are driven from host UART annotations or inferred from frame decode
-

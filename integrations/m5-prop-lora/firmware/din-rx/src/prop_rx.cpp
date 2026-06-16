@@ -43,6 +43,18 @@
 #define DIAG_DISPLAY 0
 #endif
 
+#ifndef DIN_RX_KEY_PROVISION
+#define DIN_RX_KEY_PROVISION 0
+#endif
+
+#ifndef DIN_RX_PROP_TRACE
+#define DIN_RX_PROP_TRACE 0
+#endif
+
+#if DIN_RX_KEY_PROVISION
+#include "prop_key_bytes.h"
+#endif
+
 #if DEBUG_HUD
 #include <esp_system.h>
 #include <esp_timer.h>
@@ -72,7 +84,7 @@ constexpr const char*   ODPAL_CFG_KEY     = "odpl1";
 constexpr std::uint8_t TERMINAL_ODPAL_LANE = 3;
 constexpr std::uint8_t TERMINAL_BARREL_LANE = 4;
 constexpr std::uint8_t DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK =
-    static_cast<std::uint8_t>((1U << TERMINAL_ODPAL_LANE) | (1U << TERMINAL_BARREL_LANE));
+    static_cast<std::uint8_t>(1U << TERMINAL_BARREL_LANE);
 constexpr std::uint8_t PROP_SOURCE = 0x22;
 constexpr std::uint8_t PROP_DESTINATION = 0x11;
 constexpr int SCREEN_W = 240;
@@ -357,6 +369,55 @@ std::uint32_t checksumBytes(const std::uint8_t* data, std::size_t len)
     }
     return hash;
 }
+
+#if DIN_RX_KEY_PROVISION
+bool provisionDinRxRuntimeKey()
+{
+    prop_runtime_key::RuntimeKey validated;
+    if (!validated.set(PROP_PROVISIONING_KEY, PROP_PROVISIONING_KEY_LEN))
+    {
+        Serial.println("DIN RX KEY PROVISION FAIL validate");
+        return false;
+    }
+    validated.clear();
+
+    Preferences keyPrefs;
+    if (!keyPrefs.begin(prop_runtime_key::NVS_NAMESPACE, false))
+    {
+        Serial.println("DIN RX KEY PROVISION FAIL nvs");
+        return false;
+    }
+
+    bool ok =
+        keyPrefs.putBytes(prop_runtime_key::NVS_KEY, PROP_PROVISIONING_KEY, PROP_PROVISIONING_KEY_LEN) ==
+        PROP_PROVISIONING_KEY_LEN;
+    std::array<std::uint8_t, prop_runtime_key::MAX_KEY_LENGTH> readback = {};
+    const std::size_t readbackLen =
+        ok ? keyPrefs.getBytes(prop_runtime_key::NVS_KEY, readback.data(), readback.size()) : 0U;
+
+    prop_runtime_key::RuntimeKey loaded;
+    ok = ok &&
+         readbackLen == PROP_PROVISIONING_KEY_LEN &&
+         loaded.set(readback.data(), readbackLen) &&
+         loaded.size() == PROP_PROVISIONING_KEY_LEN;
+    for (std::size_t i = 0; ok && i < PROP_PROVISIONING_KEY_LEN; ++i)
+        ok = readback[i] == PROP_PROVISIONING_KEY[i];
+
+    prop_runtime_key::secureZero(readback);
+    loaded.clear();
+    keyPrefs.end();
+
+    if (!ok)
+    {
+        Serial.println("DIN RX KEY PROVISION FAIL readback");
+        return false;
+    }
+
+    Serial.print("DIN RX KEY PROVISION OK len=");
+    Serial.println(PROP_PROVISIONING_KEY_LEN);
+    return true;
+}
+#endif
 
 class PropRxApp
 {
@@ -1471,13 +1532,9 @@ private:
 
         if (terminalLaneFireOn(0)) frame[0] = localColor(0);   // SK6812 #1 <- button 1 toggle
         if (terminalLaneFireOn(1)) frame[1] = localColor(1);   // SK6812 #2 <- button 2 latch
-        if (terminalLaneFireOn(2)) frame[2] = localColor(2);   // SK6812 #3 <- switch/Dial, ODP can invert state
-        const bool odpalLaneChanges =
-            (_terminalEffectMask & static_cast<std::uint8_t>(1U << TERMINAL_ODPAL_LANE)) != 0U;
+        if (terminalLaneFireOn(2)) frame[2] = localColor(2);   // SK6812 #3 <- switch/Dial, stable during barrel effect
         if (terminalLaneFireOn(TERMINAL_ODPAL_LANE))
-            frame[3] = (_odpalActive && odpalLaneChanges)
-                           ? odpalColor(LED_ROLE_ODPAL)
-                           : localColor(LED_ROLE_ODPAL);  // blue default LED, DualKey-toggleable
+            frame[3] = localColor(LED_ROLE_ODPAL);  // blue default LED, DualKey-toggleable, independent of barrel effect
         frame[4] = odpalColor(LED_ROLE_BARREL);       // 18x WS2812 barrel, always ODP
         applyStaticColorTransitions(frame, now, !_odpalActive);  // channels 0..2 only; LED4 odpal + LED5 status own their channels
         showBudgetedFrame(frame);
@@ -1499,13 +1556,7 @@ private:
 
     bool terminalLaneFireOn(int led) const
     {
-        const bool baseOn = terminalLaneBaseOn(led);
-        if (!_odpalActive)
-            return baseOn;
-
-        const bool changesState =
-            (_terminalEffectMask & static_cast<std::uint8_t>(1U << led)) != 0U;
-        return baseOn != changesState;
+        return terminalLaneBaseOn(led);
     }
 
     // Drives the local-control frame whenever no Dial-driven effect owns the LEDs.
@@ -1611,8 +1662,8 @@ private:
         return (_terminalEffectMask & terminalBarrelEffectBit()) != 0U;
     }
 
-    // Generic placeholder "odpal" on SK6812 #4: a LoRa Fire triggers a single bright flash
-    // of #4's colour that fades to off over ODPAL_MS. Replace later with the real behaviour.
+    // Barrel-only odpal: a LoRa/DualKey fire triggers the 18-pixel barrel effect.
+    // Status lanes, including the blue lane, keep their pre-fire state.
     bool triggerOdpal()
     {
         _previewUntilMs = 0;
@@ -1938,6 +1989,10 @@ private:
 
         if (upper.startsWith("RX "))
         {
+#if DIN_RX_PROP_TRACE
+            Serial.print("DIN RX TRACE LINE RX len=");
+            Serial.println(line.length());
+#endif
             handleRxFrame(line);
             return;
         }
@@ -2359,6 +2414,9 @@ private:
 #if DEBUG_HUD
             ++_debug.rxBad;
 #endif
+#if DIN_RX_PROP_TRACE
+            Serial.println("DIN RX TRACE KEY MISSING");
+#endif
             return;
         }
         if (!prop_protocol::decodeFrame(encoded.data(), encoded.size(), key->data(), key->size(), frame))
@@ -2367,6 +2425,9 @@ private:
             ++_debug.rxBad;
 #endif
             setStatus("BAD MAC");
+#if DIN_RX_PROP_TRACE
+            Serial.println("DIN RX TRACE BAD MAC");
+#endif
             return;
         }
 
@@ -2567,6 +2628,14 @@ private:
             }
 #if DEBUG_HUD
             ++_debug.rxValid;
+#endif
+#if DIN_RX_PROP_TRACE
+            Serial.print("DIN RX TRACE PROP_ACTION action=");
+            Serial.print(action.action);
+            Serial.print(" value=");
+            Serial.print(action.value);
+            Serial.print(" event=");
+            Serial.println(static_cast<unsigned long>(action.eventId));
 #endif
             if (action.action == prop_protocol::PROP_ACTION_BLUE_SET)
             {
@@ -3841,7 +3910,7 @@ private:
     bool _led1On = false;     // SK6812 #1 latch (button 1)
     bool _led2On = false;     // SK6812 #2 latch (remote/setup)
     bool _led3On = false;     // legacy switch-edge latch (Stav indicator / encoder-EMU only; no longer drives #3)
-    bool _led4On = false;     // DualKey default blue LED latch (effect lane can invert during odpal)
+    bool _led4On = false;     // DualKey default blue LED latch, independent of barrel odpal effect
     bool _switchEngaged = false;  // LIVE level of the ByteButton switch (idx0), tracked every poll -> drives #3 locally (D3)
     bool _led3RemoteOn  = false;  // Dial wants LED#3 on (honoured ON-only, and only while the switch is OFF -- strict, D2)
     bool _led5RemoteOn  = false;  // Dial wants LED#5 on (always honoured; ON-only; cleared by STOP)
@@ -3994,6 +4063,36 @@ static void propWatchdogTask(void*)
 
 void prop_rx_run(FactoryTest* ft)
 {
+#if DIN_RX_KEY_PROVISION
+    static bool serialStarted = false;
+    static bool provisionAttempted = false;
+    static bool provisionOk = false;
+    static std::uint32_t lastHeartbeatMs = 0;
+
+    if (!serialStarted)
+    {
+        Serial.begin(115200);
+        delay(100);
+        serialStarted = true;
+    }
+
+    if (!provisionAttempted)
+    {
+        provisionAttempted = true;
+        provisionOk = provisionDinRxRuntimeKey();
+    }
+
+    const std::uint32_t now = millis();
+    if (lastHeartbeatMs == 0 || now - lastHeartbeatMs >= 1000U)
+    {
+        lastHeartbeatMs = now;
+        Serial.print("DIN RX KEY PROVISION IDLE ok=");
+        Serial.println(provisionOk ? "1" : "0");
+    }
+    delay(50);
+    (void)ft;
+    return;
+#else
     PropRxApp app(ft);
     app.begin();
 
@@ -4026,4 +4125,5 @@ void prop_rx_run(FactoryTest* ft)
     }
 
     app.end();
+#endif
 }

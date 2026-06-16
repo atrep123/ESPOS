@@ -18,6 +18,7 @@ M1 control model:
 - 5 encoders step each LED through the named color palette.
 - Encoder button toggles whether that lane changes state during fire: a
   normally on lane turns off during fire, and a normally off lane turns on.
+  Lane 4 is the remote blue latch and keeps this fire-change flag forced off.
 - Double-click is intentionally ignored until hardware testing proves it is
   needed.
 - When an external OLED sink is enabled and validated, the large display shows
@@ -232,7 +233,10 @@ small jitter. Bring-up can tune `-DTERMINAL_FADER_RAW_MIN=<raw>`,
 setting rawMin greater than rawMax; for the verified G4 fader orientation,
 physical bottom is raw 4095 and maps to 0 percent brightness, while physical top
 is raw 0 and maps to 100 percent brightness. Brightness is quantized to 2%
-steps, and the endpoint snap still forces exact `0`/`100` so the physical stop shows `VYP` instead of a noisy low-percent value.
+steps, and the endpoint snap still forces exact `0`/`100` so the physical stop shows `VYP` instead of a noisy low-percent value. The physical midpoint notch maps to 50 percent brightness and is the bench reference for every logical lane.
+LED4 bench trim uses raw midpoint 2255 because its physical notch measured as
+46 percent under the global calibration; the other lanes use the automatic
+midpoint.
 The real fader driver can prime current raw positions at boot. After rollback,
 it locks each fader until the physical slider reaches the restored brightness,
 so stale physical positions do not immediately overwrite the saved draft.
@@ -319,7 +323,7 @@ the lane-only display contract.
 1 ZELENA  100% ---
 2 CERVENA 100% ---
 3 CERVENA 100% ---
-4 MODRA   100% ODP
+4 MODRA   100% ---
 5 CERVENA 100% ODP
 ```
 

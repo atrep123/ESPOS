@@ -43,7 +43,10 @@ Terminal sends only `SETUP` / `SIM_FIRE` setup-link commands; setup uploads use
       14x SK6812 programmable RGB LEDs. Do not expect Pa.HUB to read slider
       position or drive fader LEDs; Pb.HUB does both through its PORT.B channels.
       The fader filter snaps endpoint noise so a physical bottom stop displays
-      `VYP` rather than `1%`.
+      `VYP` rather than `1%`. Acceptance for each lane is: bottom stop -> `VYP`,
+      physical midpoint notch -> 50%, top stop -> 100%. LED4 raw midpoint trim
+      is 2255 for the current bench fader; remeasure it if that fader module is
+      swapped.
 - [ ] Flash `sticks3-terminal-pbhub-smoke`; require `PBHUB_SMOKE ONLINE 1`,
       five independent `PBHUB_ADC` lanes, and visible `PBHUB_RGB` reflection
       before accepting the fader bank.

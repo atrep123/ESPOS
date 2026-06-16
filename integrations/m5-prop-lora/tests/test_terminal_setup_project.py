@@ -301,7 +301,7 @@ def test_din_rx_terminal_sim_fire_uses_preview_mask_without_live_fire_path() -> 
     assert local_control.index("if (_masterOffInhibit)") < local_control.index("_terminalPreviewUntilMs != 0")
 
 
-def test_din_rx_real_fire_applies_terminal_effect_mask_to_static_lanes() -> None:
+def test_din_rx_real_fire_keeps_status_lanes_static_and_only_barrel_effects() -> None:
     cpp = read("firmware/din-rx/src/prop_rx.cpp")
 
     assert "bool terminalLaneFireOn(int led) const" in cpp
@@ -309,10 +309,9 @@ def test_din_rx_real_fire_applies_terminal_effect_mask_to_static_lanes() -> None
         cpp.index("bool terminalLaneFireOn(int led) const") :
         cpp.index("void applyLocalControlIfIdle()")
     ]
-    assert "const bool baseOn = terminalLaneBaseOn(led)" in fire_helper
-    assert "if (!_odpalActive)" in fire_helper
-    assert "_terminalEffectMask" in fire_helper
-    assert "baseOn != changesState" in fire_helper
+    assert "return terminalLaneBaseOn(led);" in fire_helper
+    assert "_terminalEffectMask" not in fire_helper
+    assert "baseOn != changesState" not in fire_helper
 
     local_control = cpp[
         cpp.index("void applyLocalControl()") :
@@ -323,6 +322,10 @@ def test_din_rx_real_fire_applies_terminal_effect_mask_to_static_lanes() -> None
     assert "if (terminalLaneFireOn(2)) frame[2] = localColor(2);" in local_control
     assert "if (_switchEngaged)        frame[2] = localColor(2);" not in local_control
     assert "else if (_led3RemoteOn)    frame[2] = localColor(2);" not in local_control
+    assert "frame[3] = localColor(LED_ROLE_ODPAL)" in local_control
+    assert "odpalLaneChanges" not in local_control
+    assert "odpalColor(LED_ROLE_ODPAL)" not in local_control
+    assert "frame[4] = odpalColor(LED_ROLE_BARREL)" in local_control
     assert "applyStaticColorTransitions(frame, now, !_odpalActive)" in local_control
 
     transition_section = cpp[
@@ -339,6 +342,12 @@ def test_din_rx_fire_respects_forced_terminal_barrel_effect_lane() -> None:
     assert "TERMINAL_ODPAL_LANE = 3" in cpp
     assert "TERMINAL_BARREL_LANE = 4" in cpp
     assert "DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK" in cpp
+    default_mask_section = cpp[
+        cpp.index("constexpr std::uint8_t DEFAULT_TERMINAL_EFFECT_PREVIEW_MASK") :
+        cpp.index("constexpr std::uint8_t PROP_SOURCE")
+    ]
+    assert "1U << TERMINAL_BARREL_LANE" in default_mask_section
+    assert "TERMINAL_ODPAL_LANE" not in default_mask_section
     assert "forceTerminalBarrelEffect" in cpp
     assert "bool terminalEffectAllowsOdpal() const" in cpp
     allows_section = cpp[
@@ -625,6 +634,14 @@ def test_five_lane_control_model_is_explicit() -> None:
     assert "simulateFire" in header
     assert "largeDisplayLine" in header
     assert "oledDisplayLine" in header
+    assert "BLUE_REMOTE_LANE_INDEX = 3" in header
+    assert "isBlueRemoteLane" in header
+    blue_normalize = header[
+        header.index("static LedLane normalizedLane") :
+        header.index("void refreshDraftStatus")
+    ]
+    assert "if (isBlueRemoteLane(lane))" in blue_normalize
+    assert "item.effect = false" in blue_normalize
     assert "NAVIGATION" not in header
     assert "nextPage" not in header
 
@@ -680,7 +697,11 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     config = read("firmware/sticks3-terminal/src/terminal_config.h")
     platformio = read("firmware/sticks3-terminal/platformio.ini")
     doc = read("docs/terminal_architecture.md")
+    bench = read("docs/bench_test_checklist.md")
     readme = read("firmware/sticks3-terminal/README.md")
+    doc_normalized = " ".join(doc.split())
+    bench_normalized = " ".join(bench.split())
+    readme_normalized = " ".join(readme.split())
 
     assert "namespace terminal_fader_filter" in header
     assert "RAW_SAMPLE_MISSING" in header
@@ -696,8 +717,18 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     assert "reset()" in header
     assert "lastPercent_" in header
     assert "pickupPercent_" in header
+    assert "pendingEndpointPercent_" in header
+    assert "ENDPOINT_JUMP_CONFIRM_PERCENT" in header
+    assert "RAW_MIDPOINT_AUTO" in header
+    assert "rawMid" in header
+    assert "CalibrationSet" in header
+    assert "calibrations_" in header
     assert "raw to percent clamps and rounds" in host_test
     assert "inverted raw maps high raw to low brightness" in host_test
+    assert "calibrated inverted midpoint notch preserves two-percent steps" in host_test
+    assert "custom raw midpoint maps measured lane four detent to fifty percent" in host_test
+    assert "lane-specific midpoint trim only changes measured lane" in host_test
+    assert "inverted endpoint spike does not publish false hundred percent" in host_test
     assert "endpoint snap suppresses one percent at physical stops" in host_test
     assert "brightness quantizes to two percent steps" in host_test
     assert "quantizePercent" in header
@@ -717,18 +748,27 @@ def test_terminal_fader_filter_is_pure_and_host_tested() -> None:
     assert "RAW_SAMPLE_MISSING" in driver
     assert "FADER_RAW_MIN" in config
     assert "FADER_RAW_MAX" in config
+    assert "FADER_RAW_MIDS" in config
     assert "FADER_DEADBAND_PERCENT" in config
     assert "FADER_RAW_MIN != FADER_RAW_MAX" in config
     assert "fader raw calibration must have non-zero span" in config
+    assert "fader raw midpoints must be negative auto values or inside the raw calibration span" in config
     assert "-DTERMINAL_FADER_RAW_MIN=4095" in platformio
     assert "-DTERMINAL_FADER_RAW_MAX=0" in platformio
+    assert "-DTERMINAL_FADER_LANE4_RAW_MID=2255" in platformio
     assert "fader filter" in doc
     assert "rawMin greater than rawMax" in doc
     assert "physical bottom is raw 4095" in doc
+    assert "physical midpoint notch maps to 50 percent" in doc
+    assert "LED4 bench trim uses raw midpoint 2255" in doc_normalized
     assert "physical stop displays" in doc
+    assert "physical midpoint notch -> 50%" in bench
+    assert "LED4 raw midpoint trim is 2255" in bench_normalized
     assert "fader filter" in readme
     assert "rawMin greater than rawMax" in readme
     assert "physical bottom is raw 4095" in readme
+    assert "physical midpoint notch maps to 50 percent" in readme
+    assert "LED4 bench trim uses raw midpoint 2255" in readme_normalized
     assert "physical stop shows `VYP`" in readme
 
     forbidden = [
@@ -2044,6 +2084,43 @@ def test_terminal_setup_transport_can_target_xiao_prop_link() -> None:
     assert "-DTERMINAL_PROP_LINK_TX_PIN=43" in platformio
 
 
+def test_terminal_prop_link_smoke_matches_production_600_baud_route() -> None:
+    platformio = read("firmware/sticks3-terminal/platformio.ini")
+
+    smoke_600 = re.search(
+        r"\[env:sticks3-terminal-prop-link-smoke-g43-g44-600\](?P<body>.*?)(?:\n\[env:|\Z)",
+        platformio,
+        re.S,
+    )
+    assert smoke_600 is not None
+    body = smoke_600.group("body")
+    assert "extends = env:sticks3-terminal-prop-link-smoke-g43-g44" in body
+    assert "upload_speed = 460800" in body
+    assert "-DTERMINAL_PROP_LINK_SMOKE=1" in body
+    assert "-DTERMINAL_PROP_LINK_RX_PIN=44" in body
+    assert "-DTERMINAL_PROP_LINK_TX_PIN=43" in body
+    assert "-DTERMINAL_PROP_LINK_BAUD=600" in body
+    assert "-DTERMINAL_SETUP_TRANSPORT_PROP_LINK=1" not in body
+
+
+def test_terminal_prop_link_smoke_has_600_baud_swapped_pin_probe() -> None:
+    platformio = read("firmware/sticks3-terminal/platformio.ini")
+
+    swapped = re.search(
+        r"\[env:sticks3-terminal-prop-link-smoke-g44-g43-600\](?P<body>.*?)(?:\n\[env:|\Z)",
+        platformio,
+        re.S,
+    )
+    assert swapped is not None
+    body = swapped.group("body")
+    assert "extends = env:sticks3-terminal-prop-link-smoke-g43-g44" in body
+    assert "upload_speed = 460800" in body
+    assert "-DTERMINAL_PROP_LINK_SMOKE=1" in body
+    assert "-DTERMINAL_PROP_LINK_RX_PIN=43" in body
+    assert "-DTERMINAL_PROP_LINK_TX_PIN=44" in body
+    assert "-DTERMINAL_PROP_LINK_BAUD=600" in body
+
+
 def test_terminal_upload_reads_ack_before_timeout_on_slow_prop_link() -> None:
     main = read("firmware/sticks3-terminal/src/main.cpp")
     config = read("firmware/sticks3-terminal/src/terminal_config.h")
@@ -2207,7 +2284,7 @@ def test_terminal_docs_track_current_slice_and_open_hardware_drivers() -> None:
     assert "TERMINAL_EXTERNAL_OLED_SCL_PIN" in readme
     assert "Controller, bus address, and pins are hardware bring-up checks" in readme
     assert "1 ZELENA  100% ---" in readme
-    assert "4 MODRA   100% ODP" in readme
+    assert "4 MODRA   100% ---" in readme
     assert "5 CERVENA 100% ODP" in readme
     assert "Switch edge bring-up" in readme
     assert "Hold switch: no repeated command" in readme
@@ -2457,7 +2534,7 @@ def test_terminal_external_oled_preview_tool_renders_review_png() -> None:
     assert module.ROWS[0].color == "ZELENA"
     assert module.ROWS[0].label == "100%"
     assert module.ROWS[1].color == "CERVENA"
-    assert module.ROWS[3].effect_label == "ODP"
+    assert module.ROWS[3].effect_label == "---"
     assert module.ROWS[4].color == "CERVENA"
     assert module.ROWS[4].effect_label == "ODP"
 

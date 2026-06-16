@@ -80,7 +80,7 @@ Expected: failures for missing firmware files and missing logic.
 
 - [ ] **Step 3: Implement firmware**
 
-Create `DualKeyTxLogic` with debounce/edge detection and two events: `BlueSet` and `BarrelEffect`. In `main.cpp`, read C147 keys G0/G17, use UART2 on G5/G6 by default, encode `PropAction` frames to `destination = 0xFF`, and send `FF <hex>\n` to C6L.
+Create `DualKeyTxLogic` with debounce/edge detection and two events: `BlueSet` and `BarrelEffect`. In `main.cpp`, read C147 keys G0/G17, use HY2.0-4P_1 with RX = G47 and TX = G48 by default, encode `PropAction` frames to `destination = 0xFF`, and send `FF <hex>\n` to C6L.
 
 - [ ] **Step 4: Run focused tests and build**
 
@@ -111,3 +111,17 @@ Run: `pio run -d integrations/m5-prop-lora/firmware/din-rx -e esp32-s3-devkitc-1
 Run: `pio run -d integrations/m5-prop-lora/firmware/dualkey-tx -e chain-dualkey-c147`
 Expected: build success.
 
+### First DualKey Bench Upload
+
+Use this only for the bench stack where receivers use the local dry-smoke key. Keep the release env separate.
+
+1. Build and upload one-time key provisioning:
+   `pio run -d integrations/m5-prop-lora/firmware/dualkey-tx -e chain-dualkey-c147-key-provision-dry-smoke -t upload --upload-port COM31`
+2. Reset/monitor the DualKey serial port and confirm:
+   `DUALKEY KEY PROVISION OK len=16`
+3. Build and upload the bench app:
+   `pio run -d integrations/m5-prop-lora/firmware/dualkey-tx -e chain-dualkey-c147-dry-smoke -t upload --upload-port COM31`
+4. Verify physical behavior:
+   - Key 1 toggles the receiver blue/default LED set-state.
+   - Key 2 triggers the barrel effect once per press.
+   - C147 local LEDs change state on valid input.

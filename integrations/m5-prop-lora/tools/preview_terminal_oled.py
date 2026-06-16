@@ -78,7 +78,7 @@ ROWS = (
     Row(1, "ZELENA", 100, "100%", True, False, "---"),
     Row(2, "CERVENA", 100, "100%", True, False, "---"),
     Row(3, "CERVENA", 100, "100%", True, False, "---"),
-    Row(4, "MODRA", 100, "100%", True, True, "ODP"),
+    Row(4, "MODRA", 100, "100%", True, False, "---"),
     Row(5, "CERVENA", 100, "100%", True, True, "ODP"),
 )
 

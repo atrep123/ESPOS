@@ -16,6 +16,7 @@ constexpr std::size_t OLED_LINE_MAX_CHARS = 21;
 constexpr int ENCODER_DEGREES_PER_PALETTE_STEP = 6;
 constexpr int BRIGHTNESS_STEP_PERCENT = 2;
 constexpr std::size_t BARREL_LANE_INDEX = 4;
+constexpr std::size_t BLUE_REMOTE_LANE_INDEX = 3;
 constexpr std::uint16_t BARREL_COLOR_CODE = 360;
 
 struct LedLane {
@@ -124,7 +125,7 @@ inline std::array<LedLane, LANE_COUNT> defaultLanes() {
         LedLane{363, 100, true, false},
         LedLane{360, 100, true, false},
         LedLane{360, 100, true, false},
-        LedLane{365, 100, true, true},
+        LedLane{365, 100, true, false},
         LedLane{BARREL_COLOR_CODE, 100, true, true},
     }};
 }
@@ -172,6 +173,7 @@ class TerminalSetupState {
     void setEffectLed(std::size_t lane, bool enabled) {
         if (!editableLane(lane)) return;
         if (isBarrelLane(lane) && !enabled) return;
+        if (isBlueRemoteLane(lane)) enabled = false;
         if (draft_[lane].effect == enabled) return;
         draft_[lane].effect = enabled;
         refreshDraftStatus();
@@ -281,7 +283,14 @@ class TerminalSetupState {
         return lane == BARREL_LANE_INDEX;
     }
 
+    static bool isBlueRemoteLane(std::size_t lane) {
+        return lane == BLUE_REMOTE_LANE_INDEX;
+    }
+
     static LedLane normalizedLane(std::size_t lane, LedLane item) {
+        if (isBlueRemoteLane(lane)) {
+            item.effect = false;
+        }
         if (isBarrelLane(lane)) {
             item.hue = BARREL_COLOR_CODE;
             item.effect = true;

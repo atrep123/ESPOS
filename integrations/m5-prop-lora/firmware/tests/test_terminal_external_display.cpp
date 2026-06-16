@@ -58,7 +58,7 @@ bool fiveFramedOperatorRowsExposeColorBrightnessAndEffect() {
            hasRow(frame.rows[0], 1, "TYRKYS", 0, "VYP", false, true, "ODP") &&
            hasRow(frame.rows[1], 2, "CERVENA", 26, "VYP", false, false, "---") &&
            hasRow(frame.rows[2], 3, "CERVENA", 50, "50%", true, true, "ODP") &&
-           hasRow(frame.rows[3], 4, "MODRA", 76, "VYP", false, true, "ODP") &&
+           hasRow(frame.rows[3], 4, "MODRA", 76, "VYP", false, false, "---") &&
            hasRow(frame.rows[4], 5, "CERVENA", 100, "100%", true, true, "ODP");
 }
 

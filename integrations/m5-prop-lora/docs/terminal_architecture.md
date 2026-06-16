@@ -140,8 +140,8 @@ Open bench checks before driver finalization:
 - The large external display shows one framed row per LED: LED number, color
   name, brightness or `VYP`, a small brightness bar, and `ODP`/`---` fire-change
   participation.
-- Lane 4 is the blue odpal/status LED. It starts with `ODP` enabled, and the
-  encoder button may toggle that fire-change participation.
+- Lane 4 is the blue remote latch. It starts with `---`; the main barrel fire
+  effect must not change it. The DualKey blue button toggles this lane remotely.
 - Lane 5 is the 18-pixel WS2812 barrel group. It starts red and keeps `ODP`
   forced on; the Terminal must not allow its fire-change participation to be
   disabled.
@@ -373,7 +373,12 @@ Open bench checks before driver finalization:
   bottom is raw 4095 and should map to 0 percent brightness, while physical top
   is raw 0 and should map to 100 percent brightness. The fader filter snaps the
   brightness to 2% steps and snaps the endpoints to exact `0`/`100`, so a
-  physical stop displays `VYP` instead of a noisy low-percent value.
+  physical stop displays `VYP` instead of a noisy low-percent value. The
+  physical midpoint notch maps to 50 percent brightness; this midpoint is the
+  bench acceptance reference for all five logical LED lanes. LED4 bench trim
+  uses raw midpoint 2255 because its physical notch measured low enough to show
+  46 percent with the global calibration; the other lanes keep the automatic
+  midpoint.
 - Encoder bus order for this bench snapshot is LED5, LED4, LED3, LED2, LED1,
   then upload U206, then sim-fire U206. Production maps this physical order
   back to logical LED1..LED5 with `CHAIN_ENCODER_IDS = {5, 4, 3, 2, 1}`.

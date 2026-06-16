@@ -87,7 +87,7 @@ bool uploadSetupLineCommitsThroughReceiverReply() {
         receiver.lastSetup.lanes[0].effect != true ||
         receiver.lastSetup.lanes[1].on != false ||
         receiver.lastSetup.lanes[1].effect != true ||
-        receiver.lastSetup.effectPreviewMask != 0x1B) {
+        receiver.lastSetup.effectPreviewMask != 0x13) {
         return false;
     }
 

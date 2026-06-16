@@ -27,9 +27,19 @@ bool defaultLanesUsePropRoleColors() {
            state.draftLane(1).hue == 360 &&
            state.draftLane(2).hue == 360 &&
            state.draftLane(3).hue == 365 &&
-           state.draftLane(3).effect == true &&
+           state.draftLane(3).effect == false &&
            state.draftLane(4).hue == 360 &&
            state.draftLane(4).effect == true;
+}
+
+bool blueRemoteLaneNeverParticipatesInBarrelFire() {
+    TerminalSetupState state;
+    state.setEffectLed(3, true);
+    state.beginUpload();
+    const std::string line = state.uploadLine(77);
+    return state.draftLane(3).effect == false &&
+           line.find("L4:365,100,1,0") != std::string::npos &&
+           line.find("L4:365,100,1,1") == std::string::npos;
 }
 
 bool barrelLaneKeepsRedFireEffectEnabled() {
@@ -222,7 +232,7 @@ bool uploadLineContainsAllFiveLedLanes() {
            scopedLine.find("L1:363,10,1,0") != std::string::npos &&
            line.find("L2:360,100,1,0") != std::string::npos &&
            line.find("L3:360,100,1,0") != std::string::npos &&
-           line.find("L4:365,100,0,1") != std::string::npos &&
+           line.find("L4:365,100,0,0") != std::string::npos &&
            line.find("L5:360,90,1,1") != std::string::npos;
 }
 
@@ -252,6 +262,8 @@ int main() {
     int failures = 0;
     failures += runCase("five lanes have direct controls", fiveLanesHaveDirectControls) ? 0 : 1;
     failures += runCase("default lanes use prop role colors", defaultLanesUsePropRoleColors) ? 0 : 1;
+    failures += runCase("blue remote lane never participates in barrel fire",
+                         blueRemoteLaneNeverParticipatesInBarrelFire) ? 0 : 1;
     failures += runCase("barrel lane keeps red fire effect enabled", barrelLaneKeepsRedFireEffectEnabled) ? 0 : 1;
     failures += runCase("brightness is quantized to two percent steps", brightnessIsQuantizedToTwoPercentSteps) ? 0 : 1;
     failures += runCase("accepted upload saves draft", commitAcceptedSavesDraftAndShowsUploaded) ? 0 : 1;

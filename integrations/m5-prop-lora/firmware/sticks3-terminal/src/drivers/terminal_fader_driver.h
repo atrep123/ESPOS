@@ -132,10 +132,37 @@ class FaderDriver {
 
     explicit FaderDriver(FaderRawReader& rawReader)
         : rawReader_(rawReader),
-          filter_(terminal_fader_filter::FaderCalibration{
-              terminal_config::FADER_RAW_MIN,
-              terminal_config::FADER_RAW_MAX,
-              terminal_config::FADER_DEADBAND_PERCENT}) {}
+          filter_(terminal_fader_filter::FaderFilter::CalibrationSet{
+              terminal_fader_filter::FaderCalibration{
+                  terminal_config::FADER_RAW_MIN,
+                  terminal_config::FADER_RAW_MAX,
+                  terminal_config::FADER_DEADBAND_PERCENT,
+                  1,
+                  terminal_config::FADER_RAW_MIDS[0]},
+              terminal_fader_filter::FaderCalibration{
+                  terminal_config::FADER_RAW_MIN,
+                  terminal_config::FADER_RAW_MAX,
+                  terminal_config::FADER_DEADBAND_PERCENT,
+                  1,
+                  terminal_config::FADER_RAW_MIDS[1]},
+              terminal_fader_filter::FaderCalibration{
+                  terminal_config::FADER_RAW_MIN,
+                  terminal_config::FADER_RAW_MAX,
+                  terminal_config::FADER_DEADBAND_PERCENT,
+                  1,
+                  terminal_config::FADER_RAW_MIDS[2]},
+              terminal_fader_filter::FaderCalibration{
+                  terminal_config::FADER_RAW_MIN,
+                  terminal_config::FADER_RAW_MAX,
+                  terminal_config::FADER_DEADBAND_PERCENT,
+                  1,
+                  terminal_config::FADER_RAW_MIDS[3]},
+              terminal_fader_filter::FaderCalibration{
+                  terminal_config::FADER_RAW_MIN,
+                  terminal_config::FADER_RAW_MAX,
+                  terminal_config::FADER_DEADBAND_PERCENT,
+                  1,
+                  terminal_config::FADER_RAW_MIDS[4]}}) {}
 
     bool begin() {
         filter_.reset();

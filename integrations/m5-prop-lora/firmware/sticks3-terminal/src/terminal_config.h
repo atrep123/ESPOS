@@ -27,6 +27,26 @@ namespace terminal_config {
 #define TERMINAL_FADER_RAW_MAX 4095
 #endif
 
+#ifndef TERMINAL_FADER_LANE1_RAW_MID
+#define TERMINAL_FADER_LANE1_RAW_MID -1
+#endif
+
+#ifndef TERMINAL_FADER_LANE2_RAW_MID
+#define TERMINAL_FADER_LANE2_RAW_MID -1
+#endif
+
+#ifndef TERMINAL_FADER_LANE3_RAW_MID
+#define TERMINAL_FADER_LANE3_RAW_MID -1
+#endif
+
+#ifndef TERMINAL_FADER_LANE4_RAW_MID
+#define TERMINAL_FADER_LANE4_RAW_MID -1
+#endif
+
+#ifndef TERMINAL_FADER_LANE5_RAW_MID
+#define TERMINAL_FADER_LANE5_RAW_MID -1
+#endif
+
 #ifndef TERMINAL_FADER_DEADBAND_PERCENT
 #define TERMINAL_FADER_DEADBAND_PERCENT 1
 #endif
@@ -246,6 +266,12 @@ constexpr std::uint32_t SWITCH_DEBOUNCE_MS = TERMINAL_SWITCH_DEBOUNCE_MS;
 constexpr int FADER_RAW_MIN = TERMINAL_FADER_RAW_MIN;
 constexpr int FADER_RAW_MAX = TERMINAL_FADER_RAW_MAX;
 constexpr int FADER_DEADBAND_PERCENT = TERMINAL_FADER_DEADBAND_PERCENT;
+constexpr std::array<int, TERMINAL_LANE_COUNT> FADER_RAW_MIDS = {
+    TERMINAL_FADER_LANE1_RAW_MID,
+    TERMINAL_FADER_LANE2_RAW_MID,
+    TERMINAL_FADER_LANE3_RAW_MID,
+    TERMINAL_FADER_LANE4_RAW_MID,
+    TERMINAL_FADER_LANE5_RAW_MID};
 constexpr bool FADER_ADC_ENABLED = TERMINAL_FADER_ADC_ENABLED != 0;
 constexpr bool FADER_PBHUB_ENABLED = TERMINAL_FADER_PBHUB_ENABLED != 0;
 constexpr bool FADER_PBHUB_RGB_ENABLED = TERMINAL_FADER_PBHUB_RGB_ENABLED != 0;
@@ -406,6 +432,21 @@ constexpr bool configuredPahubChannelsAreUnique() {
     return configuredPahubChannelsAreUniqueFrom(0, 1);
 }
 
+constexpr bool rawMidpointIsValid(int rawMid) {
+    return rawMid < 0 ||
+           (FADER_RAW_MIN < FADER_RAW_MAX
+                ? rawMid >= FADER_RAW_MIN && rawMid <= FADER_RAW_MAX
+                : rawMid >= FADER_RAW_MAX && rawMid <= FADER_RAW_MIN);
+}
+
+constexpr bool faderRawMidpointsAreValid() {
+    return rawMidpointIsValid(TERMINAL_FADER_LANE1_RAW_MID) &&
+           rawMidpointIsValid(TERMINAL_FADER_LANE2_RAW_MID) &&
+           rawMidpointIsValid(TERMINAL_FADER_LANE3_RAW_MID) &&
+           rawMidpointIsValid(TERMINAL_FADER_LANE4_RAW_MID) &&
+           rawMidpointIsValid(TERMINAL_FADER_LANE5_RAW_MID);
+}
+
 constexpr bool configuredPinsShareAllowedAt(std::size_t left, std::size_t right) {
     return CONFIGURED_GPIO_PINS[left] == CONFIGURED_GPIO_PINS[right] &&
            CONFIGURED_GPIO_PINS[left] >= 0 &&
@@ -442,6 +483,8 @@ static_assert(USB_LINE_MAX >= sizeof("SETUP_ERR 9999") - 1, "USB reply line buff
 static_assert(UPLOAD_ACK_TIMEOUT_MS > 0, "upload ACK timeout must be positive");
 static_assert(SWITCH_DEBOUNCE_MS <= 1000, "switch debounce must stay within a bring-up-safe range");
 static_assert(FADER_RAW_MIN != FADER_RAW_MAX, "fader raw calibration must have non-zero span");
+static_assert(faderRawMidpointsAreValid(),
+              "fader raw midpoints must be negative auto values or inside the raw calibration span");
 static_assert(FADER_DEADBAND_PERCENT >= 0 && FADER_DEADBAND_PERCENT <= 20,
               "fader deadband must stay within a bring-up-safe range");
 static_assert(!(FADER_ADC_ENABLED && FADER_PBHUB_ENABLED),

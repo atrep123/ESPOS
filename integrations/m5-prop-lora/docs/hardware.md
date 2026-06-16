@@ -142,9 +142,10 @@ Logical mapping:
 - DinMeter still keeps five logical lanes so Terminal/Dial setup semantics stay
   stable.
 - The four-pixel XIAO status LED chain receives logical LED1, LED2, switch, and
-  LED4/ODPAL via `STAT4` on one data line.
-- Logical ODPAL also drives the 18-pixel barrel as a single red
-  intensity/effect group via `BARREL RED/OFF`.
+  the remote blue latch via `STAT4` on one data line.
+- Logical ODPAL drives only the 18-pixel barrel as a single red
+  intensity/effect group via `BARREL RED/OFF`; the blue latch keeps its
+  pre-fire state.
 
 ## LoRa modem
 
