@@ -69,6 +69,15 @@ jobs:
             tests/test_focus_nav_listmodel.py \
             tests/test_inspector_commit.py \
             tests/test_scene_ops.py
+      - name: M5 prop safety tests (protocol + parser fuzz + link sim)
+        working-directory: integrations/m5-prop-lora
+        run: |
+          python -m pytest -q --tb=short -p no:cacheprovider \
+            tests/test_protocol.py \
+            tests/test_protocol_fuzz.py \
+            tests/test_protocol_roundtrip_sim.py \
+            tests/test_sim_link_safety.py \
+            tests/test_run_host_tests.py
       - name: Run tests
         env:
           PYTHONIOENCODING: "utf-8"
@@ -123,6 +132,8 @@ jobs:
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.12'
+      - name: M5 prop host safety tests (off-target C++)
+        run: python integrations/m5-prop-lora/tools/run_host_tests.py
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade "pip>=26.1.2,<27"
