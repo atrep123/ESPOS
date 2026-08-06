@@ -55,8 +55,9 @@ class RandomBytesFuzzTests(unittest.TestCase):
             except ProtocolError:
                 continue
             decoded_count += 1
-        # A random blob forging a valid 8-byte HMAC-SHA256 tag is ~2^-64 per
-        # attempt; any acceptance here means the MAC gate is broken.
+        # A random blob forging a valid 12-byte truncated HMAC-SHA256 tag
+        # (MAC_LENGTH) is ~2^-96 per attempt; any acceptance here means the
+        # MAC gate is broken.
         self.assertEqual(decoded_count, 0)
 
 
