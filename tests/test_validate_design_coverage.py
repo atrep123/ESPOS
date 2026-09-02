@@ -136,15 +136,19 @@ class TestWidgetsNotList:
 
 class TestMissingGeometry:
     def test_missing_x_detected(self):
-        """Missing geometry is detected but later code may crash — verify error is appended."""
-        import pytest
+        """Missing geometry is reported, and the validator keeps going.
 
+        This test used to assert a TypeError: the validator detected the missing
+        'x' and then crashed using x=None, because a later loop over the same
+        widgets never rebound x and inherited it from an earlier loop. That leak
+        is fixed, so the crash is gone — a validator that dies on the first
+        malformed widget reports nothing about the rest of the file.
+        """
         w = _base_widget()
         del w["x"]
         data = {"scenes": {"main": _base_scene(widgets=[w])}}
-        # The validator detects missing 'x' but then crashes when trying to use x=None.
-        with pytest.raises(TypeError):
-            _validate(data)
+        issues = _validate(data)
+        assert any("missing 'x'" in i.message for i in issues)
 
     def test_missing_width_detected(self):
         w = _base_widget()

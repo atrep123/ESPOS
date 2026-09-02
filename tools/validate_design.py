@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate ESP32OS UI design JSON — comprehensive 122-rule checker.
+Validate ESP32OS UI design JSON — comprehensive 135-rule checker.
 
 Covers:
 - required fields + basic types
@@ -28,6 +28,15 @@ Covers:
 - constraints & responsive_rules type, align-border, widget ID length
 - font_size / corner_radius / border_width type, border_color parseability
 - mostly-outside-scene detection, bold field type, duplicate geometry, disabled+no-runtime
+- device profiles: every display-dependent number (font metrics, charset,
+  contrast model, widget budget, edge margin, touch minimum) comes from the
+  panel the design is drawn for, not from the 256x128 OLED it was written on
+- collision detection announces when it skipped a scene instead of staying
+  silent about it
+- near-miss alignment: left edges 1-3 px apart are a typed coordinate that
+  missed, not a design decision
+- touch targets measured in millimetres: 44 px is 9.3 mm at 120 PPI and
+  3.8 mm at 294 PPI
 
 Usage:
   python tools/validate_design.py main_scene.json
@@ -38,6 +47,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import re
 import sys
@@ -174,6 +184,223 @@ CRITICAL_WARNING_MARKERS = (
 # fully contains the other widget in an overlapping pair, the overlap is the
 # intended "panel behind its content" composition, not a collision defect.
 CONTAINER_WIDGET_TYPES = {"panel", "box"}
+
+# Widget types a finger actually has to hit. Size limits below apply to these.
+TOUCH_WIDGET_TYPES = {"button", "checkbox", "radiobutton", "slider", "textbox"}
+
+# ── Device profiles ────────────────────────────────────────────────────────
+#
+# Every constant above describes ONE panel: the 256x128 4bpp OLED with the
+# monospaced font6x8. Those numbers are not universal, and applying them to a
+# different display produces two kinds of nonsense at the same time — findings
+# that cannot apply, and silence exactly where a real defect sits. A 1280x720
+# colour panel with a proportional font needs its own numbers, not a scaled
+# copy of these.
+#
+# The profile is picked from the design data (explicit ``"device"`` key, else
+# by scene dimensions). Anything unrecognised falls back to the OLED, so every
+# existing design and test keeps behaving exactly as it did before.
+
+
+def _rel_luminance(rgb: tuple[int, int, int]) -> float:
+    """WCAG 2.1 relative luminance (sRGB, gamma-correct)."""
+
+    def ch(v: int) -> float:
+        c = v / 255.0
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (ch(v) for v in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast_ratio(fg: tuple[int, int, int], bg: tuple[int, int, int]) -> float:
+    """WCAG contrast ratio, 1.0 .. 21.0. Symmetric: polarity does not matter."""
+    a, b = _rel_luminance(fg), _rel_luminance(bg)
+    lo, hi = min(a, b), max(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+@dataclass(frozen=True)
+class DeviceProfile:
+    """The panel a design is drawn for, and the numbers that follow from it."""
+
+    name: str
+    match_w: int  # scene size this profile is recognised by (0 = never auto)
+    match_h: int
+    char_w: int  # LOWER BOUND on glyph advance, see note in PROFILE_TAB5
+    char_h: int
+    render_pad: int  # per-side inset the renderer eats inside a text box
+    min_text_h: int
+    font_chars: frozenset[str] | None  # None = no charset restriction
+    max_text_len: int
+    soft_widgets: int
+    hard_widgets: int
+    min_edge_margin: int
+    contrast_mode: str  # "brightness" (delta) | "wcag" (ratio)
+    min_contrast: float
+    min_visible_brightness: int  # only meaningful in "brightness" mode
+    ppi: float
+    min_touch_px: int  # below this a touch target is an ERROR
+    warn_touch_px: int  # below this it is a WARN
+
+    def mm(self, px: float) -> float:
+        """Physical size of ``px`` on this panel, in millimetres."""
+        return px * 25.4 / self.ppi if self.ppi else 0.0
+
+
+PROFILE_OLED256 = DeviceProfile(
+    name="oled256",
+    match_w=256,
+    match_h=128,
+    char_w=CHAR_W,
+    char_h=CHAR_H,
+    render_pad=RENDER_PAD,
+    min_text_h=MIN_TEXT_H,
+    font_chars=frozenset(FONT_CHARS),
+    max_text_len=MAX_TEXT_LEN,
+    soft_widgets=MAX_WIDGETS_PER_SCENE,
+    hard_widgets=HARD_WIDGET_LIMIT,
+    min_edge_margin=MIN_EDGE_MARGIN,
+    contrast_mode="brightness",
+    min_contrast=MIN_CONTRAST,
+    min_visible_brightness=MIN_VISIBLE_BRIGHTNESS,
+    ppi=0.0,  # no touch panel; size limits below are disabled by 0
+    min_touch_px=0,
+    warn_touch_px=0,
+)
+
+# The 141 glyphs actually cut into the shipped LVGL font (ASCII + Czech +
+# the few typographic marks). This set is the point of the whole profile:
+# LVGL SKIPS a missing glyph without a word, so a character outside this set
+# does not render wrong — it renders as nothing, and "-58 dBm" silently
+# becomes "58 dBm".
+_TAB5_FONT_CHARS = frozenset(
+    [chr(c) for c in range(0x20, 0x7F)]
+    + [
+        chr(c)
+        for c in (
+            0xE1,
+            0xE9,
+            0xED,
+            0xF3,
+            0xFA,
+            0xFD,
+            0xC1,
+            0xC9,
+            0xCD,
+            0xD3,
+            0xDA,
+            0xDD,
+            0x10C,
+            0x10D,
+            0x10E,
+            0x10F,
+            0x11A,
+            0x11B,
+            0x147,
+            0x148,
+            0x158,
+            0x159,
+            0x160,
+            0x161,
+            0x164,
+            0x165,
+            0x16E,
+            0x16F,
+            0x17D,
+            0x17E,
+        )
+    ]
+    + [
+        chr(c)
+        for c in (
+            0x2013,
+            0x2014,
+            0x2022,
+            0x201E,
+            0x201C,
+            0xB0,
+            0xB7,
+            # rozsireni 2026-08-25: minus, mikro, +-, krat a
+            # kurzorove sipky - dorezano do gen_fonty.py
+            0x2212,
+            0xB5,
+            0xB1,
+            0xD7,
+            0x2192,
+            0x2190,
+            # + uhlove minuty, ohm a delta - mereni je
+            # bez nich nema; dorezano tehoz dne
+            0x2032,
+            0x3A9,
+            0x394,
+        )
+    ]
+)
+
+PROFILE_TAB5 = DeviceProfile(
+    name="tab5",
+    match_w=1280,
+    match_h=720,
+    # Montserrat is PROPORTIONAL, so there is no single character width. The
+    # narrowest printable advance in the shipped subset is 2.73 px at the
+    # smallest size in use (13 px), measured from the TTF hmtx table. Floored
+    # to 2 on purpose: the fit checks divide by this, so a LOWER bound can only
+    # ever overestimate how much text fits. That makes "cannot fit" sound —
+    # it never accuses falsely — at the cost of missing marginal cases.
+    char_w=2,
+    # Geometry from the converter is INK, not the line box, so the floor here
+    # is the smallest ink a single line can have: the x-height of the smallest
+    # type in use. Montserrat sxHeight is 0.53 em = 6.89 px at 13 px, floored
+    # to 6. Using the font SIZE (13) invented hundreds of "cannot fit"
+    # findings on lines that simply had no ascenders in them.
+    char_h=6,
+    # The OLED renderer clips 2 px inside every box; LVGL does not —
+    # the box IS the line box, so 13 px type in a 16 px box fits exactly.
+    # Keeping the OLED's 2 px here invented a 'cannot fit' on every label.
+    render_pad=0,
+    min_text_h=6,  # ink, not line box — see char_h above
+    font_chars=_TAB5_FONT_CHARS,
+    max_text_len=256,  # 127 is an OLED readability limit, not a panel limit
+    soft_widgets=200,
+    hard_widgets=800,  # P4 with PSRAM; O(n^2) at 800 is still ~0.3 s
+    min_edge_margin=8,
+    contrast_mode="wcag",
+    min_contrast=4.5,  # WCAG 2.1 AA for body text
+    min_visible_brightness=0,  # a dark foreground is not a defect, see below
+    ppi=293.7,  # 1280x720 on 5 in -> sqrt(1280^2+720^2)/5
+    # 294 PPI means 1 px = 0.086 mm, so pixel counts are misleading: a 44 px
+    # button is 3.8 mm, well under any published minimum. Apple asks 7.0 mm,
+    # Material 7.6 mm, ISO 9241-411 7 mm as the floor. 7 mm = 81 px here;
+    # below 5 mm (58 px) touch error rates climb steeply, so that is the line
+    # between a warning and an error.
+    min_touch_px=58,
+    warn_touch_px=81,
+)
+
+PROFILES: dict[str, DeviceProfile] = {
+    PROFILE_OLED256.name: PROFILE_OLED256,
+    PROFILE_TAB5.name: PROFILE_TAB5,
+}
+
+
+def _profile_for(data: dict[str, Any]) -> DeviceProfile:
+    """Pick the panel profile for a design: explicit key first, size second."""
+    named = data.get("device")
+    if isinstance(named, str) and named in PROFILES:
+        return PROFILES[named]
+    w, h = data.get("width"), data.get("height")
+    if not (_is_int(w) and _is_int(h)):
+        scenes = data.get("scenes")
+        if isinstance(scenes, dict):
+            for sc in scenes.values():
+                if isinstance(sc, dict) and _is_int(sc.get("width")) and _is_int(sc.get("height")):
+                    w, h = sc["width"], sc["height"]
+                    break
+    for prof in PROFILES.values():
+        if prof.match_w and prof.match_w == w and prof.match_h == h:
+            return prof
+    return PROFILE_OLED256
 
 
 def _parse_color(s: str) -> tuple[int, int, int] | None:
@@ -618,6 +845,24 @@ def validate_data(
 ) -> list[Issue]:
     issues: list[Issue] = []
 
+    # Which panel is this drawn for? Every device-dependent number below is
+    # rebound from the profile, so the rules read the same but measure the
+    # right display. Unrecognised data resolves to the OLED, i.e. the exact
+    # behaviour this validator had before profiles existed.
+    doc_prof = _profile_for(data)
+    prof = doc_prof
+    CHAR_W = prof.char_w
+    CHAR_H = prof.char_h
+    MIN_TEXT_H = prof.min_text_h
+    FONT_CHARS = prof.font_chars if prof.font_chars is not None else None
+    MAX_TEXT_LEN = prof.max_text_len
+    MAX_WIDGETS_PER_SCENE = prof.soft_widgets
+    HARD_WIDGET_LIMIT = prof.hard_widgets
+    MIN_EDGE_MARGIN = prof.min_edge_margin
+    RENDER_PAD = prof.render_pad
+    MIN_CONTRAST = prof.min_contrast
+    MIN_VISIBLE_BRIGHTNESS = prof.min_visible_brightness
+
     root_w = data.get("width")
     root_h = data.get("height")
     if root_w is not None and not _is_int(root_w):
@@ -648,6 +893,24 @@ def validate_data(
             issues.append(Issue("ERROR", f"{pfx}: height must be int >= 1"))
             continue
         sw, sh = int(scene_w), int(scene_h)
+
+        # One document can hold scenes for different panels. Resolving the
+        # profile once for the whole file measured every scene by the first
+        # one's panel. An explicit "device" key still governs the document;
+        # otherwise each scene is matched on its own dimensions.
+        if not isinstance(data.get("device"), str):
+            prof = _profile_for({"width": sw, "height": sh})
+            CHAR_W = prof.char_w
+            CHAR_H = prof.char_h
+            MIN_TEXT_H = prof.min_text_h
+            FONT_CHARS = prof.font_chars
+            MAX_TEXT_LEN = prof.max_text_len
+            MAX_WIDGETS_PER_SCENE = prof.soft_widgets
+            HARD_WIDGET_LIMIT = prof.hard_widgets
+            MIN_EDGE_MARGIN = prof.min_edge_margin
+            RENDER_PAD = prof.render_pad
+            MIN_CONTRAST = prof.min_contrast
+            MIN_VISIBLE_BRIGHTNESS = prof.min_visible_brightness
 
         widgets = scene.get("widgets", [])
         if not isinstance(widgets, list):
@@ -823,6 +1086,26 @@ def validate_data(
             if wt == "progressbar" and ww < 8:
                 issues.append(Issue("ERROR", f"{wl}: progressbar w={ww} too narrow (min 8)"))
 
+            # ── Rule 135: touch target measured in millimetres, not pixels ──
+            #
+            # A pixel count says nothing about whether a finger can hit it: the
+            # same 44 px is 9.3 mm on a 120 PPI panel and 3.8 mm on a 294 PPI
+            # one. Published minima are all physical — Apple 7.0 mm, Material
+            # 7.6 mm, ISO 9241-411 7 mm — so the profile carries PPI and the
+            # rule converts. Profiles with ppi=0 (no touch panel) skip it.
+            if prof.min_touch_px and wt in TOUCH_WIDGET_TYPES and w.get("visible") is not False:
+                small = min(ww, hh) if _is_int(ww) and _is_int(hh) else None
+                if small is not None and small < prof.warn_touch_px:
+                    lvl = "ERROR" if small < prof.min_touch_px else "WARN"
+                    issues.append(
+                        Issue(
+                            lvl,
+                            f"{wl}: touch target {ww}x{hh} is {prof.mm(small):.1f} mm "
+                            f"on its short side (min {prof.mm(prof.warn_touch_px):.1f} mm "
+                            f"= {prof.warn_touch_px} px on this panel)",
+                        )
+                    )
+
             # ── Rule 19: z_index is an integer ──
             z = w.get("z_index", 0)
             if not _is_int(z):
@@ -834,7 +1117,11 @@ def validate_data(
                 fg_rgb = _parse_color(fg_str)
                 if fg_rgb is None:
                     issues.append(Issue("WARN", f"{wl}: can't parse color_fg '{fg_str}'"))
-                elif wt in TEXT_TYPES and text:
+                elif wt in TEXT_TYPES and text and MIN_VISIBLE_BRIGHTNESS > 0:
+                    # Only meaningful where the panel is emissive and text is
+                    # always the BRIGHTER thing. On a light surface, dark ink is
+                    # the correct design, not a defect — profiles that allow it
+                    # set this threshold to 0 and rely on the ratio check below.
                     br = _brightness(fg_rgb)
                     if br < MIN_VISIBLE_BRIGHTNESS:
                         issues.append(Issue("WARN", f"{wl}: fg '{fg_str}' too dim ({br}) for text"))
@@ -851,14 +1138,30 @@ def validate_data(
                 fg_rgb = _parse_color(fg_str)
                 bg_rgb = _parse_color(bg_str)
                 if fg_rgb and bg_rgb:
-                    contrast = abs(_brightness(fg_rgb) - _brightness(bg_rgb))
-                    if contrast < MIN_CONTRAST:
-                        issues.append(
-                            Issue(
-                                "WARN",
-                                f"{wl}: low contrast ({contrast}) fg='{fg_str}' vs bg='{bg_str}'",
+                    if prof.contrast_mode == "wcag":
+                        # A brightness DELTA is not a legibility measure: the
+                        # same delta reads very differently at the dark and the
+                        # light end of the range. WCAG's ratio is gamma-correct
+                        # and symmetric, so it judges dark-on-light the same way
+                        # as light-on-dark.
+                        ratio = _contrast_ratio(fg_rgb, bg_rgb)
+                        if ratio < MIN_CONTRAST:
+                            issues.append(
+                                Issue(
+                                    "WARN",
+                                    f"{wl}: low contrast ({ratio:.2f}:1 < "
+                                    f"{MIN_CONTRAST}:1) fg='{fg_str}' vs bg='{bg_str}'",
+                                )
                             )
-                        )
+                    else:
+                        contrast = abs(_brightness(fg_rgb) - _brightness(bg_rgb))
+                        if contrast < MIN_CONTRAST:
+                            issues.append(
+                                Issue(
+                                    "WARN",
+                                    f"{wl}: low contrast ({contrast}) fg='{fg_str}' vs bg='{bg_str}'",
+                                )
+                            )
 
             # ── Rule 20: runtime string format ──
             if runtime:
@@ -932,7 +1235,10 @@ def validate_data(
 
             # ── Rule 26: Font charset compliance ──
             if wt in TEXT_TYPES and text:
-                bad = [ch for ch in text if ch.upper() not in FONT_CHARS]
+                # font6x8 has no lowercase and maps it to uppercase; a font
+                # that carries real lowercase must be compared as written.
+                fold = "a" not in FONT_CHARS
+                bad = [ch for ch in text if (ch.upper() if fold else ch) not in FONT_CHARS]
                 if bad:
                     unique = "".join(sorted(set(bad)))
                     issues.append(Issue("WARN", f"{wl}: unsupported chars in text: {unique!r}"))
@@ -1086,6 +1392,17 @@ def validate_data(
             if not isinstance(wtype, str) or not wtype.strip():
                 continue
             wt = wtype.lower()
+            # x and y MUST be rebound here. They used to leak in from the last
+            # widget of an earlier loop over the same list, so Rule 63 measured
+            # this widget's size at another widget's position — a rectangle that
+            # exists nowhere. It reported a fully on-screen 1192x592 frame as
+            # "12% visible", and the percentage changed as unrelated widgets were
+            # added. The same leak could equally keep it silent about a widget
+            # that really is off-screen.
+            x = w.get("x", 0)
+            y = w.get("y", 0)
+            if not (_is_int(x) and _is_int(y)):
+                continue
             ww = w.get("width", 0)
             hh = w.get("height", 0)
             if not (_is_int(ww) and _is_int(hh)):
@@ -1487,12 +1804,23 @@ def validate_data(
 
             # ── Rule 101: chart data_points count limit ──
             if wt == "chart":
+                # The limit was written as a bare 128 with "on 256px display" in
+                # the message: half the OLED's width. On a 1280 px panel that is
+                # simply false. Derived from the profile it stays 128 for the
+                # OLED and becomes 640 for the Tab5.
+                # Still not the sound test: sub-pixel really means more points
+                # than the CHART is wide, not than the panel is. Four tests in
+                # test_validate_rules_99_106.py pin the panel-based threshold
+                # (a 60 px chart with 128 points is asserted clean), so that
+                # correction is left as a separate decision.
                 dp101 = w.get("data_points")
-                if isinstance(dp101, list) and len(dp101) > 128:
+                limit101 = (prof.match_w // 2) or 128
+                if isinstance(dp101, list) and len(dp101) > limit101:
                     issues.append(
                         Issue(
                             "WARN",
-                            f"{wl}: data_points has {len(dp101)} entries (>128, sub-pixel on 256px display)",
+                            f"{wl}: data_points has {len(dp101)} entries "
+                            f"(>{limit101}, sub-pixel on a {prof.match_w}px display)",
                         )
                     )
 
@@ -1928,6 +2256,21 @@ def validate_data(
                 )
             )
 
+        # ── Rule 133: say so when collision detection was skipped ──
+        #
+        # Rule 21 is O(n^2) and gives up above the hard limit. Until now it did
+        # that in SILENCE, so an over-budget scene came back with "no collisions"
+        # when the truth was "not looked at". A filter that hides a real defect
+        # is worse than no gauge at all, and this one hid the check itself.
+        if len(widgets) > HARD_WIDGET_LIMIT:
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: collision detection SKIPPED ({len(widgets)} widgets "
+                    f"> {HARD_WIDGET_LIMIT}); this scene is unchecked for overlaps",
+                )
+            )
+
         # ── Rule 21: Overlap detection (skip if widget count exceeds hard limit) ──
         if len(widgets) <= HARD_WIDGET_LIMIT:
             for i in range(len(widgets)):
@@ -1974,6 +2317,65 @@ def validate_data(
                                     f"{ref_a} <> {ref_b}",
                                 )
                             )
+
+        # ── Rule 134: near-miss alignment (a coordinate typo, not a choice) ──
+        #
+        # Two edges 1-3 px apart are never a design decision — nobody indents by
+        # two pixels on purpose. It is a typed coordinate that missed. The eye
+        # cannot catch it because the two elements are usually far apart on the
+        # screen, so this is precisely the class a gauge has to carry.
+        # Only VISIBLE TEXT edges are compared: panels and rules legitimately
+        # sit a pixel off a text edge to form a frame around it.
+        # LEFT EDGES ONLY. The vertical variant is gone, and deliberately:
+        # every single time it fired — in two different codebases — the rows
+        # sat on the SAME coordinate and the "miss" was an artifact of where
+        # the extreme points of the glyphs happened to land (baselines shared
+        # by different type sizes; accents reaching higher than cap height in
+        # ink-measured geometry). Left edges carry no such effect, and the one
+        # real defect this rule ever caught (x=78 vs 80) was horizontal. The
+        # real vertical defects seen in review (a button 10 px low, mixed
+        # heights in one row) are either above this threshold or split into
+        # different height buckets — the vertical variant cannot catch them.
+        NEAR_MISS_PX = 3
+        for axis, key in (("left", "x"),):
+            buckets: dict[Any, dict[int, str]] = {}
+            for w in widgets:
+                if not isinstance(w, dict):
+                    continue
+                if w.get("visible") is False or w.get("type") not in TEXT_TYPES:
+                    continue
+                if not str(w.get("text", "")).strip():
+                    continue
+                v = w.get(key)
+                if not _is_int(v):
+                    continue
+                # The left BOX edge is where the text starts only when the text
+                # is left-aligned. Centred or right-aligned runs sit at an
+                # offset that depends on the box width, so two boxes sharing a
+                # centre but differing in width look like a 2 px miss and are
+                # not one.
+                if key == "x" and str(w.get("align", "left")).lower() != "left":
+                    continue
+                if key == "y":
+                    h = w.get("height")
+                    if not _is_int(h):  # malformed height must not crash the run
+                        continue
+                    bucket = h
+                else:
+                    bucket = None
+                buckets.setdefault(bucket, {}).setdefault(v, str(w.get("text", ""))[:24])
+            for edges in buckets.values():
+                ordered = sorted(edges)
+                for a, b in itertools.pairwise(ordered):
+                    if 0 < b - a <= NEAR_MISS_PX:
+                        issues.append(
+                            Issue(
+                                "WARN",
+                                f"{pfx}: near-miss alignment: {axis} edges {a} and {b} "
+                                f"differ by {b - a}px "
+                                f"({edges[a]!r} vs {edges[b]!r})",
+                            )
+                        )
 
         # ── Rule 123: Min gap between non-grouped widgets ──
         if len(widgets) <= HARD_WIDGET_LIMIT:
