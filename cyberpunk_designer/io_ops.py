@@ -181,6 +181,21 @@ def save_prefs(app) -> None:
 
 
 def save_json(app) -> None:
+    # Brana profilu tab5. Scena artboardu NENI zdroj pravdy - tim zustavaji
+    # generatory `gen_*.py` - a jakykoli ERROR znamena, ze se nema vydat nic:
+    # ani ulozena scena, ani rudy zapis. Stejne prisne jako `do_espos.py`.
+    # Mimo tab5 vraci `brana_ulozeni` None a nic se nemeni.
+    from . import tab5_validace
+
+    duvod = tab5_validace.brana_ulozeni(app)
+    if duvod:
+        logger.warning("tab5: neukladam, %s", duvod)
+        try:
+            app._set_status(f"tab5: NEULOZENO - {duvod}", ttl_sec=4.0)
+        except (AttributeError, TypeError):
+            logger.debug("editor nema _set_status")
+        return
+
     errors = validate_design(app)
     if errors:
         logger.warning("Design validation warnings: %s", errors[:5])
@@ -241,17 +256,45 @@ def write_audit_report(app) -> None:
         logger.debug("Could not write audit report")
 
 
+def _hlas(app, text: str) -> None:
+    """Rekne to na obrazovku. Log sam nestaci - do nej se uzivatel nediva."""
+    try:
+        app._set_status(text, ttl_sec=4.0)
+    except (AttributeError, TypeError):
+        logger.debug("editor nema _set_status")
+
+
 def maybe_autosave(app) -> None:
-    """Auto-save if dirty and enabled."""
+    """Auto-save if dirty and enabled.
+
+    Autosave jde MIMO branu `save_json` a je to zamerne: rozpracovana prace
+    se ma dostat na disk i tehdy, kdyz scena zrovna ma ERROR. Dve veci u toho
+    ale nesmi zustat tise:
+
+    * kdyz brana hlavni ulozeni zastavila, NEsmi se `_dirty` shodit - navrh
+      v `app.json_path` je porad stary a "cisty" priznak by lhal;
+    * uzivatel se to musi dozvedet ze stavoveho radku, ne az z logu.
+    """
     if not app.autosave_enabled or not app._dirty:
         return
     now = time.time()
     if now - app._last_autosave_ts < app.autosave_interval:
         return
+
+    from . import tab5_validace
+
+    duvod = tab5_validace.brana_ulozeni(app)
     try:
         app.designer.save_to_json(str(app.autosave_path))
-        app._last_autosave_ts = now
-        app._dirty = False
-        app._dirty_scenes = set()
-    except OSError:
+    except OSError as exc:
         logger.warning("Autosave failed for %s", app.autosave_path, exc_info=True)
+        _hlas(app, f"AUTOSAVE SELHAL: {app.autosave_path} ({exc})")
+        return
+    app._last_autosave_ts = now
+    if duvod:
+        # Prace je v autosave souboru, ale navrh ulozeny NENI. Zustava dirty.
+        logger.warning("tab5: hlavni ulozeni zastaveno (%s), prace jen v autosave", duvod)
+        _hlas(app, f"tab5: NEULOZENO ({duvod}) - prace je jen v {Path(app.autosave_path).name}")
+        return
+    app._dirty = False
+    app._dirty_scenes = set()

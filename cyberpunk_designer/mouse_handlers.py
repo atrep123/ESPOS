@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from typing import List, Tuple
 
 import pygame
 
-from . import layout_tools
+from . import layout_tools, tab5_validace
 from .constants import GRID, safe_save_state, snap
+from .windowing import pan_drag_end, pan_drag_move, scene_origin
+
+logger = logging.getLogger(__name__)
 
 
 def on_mouse_down(app, pos: Tuple[int, int]) -> None:
@@ -247,7 +251,8 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
     cr = app.layout.canvas_rect
     if not cr.collidepoint(lx, ly):
         return
-    sr = getattr(app, "scene_rect", cr)
+    # Pocatek souradnic sceny (pri posunutem platne != scene_rect).
+    sr = scene_origin(app)
     if not isinstance(sr, pygame.Rect):
         sr = cr
 
@@ -381,13 +386,21 @@ def on_mouse_up(app, _pos: Tuple[int, int]) -> None:
     app.state.drag_start_rect = None
     app.state.resize_start_rect = None
 
+    # Validace profilem tab5 pri pusteni prvku. Mimo scenu artboardu (a bez
+    # profilu tab5) nedela NIC - viz `tab5_validace.je_tab5`. Vyjimka tady
+    # nesmi shodit editor: pustit prvek je jina operace nez zmerit ho.
+    try:
+        tab5_validace.po_pusteni(app)
+    except (ValueError, AttributeError, KeyError, TypeError, ImportError):
+        logger.warning("validace tab5 po pusteni selhala", exc_info=True)
+
 
 def _finish_box_select(app) -> None:
     """Complete rubber-band selection: select all widgets that intersect the rect."""
     rect = app.state.box_select_rect
     if rect is None or rect.width < 4 or rect.height < 4:
         return
-    sr = getattr(app, "scene_rect", app.layout.canvas_rect)
+    sr = scene_origin(app)
     if not isinstance(sr, pygame.Rect):
         sr = app.layout.canvas_rect
     sc = app.state.current_scene()
@@ -406,6 +419,20 @@ def _finish_box_select(app) -> None:
 
 def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> None:
     """Handle mouse move; apply drag/resize when active."""
+    # Posouvani platna strednim tlacitkem. Musi byt PRED kontrolou
+    # pointer_down - ta plati jen pro leve tlacitko, takze by sem tazeni
+    # strednim tlacitkem nikdy nedoslo.
+    if getattr(app, "_pan_drag_from", None) is not None:
+        try:
+            drzi = bool(_buttons[1]) if _buttons and len(_buttons) > 1 else False
+        except (TypeError, IndexError):
+            drzi = False
+        if drzi:
+            pan_drag_move(app, pos)
+        else:
+            pan_drag_end(app)
+        return
+
     if not app.pointer_down:
         return
 
@@ -462,7 +489,7 @@ def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> 
         return
 
     cr = app.layout.canvas_rect
-    sr = getattr(app, "scene_rect", cr)
+    sr = scene_origin(app)
     if not isinstance(sr, pygame.Rect):
         sr = cr
     sc = app.state.current_scene()

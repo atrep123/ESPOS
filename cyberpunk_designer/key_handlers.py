@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pygame
 
-from . import focus_nav, layout_tools
+from . import focus_nav, layout_tools, windowing
 from .constants import GRID
 
 # Ctrl+Alt key dispatch: key → (method_name, *args)
@@ -246,7 +246,6 @@ def on_key_down(app, event: pygame.event.Event) -> None:
         app.show_shortcuts_panel = not app.show_shortcuts_panel
         app._mark_dirty()
         return
-
     # Icon Palette is modal: while open it consumes all keys (search/nav).
     from . import icon_palette
 
@@ -293,6 +292,25 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             app._mark_dirty()
             return
         # Ignore global shortcuts while editing.
+        return
+
+    # Insert = vydat rudy zapis (patch v souradnicich generatoru TabOSu).
+    # Insert je jedina klavesa, ktera je dnes volna: vsech 26 pismen je
+    # v Ctrl+Alt tabulkach, F1-F12 v Ctrl+Fkey / Shift+Fkey a interpunkce
+    # v plain tabulce. Cizi zkratku jsem proto nebral. Mimo scenu artboardu
+    # `redline.vydej` jen rekne, ze neni z ceho, a nic nezmeni.
+    #
+    # Stoji AZ TADY, tedy za vsemi modalnimi strazemi (ikonova paleta,
+    # spravce sablon, editor logiky, build/flash, pripnuta napoveda) a za
+    # `inspector_selected_field`. Drive byl uplne nahore a strazemi prosel:
+    # kdyz uzivatel prejmenovaval prvek v inspektoru a zmackl Insert
+    # (v textovych polich bezny reflex - prepinani prepisu), editor vydal
+    # dvojici souboru `_rudy_zapis_*`. Vydavat patch behem psani do
+    # inspektoru neni akce, o kterou nekdo zadal.
+    if event.key == pygame.K_INSERT and not app.sim_input_mode:
+        from . import redline
+
+        redline.vydej(app)
         return
 
     mods = pygame.key.get_mods()
@@ -570,6 +588,22 @@ def on_key_down(app, event: pygame.event.Event) -> None:
             return
 
         if not app.state.selected:
+            # Bez vyberu sipky POSOUVAJI PLATNO. Doted nedelaly nic, takze se
+            # tim zadne chovani nebere; u sceny 1280x720, ktera se do vyrezu
+            # nevejde, je to jediny zpusob, jak se klavesnici dostat na pravy
+            # a dolni okraj navrhu.
+            krok = GRID * 16 if (mods & pygame.KMOD_SHIFT) else GRID * 4
+            dx = 0
+            dy = 0
+            if event.key == pygame.K_LEFT:
+                dx = -krok
+            elif event.key == pygame.K_RIGHT:
+                dx = krok
+            elif event.key == pygame.K_UP:
+                dy = -krok
+            elif event.key == pygame.K_DOWN:
+                dy = krok
+            windowing.pan_by(app, dx, dy)
             return
         # Ctrl+Shift+Up/Down: reorder widget in list
         if (mods & pygame.KMOD_CTRL) and (mods & pygame.KMOD_SHIFT):

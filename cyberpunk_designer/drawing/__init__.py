@@ -3,6 +3,7 @@
 from .canvas import (
     draw_canvas,
     draw_distance_indicators,
+    draw_nalez_frame,
     draw_overflow_marker,
     draw_rulers,
     draw_selection_info,
@@ -17,6 +18,7 @@ from .overlays import (
     TOOLBAR_TOOLTIPS,
     draw_context_menu,
     draw_help_overlay,
+    draw_nalezy,
     draw_shortcuts_panel,
     draw_tooltip,
 )
@@ -66,6 +68,8 @@ __all__ = [
     "draw_frame",
     "draw_help_overlay",
     "draw_inspector",
+    "draw_nalez_frame",
+    "draw_nalezy",
     "draw_overflow_marker",
     "draw_palette",
     "draw_pixel_frame",

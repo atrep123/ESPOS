@@ -80,6 +80,7 @@ PROFILE_ORDER = [
     "tft_240x240_st7789",
     "tft_320x240",
     "tft_480x320",
+    "tab5_1280x720",
 ]
 PREFS_PATH = Path("designer_prefs.json")
 

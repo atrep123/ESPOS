@@ -1412,6 +1412,9 @@ class CyberpunkEditorApp:
         if et == pygame.MOUSEBUTTONDOWN:
             self._dispatch_mouse_down(event)
             return
+        if et == pygame.MOUSEBUTTONUP and event.button == 2:
+            windowing.pan_drag_end(self)
+            return
         if et == pygame.MOUSEBUTTONUP and event.button == 1:
             self.pointer_down = False
             self.pointer_pos = self._screen_to_logical(event.pos)
@@ -1474,6 +1477,10 @@ class CyberpunkEditorApp:
                         self._delete_current_scene()
                         self._mark_dirty()
                         return
+                return
+            # Na platne zahaji stredni tlacitko posouvani sceny, ktera se do
+            # vyrezu nevejde (1280x720). Kdyz se scena vejde, nedela nic.
+            windowing.pan_drag_start(self, self.pointer_pos)
             return
         if event.button == 1:
             self._handle_left_click(event)

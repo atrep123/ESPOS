@@ -364,13 +364,39 @@ def ctx_view_items(app: CyberpunkEditorApp) -> list:
     xc = "\u2713 " if app.snap_enabled else "  "
     ic = "\u2713 " if getattr(app, "show_widget_ids", False) else "  "
     zc = "\u2713 " if getattr(app, "show_z_labels", False) else "  "
-    return [
+    polozky = [
         (f"{gc}Grid", "G", "view_grid"),
         (f"{rc}Rulers", "", "view_rulers"),
         (f"{cc}Center Guides", "Shift+G", "view_guides"),
         (f"{xc}Snap", "X", "view_snap"),
         (f"{ic}Widget IDs", "", "view_ids"),
         (f"{zc}Z-Labels", "", "view_zlabels"),
+    ]
+    polozky.extend(ctx_tab5_items(app))
+    return polozky
+
+
+def ctx_tab5_items(app: CyberpunkEditorApp) -> list:
+    """Polozky pro scenu artboardu TabOSu (most tab5).
+
+    Ukazuji se jen tehdy, kdyz je most pripojeny nebo bezi profil tab5 -
+    v beznem navrhu pro OLED 256x128 by nemely co delat. Prepinac podkladu
+    (snimek z Chromu) sem patri proto, ze pro nej nezbyla volna klavesova
+    zkratka: vsechny ctyri dispatch tabulky v `key_handlers.py` jsou plne.
+    """
+    from . import tab5_validace
+
+    if not tab5_validace.je_tab5(app):
+        return []
+    pc = "✓ " if getattr(app, "show_backdrop", False) else "  "
+    nc = "✓ " if getattr(app, "show_nalezy", True) else "  "
+    vc = "✓ " if getattr(app, "tab5_ramecky_vse", False) else "  "
+    return [
+        ("---", "", None),
+        (f"{pc}Podklad (snimek)", "", "tab5_podklad"),
+        (f"{nc}Nalezy tab5", "", "tab5_nalezy"),
+        (f"{vc}Ramecky i vrstveni", "", "tab5_ramecky_vse"),
+        ("Vydat rudy zapis", "Ins", "tab5_rudy_zapis"),
     ]
 
 
@@ -452,6 +478,21 @@ def execute_context_action(app: CyberpunkEditorApp, action: str) -> None:
             pass
     elif action == "save_as_template":
         app._save_selection_as_template()
+    elif action == "tab5_podklad":
+        from . import tab5_most
+
+        tab5_most.prepni_podklad(app)
+    elif action == "tab5_nalezy":
+        from . import tab5_validace
+
+        tab5_validace.prepni_nalezy(app)
+    elif action == "tab5_ramecky_vse":
+        app.tab5_ramecky_vse = not bool(getattr(app, "tab5_ramecky_vse", False))
+        app._mark_dirty()
+    elif action == "tab5_rudy_zapis":
+        from . import redline
+
+        redline.vydej(app)
     else:
         method_name = CONTEXT_ACTION_MAP.get(action)
         if method_name is not None:

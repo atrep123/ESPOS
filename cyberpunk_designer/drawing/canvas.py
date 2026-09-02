@@ -10,6 +10,9 @@ from ui_designer import WidgetConfig
 
 from .. import text_metrics
 from ..constants import GRID, PALETTE, color_to_rgb
+from ..tab5_validace import barva_urovne
+from ..windowing import scene_origin
+from .overlays import draw_nalezy
 from .primitives import draw_border_style, draw_dashed_rect, render_pixel_text
 from .widget_renders import (
     _render_box,
@@ -55,13 +58,32 @@ def draw_canvas(app) -> None:
     if scene_rect != r:
         pygame.draw.rect(app.logical_surface, PALETTE["panel_border"], scene_rect, 1)
 
+    # Pocatek souradnic sceny na platne. Pri nulovem posunu je to presne
+    # scene_rect.topleft; pri posunutem platne lezi vlevo/nahore mimo vyrez.
+    # Pocita se PRED mrizkou, protoze mrizka i pravitka se o nej opiraji.
+    origin_rect = scene_origin(app)
+    origin_x = int(origin_rect.x)
+    origin_y = int(origin_rect.y)
+
+    # Podklad (snimek skutecneho vykresleni z Chrome) lezi POD mrizkou a
+    # widgety: rika "takhle to je ted", ramecky "sem to tahnu".
+    draw_backdrop(app, scene_rect, origin_x, origin_y)
+
     if app.show_grid:
         grid_c = PALETTE.get("grid") or app._shade(base, 14)
-        for x in range(scene_rect.left, scene_rect.right, GRID):
+        # Mrizka se drzi souradnic SCENY, ne okraje vyrezu - jinak by pri
+        # posouvani platna plavala a prestala ukazovat nasobky GRID.
+        first_x = scene_rect.left - ((scene_rect.left - origin_x) % GRID)
+        first_y = scene_rect.top - ((scene_rect.top - origin_y) % GRID)
+        for x in range(first_x, scene_rect.right, GRID):
+            if x < scene_rect.left:
+                continue
             pygame.draw.line(
                 app.logical_surface, grid_c, (x, scene_rect.top), (x, scene_rect.bottom - 1)
             )
-        for y in range(scene_rect.top, scene_rect.bottom, GRID):
+        for y in range(first_y, scene_rect.bottom, GRID):
+            if y < scene_rect.top:
+                continue
             pygame.draw.line(
                 app.logical_surface, grid_c, (scene_rect.left, y), (scene_rect.right - 1, y)
             )
@@ -69,15 +91,16 @@ def draw_canvas(app) -> None:
     # Center crosshair guides
     if getattr(app, "show_center_guides", False):
         gc = PALETTE.get("guide", (80, 200, 220))
-        cx = scene_rect.left + scene_rect.width // 2
-        cy = scene_rect.top + scene_rect.height // 2
+        # Stred SCENY, ne stred vyrezu - pri posunutem platne to neni totez.
+        cx = (origin_x + scene_w // 2) if scene_w > 0 else (scene_rect.left + scene_rect.width // 2)
+        cy = (origin_y + scene_h // 2) if scene_h > 0 else (scene_rect.top + scene_rect.height // 2)
+        cx = max(scene_rect.left, min(scene_rect.right - 1, cx))
+        cy = max(scene_rect.top, min(scene_rect.bottom - 1, cy))
         pygame.draw.line(app.logical_surface, gc, (cx, scene_rect.top), (cx, scene_rect.bottom - 1))
         pygame.draw.line(app.logical_surface, gc, (scene_rect.left, cy), (scene_rect.right - 1, cy))
 
     preview = bool(getattr(app, "clean_preview", False))
 
-    origin_x = int(scene_rect.x)
-    origin_y = int(scene_rect.y)
     padding = max(2, app.pixel_padding // 2)
 
     items = list(enumerate(sc.widgets))
@@ -126,6 +149,11 @@ def draw_canvas(app) -> None:
                 is_selected=is_selected,
             )
 
+            # Ramecek nalezu validatoru tab5. Kresli se PRED rameckem vyberu,
+            # aby vyber zustal citelny i na prvku, ktery ma nalez.
+            if not preview:
+                draw_nalez_frame(app, idx, rect)
+
             if is_selected and getattr(w, "visible", True) and not preview:
                 pygame.draw.rect(app.logical_surface, PALETTE["selection"], rect, 1)
 
@@ -151,7 +179,62 @@ def draw_canvas(app) -> None:
     # guide even when a widget hugs the top/left edge of the scene (e.g. a
     # full-width header panel at y=0 would otherwise occlude the top ruler).
     if not preview and getattr(app, "show_rulers", True):
-        draw_rulers(app, scene_rect, scene_w, scene_h)
+        draw_rulers(app, scene_rect, scene_w, scene_h, origin=(origin_x, origin_y))
+
+    # Panel nalezu lezi nad platnem, takze se musi prekreslit VZDY, kdyz se
+    # prekresluje platno - jinak by ho "jen platno je spinave" vetev
+    # optimized_draw_frame smazala a zustala by prazdna dira.
+    if not preview:
+        draw_nalezy(app)
+
+
+def draw_nalez_frame(app, idx: int, rect: pygame.Rect) -> None:
+    """Barevny ramecek prvku podle NEJHORSIHO nalezu validatoru tab5.
+
+    ERROR cerveny (2 px), WARN zluty (1 px). Trida "vrstveni" se do ramecku
+    nepocita - je jich na cistem artboardu vsech 34 a obarvily by cely navrh;
+    v panelu nalezu se ale pocita dal. `app.tab5_ramecky_vse` ji zapne.
+    """
+    vysledek = getattr(app, "tab5_vysledek", None)
+    if vysledek is None or not hasattr(vysledek, "uroven_prvku"):
+        return
+    uroven = vysledek.uroven_prvku(idx, vse=bool(getattr(app, "tab5_ramecky_vse", False)))
+    barva = barva_urovne(uroven)
+    if barva is None:
+        return
+    pygame.draw.rect(app.logical_surface, barva, rect.inflate(2, 2), 2 if uroven == "ERROR" else 1)
+
+
+def draw_backdrop(app, scene_rect: pygame.Rect, origin_x: int, origin_y: int) -> None:
+    """Vykresli podklad - snimek skutecneho vykresleni artboardu - pod widgety.
+
+    Editor kresli jednim globalnim pismem a per-widget `font_size` nepouziva,
+    takze vlastni nahled by o sirkach textu LHAL. Podkladem je proto PNG
+    z tehoz headless Chromu, kterym artboard meri i brana do_espos.py
+    (prepinac --snimek). Podklad se behem tazeni neaktualizuje, a to je
+    poctive: podklad rika "takhle to je ted", ramecky "sem to tahnu".
+
+    Nic nedela, kdyz podklad neni nacteny nebo je vypnuty (`app.show_backdrop`).
+    """
+    if not getattr(app, "show_backdrop", True):
+        return
+    surf = getattr(app, "backdrop_surface", None)
+    if surf is None:
+        return
+    target = getattr(app, "logical_surface", None)
+    if target is None:
+        return
+    old_clip = target.get_clip()
+    try:
+        target.set_clip(scene_rect)
+        target.blit(surf, (int(origin_x), int(origin_y)))
+    except (pygame.error, AttributeError, TypeError, ValueError):
+        pass
+    finally:
+        try:
+            target.set_clip(old_clip)
+        except (pygame.error, AttributeError):
+            pass
 
 
 def _draw_canvas_overlays(
@@ -221,7 +304,8 @@ def _draw_canvas_overlays(
                 pass
 
     if not preview and not app.pointer_down and not app.sim_input_mode:
-        hover_idx = app.state.hit_test_at(app.pointer_pos, scene_rect)
+        origin_rect = pygame.Rect(origin_x, origin_y, scene_rect.width, scene_rect.height)
+        hover_idx = app.state.hit_test_at(app.pointer_pos, origin_rect)
         if hover_idx is not None and hover_idx not in app.state.selected:
             hw = sc.widgets[hover_idx]
             hx = origin_x + int(hw.x)
@@ -274,33 +358,52 @@ def _draw_canvas_overlays(
                 pygame.draw.rect(app.logical_surface, c, frect.inflate(2, 2), 2)
 
 
-def draw_rulers(app, scene_rect: pygame.Rect, scene_w: int, scene_h: int) -> None:
-    """Draw pixel-coordinate rulers on the top and left edges of the scene."""
+def draw_rulers(
+    app,
+    scene_rect: pygame.Rect,
+    scene_w: int,
+    scene_h: int,
+    origin: Tuple[int, int] | None = None,
+) -> None:
+    """Draw pixel-coordinate rulers on the top and left edges of the scene.
+
+    `origin` je pocatek souradnic sceny na platne (levy horni roh sceny).
+    Pri posunutem platne se lisi od `scene_rect.topleft` a popisky by bez nej
+    ukazovaly cizi cisla. Kdyz se nepreda, pouzije se roh vyrezu (chovani
+    pred zavedenim posouvani).
+    """
     ruler_c = PALETTE.get("muted", (100, 100, 100))
     tick_step = 16  # pixels between major ticks
     tick_h = 3  # tick mark height
     surf = app.logical_surface
-    sx, sy = scene_rect.x, scene_rect.y
+    sx, sy = (int(origin[0]), int(origin[1])) if origin else (scene_rect.x, scene_rect.y)
+    # Rysky se kresli na hranu VYREZU, popisky nesou souradnici SCENY.
+    hrana_nahore = scene_rect.y
+    hrana_vlevo = scene_rect.x
 
     # Top ruler (horizontal)
     for px in range(tick_step, scene_w + 1, tick_step):
         x = sx + px
         if x > scene_rect.right:
             break
-        pygame.draw.line(surf, ruler_c, (x, sy), (x, sy + tick_h))
+        if x < scene_rect.left:
+            continue
+        pygame.draw.line(surf, ruler_c, (x, hrana_nahore), (x, hrana_nahore + tick_h))
         if px % (tick_step * 4) == 0:
             lbl = render_pixel_text(app, str(px), ruler_c)
-            surf.blit(lbl, (x + 1, sy + 1))
+            surf.blit(lbl, (x + 1, hrana_nahore + 1))
 
     # Left ruler (vertical)
     for py in range(tick_step, scene_h + 1, tick_step):
         y = sy + py
         if y > scene_rect.bottom:
             break
-        pygame.draw.line(surf, ruler_c, (sx, y), (sx + tick_h, y))
+        if y < scene_rect.top:
+            continue
+        pygame.draw.line(surf, ruler_c, (hrana_vlevo, y), (hrana_vlevo + tick_h, y))
         if py % (tick_step * 4) == 0:
             lbl = render_pixel_text(app, str(py), ruler_c)
-            surf.blit(lbl, (sx + 1, y + 1))
+            surf.blit(lbl, (hrana_vlevo + 1, y + 1))
 
 
 def draw_selection_info(app, sel_rect: pygame.Rect, bounds, scene_rect: pygame.Rect) -> None:

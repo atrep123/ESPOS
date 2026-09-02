@@ -9,6 +9,7 @@ import pygame
 from ui_designer import HARDWARE_PROFILES
 
 from ..constants import GRID, PALETTE, snap
+from ..tab5_validace import BARVA_ERROR, BARVA_WARN, TRIDY_POZOR
 from .primitives import draw_pixel_panel_bg, render_pixel_text
 from .text import draw_text_clipped, text_width_px
 
@@ -646,3 +647,81 @@ def draw_shortcuts_panel(app) -> None:
                 max_lines=1,
                 use_device_font=False,
             )
+
+
+# --------------------------------------------------------------------------- #
+# Panel nalezu validatoru tab5
+# --------------------------------------------------------------------------- #
+
+# Kolik nalezu se vypise pod souctem. Souctove radky jsou vzdy VSECHNY:
+# zadna trida nesmi zmizet, i kdyz se jeji jednotlive nalezy do panelu nevejdou.
+NALEZY_MAX_RADKU = 8
+NALEZY_SIRKA = 320
+
+
+def _nalezy_poradi(pocty: dict) -> list:
+    """Tridy k vypisu: nejdriv "pozor" (nemerilo se), pak podle poctu.
+
+    Pravidlo 133 ("collision detection SKIPPED") znamena, ze meridlo NEMERILO.
+    To musi byt videt driv nez cokoli jineho, i kdyz je to jediny nalez.
+    """
+    pozor = [(k, n) for k, n in pocty.items() if k in TRIDY_POZOR and n]
+    zbytek = [(k, n) for k, n in pocty.items() if k not in TRIDY_POZOR and n]
+    zbytek.sort(key=lambda kn: (-kn[1], kn[0]))
+    return pozor + zbytek
+
+
+def draw_nalezy(app) -> None:
+    """Panel se seznamem nalezu validatoru tab5 a s pocty po tridach.
+
+    Kresli se jen tehdy, kdyz uz nejaky vysledek je (tedy nad scenou
+    artboardu / profilem tab5). Vypina se `app.show_nalezy`.
+    """
+    if not bool(getattr(app, "show_nalezy", True)):
+        return
+    vysledek = getattr(app, "tab5_vysledek", None)
+    if vysledek is None or not getattr(vysledek, "nalezy", None):
+        return
+    surface = getattr(app, "logical_surface", None)
+    if surface is None:
+        return
+
+    pocty = dict(getattr(vysledek, "pocty", {}) or {})
+    radky = _nalezy_poradi(pocty)
+    ukazane = list(getattr(vysledek, "nalezy", ())[:NALEZY_MAX_RADKU])
+
+    pad = max(2, app.pixel_padding // 2)
+    krok = render_pixel_text(app, "X", PALETTE["text"]).get_height() + 2
+    vysoka = pad * 2 + krok * (1 + len(radky) + len(ukazane) + 1)
+    canvas = app.layout.canvas_rect
+    sirka = min(NALEZY_SIRKA, max(120, canvas.width - 8))
+    rect = pygame.Rect(canvas.right - sirka - 4, canvas.top + 4, sirka, vysoka)
+
+    draw_pixel_panel_bg(app, rect)
+    okraj = BARVA_ERROR if vysledek.chyb else PALETTE["panel_border"]
+    pygame.draw.rect(surface, okraj, rect, 1)
+
+    x = rect.x + pad
+    y = rect.y + pad
+    hlavicka = f"NALEZY tab5  {vysledek.chyb} ERROR  {vysledek.varovani} WARN"
+    if getattr(vysledek, "ceka", False):
+        # Nikdy netvrdit, ze panel meri to, co je na platne ted.
+        hlavicka += "  (neaktualni)"
+    surface.blit(render_pixel_text(app, hlavicka, PALETTE["text"]), (x, y))
+    y += krok
+
+    for trida, pocet in radky:
+        barva = BARVA_WARN if trida in TRIDY_POZOR else PALETTE["muted"]
+        znak = "!" if trida in TRIDY_POZOR else " "
+        surface.blit(render_pixel_text(app, f"{znak}{pocet:>5}  {trida}", barva), (x, y))
+        y += krok
+
+    for nalez in ukazane:
+        barva = BARVA_ERROR if nalez.uroven == "ERROR" else PALETTE["muted"]
+        radek = pygame.Rect(x, y, sirka - pad * 2, krok)
+        draw_text_clipped(app, surface, nalez.zprava, radek, barva, 0, valign="top")
+        y += krok
+
+    zbyva = len(getattr(vysledek, "nalezy", ())) - len(ukazane)
+    if zbyva > 0:
+        surface.blit(render_pixel_text(app, f"... a dalsich {zbyva}", PALETTE["muted"]), (x, y))

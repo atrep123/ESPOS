@@ -180,6 +180,22 @@ HARDWARE_PROFILES: Dict[str, HardwareProfile] = {
         "max_fb_kb": 320.0,
         "max_flash_kb": 512.0,
     },
+    # -- Velky panel s PSRAM (M5Stack Tab5: ESP32-P4 + LVGL) --
+    # Odpovida profilu PROFILE_TAB5 v tools/validate_design.py (1280x720,
+    # 293,7 PPI). Slouzi k editaci navrhu TabOSu prevedenych z artboardu.
+    "tab5_1280x720": {
+        "label": "M5Stack Tab5 1280x720 (16bpp, LVGL/PSRAM)",
+        "width": 1280,
+        "height": 720,
+        "color_depth": 16,
+        # Snimek obrazovky ma 1280*720*2 B = 1800 kB. Na Tab5 lezi ve 32 MB
+        # PSRAM, ne ve vnitrni RAM - mez proto NENI 320 kB jako u malych TFT.
+        # S malym cislem by estimate_resources hlasilo preplneni na kazde
+        # scene, tedy falesny poplach: 8 MB pokryje i dvojity buffer a rezii.
+        "max_fb_kb": 8192.0,
+        # 16 MB flash, aplikacni oddil radove 4 MB.
+        "max_flash_kb": 4096.0,
+    },
 }
 
 logger = logging.getLogger(__name__)
