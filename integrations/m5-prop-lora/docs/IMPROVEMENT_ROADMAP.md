@@ -41,10 +41,18 @@
   v1 fleet selže bezpečně = dropnut, ne tiše). **HW test (COM8): dva různé epochy
   napříč rebooty (0x02734af3 → 0x115df824), v2 na všech rámcích+ACK, FIRE potvrzen
   v obou bootech** → 1/256 kolize odstraněna (~1/4 mld). Build+flash všech 4 OK.
+- **Sprint A / 4.x — host testy + FMEA HOTOVO (2026-08-06, sw část):**
+  multiplatformní runner `tools/run_host_tests.py` (Linux/Windows; PS1 zůstává
+  jako Windows wrapper), host C++ testy safety_logic/palette/led_payload **nově
+  v CI** (job Firmware), deterministický **fuzz parseru rámců**
+  (`tests/test_protocol_fuzz.py`: 5000 náhodných blobů + mutace každého bytu +
+  trunkace — nic nesmí projít MAC gatem) a python safety subset (protocol +
+  roundtrip + link sim) **nově v CI** (job Python). **12-řádková FMEA:**
+  `docs/FMEA.md` — otevřená rizika S≥3: zero-state check GO (5.2), HW watchdog +
+  boot-safe GPIO (0.4), klíče/pairing (Sprint B 1.1). Retire
+  `test_project_sources.py` zatím neprovedeno (rozhodnutí vlastníka).
 - **Zbývá ze Sprintu A:** HW watchdog + boot-safe GPIO (0.4 — návrh sněmu hotový:
   GPIO13 idle-high root-fix first, pak Task WDT 4-5s; vyžaduje board-level práci).
-  Host testy + FMEA (4.x — návrh sněmu hotový: GoogleTest nad shared/core, 12-řádková
-  FMEA, retire stale test_project_sources.py).
 - **Pozn. build stav:** framework `framework-arduinoespressif32` je teď v
   **pioarduino** verzi (modem-buildable). Rebuild din-rx vyžaduje swap zpět na
   official (smazat + refetch) — viz build gotchas. Aktuální din-rx binárka (A2,
