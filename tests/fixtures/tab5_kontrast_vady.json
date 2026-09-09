@@ -1,0 +1,75 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "button",
+     "x": 300,
+     "y": 300,
+     "width": 240,
+     "height": 81,
+     "text": "Připojit",
+     "color_fg": "#12150E",
+     "color_bg": "#E9A63C",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "btn.1"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 400,
+     "width": 400,
+     "height": 24,
+     "text": "Srovnat podle sítě",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "volba.2"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 120,
+     "width": 400,
+     "height": 29,
+     "text": "TEPLOTA RÁDIA",
+     "color_fg": "#5A5F4C",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "titulek.3"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "btn.1": {
+      "font_size": 16,
+      "enabled": false,
+      "inkoust": "#946D2A",
+      "podklad": "#E9A63C"
+     },
+     "volba.2": {
+      "font_size": 20,
+      "enabled": false,
+      "inkoust": "#727164",
+      "podklad": "#14170F"
+     },
+     "titulek.3": {
+      "font_size": 24,
+      "inkoust": "#5A5F4C",
+      "podklad": "#14170F"
+     }
+    }
+   }
+  }
+ }
+}

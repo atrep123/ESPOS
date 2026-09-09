@@ -1,0 +1,125 @@
+{
+ "_puvod": "Hex Viewer, fotoprotokol 2026-09-08. VADY: patka 'SOUBOR — OKNO — ZOBRAZENO —' ma tri sloty bez hodnoty v JEDNOM prvku (R139, treti tvar), a o microSD rika 'nedostupne', coz neni zadny stav ze slovniku (R143) - Diagnostics o teze karte rika 'vlozena, nepripojena'. Popisky patky maji souradnice ze skutecne sceny _scena_SvorkaHex.dc.json.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 631,
+     "width": 89,
+     "height": 12,
+     "text": "SOUBOR",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.247"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 660,
+     "width": 700,
+     "height": 19,
+     "text": "SOUBOR — OKNO — ZOBRAZENO —",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.248"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 123,
+     "width": 300,
+     "height": 15,
+     "text": "nedostupné",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.253"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "txt.248": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "txt.253": {
+      "role": "stav",
+      "vec": "microSD"
+     },
+     "popis.247": {
+      "role": "popisek",
+      "pas": "razitko"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

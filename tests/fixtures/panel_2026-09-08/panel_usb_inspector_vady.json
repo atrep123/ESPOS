@@ -1,0 +1,154 @@
+{
+ "_puvod": "USB Inspector, fotoprotokol 2026-09-08 ('sloupec CO TO JE prazdny smalt; velke prazdno mezi radkem zarizeni a deskriptorem'). VSECHNA CISLA JSOU Z ARTBOARDU SvorkaUsb.dc.html (_scena_ z 2026-09-09): k.28 656,155 90x12; v.29 656,184 266x19; k.43 656,244 90x12; v.44 656,273 321x19; prazdno.45 20,349 1240x19. Z PANELU je jen to, ze OBA sloupce 'CO TO JE' jsou prazdne - artboard tam ma 'LA1010 · logicky analyzator' a 'FT232R · USB-seriovy prevodnik'.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 656,
+     "y": 155,
+     "width": 90,
+     "height": 12,
+     "text": "CO TO JE",
+     "color_fg": "#5A5F4C",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "k.28"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 184,
+     "width": 266,
+     "height": 19,
+     "text": "",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.29"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 244,
+     "width": 90,
+     "height": 12,
+     "text": "CO TO JE",
+     "color_fg": "#5A5F4C",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "k.43"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 273,
+     "width": 321,
+     "height": 19,
+     "text": "",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.44"
+    },
+    {
+     "type": "label",
+     "x": 20,
+     "y": 349,
+     "width": 1240,
+     "height": 19,
+     "text": "další port volný — nic se neohlásilo",
+     "color_fg": "#9BA28D",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "prazdno.45"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "k.28": {
+      "role": "popisek"
+     },
+     "v.29": {
+      "role": "smalt"
+     },
+     "k.43": {
+      "role": "popisek"
+     },
+     "v.44": {
+      "role": "smalt"
+     },
+     "prazdno.45": {
+      "role": "hodnota"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

@@ -1,0 +1,130 @@
+{
+ "_puvod": "Files bez vad: smalt nese hodnotu, sloupec ma jmeno a o karte se mluvi jednim stavem ze slovniku.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 1004,
+     "y": 123,
+     "width": 70,
+     "height": 12,
+     "text": "VOLNO",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.12"
+    },
+    {
+     "type": "label",
+     "x": 1004,
+     "y": 147,
+     "width": 160,
+     "height": 19,
+     "text": "28,4 GB",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "zive.13"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 123,
+     "width": 400,
+     "height": 15,
+     "text": "připojena",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "zive.16"
+    },
+    {
+     "type": "label",
+     "x": 700,
+     "y": 190,
+     "width": 260,
+     "height": 15,
+     "text": "ZMĚNĚNO",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "hlav.20"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ]
+    },
+    "prvky": {
+     "zive.13": {
+      "role": "smalt"
+     },
+     "zive.16": {
+      "role": "stav",
+      "vec": "microSD"
+     },
+     "hlav.20": {
+      "role": "popisek"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

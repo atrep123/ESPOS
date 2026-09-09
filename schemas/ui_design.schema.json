@@ -75,15 +75,15 @@
         },
         "navrh": {
           "type": "object",
-          "description": "Merena data z artboardu (most tabos-ui-kit -> ESPOS): vyhrazene pasy (patka/razitko), rodicovske ramecky prvku a sirky zmerene SKUTECNYM fontem v prohlizeci. Nese je scena, ne widget: widget ma additionalProperties:false a je obousmerne svazany s ui_models.WidgetConfig, kdezto scena ma additionalProperties:true. Tvar je tu POPSANY, ale zamerne nevynucovany - o vadny blok se stara tools/validate_design.py (znacka 'vadny blok navrh'), aby tentyz preklep nehlasila dve mista.",
+          "description": "Merena data z artboardu (most tabos-ui-kit -> ESPOS): vyhrazene pasy (razitko/hlavicka/navigace), rodicovske ramecky prvku, smaltove plochy, delici cary, sirky zmerene SKUTECNYM fontem v prohlizeci, skalu rezu, paletu a soustavu odsazeni. Nese je scena, ne widget: widget ma additionalProperties:false a je obousmerne svazany s ui_models.WidgetConfig, kdezto scena ma additionalProperties:true. Tvar je tu POPSANY, ale zamerne nevynucovany - o vadny blok se stara tools/validate_design.py (znacka 'vadny blok navrh'), aby tentyz preklep nehlasila dve mista.",
           "properties": {
             "pasy": {
               "type": "object",
-              "description": "Vyhrazene pasy sceny: jmeno -> [x, y, sirka, vyska]."
+              "description": "Vyhrazene pasy sceny: jmeno -> [x, y, sirka, vyska]. Pas ZAKLADA prvek, ktery nese data-pas i data-pas-vyska (razitko, hlavicka, navigace); kdo nese jen data-pas, je jeho CLEN a smi v nem lezet - ale cely (Rule 136)."
             },
             "prvky": {
               "type": "object",
-              "description": "_widget_id -> {rodic: [x, y, sirka, vyska], rodic_id, pas, role, sirka_textu, sirka_bunky, prazdne, presah, vec}. rodic_id je _widget_id nejblizsiho predka, ktery je taky ve scene - jim se Rule 138 pta na POTOMKY misto na pouhy prekryv."
+              "description": "_widget_id -> {rodic: [x, y, sirka, vyska], rodic_id, pas, role, sirka_textu, sirka_bunky, prazdne, presah, vec, orez, font_size, tucne, enabled, inkoust, podklad, vsazka}. rodic_id je _widget_id nejblizsiho predka, ktery je taky ve scene - jim se Rule 138 pta na POTOMKY misto na pouhy prekryv. orez je JEDNO mereni o ctyrech cislech (sirka_obsahu, sirka_schranky, vyska_obsahu, vyska_schranky = scrollWidth/clientWidth a jejich svisle protejsky); Rule 144 a 145 z nej ctou, jestli schranka text SKUTECNE useknula - to je jina velicina nez DEKLAROVANA bunka Rule 137. font_size nese Rule 148 (skala) i Rule 149 (uhlova velikost). inkoust a podklad jsou VIDENA dvojice barev (uz se slozenou prusvitnosti a opacity) pro Rule 17; scenove color_fg/color_bg zustavaji barvou, kterou generator NAPSAL, protoze na ni se pta Rule 150. tucne a enabled jsou druha pulka meze velkeho textu a vyjimka WCAG 1.4.3. vsazka je vlastni odsazeni bloku pro Rule 151 - PARAMETR meze, ne vypinac pravidla."
             },
             "mrizky": {
               "type": "array",
@@ -101,6 +101,30 @@
             "jmena_sdk": {
               "type": "array",
               "description": "Jmena rozhrani a hodnot enumu z hlavicek SDK (validate_design.jmena_ze_sdk). Rule 142 jimi rozhoduje o verzalkovem slove uvnitr vety: seznam se NEOPISUJE, vozi ho most z pinnutych hlavicek jadra."
+            },
+            "plochy": {
+              "type": "array",
+              "description": "Jmena prvku, ktere JSOU smaltova plocha (svetle pole nesouci tmavy inkoust). Rule 146 jimi meri polaritu: text lezici na plose, ktery neni jejim potomkem, se kresli barvou tmave strany. Nesou se JMENA, ne obdelniky - obdelnik uz scena ma, prislusnost ne."
+            },
+            "cary": {
+              "type": "array",
+              "description": "Delici cary listu jako obdelniky [x, y, sirka, vyska]. Vlasova linka (1 px) do sceny nevstupuje - most zahazuje vsechno tenci nez 2 px - takze Rule 147 (cara pres text) potrebuje vlastni nosic."
+            },
+            "skala": {
+              "type": "object",
+              "description": "Zavazna skala rezu pisma a JMENOVITE vyjimky tohohle listu: {rezy: [14, 16, 20, 24, 32], vyjimky: {\"40\": \"veta proc\"}}. Rule 148 jimi meri, jestli list sazi pet roli, nebo si prisadil sesty rez. Vyjimka bez vety je jen vypinac pravidla a zahazuje se nahlas. Rezy vozi most z tokens.json (typography), vyjimky z typografie_vyjimky - obojí odtud, aby skala nemela sestou kopii."
+            },
+            "paleta": {
+              "type": "array",
+              "description": "Barvy, ze kterych se list smi kreslit (kit vozi tokens.json colors, tedy tutez paletu, kterou ma firmware v tema.h). Rule 150 jimi meri color_fg a color_bg kazdeho viditelneho prvku a hlasi kazdou RUZNOU barvu jednou s poctem prvku."
+            },
+            "paleta_vlastni": {
+              "type": "string",
+              "description": "Veta o tom, ze CELY list ma vlastni identitu (list v negativu, zamerne stara obrazovka). Rule 150 pak vyda jeden WARN s duvodem misto vyctu barev. Prazdne oznaceni je vypinac bez duvodu a zahazuje se."
+            },
+            "soustava": {
+              "type": "object",
+              "description": "Soustava odsazeni: {pole_x, vsazka} z tokens.json layout (obsah.x a ram.vsazka). Rule 151 jimi meri text, ktery zacina MEZI hranou pole a zavaznou vsazkou, tedy se lepi na ram. Blok s vlastni vsazkou (prvky[*].vsazka) se meri proti sve, ne proti teto."
             }
           },
           "additionalProperties": true

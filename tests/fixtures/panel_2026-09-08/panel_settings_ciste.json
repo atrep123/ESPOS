@@ -1,0 +1,137 @@
+{
+ "_puvod": "Settings bez vad: mikro je U+00B5 (font ho ma), vety mluvi lidsky a hodiny pouzivaji stav ze slovniku.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 720,
+     "y": 445,
+     "width": 200,
+     "height": 19,
+     "text": "perioda 0,5 µs",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "jm.41"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 240,
+     "width": 660,
+     "height": 41,
+     "text": "Čip hodin na sběrnici odpověděl, hardware tam tedy je. Přístroj ale zatím neumí čas přečíst.",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "vys.24"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 340,
+     "width": 660,
+     "height": 38,
+     "text": "Zařízení dnes tiskne desetinnou tečku, i když je sestava česká.",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "vys.30"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 210,
+     "width": 200,
+     "height": 19,
+     "text": "Hodiny",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "jm.23"
+    },
+    {
+     "type": "label",
+     "x": 400,
+     "y": 210,
+     "width": 300,
+     "height": 19,
+     "text": "nezměřeno",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "hod.25"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ]
+    },
+    "prvky": {
+     "hod.25": {
+      "role": "stav",
+      "vec": "hodiny"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

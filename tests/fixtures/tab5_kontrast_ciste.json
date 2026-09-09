@@ -1,0 +1,74 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 120,
+     "width": 400,
+     "height": 29,
+     "text": "TEPLOTA RÁDIA",
+     "color_fg": "#6F7764",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "titulek.1"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 200,
+     "width": 400,
+     "height": 23,
+     "text": "49,4 °C",
+     "color_fg": "#6F7764",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "tucny.2"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 300,
+     "width": 400,
+     "height": 19,
+     "text": "vzorkuje po 2 s",
+     "color_fg": "#9BA28D",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "bezny.3"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "titulek.1": {
+      "font_size": 24,
+      "inkoust": "#6F7764",
+      "podklad": "#14170F"
+     },
+     "tucny.2": {
+      "font_size": 19,
+      "tucne": true,
+      "inkoust": "#6F7764",
+      "podklad": "#14170F"
+     },
+     "bezny.3": {
+      "font_size": 16,
+      "inkoust": "#9BA28D",
+      "podklad": "#14170F"
+     }
+    }
+   }
+  }
+ }
+}

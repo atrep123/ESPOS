@@ -1,0 +1,124 @@
+{
+ "_puvod": "Network Tools bez vad: tlacitko 240x81 jako na artboardu, obe vety bez strojoveho jmena, patka nese pocet siti.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "button",
+     "x": 1004,
+     "y": 113,
+     "width": 240,
+     "height": 81,
+     "text": "Skenovat",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "ovl_hlavni.25"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 550,
+     "width": 900,
+     "height": 18,
+     "text": "Skenování zatím není zapojené — tlačítko nic nespustí",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "pozn.117"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 580,
+     "width": 1208,
+     "height": 18,
+     "text": "Šum se neměří — přístroj na to zatím nemá měřidlo",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "pozn.118"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 628,
+     "width": 40,
+     "height": 15,
+     "text": "SÍTÍ",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.125"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 660,
+     "width": 120,
+     "height": 19,
+     "text": "3",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.126"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "txt.126": {
+      "role": "smalt",
+      "pas": "razitko"
+     },
+     "popis.125": {
+      "role": "popisek",
+      "pas": "razitko"
+     }
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

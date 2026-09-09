@@ -1,0 +1,82 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "panel",
+     "x": 36,
+     "y": 113,
+     "width": 413,
+     "height": 154,
+     "text": "",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "stitek.1",
+     "border": true,
+     "border_style": "single"
+    },
+    {
+     "type": "label",
+     "x": 52,
+     "y": 125,
+     "width": 62,
+     "height": 19,
+     "text": "TabOS",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "k.2"
+    },
+    {
+     "type": "label",
+     "x": 52,
+     "y": 146,
+     "width": 225,
+     "height": 39,
+     "text": "M5Stack Tab5",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "vv.3"
+    },
+    {
+     "type": "label",
+     "x": 460,
+     "y": 125,
+     "width": 200,
+     "height": 19,
+     "text": "Domu",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.4"
+    }
+   ],
+   "navrh": {
+    "plochy": [
+     "stitek.1"
+    ],
+    "prvky": {
+     "k.2": {
+      "rodic_id": "stitek.1"
+     },
+     "vv.3": {
+      "rodic_id": "stitek.1"
+     }
+    }
+   }
+  }
+ }
+}

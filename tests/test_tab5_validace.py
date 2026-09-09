@@ -223,10 +223,10 @@ def test_TRIDY_se_shoduji_s_branou():
 
 @pytest.mark.skipif(not DO_ESPOS.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
 def test_CELA_tabulka_trid_se_shoduje_s_branou():
-    """Tridy pravidel 136-143 musi editor znat taky, a to VE STEJNEM PORADI.
+    """Tridy pravidel 136-147 musi editor znat taky, a to VE STEJNEM PORADI.
 
     `TRIDY` sama uz nestaci: od 2026-09-08 brana tridi jeste nalezy pravidel
-    136-143 a jejich vzory nejsou retezce ve zdroji, ale znacky hlasek
+    136-147 a jejich vzory nejsou retezce ve zdroji, ale znacky hlasek
     (`validate_design.ZNACKA_R136_RODIC` a spol.). Staticke cteni je proto
     nezvedne a jedina poctiva kontrola je behova - proti tomu, co brana
     SKUTECNE pouzije.
@@ -246,7 +246,7 @@ def test_kazda_znacka_novych_pravidel_ma_svou_tridu():
 
     Shoda dvou seznamu by platila i tehdy, kdyby OBA byly prazdne nebo
     kdyby v obou nejaka znacka chybela. Tenhle test tvrdi neco jineho:
-    ke KAZDE verejne znacce pravidel 136-143 existuje trida, a zadna z
+    ke KAZDE verejne znacce pravidel 136-147 existuje trida, a zadna z
     nich neni "netrideno".
     """
     from tools import validate_design as vd
@@ -260,6 +260,7 @@ def test_kazda_znacka_novych_pravidel_ma_svou_tridu():
         vd.ZNACKA_R141, vd.ZNACKA_R141_NEMERENO,
         vd.ZNACKA_R142,
         vd.ZNACKA_R143, vd.ZNACKA_R143_NEMERENO,
+        vd.ZNACKA_R144, vd.ZNACKA_R145, vd.ZNACKA_R146, vd.ZNACKA_R147,
         vd.ZNACKA_NAVRH_VADNY,
     ]
     for znacka in znacky:

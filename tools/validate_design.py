@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate ESP32OS UI design JSON — comprehensive 143-rule checker.
+Validate ESP32OS UI design JSON — comprehensive 151-rule checker.
 
 Covers:
 - required fields + basic types
@@ -44,6 +44,20 @@ Covers:
   sentence, grid capacity against the number of items to place, firmware DPI
   against panel PPI, machine names inside sentences written for a human, and
   one vocabulary per thing across screens
+- what the box really did to the text: content actually clipped by its own
+  clip box (a DIFFERENT quantity from the declared cell above - a text can
+  overflow the column it was budgeted and still be clipped by nothing), and
+  text that wrapped into more lines than there was room for
+- the design language itself: dark ink belongs on the light enamel it is
+  drawn on, and a divider must not run through the glyphs of a sentence
+  (both gated by the panel profile - they are TabOS laws, not properties
+  of a piece of glass)
+- typography, colour and the indentation system: a type size outside the
+  binding scale of roles, a glyph whose ANGULAR height falls under what an
+  eye resolves at the reading distance (the profile carries PPI and the
+  distance, so the same 14 px passes on one panel and fails on another),
+  a colour that is not in the palette, and text glued to the frame instead
+  of sitting on the mandatory indent
 
 Usage:
   python tools/validate_design.py main_scene.json
@@ -56,6 +70,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 import re
 import sys
 from dataclasses import dataclass
@@ -266,6 +281,24 @@ ZNACKA_R142_NEMERENO = "jmena SDK nedodana"
 ZNACKA_R142_VYKLAD = "list je vyklad o navrhu"
 ZNACKA_R143 = "jiny stav teze veci"
 ZNACKA_R143_NEMERENO = "slovnik stavu chybi"
+ZNACKA_R143_ROLE_NEMERENO = "slovnik stavu: zadny prvek s roli stav"
+ZNACKA_R144 = "text oriznuty schrankou"
+ZNACKA_R145 = "text pretekl dolu"
+ZNACKA_R146 = "cizi text na smaltu"
+ZNACKA_R147 = "delici cara pres text"
+ZNACKA_R148 = "rez pisma mimo skalu"
+ZNACKA_R148_NEMERENO = "zavazna skala pisma nedodana"
+ZNACKA_R148_ODCHYLKA = "rez pisma je jmenovita vyjimka"
+ZNACKA_R149 = "znak pod mezi citelnosti"
+ZNACKA_R150 = "barva mimo paletu"
+ZNACKA_R150_NEMERENO = "paleta navrhu nedodana"
+ZNACKA_R150_ODCHYLKA = "list ma vlastni paletu"
+ZNACKA_R151 = "text se lepi na ram"
+ZNACKA_R151_NEMERENO = "soustava odsazeni nedodana"
+# Rule 17: neaktivni ovladac je z kontrastu VYNATY (WCAG 2.1, 1.4.3). Ticho
+# ale musi byt VIDET, jinak se vyjimka neda odlisit od zmereneho "v poradku"
+# - hlasi se proto tehdy (a jen tehdy), kdyz opravdu neco vyjmula.
+ZNACKA_R17_NEAKTIVNI = "neaktivni ovladac mimo kontrast"
 
 # R136: most zaokrouhluje OBE hrany obdelniku zvlast (viz komentar v
 # `do_espos.MERIC`: zaokrouhlovani hrany a SIRKY zvlast vyrobilo jedenact
@@ -277,12 +310,72 @@ R136_PRAH_PX = 1
 # i panelu.
 R137_TOLERANCE_PX = 0.5
 
+# R144/R145: `scrollWidth`/`clientWidth` (a jejich svisle protejsky) vraci
+# Chrome jako CELA cisla - zaokrouhluje se v nich subpixelova sirka obsahu
+# nahoru a subpixelova sirka schranky dolu, takze rozdil 1 px umi vzniknout
+# i u textu, ktery se vejde presne. Hlasi se proto od 2 px vys. Je to tataz
+# mez, jakou mel merid kitu (`zmer_prekryv.py`: `sw > cw + 1`) a nad 62
+# listy s ni nevznikl ani jeden nalez - tedy ani jeden falesny.
+# Ctyri rozmery jednoho odectu: kolik obsahu prvek MA a kolik ho je VIDET.
+# Jmena jsou ceska schvalne - je to smlouva mezi generatorem a branou, ne
+# jmena z DOM API.
+OREZ_KLICE = ("sirka_obsahu", "sirka_schranky", "vyska_obsahu", "vyska_schranky")
+R144_PRAH_PX = 2
+R145_PRAH_PX = 2
+# R146: dotek neni prekryv. Most zaokrouhluje obe hrany obdelniku zvlast
+# (tataz uvaha jako u `R136_PRAH_PX`), takze prekryv pod 1 px je artefakt
+# mereni, ne inkoust lezici na smaltu.
+R146_PRAH_PX = 1
+# R147: cara musi lezet UVNITR inkoustu, ne se ho dotknout. Scena nese
+# u popisku rozsah INKOUSTU (viz `do_espos.inkoust`), takze "cara protina
+# text" znamena doslova "cara jde pres glyfy".
+R147_ODSTUP_PX = 1
+
+# ── Rule 17, rozsireni o mez velkeho textu (WCAG 2.1 AA, 1.4.3) ──
+# Norma ma DVE meze, ne jednu: bezny text 4,5:1 a "velky" text 3,0:1, kde
+# velky znamena 24 px a vic, nebo 19 px a vic pri tucnem rezu (norma mluvi
+# o 18,66 px = 14 bodu tucne; 19 px je totez cislo zaokrouhlene nahoru,
+# tedy PRISNEJI). Do 9. 9. 2026 tu byla jen mez 4,5 pro vsechno, takze
+# velky titulek na hrane dostaval falesny poplach - a falesny poplach je
+# horsi nez zadny, protoze se na branu prestane koukat.
+WCAG_VELKY_PX = 24.0
+WCAG_TUCNE_PX = 19.0
+
+# ── Rule 149: uhlova velikost znaku ──
+# Meze nejsou z tohohle projektu a to je jejich smysl. Mez, ktera prijde
+# zevnitr, popisuje jen to, co uz mame.
+#   ~1'  rozliseni dvou car u zdraveho oka (Snellen 20/20) - na TEHLE mezi
+#        se veci prekryvaji: tusim, ze tam neco je, nerozeznam co.
+#   ~3'  spolehlive rozpoznani TVARU glyfu.
+#   ~5'  pohodlne pri letmem pohledu, bez zaostrovani.
+#   16'  ISO 9241-303, minimalni uhlova vyska ZNAKU (doporuceni 20-22').
+#
+# GATUJE SE NA 5' (WARN) a 3' (ERROR), NE NA ISO, a je poctive rict proc:
+# na 450 mm zada ISO rez 35 px, kdezto bezna hodnota TabOSu ma 20 px
+# (58 % meze), popisek 16 px (46 %) a patka 14 px (40 %). Pravidlo na 16'
+# by vystrelilo na VSECH 3751 textech kitu a tim by neomerilo nic -
+# vzdalenost od ISO je rozhodnuti o OBSAHU (pri 35 px padne sloupec z 26
+# radku na 14), ne vada rozvrzeni, a majitel ho uz jednou ucinil
+# (`tokens.json: _pozn_typografie._vyhrada_iso`). ISO mez proto tenhle
+# modul zna, pocita a pise do hlasky jako procento - ale nesoudi podle ni.
+R149_MEZ_DETEKCE = 1.0
+R149_MEZ_TVAR = 3.0
+R149_MEZ_LETMO = 5.0
+R149_MEZ_ISO = 16.0
+
 # Role prvku: co ta plocha SLIBUJE. Hodnotova role slibuje sdeleni ("jaky
 # port", "kolik", "jaky stav"), popiskova role je jen navesti nad cizim
 # sdelenim. Rule 138 a Rule 139 meri jen sliby: prazdny nadpis vada neni a
 # pomlcka mezi cisly rozsahu taky ne. Roli vozi generator (`data-role`
 # v kitu) - scena sama nese jen obdelniky a texty, o slibech nevi nic.
-ROLE_HODNOTY = frozenset({"hodnota", "smalt", "stitek", "cislo"})
+# `stav` je UZSI slib nez `hodnota`: prvek netvrdi jen "tady bude sdeleni",
+# ale "tady stoji STAV teto veci". Rozdil je mericí, ne slovickareni -
+# pravidlo 143 se pta, jestli je ten stav ze slovniku, a "28,4 GB volno"
+# nebo "NERTERA" zadny stav netvrdi (je to hodnota O veci). Do 9. 9. 2026
+# meril slovnik kazdou hodnotu s `data-vec` a mel na 62 listech deset
+# nalezu, z nichz ZADNY nebyl vada, kterou hleda.
+ROLE_STAV = "stav"
+ROLE_HODNOTY = frozenset({"hodnota", "smalt", "stitek", "cislo", ROLE_STAV})
 ROLE_POPISKU = frozenset({"popisek", "patka", "titulek"})
 ROLE_ZNAME = ROLE_HODNOTY | ROLE_POPISKU
 
@@ -433,6 +526,56 @@ VETY_NENI_ROZHRANI = frozenset({"IPv4", "IPv6", "I2C", "I2S", "IEEE", "ID", "IO"
 # zmenou v SDK a brana by mlcela prave o novem jmenu.
 _V_VERZALKY = re.compile(r"\b[A-Z][A-Z0-9_]{2,}\b")
 
+# --- Jmeno rozhrani ve STITKU verzalkami (devaty tvar) --------------------
+#
+# Rozhodnuti koordinatora 9. 9. 2026 k rezidu R3 kritika. Bod (a) vyse rika,
+# ze text CELY verzalkami je stitek a bezna slova ze SDK (`SMALT`, `ZNAK`,
+# `INFO`) se v nem nemeri - to plati dal a je to ZMERENA mez. Jmeno
+# ROZHRANI je ale jina vec: `IHwDiagnostics` neni bezne slovo, ktere by
+# nekdo napsal na smalt, a patka "ZDROJ IHWDIAGNOSTICS" je tataz vada F4
+# jako "ZDROJ IHwDiagnostics" o radek vedle. Do 9. 9. mlcely OBE brany.
+#
+# Ve verzalkovem textu se hrby VIDET NEDAJI (`IHWDIAGNOSTICS` je jen dlouhe
+# slovo), takze tvar sam rozhodnout nemuze a POROVNAVA se se jmeny ze SDK.
+# Aby se nechytila jednohrba jmena, jejichz verzalkova podoba uz muze byt
+# bezne slovo (`IClock` -> `ICLOCK`, `ISettings` -> `ISETTINGS`), zada se
+# konvence repa PLNE: velke I a za nim CamelCase s NEJMENE DVEMA hrby.
+# Zmereno nad zivym SDK (57 jmen): 23 rozhrani, z toho 18 dvouhrbych;
+# petice jednohrbych (`IAsync`, `IClock`, `ILogger`, `ISettings`,
+# `ITelemetry`) je vedomy okraj, ne opomenuti.
+_V_ROZHRANI_HRBY = 2
+
+
+def _dvouhrba_rozhrani(jmena_sdk: frozenset[str]) -> frozenset[str]:
+    """Jmena rozhrani I+CamelCase se dvema hrby, VERZALKOVE (pro porovnani).
+
+    Filtruje se TVAREM, ne rucnim seznamem: co je v SDK rozhranim, urcuje
+    `jmena_ze_sdk`, a co je dost nezamenitelne na to, aby se hlasilo i ve
+    stitku verzalkami, urcuje pocet hrbu.
+    """
+    ven = set()
+    for j in jmena_sdk:
+        if not _V_ROZHRANI.fullmatch(j):
+            continue
+        if sum(1 for z in j[1:] if z.isupper()) < _V_ROZHRANI_HRBY:
+            continue
+        ven.add(j.upper())
+    return frozenset(ven)
+
+
+# CamelCase slovo se dvema hrby uvnitr vety: `NotFound`, `InvalidArgument`,
+# `OutOfMemory`. Hlasi se JEN pri shode se jmenem ze SDK - jinak by kazde
+# `TabOS`, `BusLab` nebo `WiFiKarta` bylo obvinenim a brana by rudla na
+# vlastnim jmenu pristroje. Zmereno nad zivym SDK: shodu davaji `BadState`,
+# `InvalidArgument`, `NotFound`, `OutOfMemory`, `PermissionDenied`,
+# `WifiHosted`; `TabOS` tvarem sedi, ale v SDK neni, takze mlci.
+#
+# Zavira reziduum R4 kritika: radek terminalu 'ERROR cteni: NotFound' se
+# dosud citoval slabsim kusem (`ERROR` je bezne slovo severity), zatimco
+# ostrejsi dukaz `NotFound` propadal. Proto se tenhle tvar meri PRED
+# verzalkovym - hlaska ma ukazat na to, co je nejmene sporne.
+_V_CAMEL = re.compile(r"\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+\b")
+
 # Verzalkova slova, ktera se se jmenem ze SDK trefi TVAREM, ale na panelu
 # znamenaji neco jineho. Kazde jmenovite a s duvodem; seznam je shodny
 # s `brana_vety.NENI_JMENO_SDK`.
@@ -538,10 +681,51 @@ class DeviceProfile:
     # cloveka nesmi nest strojove jmeno)? Je to zakon TabOSu, ne
     # vlastnost displeje - cizi navrh se jim soudit nema.
     vety_pro_cloveka: bool = False
+    # Rule 146: plati na tomhle panelu zakon polarity (svetla smaltova
+    # plocha nese TMAVY inkoust, ktery na ni PATRI)? Tataz uvaha jako
+    # u `vety_pro_cloveka`: je to zakon jazyka TabOSu (ram.py, "SVETLA
+    # SMALTOVA PLOCHA = FYZICKA PRAVDA PRISTROJE"), ne vlastnost skla.
+    # Cizi navrh muze mit svetle plochy a svetly text nad nimi zamerne.
+    polarita_smaltu: bool = False
+    # Rule 147: rozhoduje na tomhle panelu delici cara? Gatuje se profilem
+    # proto, ze CO JE CARA je rozhodnuti kreslicího jazyka: v TabOSu je to
+    # vlasova linka `.cara` (1 px pres sirku pole), jinde muze byt 2 px
+    # vysoky obdelnik plocha, ne oddelovac. Bez teto pulky by pravidlo
+    # v cizim navrhu obvinovalo vyplne.
+    delici_cary: bool = False
+    # Rule 17: druha, VOLNEJSI mez kontrastu pro velky text (WCAG 2.1 AA).
+    # Nula = profil druhou mez nema a plati jedina `min_contrast` pro
+    # vsechno; smysl ma jen v rezimu "wcag" (v rezimu "brightness" se
+    # nemeri pomer, ale rozdil jasu, a WCAG o nem nemluvi).
+    min_contrast_velky: float = 0.0
+    # Rule 149: jak daleko od skla je oko. Uhlova velikost znaku je
+    # vlastnost TROJICE (rez, PPI, vzdalenost), takze bez tohohle cisla
+    # nema pravidlo co pocitat a MLCI. 0 = profil vzdalenost nezna.
+    cteci_vzdalenost_mm: float = 0.0
+    # Rule 149: kolik z rezu je VERZALKA. Je to vlastnost FONTU, ne skla
+    # (OS/2 sCapHeight deleno unitsPerEm), ale profil uz jednu vlastnost
+    # fontu nese (`font_chars`) a je to tyz font, ktery panel opravdu ma
+    # ve flashi. 0 = nezname, pravidlo mlci.
+    verzalka_pomer: float = 0.0
 
     def mm(self, px: float) -> float:
         """Physical size of ``px`` on this panel, in millimetres."""
         return px * 25.4 / self.ppi if self.ppi else 0.0
+
+    def minuty(self, px: float) -> float:
+        """Uhlova velikost ``px`` na tomhle panelu, v uhlovych minutach.
+
+        Presny prepocet ``2*atan(h/2d)``, ne maly uhel ``h/d``. Rozdil je
+        0,007 %, ale u rezu 32 px prehodi zaokrouhleni ze 14,78' na 14,79'
+        - a prave o tenhle jeden setinovy rozdil se v kitu rozesly dve
+        tabulky, kazda s vlastnim zakazem opravy. Sjednoceno 2026-09-06
+        ve prospech presneho prepoctu (fyzika, ne konvence).
+        """
+        if not self.ppi or not self.cteci_vzdalenost_mm:
+            return 0.0
+        return math.degrees(
+            2.0 * math.atan(self.mm(px) / (2.0 * self.cteci_vzdalenost_mm))
+        ) * 60.0
 
 
 PROFILE_OLED256 = DeviceProfile(
@@ -567,14 +751,46 @@ PROFILE_OLED256 = DeviceProfile(
     # "INVERSE", ktery vzor jmena rozhrani chyta. Cizi navrh neni
     # TabOS a jazykovym zakonem F4 se soudit nema.
     vety_pro_cloveka=False,
+    # Tyz duvod: 256x128 4bpp seda zadny "smalt" nema (svetla plocha je
+    # tam bezna vypln) a "cara" je na ni 1 px obdelnik, kterym se kresli
+    # i ramecky. Obe pravidla by tu merila neco jineho, nez slibuji.
+    polarita_smaltu=False,
+    delici_cary=False,
+    # Rezim "brightness" pomer nepocita, takze druha mez WCAG nema co
+    # zjemnit; 4bpp seda navic zna 16 odstinu a "velky text" je tu 8 px.
+    min_contrast_velky=0.0,
+    # Bez PPI nema uhlova velikost co pocitat (viz `ppi=0.0` vyse), takze
+    # vzdalenost ani verzalka nedavaji smysl a Rule 149 mlci.
+    cteci_vzdalenost_mm=0.0,
+    verzalka_pomer=0.0,
 )
 
-# The 141 glyphs actually cut into the shipped LVGL font (ASCII + Czech +
-# the few typographic marks). This set is the point of the whole profile:
-# LVGL SKIPS a missing glyph without a word, so a character outside this set
-# does not render wrong — it renders as nothing, and "-58 dBm" silently
-# becomes "58 dBm".
-_TAB5_FONT_CHARS = frozenset(
+# Glyfy, ktere jsou OPRAVDU vyrezane ve fontu zarizeni. Tenhle seznam je
+# smysl celeho profilu: LVGL chybejici glyf TISE preskoci, takze znak mimo
+# tuhle mnozinu se nevykresli spatne — nevykresli se vubec, a z "-58 dBm"
+# se stane "58 dBm".
+#
+# JEDEN ZDROJ PRAVDY: `core/src/fonts/lv_font_tabos_*.c`, tedy to, co ma
+# zarizeni ve flashi. Tenhle seznam je jeho OPIS a opis se s originalem
+# drive nebo pozdeji rozejde — proto ho pribiji test
+# `test_znakova_sada_sedi_s_fontem_zarizeni` (cte cmap funkci
+# `znaky_fontu_zarizeni` a porovnava ji se vsemi ctyrmi kopiemi, ktere
+# v projektu zijou: tady, `gen_subset.SADA` v kitu a recept
+# `gen_fonty.py` v jadre). Zmereno 2026-09-09: font ma 201 kodovych bodu
+# — 141 textovych a 60 symbolu LVGL.
+#
+# Delba na dve pulky NENI kosmetika:
+#
+#  * `_TAB5_FONT_TEXT` je to, co umi i podmnozina vsazena do artboardu
+#    (`montserrat_b64.txt`); v prohlizeci se tyhle znaky nakresli TOUZ
+#    kresbou jako na skle, takze meridla sirek nad artboardem plati.
+#  * `_TAB5_FONT_SYMBOLY` jsou symboly LVGL (FontAwesome, U+F000 a vys).
+#    Zarizeni je UMI — pouzivaji je vestavene widgety (klavesnice mela
+#    misto backspace prazdny ramecek, dokud se vynechavaly — zmereno na
+#    desce). Do subsetu artboardu se schvalne NEDAVAJI: v listech se
+#    nekresli a FontAwesome by base64 zbytecne nafoukl. Pravidlo 26 ale
+#    meri, co zarizeni UMI, ne co umi artboard, takze do profilu patri.
+_TAB5_FONT_TEXT = frozenset(
     [chr(c) for c in range(0x20, 0x7F)]
     + [
         chr(c)
@@ -638,6 +854,27 @@ _TAB5_FONT_CHARS = frozenset(
     ]
 )
 
+# Symboly LVGL (FontAwesome) prilozene do tehoz fontu. Cisla jsou z receptu
+# `tabos-core/tools/gen_fonty.py` (SYMBOLY) a zmereno se shoduji s cmap
+# vygenerovaneho `lv_font_tabos_16.c` do jednoho kodoveho bodu.
+_TAB5_FONT_SYMBOLY = frozenset(
+    chr(c)
+    for c in (
+        0xF001, 0xF008, 0xF00B, 0xF00C, 0xF00D, 0xF011,
+        0xF013, 0xF015, 0xF019, 0xF01C, 0xF021, 0xF026,
+        0xF027, 0xF028, 0xF03E, 0xF043, 0xF048, 0xF04B,
+        0xF04C, 0xF04D, 0xF051, 0xF052, 0xF053, 0xF054,
+        0xF067, 0xF068, 0xF06E, 0xF070, 0xF071, 0xF074,
+        0xF077, 0xF078, 0xF079, 0xF07B, 0xF093, 0xF095,
+        0xF0C4, 0xF0C5, 0xF0C7, 0xF0C9, 0xF0E0, 0xF0E7,
+        0xF0EA, 0xF0F3, 0xF11C, 0xF124, 0xF15B, 0xF1EB,
+        0xF240, 0xF241, 0xF242, 0xF243, 0xF244, 0xF287,
+        0xF293, 0xF2ED, 0xF304, 0xF55A, 0xF7C2, 0xF8A2,
+    )
+)  # fmt: skip
+
+_TAB5_FONT_CHARS = _TAB5_FONT_TEXT | _TAB5_FONT_SYMBOLY
+
 PROFILE_TAB5 = DeviceProfile(
     name="tab5",
     match_w=1280,
@@ -668,7 +905,14 @@ PROFILE_TAB5 = DeviceProfile(
     contrast_mode="wcag",
     min_contrast=4.5,  # WCAG 2.1 AA for body text
     min_visible_brightness=0,  # a dark foreground is not a defect, see below
-    ppi=293.7,  # 1280x720 on 5 in -> sqrt(1280^2+720^2)/5
+    # PPI panelu. Cislo se NEVOLI: uhlopricka v pixelech
+    # sqrt(1280^2+720^2) = 1468,6 delena 5,0" da 293,72, zaokrouhleno 294.
+    # 294 je JEDINE cislo panelu v celem projektu (drive tu bylo 293,7,
+    # zatimco `tokens.json` i `citelnost.py` pocitaly s 294 - rozdil 0,1 %,
+    # tedy 0,001 mm na verzalce, ale dve pravdy). Pribito testem
+    # `test_ppi_je_odvozene_a_shodne_s_tokens` proti primarnim udajum
+    # (`tokens.json: panel`), takze sem nikdo nesmi napsat libovolne cislo.
+    ppi=294.0,
     # 294 PPI means 1 px = 0.086 mm, so pixel counts are misleading: a 44 px
     # button is 3.8 mm, well under any published minimum. Apple asks 7.0 mm,
     # Material 7.6 mm, ISO 9241-411 7 mm as the floor. 7 mm = 81 px here;
@@ -679,6 +923,24 @@ PROFILE_TAB5 = DeviceProfile(
     # Tady zakon F4 plati: jsou to listy TabOSu (charta
     # docs/CHARTA_JAZYKA_VET.md).
     vety_pro_cloveka=True,
+    # A tady plati i zakon polarity a kreslici jazyk s vlasovou carou
+    # (tabos-ui-kit/navrh-appky/ram.py).
+    polarita_smaltu=True,
+    delici_cary=True,
+    # WCAG 2.1 AA zna dve meze, ne jednu: 3,0:1 pro velky text (>= 24 px,
+    # nebo >= 19 px tucne). Bez ni hlasi Rule 17 falesny poplach na kazdem
+    # velkem titulku, ktery se do 4,5 netrefi - a to je prave trida, kde
+    # norma vetsi glyf uznava jako nahradu kontrastu.
+    min_contrast_velky=3.0,
+    # Nad pristrojem se stoji, ne sedi: 450 mm je vzdalenost, na ktere se
+    # panel opravdu cte (`tabos-ui-kit/navrh-appky/citelnost.py`, tabulka
+    # vzdalenosti 400/450/600/900 mm; verdikt se vynasi na 450).
+    cteci_vzdalenost_mm=450.0,
+    # Montserrat-Medium, ktery jde do LVGL: OS/2 sCapHeight 700 pri
+    # unitsPerEm 1000. Potvrzeno druhym ctenim (bbox glyfu 'H' i 'E' ma
+    # ymax 700). NENI to 0,708 - to je vyska CISLICE (bbox '0' ma pretah
+    # 8 jednotek) a kdo si ji splete, nadsadi citelnost o 2,86 %.
+    verzalka_pomer=0.700,
 )
 
 PROFILES: dict[str, DeviceProfile] = {
@@ -1272,6 +1534,9 @@ def _navrh_ze_sceny(
                 "prazdne",
                 "presah",
                 "vec",
+                "orez",
+                "font_size",
+                "enabled",
             )
         }
         rodic_raw = prvek_raw.get("rodic")
@@ -1436,6 +1701,140 @@ def _navrh_ze_sceny(
                 )
             else:
                 prvek["vec"] = vec_raw.strip()
+        orez_raw = prvek_raw.get("orez")
+        if orez_raw is not None:
+            # OREZ JE JEDNO MERENI, NE CTYRI. Vsechny ctyri hodnoty vznikaji
+            # z JEDNOHO odectu vykresleneho DOM (`scrollWidth`/`clientWidth`
+            # a jejich svisle protejsky), takze pulka mereni neni "mezera
+            # v pokryti", ale rozbita smlouva - a ta se hlasi NAHLAS a cela
+            # se zahodi. Kdyby se pulka nechala projit, mel by tu vzniknout
+            # tvar "kontrola NEPROBEHLA", ktery by nad dnesnim mostem nikdy
+            # nenastal - a mrtva vetev je horsi nez zadna (kritik ji nasel
+            # u `ZNACKA_R137_NEMERENO`).
+            if not isinstance(orez_raw, dict):
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.orez' ma byt objekt "
+                        f"se ctyrmi rozmery {list(OREZ_KLICE)}, je "
+                        f"{type(orez_raw).__name__}",
+                    )
+                )
+            else:
+                orez: dict[str, float] = {}
+                spatne = False
+                for klic in OREZ_KLICE:
+                    hod = _nezaporne_cislo(orez_raw.get(klic))
+                    if hod is None:
+                        spatne = True
+                        issues.append(
+                            Issue(
+                                "ERROR",
+                                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.orez.{klic}' "
+                                f"ma byt nezaporne cislo v px, je "
+                                f"{orez_raw.get(klic)!r}",
+                            )
+                        )
+                    else:
+                        orez[klic] = hod
+                navic = sorted(set(orez_raw) - set(OREZ_KLICE))
+                if navic:
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.orez' zna klice "
+                            f"{', '.join(navic)}, ktere pravidla 144 a 145 neumi "
+                            f"(znam: {', '.join(OREZ_KLICE)})",
+                        )
+                    )
+                if not spatne and not navic:
+                    prvek["orez"] = orez
+        font_raw = prvek_raw.get("font_size")
+        if font_raw is not None:
+            # Rez pisma v px. Sam o sobe dnes ZADNE pravidlo nespousti - je
+            # to nosic pro pravidla 148 (rez mimo zavaznou skalu) a 149
+            # (uhlova velikost znaku) a pro rozsireni Rule 17 o mez velkeho
+            # textu. Cte se uz ted, aby smlouva o atributech byla JEDNA
+            # a most ji nemusel menit dvakrat.
+            hod = _nezaporne_cislo(font_raw)
+            if hod is None or hod <= 0:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.font_size' ma byt "
+                        f"kladne cislo v px, je {font_raw!r}",
+                    )
+                )
+            else:
+                prvek["font_size"] = hod
+        enabled_raw = prvek_raw.get("enabled")
+        if enabled_raw is not None:
+            # Je ovladac ciny? Nosic pro vyjimku WCAG 1.4.3 (neaktivni
+            # ovladac nema predepsany kontrast) v rozsireni Rule 17.
+            # Musi to byt PRAVDIVOSTNI hodnota: retezec "false" je v Pythonu
+            # pravdivy, takze by vyjimku tise otocil naruby.
+            if not _is_bool(enabled_raw):
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.enabled' ma byt true "
+                        f"nebo false, je {enabled_raw!r}",
+                    )
+                )
+            else:
+                prvek["enabled"] = bool(enabled_raw)
+        tucne_raw = prvek_raw.get("tucne")
+        if tucne_raw is not None:
+            # Je rez TUCNY? Druha polovina meze "velky text" ve WCAG 2.1
+            # (>= 19 px tucne se pocita stejne jako >= 24 px bezne).
+            # Musi to byt PRAVDIVOSTNI hodnota ze stejneho duvodu jako
+            # u `enabled`: retezec "false" je v Pythonu pravdivy, takze by
+            # mez tise povolil o pet pixelu niz.
+            if not _is_bool(tucne_raw):
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.tucne' ma byt true "
+                        f"nebo false, je {tucne_raw!r}",
+                    )
+                )
+            else:
+                prvek["tucne"] = bool(tucne_raw)
+        for klic in ("inkoust", "podklad"):
+            barva_raw = prvek_raw.get(klic)
+            if barva_raw is None:
+                continue
+            # VIDENA dvojice pro Rule 17: popredi a pozadi uz se slozenou
+            # alfou a `opacity`. Scenove `color_fg`/`color_bg` zustavaji
+            # tim, cim byla - barvou, kterou generator NAPSAL, protoze
+            # prave na ni se pta Rule 150. Dve otazky, dve pole.
+            if not isinstance(barva_raw, str) or _parse_color(barva_raw) is None:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.{klic}' ma byt "
+                        f"barva, je {barva_raw!r}",
+                    )
+                )
+            else:
+                prvek[klic] = barva_raw
+        vsazka_raw = prvek_raw.get("vsazka")
+        if vsazka_raw is not None:
+            # Vlastni odsazeni bloku (Rule 151). NENI to vypinac pravidla:
+            # klavesnicovy blok ma okraj 8 px misto 16 a meri se PROTI
+            # NEMU, takze klavesa, ktera se do vlastni soustavy bloku
+            # netrefi, nalez porad dostane.
+            hod = _nezaporne_cislo(vsazka_raw)
+            if hod is None or hod <= 0:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.vsazka' ma byt kladne "
+                        f"cislo v px, je {vsazka_raw!r}",
+                    )
+                )
+            else:
+                prvek["vsazka"] = hod
         for klic in ("sirka_textu", "sirka_bunky"):
             hod_raw = prvek_raw.get(klic)
             if hod_raw is None:
@@ -1938,6 +2337,814 @@ def _r139_nalezy(wl: str, text: str) -> list[Issue]:
     return []
 
 
+def _r144_nalezy(wl: str, prvek: dict[str, Any], text: str) -> list[Issue]:
+    """Rule 144: text, ktery SKUTECNE useknula jeho vlastni schranka.
+
+    JINA VELICINA NEZ Rule 137, i kdyz obe mluvi o sirce. Rule 137 se pta,
+    jestli se text vejde do BUNKY, kterou mu generator DEKLAROVAL
+    (``data-bunka``, sloupec razitka) - to je otazka o rozvrzeni a odpoved
+    "nevejde" znamena "sloupec je uzky", ne nutne "neco je pryc". Rule 144
+    se pta, jestli prohlizec obsah opravdu OREZAL: ``sirka_obsahu``
+    (``scrollWidth``) je sirka, kterou obsah potrebuje, ``sirka_schranky``
+    (``clientWidth``) sirka, ktera je videt.
+
+    Ze rozdil neni akademicky, je ZMERENE: ze sesti dnesnich nalezu Rule 137
+    na 62 listech kitu jsou dva o textu, ktery se sve delici cary ani
+    nedotkne (SvorkaCislice: inkoust konci 3,9 px PRED carou), a zadny
+    z tech sesti prvku nema nad sebou ``overflow: hidden`` - takze se
+    neuseklo nic. Kritik to hlasi jako reziduum R1 a tohle pravidlo ho
+    zavira z druhe strany: kdyz Rule 144 mlci a Rule 137 hlasi, je vada
+    v rozvrzeni; kdyz hlasi obe, je i v obsahu.
+
+    Bez zmereneho ``orez`` pravidlo MLCI - tataz datova zavora jako
+    u Rule 136 a 137. Pulka mereni sem nedojde: neuplny ``orez`` zahodi
+    hlasite uz ctecka bloku (viz `_navrh_ze_sceny`).
+    """
+    orez = prvek.get("orez")
+    if not orez:
+        return []
+    obsah = orez["sirka_obsahu"]
+    schranka = orez["sirka_schranky"]
+    pretok = obsah - schranka
+    if pretok < R144_PRAH_PX:
+        return []
+    return [
+        Issue(
+            "ERROR",
+            f"{wl}: {ZNACKA_R144}: obsah je {obsah:.0f} px siroky, videt je "
+            f"{schranka:.0f} px (useklo se {pretok:.0f} px), text '{text}'",
+        )
+    ]
+
+
+def _r145_nalezy(wl: str, prvek: dict[str, Any], text: str) -> list[Issue]:
+    """Rule 145: text se zalomil do vic radku, nez pro nej bylo mista.
+
+    Svisla pulka tehoz oriznuti. Zavira otevrene reziduum kritika (bod 7):
+    "text, ktery se vodorovne vejde, ale je na dva radky v bunce vysoke na
+    jeden -> TICHO; vyska bunky se do sceny nevozi vubec."
+
+    Proc to nechyti zadne jine pravidlo: Rule 136 meri presah RODICE, jenze
+    prvek se svisle NEPRETECE - schranka ho oreze a jeho obdelnik zustane
+    presne tak vysoky, jak ma byt. Ven neceni nic; zmizi DRUHY RADEK, a to
+    je videt jen na rozdilu ``vyska_obsahu`` proti ``vyska_schranky``.
+
+    Zivy protejsek: kterykoli jednoradkovy stavovy radek, kteremu delsi
+    preklad pridal slovo (nemecke "Nicht verbunden" na dva radky do boxu
+    vysokeho 19 px).
+    """
+    orez = prvek.get("orez")
+    if not orez:
+        return []
+    obsah = orez["vyska_obsahu"]
+    schranka = orez["vyska_schranky"]
+    pretok = obsah - schranka
+    if pretok < R145_PRAH_PX:
+        return []
+    return [
+        Issue(
+            "ERROR",
+            f"{wl}: {ZNACKA_R145}: obsah je {obsah:.0f} px vysoky, videt je "
+            f"{schranka:.0f} px (useklo se {pretok:.0f} px dolu), text '{text}'",
+        )
+    ]
+
+
+def _plochy_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+    znama_id: set[str],
+) -> tuple[list[str], list[Issue]]:
+    """Precte ``navrh.plochy`` -> (jmena prvku, nalezy o vadnem bloku).
+
+    Smaltova plocha je PLOCHA, ne hodnota. Role ``smalt`` v ``prvky[*].role``
+    rika "tenhle prvek NESE namerenou hodnotu" (meridlo Rule 138/139); tenhle
+    seznam rika "tahle plocha JE smalt", tedy svetle pole, na kterem smi
+    lezet jen tmavy inkoust, ktery na nej PATRI.
+
+    Nese se to jmenem prvku, ne obdelnikem, a ma to duvod: obdelnik uz ve
+    scene JE (plocha ma vypln, takze do sceny vstoupi), kdezto PRISLUSNOST
+    se z obdelniku vycist neda - a prave o ni Rule 146 rozhoduje. Odkaz na
+    prvek, ktery ve scene neni, je ERROR: tise zahozena plocha by pravidlo
+    vypnula beze slova.
+    """
+    issues: list[Issue] = []
+    plochy: list[str] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return plochy, issues
+    raw = blok.get("plochy")
+    if raw is None:
+        return plochy, issues
+    if not isinstance(raw, list):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'plochy' ma byt seznam jmen prvku, "
+                f"je {type(raw).__name__}",
+            )
+        )
+        return plochy, issues
+    for i, jm_raw in enumerate(raw):
+        if not isinstance(jm_raw, str) or not jm_raw.strip():
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'plochy[{i}]' ma byt jmeno prvku, "
+                    f"je {jm_raw!r}",
+                )
+            )
+            continue
+        jm = jm_raw.strip()
+        if jm not in znama_id:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'plochy[{i}]' odkazuje na prvek "
+                    f"'{jm}', ktery ve scene neni",
+                )
+            )
+            continue
+        if jm not in plochy:
+            plochy.append(jm)
+    return plochy, issues
+
+
+def _r146_nalezy(
+    wl: str,
+    wid: str,
+    rect: tuple[int, int, int, int],
+    text: str,
+    plochy: list[tuple[str, tuple[int, int, int, int]]],
+    prvky: dict[str, dict[str, Any]],
+    zna_rodic_id: bool,
+) -> list[Issue]:
+    """Rule 146: cizi text lezici na smaltove plose (obracena polarita).
+
+    Zakon jazyka (tabos-ui-kit/navrh-appky/ram.py): SVETLA SMALTOVA PLOCHA
+    je fyzicka pravda pristroje a nese TMAVY inkoust. Text, ktery na smaltu
+    LEZI, ale nepatri mu, se kresli barvou tmave strany - tedy svetlou na
+    svetlem, nebo naopak. Stalo se to uz tretikrat (tlacitko Odpojit,
+    popisek tridy .stitek, popisek vodopadu), a ani jednou to nechytila
+    zadna kontrola prekryvu: obe plochy jsou "spravne", jen na sobe.
+
+    Kdo tu MLCI a proc:
+
+    * **Plocha sama** - je to jeji vlastni text.
+    * **Potomek plochy** - inkoust, ktery na ni PATRI. Prislusnost se bere
+      z retezu ``rodic_id`` (tataz cesta jako u Rule 138), ne z geometrie:
+      geometricka verze by umlcela kazdy cizi popisek, ktery pod plochou
+      nahodou lezi - presne ten obchvat, kterym kritik umlcel Rule 138.
+      Kdyz scena ``rodic_id`` NENESE ANI JEDNOU (starsi scena, dokument
+      editoru), spadne se na hrubsi meridlo ``rodic`` = obdelnik
+      ``offsetParent``u, presne jako v `_text_uvnitr`. Bez teto zavory by
+      pravidlo nad starou scenou obvinilo KAZDY text uvnitr KAZDEHO
+      smaltu - a ze slepoty by delalo poplach misto ticha.
+    * **Predek plochy** - podklad, uvnitr ktereho smalt sedi. Bez teto
+      vyjimky by kazdy radek s vlastnim textem a se smaltovym stitkem
+      uvnitr byl nalez: scena nese u popisku obdelnik CELEHO prvku, takze
+      radek smalt geometricky obsahuje. Tataz vyjimka, jakou ma Rule 21
+      pro "panel za svym obsahem" (`_overlap_is_benign`).
+    * **Prekryv pod prah** - dotek hranou neni inkoust na smaltu.
+
+    Pravidlo je gatovane PROFILEM (`polarita_smaltu`), ne daty: polarita je
+    zakon TabOSu, ne vlastnost skla.
+    """
+    issues: list[Issue] = []
+    x, y, w, h = rect
+    x2, y2 = x + w, y + h
+    for pid, (px, py, pw, ph) in plochy:
+        if pid == wid:
+            continue
+        px2, py2 = px + pw, py + ph
+        if min(x2, px2) - max(x, px) < R146_PRAH_PX:
+            continue
+        if min(y2, py2) - max(y, py) < R146_PRAH_PX:
+            continue
+        if zna_rodic_id:
+            if _je_potomek(wid, pid, prvky):
+                continue
+            if _je_potomek(pid, wid, prvky):
+                continue
+        elif tuple(prvky.get(wid, {}).get("rodic") or ()) == (px, py, pw, ph):
+            continue
+        if _rect_contains((x, y, x2, y2), (px, py, px2, py2)):
+            continue
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{wl}: {ZNACKA_R146}: text '{text}' lezi na smaltove plose '{pid}' "
+                f"({px},{py} {pw}x{ph}), ale neni jeji soucasti - inkoust a smalt "
+                f"maji obracenou polaritu",
+            )
+        )
+    return issues
+
+
+def _cary_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[list[tuple[int, int, int, int]], list[Issue]]:
+    """Precte ``navrh.cary`` -> (obdelniky delicich car, nalezy o bloku).
+
+    Delici cara je v kitu vlasova linka (1 px), a prave proto ji scena
+    NENESE: most zahazuje vsechno tenci nez 2 px (``r.height < 2``), jinak
+    by kazda sit v kresbe vyrobila stovky widgetu. Cary se tedy vozi
+    zvlast - jako obdelniky, ne jako prvky, protoze se na ne nic jineho
+    neptá.
+    """
+    issues: list[Issue] = []
+    cary: list[tuple[int, int, int, int]] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return cary, issues
+    raw = blok.get("cary")
+    if raw is None:
+        return cary, issues
+    if not isinstance(raw, list):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'cary' ma byt seznam obdelniku, "
+                f"je {type(raw).__name__}",
+            )
+        )
+        return cary, issues
+    for i, rect_raw in enumerate(raw):
+        rect = _obdelnik4(rect_raw)
+        if rect is None or rect[2] <= 0 or rect[3] <= 0:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'cary[{i}]' ma byt ctyri cela cisla "
+                    f"[x, y, sirka, vyska] s kladnymi rozmery, je {rect_raw!r}",
+                )
+            )
+            continue
+        cary.append(rect)
+    return cary, issues
+
+
+def _r147_nalezy(
+    wl: str,
+    rect: tuple[int, int, int, int],
+    text: str,
+    cary: list[tuple[int, int, int, int]],
+) -> list[Issue]:
+    """Rule 147: delici cara vede pres text.
+
+    Blok textu nema pevnou vysku: kdyz naroste o radek, tise prejede pres
+    oddelovac - a zadna kontrola preteceni to nevidi, protoze prvek nikam
+    neceni.
+
+    MERI SE INKOUST, NE BOX, a je to rozdil se zmerenym dopadem. Meridlo
+    kitu (`zmer_prekryv.py`) porovnavalo caru s DOM boxem a s odstupem 4 px
+    od jeho hran; na listu `Main` z toho vysel jeho JEDINY nalez:
+
+        div.kostra box  537,140 686x229   "Zatim neni co ukazovat"
+        cary site       y192, y244, y296, y348
+        INKOUST tehoz textu ve scene: 537,248 686x12
+
+    Text je ve svem boxu svisle na stredu, takze cary jdou pres PRAZDNOU
+    cast boxu - nejblizsi (y244) konci 4 px nad prvnim pixelem pisma.
+    Nalez byl artefakt merene veliciny, ne vada na skle. Scena nese
+    u popisku rozsah inkoustu (`do_espos.inkoust`), takze tady se pravidlo
+    pta presne na to, co slibuje: jde cara pres glyfy?
+
+    Odstup `R147_ODSTUP_PX` je z teze uvahy: cara, ktera se inkoustu jen
+    dotkne shora nebo zdola, je podtrzeni nebo nadpis nad carou, ne
+    preskrtnuti.
+
+    Gatovano profilem (`delici_cary`) - viz `DeviceProfile`.
+    """
+    issues: list[Issue] = []
+    x, y, w, h = rect
+    x2, y2 = x + w, y + h
+    for cx, cy, cw, ch in cary:
+        cx2, cy2 = cx + cw, cy + ch
+        if min(x2, cx2) - max(x, cx) < 1:
+            continue
+        if cy - y < R147_ODSTUP_PX or y2 - cy2 < R147_ODSTUP_PX:
+            continue
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{wl}: {ZNACKA_R147}: cara {cx},{cy} {cw}x{ch} vede pres text "
+                f"'{text}' (inkoust {x},{y} {w}x{h})",
+            )
+        )
+    return issues
+
+
+def _skala_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[dict[str, Any] | None, list[Issue]]:
+    """Precte ``navrh.skala`` -> (zavazna skala rezu + vyjimky, nalezy).
+
+    Tvar: ``{"rezy": [14, 16, 20, 24, 32], "vyjimky": {"40": "duvod"}}``.
+
+    ``rezy`` je ZAVAZNA skala roli - pet roli, pet velikosti, nic jineho
+    (`tokens.json: typography`). ``vyjimky`` jsou rezy, ktere smi stat
+    PRAVE NA TOMHLE LISTU, a ke kazdemu MUSI byt veta proc: vyjimka bez
+    duvodu je jen vypinac pravidla (tataz uvaha jako u ``presah``
+    a ``prazdne`` u Rule 136 a 138).
+
+    Vraci ``None``, kdyz blok chybi - pravidlo pak rekne NAHLAS, ze se
+    nemerilo, misto aby mlcelo jako "v poradku".
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return None, issues
+    raw = blok.get("skala")
+    if raw is None:
+        return None, issues
+    if not isinstance(raw, dict):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'skala' ma byt objekt "
+                f"{{'rezy': [...], 'vyjimky': {{...}}}}, je {type(raw).__name__}",
+            )
+        )
+        return None, issues
+    rezy_raw = raw.get("rezy")
+    if not isinstance(rezy_raw, list) or not rezy_raw:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'skala.rezy' ma byt neprazdny seznam "
+                f"rezu v px, je {rezy_raw!r}",
+            )
+        )
+        return None, issues
+    rezy: set[float] = set()
+    for rez_raw in rezy_raw:
+        hod = _nezaporne_cislo(rez_raw)
+        if hod is None or hod <= 0:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'skala.rezy' ma byt seznam kladnych "
+                    f"cisel v px, je v nem {rez_raw!r}",
+                )
+            )
+            return None, issues
+        rezy.add(float(hod))
+    vyjimky: dict[float, str] = {}
+    vyjimky_raw = raw.get("vyjimky")
+    if vyjimky_raw is not None:
+        if not isinstance(vyjimky_raw, dict):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'skala.vyjimky' ma byt objekt "
+                    f"{{rez: duvod}}, je {type(vyjimky_raw).__name__}",
+                )
+            )
+        else:
+            for rez_raw, duvod_raw in vyjimky_raw.items():
+                # Klic JSONoveho objektu je vzdycky RETEZEC ("12"), takze
+                # se tu cislo cte z retezce - jinde v tomhle modulu by to
+                # byla dira (retezec misto cisla je vada dat), tady je to
+                # jediny tvar, ktery JSON umi.
+                hod = _rez_z_klice(rez_raw)
+                if hod is None:
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'skala.vyjimky' ma klic "
+                            f"{rez_raw!r}, ktery neni rez v px",
+                        )
+                    )
+                    continue
+                if not isinstance(duvod_raw, str) or not duvod_raw.strip():
+                    # Vyjimka bez vety je vypinac pravidla. Zahazuje se
+                    # a rekne se to nahlas - jinak by po ni zbylo ticho
+                    # vypadajici jako "tenhle rez je v poradku".
+                    issues.append(
+                        Issue(
+                            "WARN",
+                            f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'skala.vyjimky[{rez_raw}]' je "
+                            f"vyjimka bez duvodu - zahazuje se",
+                        )
+                    )
+                    continue
+                vyjimky[float(hod)] = duvod_raw.strip()
+    return {"rezy": rezy, "vyjimky": vyjimky}, issues
+
+
+def _rez_z_klice(v: object) -> float | None:
+    """Rez v px z klice JSONoveho objektu ("12" i 12), jinak ``None``."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v) if v > 0 else None
+    if isinstance(v, str):
+        try:
+            hod = float(v.strip())
+        except ValueError:
+            return None
+        return hod if hod > 0 else None
+    return None
+
+
+def _skala_popis(rezy: set[float]) -> str:
+    return "/".join(f"{r:g}" for r in sorted(rezy))
+
+
+def _r148_nalezy(
+    pfx: str,
+    widgets: list[Any],
+    prvky: dict[str, dict[str, Any]],
+    skala: dict[str, Any] | None,
+) -> list[Issue]:
+    """Rule 148: rez pisma mimo zavaznou skalu roli.
+
+    Pet roli, pet velikosti (`tokens.json: typography`, tabulka 3.1
+    specifikace). Kdo sazi sesty rez, sazi ho od oka - a od oka se pismo
+    na 294 PPI sazet neda: rozdil 13 vs 14 px je 0,086 mm, tedy pod
+    rozlisenim oka, ale nad rozlisenim MRIZKY (radkovy box 17 vs 18)
+    a sloupec opakovanych radku se o nej rozjede.
+
+    Kdo tu MLCI a proc:
+
+    * **Prvek bez ``font_size``** -> mlci. Bez mereni neni co soudit;
+      most vozi rez jen prvku, ktery nese VLASTNI text.
+    * **Prvek bez textu** -> mlci. Rez prazdne schranky nikdo nevidi.
+    * **Rez ve vyjimkach TOHOHLE listu** -> hlasi se jako ODCHYLKA
+      s duvodem, ne jako vada. Ticho by se nedalo odlisit od zmereneho
+      "v poradku" a prvni clovek, ktery vyjimku nenajde, ji zrusi.
+
+    Vyjimky jsou JMENOVITE a per-list schvalne: rez 13 px je na
+    klavesnici vedomy (vlastni soustava, roztec 18 pri boxu 18 nema kam
+    rust), na listu Nastaveni by to byl preklep. Do 9. 9. 2026 zil
+    tenhle seznam jen v `navrh-identita/gen_identita.py` a meril tedy
+    25 listu z 62; ted je v `tokens.json` a meri se jim VSECH 62.
+
+    HLASI SE PO REZECH, ne po prvcich, a je to rozhodnuti o hlasce: rez
+    se opakuje. Klavesnice ma 26 prvku ve trech vyjimecnych rezech - tri
+    vety jsou nalez, 26 je smetiste, ve kterem ten nalez zanikne. Tataz
+    uvaha jako u Rule 150.
+    """
+    if skala is None:
+        return []
+    nalezy: dict[float, list[tuple[str, str]]] = {}
+    for i, w in enumerate(widgets):
+        if not isinstance(w, dict) or w.get("visible") is False:
+            continue
+        text = str(w.get("text", "")) if isinstance(w.get("text"), str) else ""
+        if not text.strip():
+            continue
+        wid = w.get("_widget_id") or w.get("id")
+        prvek = prvky.get(wid, {}) if isinstance(wid, str) else {}
+        rez = prvek.get("font_size")
+        if rez is None:
+            continue
+        rez = float(rez)
+        if rez in skala["rezy"]:
+            continue
+        nalezy.setdefault(rez, []).append(
+            (str(wid or f"widget[{i}]"), text)
+        )
+    issues: list[Issue] = []
+    for rez in sorted(nalezy):
+        kdo = nalezy[rez]
+        duvod = skala["vyjimky"].get(rez)
+        if duvod is not None:
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R148_ODCHYLKA}: rez {rez:g} px na {len(kdo)} "
+                    f"prvcich neni ve skale {_skala_popis(skala['rezy'])}, "
+                    f"duvod: {duvod}",
+                )
+            )
+        else:
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R148}: rez {rez:g} px na {len(kdo)} prvcich "
+                    f"(napr. {kdo[0][0]}, text '{kdo[0][1]}'), zavazna skala je "
+                    f"{_skala_popis(skala['rezy'])} px",
+                )
+            )
+    return issues
+
+
+def _r149_nalezy(
+    wl: str,
+    prvek: dict[str, Any],
+    text: str,
+    prof: DeviceProfile,
+) -> list[Issue]:
+    """Rule 149: uhlova velikost znaku pod mezi ctenosti.
+
+    Pixel o citelnosti nerika nic: tyz rez 14 px ma na 120 PPI verzalku
+    2,07 mm a na 294 PPI 0,85 mm. Meritkem je UHLOVA velikost na
+    vzdalenosti, ze ktere se pristroj opravdu cte - a ta je vlastnost
+    TROJICE (rez, PPI panelu, vzdalenost oka), takze obe cisla nese
+    profil a bez nich pravidlo MLCI.
+
+    Meri se VYSKA ZNAKU (verzalka = ``verzalka_pomer * rez``), ne radkovy
+    box a uz vubec ne dotykovy cil. Je to tataz delba, jakou dela
+    `citelnost.py`: ISO 9241-303 mluvi o vysce znaku, natahnout tutez
+    latku na mezeru v care nebo na dotykovy cil znamena merit jinou
+    velicinu tymz meritkem (dotykovy cil 81 px by pak "splnoval ISO",
+    coz nic neznamena - jeho mez je hmat, ne oko).
+
+    O tom, PROC se nesoudi podle ISO, mluvi komentar u `R149_MEZ_ISO`.
+    """
+    if not prof.cteci_vzdalenost_mm or not prof.verzalka_pomer or not prof.ppi:
+        return []
+    rez = prvek.get("font_size")
+    if rez is None or not text.strip():
+        return []
+    verzalka = prof.verzalka_pomer * float(rez)
+    minut = prof.minuty(verzalka)
+    if minut >= R149_MEZ_LETMO:
+        return []
+    uroven = "ERROR" if minut < R149_MEZ_TVAR else "WARN"
+    co = (
+        "tvar glyfu se nerozezna"
+        if minut < R149_MEZ_TVAR
+        else "letmym pohledem se to neprecte"
+    )
+    return [
+        Issue(
+            uroven,
+            f"{wl}: {ZNACKA_R149}: rez {float(rez):g} px = verzalka "
+            f"{prof.mm(verzalka):.3f} mm = {minut:.2f}' na "
+            f"{prof.cteci_vzdalenost_mm:.0f} mm ({co}; mez {R149_MEZ_LETMO:.0f}' "
+            f"letmo, {R149_MEZ_TVAR:.0f}' tvar, ISO 9241-303 zada "
+            f"{R149_MEZ_ISO:.0f}' a tenhle znak je na "
+            f"{100.0 * minut / R149_MEZ_ISO:.0f} % te meze), text '{text}'",
+        )
+    ]
+
+
+def _barva_klic(s: str) -> str:
+    """Barva jako porovnatelny klic: '#E9A63C', 'e9a63c' i 'red' -> jedno."""
+    rgb = _parse_color(s)
+    return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}" if rgb else s.strip().lower()
+
+
+def _paleta_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[tuple[frozenset[str], str | None] | None, list[Issue]]:
+    """Precte ``navrh.paleta`` a ``navrh.paleta_vlastni`` -> (paleta, duvod).
+
+    ``paleta`` je seznam hexu, proti kterym se list meri (kit vozi
+    `tokens.json: colors`, tedy tutez paletu, kterou ma firmware v
+    `tema.h`). ``paleta_vlastni`` je veta o tom, ze TENHLE list ma
+    vlastni identitu - list v negativu nebo zamerne stara obrazovka.
+
+    Vraci ``None``, kdyz paleta nedosla: pravidlo pak rekne, ze se
+    nemerilo, misto aby mlcelo.
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return None, issues
+    raw = blok.get("paleta")
+    vlastni_raw = blok.get("paleta_vlastni")
+    vlastni: str | None = None
+    if vlastni_raw is not None:
+        if not isinstance(vlastni_raw, str) or not vlastni_raw.strip():
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'paleta_vlastni' je oznaceni bez vety "
+                    f"- vypinac pravidla bez duvodu se zahazuje",
+                )
+            )
+        else:
+            vlastni = vlastni_raw.strip()
+    if raw is None:
+        if vlastni is not None:
+            # Pulka smlouvy: list rekl, ze ma vlastni paletu, ale paleta
+            # nedosla. Ticho by tu bylo horsi nez nalez - vypadalo by
+            # jako "zmereno a v poradku", pritom se nemerilo nic.
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'paleta_vlastni' je, ale "
+                    f"'paleta' ne - vyjimka bez meze nic nevyjima",
+                )
+            )
+        return None, issues
+    if not isinstance(raw, list) or not raw:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'paleta' ma byt neprazdny seznam hexu, "
+                f"je {raw!r}",
+            )
+        )
+        return None, issues
+    barvy: set[str] = set()
+    for barva_raw in raw:
+        if not isinstance(barva_raw, str) or _parse_color(barva_raw) is None:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'paleta' ma byt seznam barev, "
+                    f"je v nem {barva_raw!r}",
+                )
+            )
+            return None, issues
+        barvy.add(_barva_klic(barva_raw))
+    return (frozenset(barvy), vlastni), issues
+
+
+def _r150_nalezy(
+    pfx: str,
+    widgets: list[Any],
+    paleta: tuple[frozenset[str], str | None] | None,
+) -> list[Issue]:
+    """Rule 150: barva prvku mimo paletu.
+
+    SCENOVE pravidlo, ne widgetove, a je to rozhodnuti o hlasce: barva se
+    opakuje. Zamerne stara obrazovka `DnesSystemMonitor` ma 54 prvku v peti
+    barvach starsi generace palety; pet vet je nalez, 54 je smetiste, ve
+    kterem ten nalez zanikne. Hlasi se proto KAZDA RUZNA barva jednou,
+    s poctem prvku a s jednim jmenem pro priklad.
+
+    Kdo tu MLCI a proc:
+
+    * **Bez ``navrh.paleta``** -> tahle funkce mlci. Je to tataz DATOVA
+      zavora jako u Rule 136, 137 a 144-147: bez mereni neni co soudit
+      a cizi navrh, ktery paletu nedeklaruje, se z ni obvinovat nema.
+      Ticho ale NENI konec: `validate_data` vedle toho hlasi
+      `ZNACKA_R150_NEMERENO` vsude, kde prvky NESOU zmerenou barvu
+      (`navrh.prvky[*].inkoust`) a paleta presto nedosla - tedy na
+      kazdem listu kitu a na zadne cizi scene. Do 9. 9. 2026 tahle
+      zavora chybela a rozbity `tokens.json` umlcel celou tridu bez
+      jedineho slova. Ze most paletu opravdu vozi, meri
+      `tests/test_paleta_jeden_zdroj.py`.
+    * **List s vlastni identitou** (``paleta_vlastni``) -> jeden WARN
+      s duvodem misto vyctu barev. List v negativu ma vlastni, take
+      zmerenou paletu (`gen_negativ.BARVY`) a obvinovat ho z toho, ze
+      neni smaltovy, znamena merit jinou vec, nez pravidlo slibuje.
+    * **Neviditelny prvek** -> mlci, stejne jako u Rule 135 a 136.
+    * **Barva pisma prvku BEZ pisma** -> mlci: dedi se z rodice a nikdo
+      ji nevidi.
+
+    Tohle je NAVRHOVA polovina brany `tabos-core/tools/barvy_natvrdo.py`:
+    ta meri hexy ve ZDROJACICH C++ proti `tema.h`, tahle meri barvy na
+    SKLE proti `tokens.json`. Dva hlidaci, kazdy na jiny clanek retezu -
+    jinak by to byly dve palety a kazda strana by merila svou:
+
+      * `tests/test_typografie_a_paleta.py` - ze se SHODUJI tri kopie
+        palety (`tokens.json` x `tema.h` x `ram.BARVY` kitu);
+      * `tests/test_paleta_jeden_zdroj.py` - ze ji most (`do_espos.paleta`)
+        z `tokens.json` opravdu VOZI do sceny, takze to ticho vyse neni
+        ticho nad prazdnou paletou.
+    """
+    if paleta is None:
+        return []
+    barvy, vlastni = paleta
+    if vlastni is not None:
+        return [
+            Issue(
+                "WARN",
+                f"{pfx}: {ZNACKA_R150_ODCHYLKA}: {vlastni} - barvy prvku se proti "
+                f"palete NEMERI",
+            )
+        ]
+    nalezy: dict[tuple[str, str], list[str]] = {}
+    for i, w in enumerate(widgets):
+        if not isinstance(w, dict) or w.get("visible") is False:
+            continue
+        for klic, co in (("color_fg", "popredi"), ("color_bg", "pozadi")):
+            s = w.get(klic)
+            if not isinstance(s, str) or not s.strip():
+                continue
+            if klic == "color_fg" and not str(w.get("text", "")).strip():
+                continue
+            barva = _barva_klic(s)
+            if barva in barvy:
+                continue
+            kdo = w.get("_widget_id") or w.get("id") or f"widget[{i}]"
+            nalezy.setdefault((barva, co), []).append(str(kdo))
+    issues: list[Issue] = []
+    for (barva, co), kdo in sorted(nalezy.items()):
+        issues.append(
+            Issue(
+                "WARN",
+                f"{pfx}: {ZNACKA_R150}: {co} '{barva}' na {len(kdo)} prvcich "
+                f"(napr. {kdo[0]}), paleta ma {len(barvy)} barev",
+            )
+        )
+    return issues
+
+
+def _soustava_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[dict[str, float] | None, list[Issue]]:
+    """Precte ``navrh.soustava`` -> ({'pole_x', 'vsazka'}, nalezy).
+
+    Dve cisla soustavy odsazeni: kde zacina POLE a o kolik od jeho hrany
+    ma text odskocit. Kit je vozi z `tokens.json: layout`
+    (``obsah.x`` a ``ram.vsazka``), tedy z tehoz mista, ze ktereho je bere
+    generator i firmware.
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return None, issues
+    raw = blok.get("soustava")
+    if raw is None:
+        return None, issues
+    if not isinstance(raw, dict):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'soustava' ma byt objekt "
+                f"{{'pole_x': .., 'vsazka': ..}}, je {type(raw).__name__}",
+            )
+        )
+        return None, issues
+    ven: dict[str, float] = {}
+    for klic in ("pole_x", "vsazka"):
+        hod = _nezaporne_cislo(raw.get(klic))
+        if hod is None:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'soustava.{klic}' ma byt nezaporne "
+                    f"cislo v px, je {raw.get(klic)!r}",
+                )
+            )
+            return None, issues
+        ven[klic] = float(hod)
+    if ven["vsazka"] <= 0:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'soustava.vsazka' ma byt kladna, "
+                f"je {ven['vsazka']:g} - s nulovou vsazkou nema Rule 151 co merit",
+            )
+        )
+        return None, issues
+    return ven, issues
+
+
+def _r151_nalezy(
+    wl: str,
+    prvek: dict[str, Any],
+    x: int,
+    text: str,
+    soustava: dict[str, float] | None,
+) -> list[Issue]:
+    """Rule 151: text se lepi na ram misto aby dosedl na vsazku.
+
+    Soustava zni: leva hrana pole je ``pole_x``, text v nem zacina o
+    ``vsazka`` dal. Text, ktery zacina MEZI tim, se lepi na ram - a je to
+    skoro vzdycky preklep v souradnici, ne zamer: nikdo neodsazuje o
+    patnact pixelu, kdyz soustava zna sestnact.
+
+    Proc to nechyti Rule 134: ta meri near-miss dvou TEXTOVYCH hran do
+    3 px od sebe. Zamerne stara obrazovka `DnesSystemMonitor` ma text na
+    x=35 a nejblizsi jina hrana je x=20, tedy 15 px daleko - Rule 134
+    o nem mlci a mlcet ma, protoze to neni preklep proti jinemu textu,
+    ale proti SOUSTAVE.
+
+    BLOK S VLASTNI VSAZKOU se nevypina, PARAMETRIZUJE. Klavesnicovy blok
+    ma vlastni okraj 8 px (`klavesnice_blok.OKRAJ`), takze jeho klavesy
+    stoji na x=28. Kdyby pravidlo umelo jen mez ze soustavy, hlasilo by
+    24 falesnych nalezu; kdyby se blok dal jen VYPNOUT, prestalo by se
+    v nem merit uplne. Prvek proto smi nest vlastni ``vsazka`` a meri se
+    proti ni - klavesa na x=24 nalez porad dostane.
+
+    Meri se jen text zacinajici v pasmu ``(pole_x, pole_x + vsazka)``.
+    Vlevo od pole uz jsou hrany, ktere meri Rule 63 a Rule 80; vpravo od
+    vsazky uz je soustava splnena.
+    """
+    if soustava is None or not text.strip():
+        return []
+    pole_x = soustava["pole_x"]
+    vlastni_raw = prvek.get("vsazka")
+    vsazka = soustava["vsazka"] if vlastni_raw is None else float(vlastni_raw)
+    if vsazka <= 0:
+        return []
+    cil = pole_x + vsazka
+    if not (pole_x < x < cil):
+        return []
+    vlastni = "" if vlastni_raw is None else " (blok ma vlastni vsazku)"
+    return [
+        Issue(
+            "WARN",
+            f"{wl}: {ZNACKA_R151}: text zacina na x={x}, hrana pole je "
+            f"{pole_x:g} a soustava zada x={cil:g} (vsazka {vsazka:g} px)"
+            f"{vlastni}, text '{text}'",
+        )
+    ]
+
+
 def _mrizky_ze_sceny(
     scene: dict[str, Any],
     pfx: str,
@@ -2243,6 +3450,248 @@ def zkontroluj_dpi(
     return issues
 
 
+# Cmap vygenerovaneho LVGL fontu: `.range_start`/`.range_length` a bud
+# `NULL` (souvisly rozsah), nebo `unicode_list_N` (rozptylene kodove body).
+_FONT_SEZNAM = re.compile(
+    r"static const uint16_t (unicode_list_\d+)\[\] = \{(.*?)\};", re.S
+)
+_FONT_CISLO = re.compile(r"0x[0-9a-fA-F]+|\d+")
+_FONT_ROZSAH = re.compile(
+    r"\.range_start\s*=\s*(\d+)\s*,\s*\.range_length\s*=\s*(\d+)\s*,"
+    r".*?\.unicode_list\s*=\s*(NULL|unicode_list_\d+)",
+    re.S,
+)
+
+
+def radkovy_box(rez: float, asc: float, desc: float) -> int:
+    """Radkovy box rezu tak, jak ho opravdu vysadi prohlizec.
+
+    ``round(asc*rez) + round(desc*rez)``, tedy KAZDA cast zaokrouhlena
+    zvlast - NE ``round((asc+desc)*rez)``. Neni to detail: pri hhea
+    968/251 dava spravny vzorec 14 -> 18, 16 -> 19, 20 -> 24, 24 -> 29
+    a jednorazove zaokrouhleni by u rezu 16 vydalo 20 misto 19. Overeno
+    merenim na vysazenem DOM.
+    """
+    return round(asc * rez) + round(desc * rez)
+
+
+def skala_rozpory(
+    prof: DeviceProfile,
+    *,
+    skala: dict[str, float],
+    box: dict[int, int],
+    roztec: dict[int, int],
+    otisk_box: dict[int, int],
+    otisk_minut: dict[int, float],
+    typography: dict[str, Any],
+    pozn_typografie: dict[str, Any],
+    token_role: dict[str, int],
+    asc: float,
+    desc: float,
+    roztec_pricti: int = 2,
+    mez_minut: float = 0.005,
+) -> list[str]:
+    """Co se rozeslo mezi skalou pisma, jejim popisem a fyzikou.
+
+    CISTA FUNKCE: dostane cisla, vrati vety. Na disk nesaha, takze ji
+    muze pouzit jak brana v kitu (`citelnost.py`), tak pytest ESPOSu -
+    a prave o to jde. Do 9. 9. 2026 zila tahle kontrola JEN v kitu jako
+    skript s navratovym kodem; kdo ji nespustil rukou, nedozvedel se nic.
+
+    Parametry, at je videt, co je co:
+
+    * ``skala``   role -> rez v px, tak jak je SAZI generator (`ram.py`).
+    * ``box``, ``roztec``  co generator vysazi jako radkovy box a roztec.
+    * ``otisk_box``, ``otisk_minut``  ZAVAZNA tabulka 3.1 specifikace.
+    * ``typography``  `tokens.json: typography` (role -> jmeno LVGL fontu).
+    * ``pozn_typografie``  `tokens.json: _pozn_typografie` (druhy opis
+      tychz cisel; do 2026-09-06 ho neporovnaval nikdo).
+    * ``token_role``  ktery klic tokenu je ktera role v `ram.py`. Klice
+      se zamerne neprejmenovavaly, takze jmeno roli neprozradi - spojnici
+      drzi jen tahle tabulka.
+
+    OBA SMERY. Kontroly tvaru "je-li rez v tabulce, sedi?" propusti
+    POSUNUTOU SKALU: kdyz se rezy zmeni na 15/17/21/25/33 a vsechny opisy
+    se srovnaji, zadny `rez in otisk` neplati, cyklus se o nic neopre
+    a meridlo vytiskne SHODU. Skala se proto porovnava s tabulkou 3.1
+    jako MNOZINA, v obou smerech.
+    """
+    nalezy: list[str] = []
+    mereno: set[int] = set()
+    for _role, rez_raw in skala.items():
+        rez = int(rez_raw)
+        mereno.add(rez)
+        muj = radkovy_box(rez, asc, desc)
+        if rez in box and box[rez] != muj:
+            nalezy.append(
+                f"box rezu {rez}: generator sazi {box[rez]}, "
+                f"hhea {asc:g}/{desc:g} dava {muj}"
+            )
+        if rez in roztec and roztec[rez] != muj + roztec_pricti:
+            nalezy.append(
+                f"roztec rezu {rez}: generator ma {roztec[rez]}, "
+                f"box+{roztec_pricti} je {muj + roztec_pricti}"
+            )
+        if rez in otisk_box and otisk_box[rez] != muj:
+            nalezy.append(
+                f"box rezu {rez}: specifikace 3.1 rika {otisk_box[rez]}, "
+                f"spocitano {muj}"
+            )
+        if rez in otisk_minut:
+            m = prof.minuty(prof.verzalka_pomer * rez)
+            if abs(m - otisk_minut[rez]) > mez_minut:
+                nalezy.append(
+                    f"rez {rez} na {prof.cteci_vzdalenost_mm:.0f} mm: specifikace "
+                    f"3.1 rika {otisk_minut[rez]:.2f}', spocitano {m:.2f}'"
+                )
+    chybi = sorted(set(box) - mereno)
+    if chybi:
+        nalezy.append(f"generator zna rezy {chybi}, ktere tahle skala nemeri")
+    prebyva = sorted(mereno - set(otisk_minut))
+    if prebyva:
+        nalezy.append(
+            f"skala sazi rezy {prebyva}, ktere zavazna tabulka 3.1 nezna"
+        )
+    schazi = sorted(set(otisk_minut) - mereno)
+    if schazi:
+        nalezy.append(
+            f"zavazna tabulka 3.1 predepisuje rezy {schazi}, ktere skala nesazi"
+        )
+    for klic, rez in token_role.items():
+        zaznam = pozn_typografie.get(klic)
+        if not isinstance(zaznam, dict):
+            nalezy.append(
+                f"_pozn_typografie nema zaznam '{klic}' (role rezu {rez})"
+            )
+        else:
+            if zaznam.get("rez_px") != rez:
+                nalezy.append(
+                    f"_pozn_typografie.{klic}.rez_px = {zaznam.get('rez_px')}, "
+                    f"generator ma {rez}"
+                )
+            if zaznam.get("radkovy_box_px") != radkovy_box(rez, asc, desc):
+                nalezy.append(
+                    f"_pozn_typografie.{klic}.radkovy_box_px = "
+                    f"{zaznam.get('radkovy_box_px')}, spocitano "
+                    f"{radkovy_box(rez, asc, desc)}"
+                )
+            m = prof.minuty(prof.verzalka_pomer * rez)
+            try:
+                zapsano = float(zaznam.get("minut_450mm", -1))
+            except (TypeError, ValueError):
+                zapsano = -1.0
+            if abs(zapsano - round(m, 2)) > mez_minut:
+                nalezy.append(
+                    f"_pozn_typografie.{klic}.minut_450mm = "
+                    f"{zaznam.get('minut_450mm')}, spocitano {m:.2f}'"
+                )
+        if klic not in typography:
+            nalezy.append(f"typography nema klic '{klic}' (role rezu {rez})")
+            continue
+        ceka = f"tabos_{rez}"
+        if str(typography[klic]) != ceka:
+            nalezy.append(
+                f"typography.{klic} = '{typography[klic]}', role ma rez "
+                f"{rez} px (ceka '{ceka}')"
+            )
+    navic = sorted(set(typography) - set(token_role))
+    if navic:
+        nalezy.append(
+            f"typography ma navic klice {navic}, ktere zadne roli neodpovidaji"
+        )
+    return nalezy
+
+
+def sirka_retezce(
+    text: str,
+    rez: float,
+    prostrkani: float,
+    upem: int,
+    cmap: dict[int, str],
+    hmtx: dict[str, Any],
+) -> float:
+    """Sirka retezce jako SOUCET ADVANCE SIREK glyfu daneho fontu.
+
+    Druhy, NEZAVISLY odhad teze veliciny, kterou meri Rule 137 v
+    prohlizeci (`Range.getClientRects()`). Neni to tyz vypocet - Chrome
+    navic uplatnuje parovy kerning z GPOS - takze se neporovnava na
+    rovnost, ale mezi (viz `sirka_meze`). Ze si obe cesty odpovidaji,
+    meri `test_parita_sirek_R137_a_fontu`: na vete "Vypada to jako I2C.
+    D1 = SCL, D0 = SDA." pri rezu 20 px vysel rozdil 0,04 px.
+
+    `prostrkani` je CSS letter-spacing v em. CSS ho pricita i ZA posledni
+    pismeno, takze se tak pocita i tady - schranka textu je o tu mezeru
+    sirsi nez jeho inkoust.
+
+    Znak, ktery font NEMA, je ValueError, ne nula: LVGL chybejici glyf
+    TISE preskoci a z "-58 dBm" se stane "58 dBm" (viz Rule 26).
+    """
+    soucet = 0
+    for ch in text:
+        glyf = cmap.get(ord(ch))
+        if glyf is None:
+            raise ValueError(
+                f"font nema glyf pro {ch!r} (U+{ord(ch):04X}) v retezci "
+                f"{text!r} - vysadil by se prazdny"
+            )
+        soucet += hmtx[glyf][0]
+    return soucet * rez / upem + prostrkani * rez * len(text)
+
+
+def sirka_meze(soucet: float, kerning: float) -> tuple[float, float]:
+    """Pripustne pasmo pro cislo OPSANE do generatoru: (dolni, horni).
+
+    Mez je JEDNOSTRANNA, protoze kerning sirku jen ZMENSUJE:
+    ``soucet - kerning <= opsane <= ceil(soucet)``. `kerning` je nejvetsi
+    NAMERENY rozdil (v kitu 3,75 px u "/sd/capture_0412.la" v roli
+    hodnota), zaokrouhleny nahoru. Mez tim padne az na retezec, ktery se
+    OPRAVDU zmenil, ne na zaokrouhleni.
+    """
+    return soucet - kerning, float(math.ceil(soucet))
+
+
+def znaky_fontu_zarizeni(cesta: Any) -> frozenset[str]:
+    """Znaky, ktere umi font ZARIZENI (`lv_font_tabos_*.c`). CTE DISK.
+
+    Tohle je JEDINY zdroj pravdy o znakove sade: nic jineho neni to, co
+    ma pristroj ve flashi. Vsechny ostatni seznamy v projektu jsou opisy
+    a merí se PROTI TOMUHLE - `_TAB5_FONT_CHARS` tady, `gen_subset.SADA`
+    v kitu a recept `gen_fonty.py` v jadre. Opsany seznam zestarne prvni
+    zmenou pisma a brana pak mlci prave o novem znaku; presne tak vznikla
+    ctverice kopii, kterou tahle funkce rusi.
+
+    **Proc funkce a ne pravidlo.** Tataz delba jako u `jmena_ze_sdk`
+    a `zkontroluj_dpi`: `validate_data` smi zaviset jen na dokumentu,
+    ktery dostal. Font cte volajici (test, brana) a vysledek si nese sam.
+
+    Cte oba tvary, ktere `lv_font_conv` vydava, protoze font zarizeni
+    obsahuje OBA naraz: souvisly rozsah ASCII (`unicode_list = NULL`)
+    i rozptylene ceske znaky a symboly (`unicode_list_N` s offsety od
+    `range_start`). Cist jen jeden tvar znamena tise ztratit pulku
+    abecedy.
+
+    Prazdna mnozina se NEVRACI: kdyz se v souboru zadna cmap nenajde,
+    zmenil se format a je to CHYBA, ne "font nic neumi". Ticho vydavane
+    za "cisto" je prave ta vada, kterou tahle kampan jinde odstranuje.
+    """
+    cesta = Path(cesta)
+    text = cesta.read_text(encoding="utf-8", errors="replace")
+    seznamy = {
+        m.group(1): [int(x, 0) for x in _FONT_CISLO.findall(m.group(2))]
+        for m in _FONT_SEZNAM.finditer(text)
+    }
+    umi: set[int] = set()
+    for m in _FONT_ROZSAH.finditer(text):
+        start, delka, seznam = int(m.group(1)), int(m.group(2)), m.group(3)
+        if seznam == "NULL":
+            umi |= set(range(start, start + delka))
+        else:
+            umi |= {start + k for k in seznamy.get(seznam, [])}
+    if not umi:
+        raise ValueError(f"v {cesta.name} neni zadna cmap - zmenil se format fontu?")
+    return frozenset(chr(c) for c in umi)
+
+
 def jmena_ze_sdk(koren: Any) -> frozenset[str]:
     """Jmena rozhrani a hodnot enumu z hlavicek SDK. CTE DISK.
 
@@ -2344,9 +3793,29 @@ def _verzalkove_jmeno(
     """
     if not jmena_sdk:
         return None
+    # (c) Jmeno rozhrani se dvema hrby se meri I VE STITKU VERZALKAMI.
+    #     Bezi PRVNI a bez ohledu na velikost pismen zbytku textu, protoze
+    #     'ZDROJ IHWDIAGNOSTICS' je tataz vada jako 'ZDROJ IHwDiagnostics'.
+    rozhrani = _dvouhrba_rozhrani(jmena_sdk)
+    if rozhrani:
+        for m in _V_VERZALKY.finditer(text):
+            slovo = m.group(0)
+            if slovo in VETY_NENI_ROZHRANI or slovo in VETY_NENI_JMENO_SDK:
+                continue
+            if slovo.upper() in rozhrani:
+                return "jmeno rozhrani ze SDK", slovo
     if not any(z.islower() for z in text):
         return None
     velka = {j.upper() for j in jmena_sdk}
+    # (d) CamelCase jmeno ze SDK uvnitr vety. Meri se PRED verzalkovym
+    #     tvarem: `NotFound` je ostrejsi dukaz nez `ERROR`, ktere je
+    #     zaroven beznym slovem severity (reziduum R4 kritika).
+    for m in _V_CAMEL.finditer(text):
+        slovo = m.group(0)
+        if slovo in VETY_NENI_ROZHRANI or slovo in VETY_NENI_JMENO_SDK:
+            continue
+        if slovo.upper() in velka:
+            return "jmeno ze SDK", slovo
     for m in _V_VERZALKY.finditer(text):
         slovo = m.group(0)
         if slovo in VETY_NENI_ROZHRANI or slovo in VETY_NENI_JMENO_SDK:
@@ -2363,12 +3832,16 @@ def _r142_ma_verzalkove_slovo(text: str) -> bool:
     WARN "jmena SDK nedodana" vyskocil i na listech, kde by stejne nebylo
     co porovnavat - a varovani, ktere sviti porad, nikdo necte.
     """
-    if not any(z.islower() for z in text):
-        return False
+    vzory = (
+        (_V_VERZALKY,)
+        if not any(z.islower() for z in text)
+        else (_V_VERZALKY, _V_CAMEL)
+    )
     return any(
         m.group(0) not in VETY_NENI_ROZHRANI
         and m.group(0) not in VETY_NENI_JMENO_SDK
-        for m in _V_VERZALKY.finditer(text)
+        for vzor in vzory
+        for m in vzor.finditer(text)
     )
 
 
@@ -2609,10 +4082,27 @@ def _r143_nalezy(
     **Zavaznost je WARNING**, ne ERROR: neni to vada rozvrzeni (nic se
     neoreze, nic nepretece), je to rozpor ve slovniku. Rozhodl tak majitel.
 
+    **MERI SE JEN ROLE `stav`** (rozhodnuti koordinatora 9. 9. 2026). Do
+    te doby pravidlo merilo KAZDOU hodnotovou roli s `data-vec` - a na 62
+    zivych listech vydalo deset nalezu, z nichz nebyl pravdivy ANI JEDEN:
+
+        'USB-A host': 'LA1010 + FT232R'          'USB-A host': '2 zarizeni'
+        'sit': 'NERTERA - -58 dBm - 2,4 GHz'     'sit': 'NERTERA'
+        'microSD': '28,4 GB volno'
+
+    Vsech pet je HODNOTA O VECI (kolik volneho mista, ktera sit, kolik
+    zarizeni), ne STAV VECI. Pravidlo tedy merilo jinou velicinu, nez
+    slibuje, a deset radku sumu se ctenar nauci preskakovat - vcetne toho
+    jedenacteho, ktery pravdivy bude. Uzsi role je levnejsi nez chytrejsi
+    heuristika nad textem: co je stav a co hodnota, vi generator, ne
+    meridlo.
+
     Kdo tu mlci a proc:
 
-    * bez hodnotove role - hlavicka sloupce "microSD" vec jmenuje, ale zadny
-      stav netvrdi; slib nese role, ne slovo;
+    * role neni `stav` - "28,4 GB volno" je hodnota o karte, ne jeji stav;
+      hlavicka sloupce "microSD" vec jen jmenuje. Slib nese ROLE, ne slovo.
+      Ze se na listu, ktery o veci mluvi, ale zadnou roli `stav` nema,
+      NEMERILO, rekne `validate_data` jednou za list;
     * prazdny text patri Rule 138 a samotna pomlcka Rule 139 - jedna obet,
       jeden nalez;
     * text, ktery je JEN jmenem veci ("microSD"), je navesti, ne tvrzeni.
@@ -2631,7 +4121,7 @@ def _r143_nalezy(
     a Rule 140): most o veci neco tvrdil, meridlo se nepustilo - a ticho by
     vypadalo k nerozeznani od "v poradku".
     """
-    if role not in ROLE_HODNOTY:
+    if role != ROLE_STAV:
         return []
     vec = prvek.get("vec")
     if vec is None and not slovnik:
@@ -2786,6 +4276,35 @@ def validate_data(
         # NAPRIC listy meri bez globalniho stavu (viz `_r143_nalezy`).
         navrh_slovnik, slovnik_nalezy = _slovnik_ze_sceny(scene, pfx)
         issues.extend(slovnik_nalezy)
+        # Ticho pravidla 143 musi byt VIDET, jinak se nemereni necha cist
+        # jako "vsechny stavy sedi". Hlasi se JEDNOU za list a jen tehdy,
+        # kdyz by pravidlo jinak MELO co merit:
+        #
+        #   list mluvi o VECI ZE SLOVNIKU (`data-vec`), ale ani jeden
+        #   prvek na nem nema roli `stav`.
+        #
+        # Uzsi podminka nez "list nema roli stav": vetsina obrazovek o
+        # zadnem sdilenem stavu netvrdi nic (Terminal, Hex, klavesnice) a
+        # hlaska nad nimi by byla sum na 50 listech ze 62 - tedy prave to,
+        # co se timhle rozhodnutim odstranuje. Zavora je tataz jako u 148,
+        # 150 a 151: "pulka smlouvy dosla, druha ne".
+        if navrh_slovnik:
+            veci_listu = {
+                pr["vec"].casefold() for pr in navrh_prvky.values()
+                if isinstance(pr.get("vec"), str)
+            } & set(navrh_slovnik)
+            if veci_listu and not any(
+                    pr.get("role") == ROLE_STAV for pr in navrh_prvky.values()):
+                jmena = ", ".join(sorted(navrh_slovnik[k]["jmeno"]
+                                         for k in veci_listu))
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{pfx}: {ZNACKA_R143_ROLE_NEMERENO}: list mluvi o veci "
+                        f"({jmena}), ale zadny prvek netvrdi STAV - slovnik se "
+                        f"NEPOROVNAVAL",
+                    )
+                )
 
         # ── Rule 142, osmy tvar: jmena ze SDK ──
         # Seznam se neopisuje, cte ho `jmena_ze_sdk()` z hlavicek a vozi ho
@@ -2793,12 +4312,101 @@ def validate_data(
         navrh_jmena_sdk, jmena_nalezy = _jmena_sdk_ze_sceny(scene, pfx)
         issues.extend(jmena_nalezy)
 
+        # ── Rule 146: smaltove plochy sceny ──
+        # Seznam JMEN prvku, ne obdelniku: obdelnik uz scena nese, prislusnost
+        # ne (viz `_plochy_ze_sceny`). Obdelnik se proto dohleda ve widgetech
+        # a neviditelna plocha se preskoci - stejne jako v Rule 135 a 136.
+        navrh_plochy, plochy_nalezy = _plochy_ze_sceny(scene, pfx, znama_id)
+        issues.extend(plochy_nalezy)
+        plochy_rects: list[tuple[str, tuple[int, int, int, int]]] = []
+        if navrh_plochy:
+            hledane = set(navrh_plochy)
+            for cw in widgets:
+                if not isinstance(cw, dict) or cw.get("visible") is False:
+                    continue
+                cid = cw.get("_widget_id") or cw.get("id")
+                if not isinstance(cid, str) or cid not in hledane:
+                    continue
+                if not all(_is_int(cw.get(k)) for k in ("x", "y", "width", "height")):
+                    continue
+                plochy_rects.append(
+                    (
+                        cid,
+                        (
+                            int(cw["x"]),
+                            int(cw["y"]),
+                            int(cw["width"]),
+                            int(cw["height"]),
+                        ),
+                    )
+                )
+
+        # ── Rule 147: delici cary sceny ──
+        # Vlasove linky do sceny nevstupuji (most zahazuje vsechno tenci nez
+        # 2 px), takze se vozi zvlast jako obdelniky.
+        navrh_cary, cary_nalezy = _cary_ze_sceny(scene, pfx)
+        issues.extend(cary_nalezy)
+
+        # ── Rule 148: zavazna skala rezu + jmenovite vyjimky listu ──
+        # Vlastnost SCENY, ne prvku: skala je smlouva o celem jazyce
+        # a vyjimky plati PRO TENHLE LIST (rez 13 px je na klavesnici
+        # vedomy, na Nastaveni preklep).
+        navrh_skala, skala_nalezy = _skala_ze_sceny(scene, pfx)
+        issues.extend(skala_nalezy)
+
+        # ── Rule 150: paleta listu ──
+        navrh_paleta, paleta_nalezy = _paleta_ze_sceny(scene, pfx)
+        issues.extend(paleta_nalezy)
+
+        # ── Rule 151: soustava odsazeni ──
+        navrh_soustava, soustava_nalezy = _soustava_ze_sceny(scene, pfx)
+        issues.extend(soustava_nalezy)
+
         # ── Rule 142: obrazovka, nebo vyklad o navrhu? ──
         # Vykladovy list vadu CITUJE misto aby ji delal (viz `DRUHY_LISTU`).
         # Ticho je videt: rekne se jednou za list, at nikdo necte nemereno
         # jako v poradku.
         druh_listu, druh_nalezy = _druh_listu_ze_sceny(scene, pfx)
         issues.extend(druh_nalezy)
+        # Rule 148: skala nedosla? Rekne se to JEDNOU za list, ne u kazdeho
+        # z tisice prvku - a rekne se to jen tehdy, kdyz na listu vubec
+        # nejaky mereny rez je. Ticho o nezmerenem se nesmi cist jako cisto.
+        if navrh_skala is None and any("font_size" in pr for pr in navrh_prvky.values()):
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R148_NEMERENO}: rezy pisma jsou zmerene, ale "
+                    f"zavazna skala nedosla - rezy se NEPOROVNAVALY",
+                )
+            )
+        # Tataz uvaha pro Rule 151. Zavora je `orez`, ne `vsazka`:
+        #
+        # Do 9. 9. 2026 se NEMERENO hlasilo jen tehdy, kdyz nejaky blok
+        # DEKLAROVAL vlastni vsazku - to jsou dva klavesnicove listy.
+        # Jenze `DnesSystemMonitor`, na kterem lezi vsechny ctyri zive
+        # nalezy pravidla 151, zadnou vlastni vsazku nema. Zavora tedy
+        # mlcela prave tam, kde pravidlo nachazi: kdyby ze scen zmizel
+        # blok `soustava`, ctyri nalezy by zmizely BEZE SLOVA.
+        #
+        # `orez` je klic, ktery na prvek posila JEN most kitu (3751 prvku
+        # na 62 listech), a to prave tehdy, kdyz prvek zmeril. Znamena
+        # tedy "tenhle list most opravdu prosel" - cizi scena (editor,
+        # ruzne psany navrh) ho nema, takze se na ni NEMERENO nevystreli.
+        # Tataz uvaha jako u Rule 148 o `font_size`.
+        #
+        # `vsazka` v podmince ZUSTAVA vedle nej: deklarovana vlastni vsazka
+        # bez soustavy je ROZBITA SMLOUVA i tehdy, kdyz prvek prosel jinou
+        # cestou nez mostem. Stara zavora byla spravna, jen prilis uzka -
+        # nerusi se, rozsiruje se.
+        if navrh_soustava is None and any(
+                ("orez" in pr or "vsazka" in pr) for pr in navrh_prvky.values()):
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R151_NEMERENO}: soustava odsazeni nedosla - "
+                    f"leve hrany textu se proti ni NEMERILY",
+                )
+            )
         if prof.vety_pro_cloveka and druh_listu == "vyklad":
             issues.append(
                 Issue(
@@ -2808,6 +4416,40 @@ def validate_data(
                     f"vyklad vadu cituje)",
                 )
             )
+        # ── Rule 150: barvy prvku proti palete ──
+        # Az TED, kdyz uz je videt cely seznam widgetu: hlasi se kazda ruzna
+        # barva JEDNOU s poctem prvku, ne kazdy prvek zvlast (viz
+        # `_r150_nalezy`).
+        #
+        # Bez palety se rekne NAHLAS, ze se nemerilo - a plati pro to tataz
+        # UZSI zavora jako u Rule 148 a 151. Do 9. 9. 2026 tady zavora
+        # nebyla vubec: jedna carka navic v `tokens.json` srazila tridu
+        # `paleta` z peti nalezu na nulu UPLNE TISE a brana zustala zelena
+        # (zmereno v pisikovisti kritika). Duvod, proc se NEMERENO nehlasilo,
+        # byl spravny - vystrelovalo by na kazde cizi scene vcetne kazde
+        # sceny editoru - ale lek byl silnejsi nez nemoc.
+        #
+        # Zavora je `inkoust`: klic, ktery na prvek posila JEN most kitu
+        # (3751 prvku na 62 listech) a jen tehdy, kdyz mu barvu ZMERIL.
+        # "Barvy jsou zmerene, ale paleta nedosla" je proto stav, ktery
+        # nemuze nastat u ciziho navrhu - a u kitoveho znamena, ze se
+        # NEMERILO. `color_fg` widgetu by se na tohle nehodilo: ten ma
+        # kazda scena, takze by zavora byla jen jinak napsane "vzdycky".
+        if navrh_paleta is None and any("inkoust" in pr for pr in navrh_prvky.values()):
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R150_NEMERENO}: barvy prvku jsou zmerene, ale "
+                    f"paleta navrhu nedosla - barvy se NEPOROVNAVALY",
+                )
+            )
+        issues.extend(_r150_nalezy(pfx, widgets, navrh_paleta))
+
+        # ── Rule 148: rezy pisma proti zavazne skale ──
+        # Take scenove a ze stejneho duvodu jako Rule 150: rez se opakuje,
+        # takze se hlasi po REZECH s poctem prvku, ne po prvcich.
+        issues.extend(_r148_nalezy(pfx, widgets, navrh_prvky, navrh_skala))
+
         # Rule 138 se pta "nese sdeleni nekdo UVNITR me?" geometricky, takze
         # potrebuje texty cele sceny predem. Bez merenych dat se nestavi.
         texty_sceny = _texty_sceny(widgets) if navrh_prvky else []
@@ -3043,6 +4685,74 @@ def validate_data(
             if navrh_prvek and w.get("visible") is not False:
                 issues.extend(_r137_nalezy(wl, navrh_prvek, text))
 
+            # ── Rule 144 + Rule 145: text useknuty svou schrankou ──
+            #
+            # Jina velicina nez Rule 137: ta meri DEKLAROVANOU bunku
+            # (rozvrzeni), tahle dvojice SKUTECNY orez (co je videt). Bez
+            # textu se nemeri - prazdna schranka nic neusekla a prazdny
+            # smalt patri Rule 138.
+            if navrh_prvek and text.strip() and w.get("visible") is not False:
+                issues.extend(_r144_nalezy(wl, navrh_prvek, text))
+                issues.extend(_r145_nalezy(wl, navrh_prvek, text))
+
+            # ── Rule 146: cizi text na smaltove plose ──
+            #
+            # Gatovane PROFILEM (polarita je zakon TabOSu) i DATY (bez
+            # `navrh.plochy` neni co merit).
+            if (
+                prof.polarita_smaltu
+                and plochy_rects
+                and text.strip()
+                and isinstance(wid_navrh, str)
+                and w.get("visible") is not False
+            ):
+                issues.extend(
+                    _r146_nalezy(
+                        wl,
+                        wid_navrh,
+                        (x, y, ww, hh),
+                        text,
+                        plochy_rects,
+                        navrh_prvky,
+                        zna_rodic_id,
+                    )
+                )
+
+            # ── Rule 147: delici cara pres text ──
+            if (
+                prof.delici_cary
+                and navrh_cary
+                and text.strip()
+                and w.get("visible") is not False
+            ):
+                issues.extend(_r147_nalezy(wl, (x, y, ww, hh), text, navrh_cary))
+
+            # ── Rule 149: co z rezu udela oko na 450 mm ──
+            #
+            # Druha otazka nad tymz merenim (`prvky[*].font_size`) nez
+            # Rule 148 vyse: 148 se pta, jestli rez patri do SKALY
+            # (smlouva jazyka, datove gatovana), 149 jestli je z nej na
+            # 450 mm jeste neco videt (fyzika, gatovana PROFILEM - tyz
+            # rez je na jinem panelu jina velicina). Prvek pod skalou
+            # i pod mezi ctenosti dostane oba nalezy pravem: opravit se
+            # to da dvema ruznymi zpusoby. Rule 149 zustava po prvcich,
+            # protoze mez je fyzikalni a hlaska ma rict, CO se neprecte.
+            if navrh_prvek and w.get("visible") is not False:
+                issues.extend(_r149_nalezy(wl, navrh_prvek, text, prof))
+
+            # ── Rule 151: text nalepeny na ram ──
+            #
+            # Meri se KAZDEMU viditelnemu prvku s textem, i tomu, ktery
+            # vlastni zaznam v bloku nema - tataz uvaha jako u pasu
+            # v Rule 136: soustava odsazeni je vlastnost SCENY a leva
+            # hrana je u kazdeho widgetu. Kdyby se pravidlo vazalo na
+            # zaznam, prvek bez merenych dat by se nalepil na ram mlcky.
+            # Zaznam rozhoduje jen o tom, jestli blok ma VLASTNI vsazku.
+            if navrh_soustava and w.get("visible") is not False and _is_int(x):
+                issues.extend(
+                    _r151_nalezy(wl, navrh_prvek, int(x), text, navrh_soustava)
+                )
+
             # ── Rule 138 + Rule 139: hodnotova role bez sdeleni ──
             #
             # Dve podoby teze vady, kterou koordinator nasel ocima na panelu:
@@ -3119,7 +4829,18 @@ def validate_data(
                     issues.append(Issue("WARN", f"{wl}: can't parse color_bg '{bg_str}'"))
 
             # ── Rule 17: Contrast check (fg vs bg for text widgets) ──
-            if wt in TEXT_TYPES and text and fg_str and bg_str:
+            #
+            # MERI SE, CO OKO VIDI. Kdyz most vozi slozenou dvojici
+            # (`inkoust`/`podklad`, tedy barvy uz s prusvitnosti a
+            # `opacity`), plati ona; jinak zbyva DEKLAROVANA dvojice ze
+            # sceny. Rozdil neni akademicky: zasedle tlacitko "Pripojit"
+            # ma napsany inkoust #12150E (pomer 14,07:1), ale na skle je
+            # z nej #946D2A (2,23:1) - a stara Rule 17 o vsech deviti
+            # zasedlych ovladacich kitu mlcela.
+            fg_videna = navrh_prvek.get("inkoust", fg_str)
+            bg_videna = navrh_prvek.get("podklad", bg_str)
+            if wt in TEXT_TYPES and text and fg_videna and bg_videna:
+                fg_str, bg_str = fg_videna, bg_videna
                 fg_rgb = _parse_color(fg_str)
                 bg_rgb = _parse_color(bg_str)
                 if fg_rgb and bg_rgb:
@@ -3130,14 +4851,48 @@ def validate_data(
                         # and symmetric, so it judges dark-on-light the same way
                         # as light-on-dark.
                         ratio = _contrast_ratio(fg_rgb, bg_rgb)
-                        if ratio < MIN_CONTRAST:
-                            issues.append(
-                                Issue(
-                                    "WARN",
-                                    f"{wl}: low contrast ({ratio:.2f}:1 < "
-                                    f"{MIN_CONTRAST}:1) fg='{fg_str}' vs bg='{bg_str}'",
+                        # WCAG 2.1 AA ma DVE meze, ne jednu. Velky text
+                        # (>= 24 px, nebo >= 19 px tucne) staci 3,0:1,
+                        # protoze vetsi glyf sam nese cast citelnosti.
+                        # Bez teto pulky dostava kazdy velky titulek mezi
+                        # 3,0 a 4,5 falesny poplach - a brana, ktera krici
+                        # vlka, prestane byt bran vazne. Rez i tucnost
+                        # vozi most v bloku `navrh`; kdyz nedosly, plati
+                        # prisnejsi mez (nezmerene se nesmi vyplatit).
+                        mez = MIN_CONTRAST
+                        if prof.min_contrast_velky:
+                            rez_px = navrh_prvek.get("font_size")
+                            tucne = bool(navrh_prvek.get("tucne"))
+                            if rez_px is not None and (
+                                float(rez_px) >= WCAG_VELKY_PX
+                                or (tucne and float(rez_px) >= WCAG_TUCNE_PX)
+                            ):
+                                mez = prof.min_contrast_velky
+                        if ratio < mez:
+                            # WCAG 2.1, 1.4.3: neaktivni ovladac je z meze
+                            # kontrastu VYNATY - zasedle tlacitko ma vypadat
+                            # zasedle a je to sdeleni, ne vada. Ticho ale
+                            # musi byt VIDET: hlasi se, ze vyjimka opravdu
+                            # neco vyjmula, a jen tehdy (vyjimka, ktera nic
+                            # nezmenila, by byla jen sum).
+                            if navrh_prvek.get("enabled") is False:
+                                issues.append(
+                                    Issue(
+                                        "WARN",
+                                        f"{wl}: {ZNACKA_R17_NEAKTIVNI}: "
+                                        f"{ratio:.2f}:1 < {mez}:1 "
+                                        f"fg='{fg_str}' vs bg='{bg_str}' "
+                                        f"(WCAG 2.1, 1.4.3 - mez na nej neplati)",
+                                    )
                                 )
-                            )
+                            else:
+                                issues.append(
+                                    Issue(
+                                        "WARN",
+                                        f"{wl}: low contrast ({ratio:.2f}:1 < "
+                                        f"{mez}:1) fg='{fg_str}' vs bg='{bg_str}'",
+                                    )
+                                )
                     else:
                         contrast = abs(_brightness(fg_rgb) - _brightness(bg_rgb))
                         if contrast < MIN_CONTRAST:

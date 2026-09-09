@@ -1,0 +1,114 @@
+{
+ "_puvod": "Logic Analyzer, fotoprotokol 2026-09-08. VADY: hodnota u 'SPOUST' je pomlcka a patka je taky pomlcka (R139, prvni tvar - dva nalezy, dve obeti). Popisek a hodnota jsou DVA prvky, jak je sazi generator kitu; kdyby generator sazel 'SPOUST —' jako jeden prvek, treti tvar R139 by mlcel (jeden osamely slot se od hodnoty s oddelovacem nerozezna) - to ma vlastni hranicni test.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 123,
+     "width": 89,
+     "height": 12,
+     "text": "SPOUŠŤ",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.30"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 147,
+     "width": 300,
+     "height": 19,
+     "text": "—",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.31"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 631,
+     "width": 70,
+     "height": 12,
+     "text": "STAV",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.60"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 660,
+     "width": 400,
+     "height": 19,
+     "text": "—",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.61"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "txt.31": {
+      "role": "hodnota"
+     },
+     "txt.61": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.60": {
+      "role": "popisek",
+      "pas": "razitko"
+     }
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

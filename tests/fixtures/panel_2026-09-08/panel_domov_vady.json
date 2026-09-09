@@ -1,0 +1,188 @@
+{
+ "_puvod": "Domov, fotoprotokol 2026-09-08. VADY: dlazdice RF sondy oriznuta patkou (R136 pas), jeji hodnota je pomlcka (R139), stitek FIRMWARE useknuty (R144), mrizka 2x5 nepojme 11 appek (R140). Souradnice dlazdice, stitku a pasu jsou ze skutecne sceny _scena_SvorkaDomu.dc.json; posunute je JEDNO cislo (y dlazdice 523 -> 548), protoze artboard ma 13 px vzduchu a panel ma mrizku o radu vyssi.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "panel",
+     "x": 466,
+     "y": 548,
+     "width": 386,
+     "height": 76,
+     "text": "",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#1C2016",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "dlazdice.77"
+    },
+    {
+     "type": "label",
+     "x": 481,
+     "y": 559,
+     "width": 95,
+     "height": 15,
+     "text": "RF sonda",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "b.78"
+    },
+    {
+     "type": "label",
+     "x": 481,
+     "y": 584,
+     "width": 143,
+     "height": 11,
+     "text": "Wi-Fi · BLE · 802.15.4",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "u.79"
+    },
+    {
+     "type": "label",
+     "x": 481,
+     "y": 604,
+     "width": 109,
+     "height": 14,
+     "text": "—",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt_zivy.80"
+    },
+    {
+     "type": "label",
+     "x": 256,
+     "y": 210,
+     "width": 109,
+     "height": 12,
+     "text": "FIRMWARE",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "k.20"
+    },
+    {
+     "type": "label",
+     "x": 256,
+     "y": 234,
+     "width": 149,
+     "height": 14,
+     "text": "V0.4-71-gee91351-dirty ·",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.21"
+    },
+    {
+     "type": "label",
+     "x": 873,
+     "y": 497,
+     "width": 160,
+     "height": 14,
+     "text": "hodiny nenastaveny",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt_zivy.72"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "txt_zivy.80": {
+      "role": "hodnota"
+     },
+     "v.21": {
+      "role": "hodnota",
+      "orez": {
+       "sirka_obsahu": 212,
+       "sirka_schranky": 149,
+       "vyska_obsahu": 19,
+       "vyska_schranky": 19
+      }
+     },
+     "txt_zivy.72": {
+      "role": "stav",
+      "vec": "hodiny"
+     }
+    },
+    "mrizky": [
+     {
+      "jmeno": "dlazdice",
+      "kapacita": 10,
+      "polozek": 11
+     }
+    ],
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

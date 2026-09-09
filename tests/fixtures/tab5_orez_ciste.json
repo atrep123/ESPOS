@@ -1,0 +1,84 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 140,
+     "width": 291,
+     "height": 19,
+     "text": "obrysy z Montserrat-Medium, 4 bpp",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.93"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 180,
+     "width": 200,
+     "height": 19,
+     "text": "Zpet do seznamu",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.94"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 220,
+     "width": 200,
+     "height": 19,
+     "text": "presne na hranu",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.95"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "txt.93": {
+      "sirka_bunky": 278.0,
+      "sirka_textu": 290.1,
+      "orez": {
+       "sirka_obsahu": 291,
+       "sirka_schranky": 291,
+       "vyska_obsahu": 19,
+       "vyska_schranky": 19
+      }
+     },
+     "txt.94": {
+      "orez": {
+       "sirka_obsahu": 201,
+       "sirka_schranky": 200,
+       "vyska_obsahu": 20,
+       "vyska_schranky": 19
+      }
+     },
+     "txt.95": {
+      "orez": {
+       "sirka_obsahu": 200,
+       "sirka_schranky": 200,
+       "vyska_obsahu": 19,
+       "vyska_schranky": 19
+      }
+     }
+    }
+   }
+  }
+ }
+}

@@ -84,6 +84,8 @@ from tools.validate_design import (
     ZNACKA_R142_VYKLAD,
     ZNACKA_R143,
     ZNACKA_R143_NEMERENO,
+    ZNACKA_R143_ROLE_NEMERENO,
+    _dvouhrba_rozhrani,
     _veta_strojove_jmeno,
     jmena_ze_sdk,
     validate_data,
@@ -782,7 +784,7 @@ def test_neznama_role_je_WARN_a_pravidlo_nemeri():
     d = _smalt(role="hodnta")
     assert (
         f"{FL}: main: {ZNACKA_NAVRH_VADNY}: 'prvky.smalt.port.role' je nezname jmeno role "
-        f"'hodnta' (znam: cislo, hodnota, patka, popisek, smalt, stitek, titulek) - merena "
+        f"'hodnta' (znam: cislo, hodnota, patka, popisek, smalt, stav, stitek, titulek) - merena "
         f"data se zahazuji"
     ) in _warns(d)
     assert _obsahuji(_msgs(d), ZNACKA_R138) == []
@@ -1427,6 +1429,96 @@ def test_r140_vadna_mrizka_nezastavi_ostatni():
 
 
 # --------------------------------------------------------------------------- #
+# Rule 140: dva tvary `data-polozky` v MOSTU
+# --------------------------------------------------------------------------- #
+#
+# Pravidlo 140 potrebuje DVE cisla, ktera vzniknou RUZNYM vypoctem - jinak
+# meri samo sebe. Kapacitu (kolik slotu se do plochy vejde) rika artboard,
+# pocet VECI dodava most a od 9. 9. 2026 ma na to dva pojmenovane tvary:
+#
+#   data-polozky="appky"  jmeno zdroje - cislo prijde zvenku (--polozek
+#                         z registru appek jadra); artboard ho znat nemuze
+#   data-polozky="16"     cislo, ktere generator zna z JINEHO faktu nez
+#                         z kresby (kanalu LA je 16 podle models.h)
+#
+# Cokoli jineho se ZAHODI a mrizka dostane WARN "kontrola NEPROBEHLA":
+# preklep v atributu se nesmi tvarit jako mereni.
+
+DO_ESPOS_MOST = (
+    pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "navrh-appky"
+    / "do_espos.py"
+)
+
+
+def _dopln(mrizky, polozek):
+    """`do_espos._dopln_polozky` nactene ze zdroje kitu, bez importu modulu."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_do_espos_test", DO_ESPOS_MOST)
+    modul = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    return modul._dopln_polozky({"mrizky": mrizky}, polozek)["mrizky"]
+
+
+@pytest.mark.skipif(not DO_ESPOS_MOST.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+def test_most_dosadi_pocet_ze_JMENA_zdroje():
+    """`appky` = cislo prijde zvenku; sluzebni klic `zdroj` se ve scene neobjevi."""
+    ven = _dopln([{"jmeno": "dlazdice", "kapacita": 12, "zdroj": "appky"}], 11)
+    assert ven == [{"jmeno": "dlazdice", "kapacita": 12, "polozek": 11}]
+
+
+@pytest.mark.skipif(not DO_ESPOS_MOST.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+def test_most_dosadi_pocet_z_CISLA():
+    """`"16"` = pocet, ktery generator zna z hardwaru, ne z kresby."""
+    ven = _dopln([{"jmeno": "drahy", "kapacita": 16, "zdroj": "16"}], None)
+    assert ven == [{"jmeno": "drahy", "kapacita": 16, "polozek": 16}]
+
+
+@pytest.mark.skipif(not DO_ESPOS_MOST.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+@pytest.mark.parametrize("zdroj", ["", "kanaly", "16 kanalu", "-4", "12.5", "sestnact"])
+def test_most_NEZNAMY_tvar_zdroje_pocet_NEDOSTANE(zdroj):
+    """NEGATIVNI TRIDA: preklep v atributu nesmi vypadat jako mereni.
+
+    Mrizka bez poctu dostane od pravidla 140 WARN "kontrola NEPROBEHLA",
+    coz je pravda. Kdyby se preklep tise prelozil na nejake cislo, brana
+    by hlasila vysledek mereni, ktere se nekonalo.
+    """
+    ven = _dopln([{"jmeno": "x", "kapacita": 5, "zdroj": zdroj}], 11)
+    assert "polozek" not in ven[0]
+    assert "zdroj" not in ven[0]
+
+
+@pytest.mark.skipif(not DO_ESPOS_MOST.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+@pytest.mark.parametrize("zdroj", ["appky ", " appky", "	16 ", " 16"])
+def test_most_bile_znaky_kolem_zdroje_rozhodnuti_NEMENI(zdroj):
+    """Mezera v atributu neni rozhodnuti autora, je to sazba HTML.
+
+    Hranice mezi "preklep" a "bily znak" je tady vedome: preklep meni
+    SLOVO, mezera ne. Kdyby se neorezavala, spadl by list na tom, ze
+    generator zalomil radek uvnitr znacky.
+    """
+    ven = _dopln([{"jmeno": "x", "kapacita": 20, "zdroj": zdroj}], 11)
+    assert ven[0]["polozek"] in (11, 16)
+
+
+@pytest.mark.skipif(not DO_ESPOS_MOST.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+def test_most_bez_prepinace_polozek_JMENOVANY_zdroj_pocet_NEDOSTANE():
+    """Hranice mezi obema tvary: cislo si most nesmi domyslet.
+
+    Bez `--polozek` neni registr appek precteny, takze `appky` zustava bez
+    poctu - zatimco cislo v atributu plati porad. Kdyby se tvary spletly,
+    dostala by dlazdicova mrizka pocet 12 od sve vlastni kapacity.
+    """
+    ven = _dopln(
+        [{"jmeno": "dlazdice", "kapacita": 12, "zdroj": "appky"},
+         {"jmeno": "drahy", "kapacita": 16, "zdroj": "16"}],
+        None,
+    )
+    assert "polozek" not in ven[0]
+    assert ven[1]["polozek"] == 16
+
+
+# --------------------------------------------------------------------------- #
 # Fixtury Rule 140: obe tridy
 # --------------------------------------------------------------------------- #
 
@@ -1829,8 +1921,13 @@ STAVY_MICROSD = "vlozena, pripojena | vlozena, nepripojena | neni vlozena"
 
 
 def _stav(text, prvek=None, *, wid="hex.karta", slovnik=None, **kw):
-    """Jeden hodnotovy popisek proti slovniku stavu."""
-    navrh = {"prvky": {wid: prvek if prvek is not None else {"role": "hodnota"}}}
+    """Jeden popisek v roli `stav` proti slovniku stavu.
+
+    Role je `stav`, ne `hodnota`: od 9. 9. 2026 meri pravidlo 143 JEN
+    prvky, ktere STAV veci tvrdi. Hodnota o veci ("28,4 GB volno") se
+    slovnikem neporovnava - viz `test_r143_role_hodnota_se_NEMERI`.
+    """
+    navrh = {"prvky": {wid: prvek if prvek is not None else {"role": "stav"}}}
     if slovnik is not None:
         navrh["slovnik"] = slovnik
     return _make([_w(wid, 48, 140, 560, 32, text=text, **kw)], navrh=navrh)
@@ -1838,7 +1935,7 @@ def _stav(text, prvek=None, *, wid="hex.karta", slovnik=None, **kw):
 
 def test_r143_jiny_slovnik_je_WARNING():
     """Hex rika o teze karte "nedostupne", zatimco Diagnostics zna tri stavy."""
-    d = _stav("nedostupne", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav("nedostupne", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_warns(d), ZNACKA_R143) == [
         f"{FL}: main: scene 'main': widget[0] (hex.karta): {ZNACKA_R143} 'microSD': "
         f"text 'nedostupne' nepouziva zadny stav ze slovniku ({STAVY_MICROSD})"
@@ -1847,7 +1944,7 @@ def test_r143_jiny_slovnik_je_WARNING():
 
 
 def test_r143_stav_ze_slovniku_mlci():
-    d = _stav("vlozena, nepripojena", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav("vlozena, nepripojena", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
 
 
@@ -1855,7 +1952,7 @@ def test_r143_stav_s_privazkem_mlci():
     """HRANICE: stav je podretezec, dalsi udaj za nim je v poradku."""
     d = _stav(
         "microSD: vlozena, pripojena · 28,4 GB volno",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik=SLOVNIK,
     )
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
@@ -1863,13 +1960,13 @@ def test_r143_stav_s_privazkem_mlci():
 
 def test_r143_vic_mezer_nerozhoduje():
     """Sazba pridala mezeru navic - slovnik nesmi prestat platit."""
-    d = _stav("vlozena,   nepripojena", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav("vlozena,   nepripojena", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
 
 
 def test_r143_velikost_pismen_nerozhoduje():
     """Smalt sazi verzalkami; stav se tim menit nema."""
-    d = _stav("VLOZENA, NEPRIPOJENA", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav("VLOZENA, NEPRIPOJENA", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
 
 
@@ -1881,7 +1978,7 @@ def test_r143_velikost_pismen_nerozhoduje_ani_ve_slovniku():
     """
     d = _stav(
         "vlozena, pripojena",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik={"microSD": ["VLOZENA, PRIPOJENA"]},
     )
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
@@ -1895,14 +1992,72 @@ def test_r143_diakritika_se_neprevadi_na_hola_pismena():
     jako texty. Kdyby se diakritika skladala, brana by tise prijala text,
     ktery se na desce vykresli jinak, nez jak stoji ve slovniku.
     """
-    d = _stav("vložena, nepřipojena", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav("vložena, nepřipojena", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_warns(d), ZNACKA_R143) != []
 
 
 def test_r143_vec_se_najde_i_bez_data_vec():
-    """Bez `vec` se vec hleda podretezcem jmena v textu."""
-    d = _stav("microSD zase nic", {"role": "hodnota"}, slovnik=SLOVNIK)
+    """Bez `vec` se vec hleda podretezcem jmena v textu.
+
+    Role musi byt `stav` i tady: hledani veci podretezcem je nahrada za
+    chybejici `data-vec`, ne za chybejici roli. Slib nese ROLE.
+    """
+    d = _stav("microSD zase nic", {"role": "stav"}, slovnik=SLOVNIK)
     assert _obsahuji(_warns(d), ZNACKA_R143) != []
+
+
+def test_r143_role_hodnota_se_NEMERI():
+    """S1: hodnota O veci neni STAV veci - a pravidlo ji nesmi obvinovat.
+
+    Zive protejsky, kterych bylo 9. 9. 2026 na 62 listech deset a ani
+    jeden nebyl vada: "28,4 GB volno" (kolik mista), "NERTERA" (ktera
+    sit), "2 zarizeni" (kolik jich je), "LA1010 + FT232R" (ktera to jsou).
+    Tyz prvek s roli `stav` vystreli - viz `test_r143_jiny_slovnik_je_WARNING`.
+    """
+    d = _stav("28,4 GB volno", {"role": "hodnota", "vec": "microSD"},
+              slovnik=SLOVNIK)
+    assert _obsahuji(_msgs(d), ZNACKA_R143) == []
+
+
+def test_r143_tentyz_text_v_roli_stav_UZ_vystreli():
+    """Pozitivni kontrola k testu vyse: rozhoduje ROLE, ne text.
+
+    Bez ni by "role hodnota mlci" mohlo znamenat, ze mlci cele pravidlo.
+    """
+    d = _stav("28,4 GB volno", {"role": "stav", "vec": "microSD"},
+              slovnik=SLOVNIK)
+    assert _obsahuji(_warns(d), ZNACKA_R143) != []
+
+
+def test_r143_list_o_veci_BEZ_role_stav_rekne_ze_NEMERIL():
+    """Ticho po zuzeni musi byt SLYSET, jinak je to jen tissi slepota.
+
+    List mluvi o veci ze slovniku (`data-vec`), ale zadny prvek na nem
+    netvrdi STAV - pravidlo tedy nemelo co merit a rekne to JEDNOU za
+    list, ne u kazdeho prvku.
+    """
+    d = _stav("28,4 GB volno", {"role": "hodnota", "vec": "microSD"},
+              slovnik=SLOVNIK)
+    assert _obsahuji(_warns(d), ZNACKA_R143_ROLE_NEMERENO) != []
+
+
+def test_r143_list_S_roli_stav_uz_NEMERENO_nehlasi():
+    """Pozitivni kontrola teze cesty."""
+    d = _stav("vlozena, nepripojena", {"role": "stav", "vec": "microSD"},
+              slovnik=SLOVNIK)
+    assert _obsahuji(_msgs(d), ZNACKA_R143_ROLE_NEMERENO) == []
+
+
+def test_r143_list_BEZ_veci_ze_slovniku_MLCI_uplne():
+    """Kontrolni skupina: obrazovka, ktera o zadne sdilene veci nemluvi.
+
+    Terminal, Hex ani klavesnice o microSD ani hodinach netvrdi nic.
+    Kdyby NEMERENO vystrelilo i na nich, byl by to sum na 50 listech z 62
+    - tedy prave to, co se timhle rozhodnutim odstranuje.
+    """
+    d = _stav("115 200 Bd", {"role": "hodnota"}, slovnik=SLOVNIK)
+    assert _obsahuji(_msgs(d), ZNACKA_R143_ROLE_NEMERENO) == []
+    assert _obsahuji(_msgs(d), ZNACKA_R143) == []
 
 
 def test_r143_jmeno_veci_bez_dalsiho_slova_mlci():
@@ -1921,7 +2076,7 @@ def test_r143_veta_s_povolenym_stavem_a_privazkem_je_MEZ_pravidla():
     """
     d = _stav(
         "karta neni vlozena nebo mount selhal",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik=SLOVNIK,
     )
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
@@ -1949,7 +2104,7 @@ def test_r143_bez_slovniku_a_bez_vec_mlci():
 
 def test_r143_vec_bez_slovniku_je_WARN_o_nemereni():
     """Most o veci neco tvrdil, meridlo se nepustilo - ticho by lhalo."""
-    d = _stav("nedostupne", {"role": "hodnota", "vec": "USB-A"}, slovnik=SLOVNIK)
+    d = _stav("nedostupne", {"role": "stav", "vec": "USB-A"}, slovnik=SLOVNIK)
     assert _obsahuji(_warns(d), ZNACKA_R143_NEMERENO) == [
         f"{FL}: main: scene 'main': widget[0] (hex.karta): {ZNACKA_R143_NEMERENO}: "
         f"prvek mluvi o veci 'USB-A', ale slovnik stavu pro ni nikdo nedodal "
@@ -1959,7 +2114,7 @@ def test_r143_vec_bez_slovniku_je_WARN_o_nemereni():
 
 def test_r143_vec_bez_jedineho_slovniku_taky_rekne_ze_nemerila():
     """Chybi CELY slovnik: vec je deklarovana, tak se rekne, ze se nemerilo."""
-    d = _stav("nedostupne", {"role": "hodnota", "vec": "USB-A"})
+    d = _stav("nedostupne", {"role": "stav", "vec": "USB-A"})
     nalezy = _obsahuji(_warns(d), ZNACKA_R143_NEMERENO)
     assert len(nalezy) == 1
     assert "znam: zadnou vec" in nalezy[0]
@@ -1967,7 +2122,7 @@ def test_r143_vec_bez_jedineho_slovniku_taky_rekne_ze_nemerila():
 
 def test_r143_jmeno_veci_se_paruje_bez_ohledu_na_velikost_pismen():
     """"microsd" a "microSD" je tataz karta; do hlasky patri jmeno ze slovniku."""
-    d = _stav("nedostupne", {"role": "hodnota", "vec": "microsd"}, slovnik=SLOVNIK)
+    d = _stav("nedostupne", {"role": "stav", "vec": "microsd"}, slovnik=SLOVNIK)
     nalezy = _obsahuji(_warns(d), ZNACKA_R143)
     assert len(nalezy) == 1
     assert "'microSD'" in nalezy[0]
@@ -1976,7 +2131,7 @@ def test_r143_jmeno_veci_se_paruje_bez_ohledu_na_velikost_pismen():
 def test_r143_neviditelny_prvek_se_preskoci():
     d = _stav(
         "nedostupne",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik=SLOVNIK,
         visible=False,
     )
@@ -1999,9 +2154,9 @@ def test_r143_meri_kazdy_list_proti_TEMUZ_slovniku():
         navrh={
             "slovnik": SLOVNIK,
             "prvky": {
-                "diag.karta": {"role": "hodnota", "vec": "microSD"},
-                "files.karta": {"role": "hodnota", "vec": "microSD"},
-                "hex.karta": {"role": "hodnota", "vec": "microSD"},
+                "diag.karta": {"role": "stav", "vec": "microSD"},
+                "files.karta": {"role": "stav", "vec": "microSD"},
+                "hex.karta": {"role": "stav", "vec": "microSD"},
             },
         },
     )
@@ -2018,7 +2173,7 @@ def test_r143_slovnik_neni_objekt_je_ERROR():
 @pytest.mark.parametrize("stavy", [[], "vlozena", {"a": 1}, None])
 def test_r143_vadny_seznam_stavu_je_ERROR_a_pravidlo_nemeri(stavy):
     """Prazdny seznam stavu by pravidlo TISE vypnul - meridlo selhalo != nula."""
-    d = _stav("nedostupne", {"role": "hodnota", "vec": "microSD"}, slovnik={"microSD": stavy})
+    d = _stav("nedostupne", {"role": "stav", "vec": "microSD"}, slovnik={"microSD": stavy})
     assert _obsahuji(_errors(d), "'slovnik.microSD' ma byt neprazdny seznam stavu") != []
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
     # ... a po zahozene veci nezbyde ticho, ale priznani, ze se nemerilo:
@@ -2028,7 +2183,7 @@ def test_r143_vadny_seznam_stavu_je_ERROR_a_pravidlo_nemeri(stavy):
 def test_r143_stav_ktery_neni_veta_je_ERROR():
     d = _stav(
         "nedostupne",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik={"microSD": ["vlozena, pripojena", "  "]},
     )
     assert _obsahuji(_errors(d), "'slovnik.microSD' ma byt seznam vet, je v nem '  '") != []
@@ -2047,7 +2202,7 @@ def test_r143_dve_jmena_teze_veci_je_ERROR_a_nebere_se_ani_jedno():
     """
     d = _stav(
         "nedostupne",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik={"microSD": ["vlozena"], "microsd": ["neni vlozena"]},
     )
     assert _obsahuji(_errors(d), "dve jmena teze veci") != []
@@ -2055,7 +2210,7 @@ def test_r143_dve_jmena_teze_veci_je_ERROR_a_nebere_se_ani_jedno():
 
 
 def test_r143_vadna_vec_na_prvku_je_ERROR_a_pravidlo_nemeri():
-    d = _stav("nedostupne", {"role": "hodnota", "vec": 5}, slovnik=SLOVNIK)
+    d = _stav("nedostupne", {"role": "stav", "vec": 5}, slovnik=SLOVNIK)
     assert (
         f"{FL}: main: {ZNACKA_NAVRH_VADNY}: 'prvky.hex.karta.vec' ma byt jmeno veci, "
         f"o ktere prvek mluvi, je 5"
@@ -2071,7 +2226,7 @@ def test_r143_vadna_vec_na_prvku_je_ERROR_a_pravidlo_nemeri():
 
 def test_prazdna_hodnota_s_veci_dostane_jen_rule138():
     """Prazdny text patri VYHRADNE Rule 138, i kdyz o veci mluvit mel."""
-    d = _stav("", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav("", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     zpravy = _msgs(d)
     assert len(_obsahuji(zpravy, ZNACKA_R138)) == 1
     assert _obsahuji(zpravy, ZNACKA_R143) == []
@@ -2079,7 +2234,7 @@ def test_prazdna_hodnota_s_veci_dostane_jen_rule138():
 
 def test_pomlcka_s_veci_dostane_jen_rule139():
     """Pomlcku uz obvinila Rule 139; druhy nalez by byl tyz nalez dvakrat."""
-    d = _stav(POMLCKA, {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
+    d = _stav(POMLCKA, {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     zpravy = _msgs(d)
     assert len(_obsahuji(zpravy, ZNACKA_R139)) == 1
     assert _obsahuji(zpravy, ZNACKA_R143) == []
@@ -2094,7 +2249,7 @@ def test_veta_muze_byt_zaroven_strojova_i_mimo_slovnik():
     """
     d = _stav(
         "ISystemMetrics::radioTemp nedostupne",
-        {"role": "hodnota", "vec": "microSD"},
+        {"role": "stav", "vec": "microSD"},
         slovnik=SLOVNIK,
     )
     zpravy = _msgs(d)
@@ -2191,7 +2346,18 @@ def test_starsi_fixtury_na_jazykova_pravidla_mlci():
 # `TEPLOTA CPU`. Tvar slova tedy nerozhoduje - rozhoduje, jestli je to slovo
 # jmenem NEKDE V SDK, a ten seznam se NEOPISUJE (`jmena_ze_sdk`).
 
-SDK_JMENA = frozenset({"IHwDiagnostics", "Unavailable", "NotFound", "Error", "Mock"})
+SDK_JMENA = frozenset(
+    {
+        "IHwDiagnostics",   # rozhrani se DVEMA hrby - meri se i ve stitku verzalkami
+        "IClock",           # rozhrani s JEDNIM hrbem - vedomy okraj, ve stitku mlci
+        "Unavailable",
+        "NotFound",         # CamelCase se dvema hrby
+        "Error",
+        "Mock",
+        "Smalt",            # bezne slovo, ktere JE hodnotou enumu - kontrolni skupina
+        "Znak",
+    }
+)
 
 
 def _veta_sdk(text, jmena=SDK_JMENA, **kw):
@@ -2258,16 +2424,21 @@ def test_r142_cely_text_verzalkami_je_STITEK_a_NEMERI_se():
     spravny popisek. Je to ZMERENA MEZ, ne opomenuti - proto ma vlastni
     test a je zapsana i ve sdilenem korpusu vet.
     """
-    assert _obsahuji(_msgs(_veta_sdk("IHWDIAGNOSTICS")), ZNACKA_R142) == []
+    assert _obsahuji(_msgs(_veta_sdk("SMALT")), ZNACKA_R142) == []
+    assert _obsahuji(_msgs(_veta_sdk("ZNAK")), ZNACKA_R142) == []
     assert _obsahuji(_msgs(_veta_sdk("ZDROJ UNAVAILABLE")), ZNACKA_R142) == []
     # ... a ze to neni tim, ze by trida nemerila vubec:
     assert _obsahuji(_errors(_veta_sdk("zdroj vraci UNAVAILABLE")), ZNACKA_R142) != []
 
 
 def test_r142_mala_pismena_rozhoduji_o_meritelnosti():
-    """MUTACE: kdyby (a) zmizela, tenhle par by rekl totez. Rika neco jineho."""
-    velky = _obsahuji(_msgs(_veta_sdk("ZDROJ IHWDIAGNOSTICS")), ZNACKA_R142)
-    maly = _obsahuji(_msgs(_veta_sdk("zdroj IHWDIAGNOSTICS")), ZNACKA_R142)
+    """MUTACE: kdyby (a) zmizela, tenhle par by rekl totez. Rika neco jineho.
+
+    Mereno na BEZNEM slove ze SDK (`Smalt`), ne na jmenu rozhrani: to se od
+    9. 9. 2026 meri i ve stitku verzalkami (viz devaty tvar nize).
+    """
+    velky = _obsahuji(_msgs(_veta_sdk("STAV SMALT")), ZNACKA_R142)
+    maly = _obsahuji(_msgs(_veta_sdk("stav SMALT")), ZNACKA_R142)
     assert velky == []
     assert len(maly) == 1
 
@@ -2288,6 +2459,120 @@ def test_r142_MOCK_je_pojmenovana_vyjimka():
     assert _obsahuji(_msgs(_veta_sdk("MOCK DATA - desktop, ne deska")), ZNACKA_R142) == []
     # Pozitivni kontrola teze vety: jiny SDK tvar v ni vystreli.
     assert _obsahuji(_errors(_veta_sdk("MOCK DATA - vraci UNAVAILABLE")), ZNACKA_R142) != []
+
+
+# --------------------------------------------------------------------------- #
+# Rule 142, devaty tvar: jmeno ROZHRANI i ve stitku verzalkami
+# --------------------------------------------------------------------------- #
+#
+# Rozhodnuti koordinatora 9. 9. 2026 k rezidu R3 kritika. Bod (a) vyse
+# (celoverzalkovy text je stitek) plati pro BEZNA slova ze SDK; jmeno
+# rozhrani je jina vec - `IHwDiagnostics` nikdo na smalt nenapise omylem.
+# Hrby ve verzalkach videt nejsou, takze se porovnava se seznamem ze SDK
+# a zada se konvence repa PLNE: I + CamelCase se DVEMA hrby.
+
+
+def test_r142_jmeno_rozhrani_ve_stitku_verzalkami_je_ERROR():
+    """Ziva vada z fotoprotokolu: patka "ZDROJ IHwDiagnostics" sazena verzalkami."""
+    nalezy = _obsahuji(_errors(_veta_sdk("ZDROJ IHWDIAGNOSTICS")), ZNACKA_R142)
+    assert len(nalezy) == 1
+    assert "jmeno rozhrani ze SDK: 'IHWDIAGNOSTICS'" in nalezy[0]
+
+
+def test_r142_jmeno_rozhrani_verzalkami_i_uvnitr_vety():
+    """Tataz vada ve vete s malymi pismeny hlasi TYZ kus, ne obecnejsi."""
+    nalezy = _obsahuji(_errors(_veta_sdk("zdroj je IHWDIAGNOSTICS")), ZNACKA_R142)
+    assert len(nalezy) == 1
+    assert "IHWDIAGNOSTICS" in nalezy[0]
+
+
+@pytest.mark.parametrize("stitek", ["SMALT", "ZNAK", "INVERSE", "IDENTITA", "TEPLOTA CPU"])
+def test_r142_KONTROLNI_SKUPINA_stitku_verzalkami_mlci(stitek):
+    """Negativni trida k devatemu tvaru.
+
+    `Smalt` i `Znak` JSOU hodnoty enumu v SDK a presto se ve stitku nemeri:
+    rozhoduje, ze to nejsou jmena ROZHRANI. Bez teto skupiny by tvar mohl
+    byt zeleny i tehdy, kdyby obvinoval kazde dlouhe verzalkove slovo.
+    """
+    assert _obsahuji(_msgs(_veta_sdk(stitek)), ZNACKA_R142) == []
+
+
+def test_r142_jednohrbe_rozhrani_je_VEDOMY_okraj():
+    """HRANICE na hrb: `IClock` ma jeden hrb a ve stitku verzalkami mlci.
+
+    Mez je vedoma, ne opomenuta - jednohrba verzalkova podoba (`ICLOCK`,
+    `ILOGGER`) uz muze byt bezne slovo. Pozitivni protejsek o radek niz
+    dokazuje, ze tvar meri: dvouhrbe jmeno ve stejnem tvaru vety KRICI.
+    """
+    assert _obsahuji(_msgs(_veta_sdk("ZDROJ ICLOCK")), ZNACKA_R142) == []
+    assert _obsahuji(_errors(_veta_sdk("ZDROJ IHWDIAGNOSTICS")), ZNACKA_R142) != []
+
+
+def test_r142_dvouhrba_rozhrani_se_bere_ze_SDK_ne_z_tvaru():
+    """MUTACE: kdyz jmeno v SDK neni, tvar sam obvinovat nesmi.
+
+    `IXXXSERVICE` vypada jako rozhrani, ale v dodanem seznamu neni. Kdyby
+    se rozhodovalo tvarem, kazdy verzalkovy stitek zacinajici na I by byl
+    nalezem - presne ta prilis siroka vyjimka, kterou tahle trida nahradila.
+    """
+    assert _obsahuji(_msgs(_veta_sdk("ZDROJ IXXXSERVICE")), ZNACKA_R142) == []
+
+
+def test_dvouhrba_rozhrani_filtruje_tvarem_a_ne_seznamem():
+    """Jednotkove: co je rozhrani se dvema hrby a co uz ne."""
+    j = frozenset({"IHwDiagnostics", "ISystemMetrics", "IClock", "IAsync",
+                   "NotFound", "Smalt", "I802154Service"})
+    assert _dvouhrba_rozhrani(j) == {"IHWDIAGNOSTICS", "ISYSTEMMETRICS"}
+
+
+# --------------------------------------------------------------------------- #
+# Rule 142, desaty tvar: CamelCase jmeno ze SDK uvnitr vety
+# --------------------------------------------------------------------------- #
+#
+# Rozhodnuti koordinatora k rezidu R4: radek terminalu 'ERROR cteni:
+# NotFound' se dosud citoval slabsim kusem (`ERROR` je bezne slovo
+# severity). CamelCase jmeno se hlasi JEN pri shode se seznamem ze SDK -
+# jinak by kazde `TabOS` bylo obvinenim.
+
+
+def test_r142_camel_jmeno_ze_SDK_je_ERROR_a_cituje_OSTREJSI_kus():
+    """Ziva vada z SvorkaTerminal; hlaska ukazuje `NotFound`, ne `ERROR`."""
+    nalezy = _obsahuji(_errors(_veta_sdk("ERROR cteni: NotFound")), ZNACKA_R142)
+    assert len(nalezy) == 1
+    assert "jmeno ze SDK: 'NotFound'" in nalezy[0]
+    assert "'ERROR'" not in nalezy[0]
+
+
+@pytest.mark.parametrize(
+    "veta",
+    [
+        "stav TabOS je v poradku",
+        "Bus Lab nacetl 12 registru",
+        "Logic Analyzer ceka na spoust",
+        "Nastaveni ulozeno",
+    ],
+)
+def test_r142_KONTROLNI_SKUPINA_camel_mimo_SDK_mlci(veta):
+    """Negativni trida: tvar CamelCase sam o sobe vada neni.
+
+    `TabOS` ma dva hrby a v SDK NENI. Bez teto skupiny by brana rudla na
+    vlastnim jmenu pristroje - a to je presne ten druh falesneho poplachu,
+    ktery uci cloveka rudou barvu prehlizet.
+    """
+    assert _obsahuji(_msgs(_veta_sdk(veta)), ZNACKA_R142) == []
+
+
+def test_r142_camel_potrebuje_DVA_hrby():
+    """HRANICE: jednohrbe `Error` je bezne slovo a samo o sobe se nemeri."""
+    assert _obsahuji(_msgs(_veta_sdk("chyba pri cteni: Error")), ZNACKA_R142) == []
+    assert _obsahuji(_errors(_veta_sdk("chyba pri cteni: NotFound")), ZNACKA_R142) != []
+
+
+def test_r142_camel_MUTACE_bez_seznamu_SDK_mlci():
+    """Bez jmen ze SDK se desaty tvar nemeri - a rekne se to."""
+    bez = _veta_sdk("ERROR cteni: NotFound", jmena=None)
+    assert _obsahuji(_errors(bez), ZNACKA_R142) == []
+    assert _obsahuji(_warns(bez), ZNACKA_R142_NEMERENO) != []
 
 
 def test_r142_bez_jmen_SDK_se_trida_NEMERI_a_rekne_se_to():

@@ -1,0 +1,120 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 28,
+     "y": 119,
+     "width": 1224,
+     "height": 23,
+     "text": "Měření I2C 100 kHz",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "border": true,
+     "border_style": "single",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "pisu.14"
+    },
+    {
+     "type": "button",
+     "x": 28,
+     "y": 258,
+     "width": 116,
+     "height": 82,
+     "text": "1",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "border": true,
+     "border_style": "single",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "klv.29"
+    },
+    {
+     "type": "button",
+     "x": 28,
+     "y": 348,
+     "width": 116,
+     "height": 82,
+     "text": "q",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "border": true,
+     "border_style": "single",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "klv.39"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "pisu.14": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "orez": {
+       "sirka_obsahu": 1222,
+       "sirka_schranky": 1222,
+       "vyska_obsahu": 42,
+       "vyska_schranky": 42
+      },
+      "font_size": 20,
+      "vsazka": 8
+     },
+     "klv.29": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "orez": {
+       "sirka_obsahu": 114,
+       "sirka_schranky": 114,
+       "vyska_obsahu": 80,
+       "vyska_schranky": 80
+      },
+      "font_size": 24,
+      "sirka_bunky": 114,
+      "sirka_textu": 8.9,
+      "vsazka": 8
+     },
+     "klv.39": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "orez": {
+       "sirka_obsahu": 114,
+       "sirka_schranky": 114,
+       "vyska_obsahu": 80,
+       "vyska_schranky": 80
+      },
+      "font_size": 24,
+      "sirka_bunky": 114,
+      "sirka_textu": 16.4,
+      "vsazka": 8
+     }
+    },
+    "soustava": {
+     "pole_x": 20,
+     "vsazka": 16
+    }
+   }
+  }
+ }
+}

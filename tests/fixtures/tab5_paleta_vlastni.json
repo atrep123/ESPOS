@@ -1,0 +1,127 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 35,
+     "y": 144,
+     "width": 32,
+     "height": 12,
+     "text": "FPS",
+     "color_fg": "#8fa0a5",
+     "color_bg": "#151e26",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "karta_l.18"
+    },
+    {
+     "type": "label",
+     "x": 569,
+     "y": 143,
+     "width": 50,
+     "height": 21,
+     "text": "58,9",
+     "color_fg": "#3fc1d8",
+     "color_bg": "#151e26",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "karta_v.19"
+    },
+    {
+     "type": "label",
+     "x": 35,
+     "y": 170,
+     "width": 108,
+     "height": 12,
+     "text": "rozsah 55,8–60,0",
+     "color_fg": "#8fa0a5",
+     "color_bg": "#151e26",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "karta_r.20"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "karta_l.18": {
+      "rodic": [
+       20,
+       128,
+       614,
+       280
+      ],
+      "orez": {
+       "sirka_obsahu": 32,
+       "sirka_schranky": 32,
+       "vyska_obsahu": 19,
+       "vyska_schranky": 19
+      },
+      "font_size": 16
+     },
+     "karta_v.19": {
+      "rodic": [
+       20,
+       128,
+       614,
+       280
+      ],
+      "orez": {
+       "sirka_obsahu": 50,
+       "sirka_schranky": 50,
+       "vyska_obsahu": 29,
+       "vyska_schranky": 29
+      },
+      "font_size": 24
+     },
+     "karta_r.20": {
+      "rodic": [
+       20,
+       128,
+       614,
+       280
+      ],
+      "orez": {
+       "sirka_obsahu": 108,
+       "sirka_schranky": 108,
+       "vyska_obsahu": 16,
+       "vyska_schranky": 16
+      },
+      "font_size": 13
+     }
+    },
+    "paleta": [
+     "#14170F",
+     "#1C2016",
+     "#1C2016",
+     "#A9C24A",
+     "#9BA28D",
+     "#E9A63C",
+     "#FF7B5E",
+     "#A9C24A",
+     "#E4DFCC",
+     "#E27BE2",
+     "#6F7764",
+     "#E6E1CE",
+     "#12150E",
+     "#5A5F4C",
+     "#6B6653"
+    ],
+    "paleta_vlastni": "zamerne stara obrazovka: na platne stoji jako obrazek PRED a ukazuje prave to, co se zmenilo"
+   }
+  }
+ }
+}

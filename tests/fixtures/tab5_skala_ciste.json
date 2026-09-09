@@ -1,0 +1,65 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 120,
+     "width": 200,
+     "height": 19,
+     "text": "TEPLOTA CPU",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.1"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 150,
+     "width": 200,
+     "height": 17,
+     "text": "rozsah 55,8-60,0",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "drobne.2"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "popis.1": {
+      "font_size": 16,
+      "role": "popisek"
+     },
+     "drobne.2": {
+      "font_size": 13,
+      "role": "popisek"
+     }
+    },
+    "skala": {
+     "rezy": [
+      14,
+      16,
+      20,
+      24,
+      32
+     ],
+     "vyjimky": {
+      "13": "ZAMERNE STARA OBRAZOVKA: na platne stoji jako obrazek PRED a nesmi se prekreslit"
+     }
+    }
+   }
+  }
+ }
+}

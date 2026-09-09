@@ -1,0 +1,61 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 256,
+     "y": 229,
+     "width": 149,
+     "height": 24,
+     "text": "0.9.3 - IDF 5.4.2 - dirty",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "stitek.firmware"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 300,
+     "width": 200,
+     "height": 19,
+     "text": "Nicht verbunden",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "stav.radek"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "stitek.firmware": {
+      "orez": {
+       "sirka_obsahu": 212,
+       "sirka_schranky": 149,
+       "vyska_obsahu": 24,
+       "vyska_schranky": 24
+      }
+     },
+     "stav.radek": {
+      "orez": {
+       "sirka_obsahu": 200,
+       "sirka_schranky": 200,
+       "vyska_obsahu": 38,
+       "vyska_schranky": 19
+      }
+     }
+    }
+   }
+  }
+ }
+}

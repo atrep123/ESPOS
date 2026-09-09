@@ -113,11 +113,11 @@
             "role": "hodnota"
           },
           "hex.karta": {
-            "role": "hodnota",
+            "role": "stav",
             "vec": "microSD"
           },
           "settings.hodiny": {
-            "role": "hodnota",
+            "role": "stav",
             "vec": "hodiny"
           }
         }

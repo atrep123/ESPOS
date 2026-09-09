@@ -156,19 +156,19 @@
         },
         "prvky": {
           "diag.karta": {
-            "role": "hodnota",
+            "role": "stav",
             "vec": "microSD"
           },
           "files.karta": {
-            "role": "hodnota",
+            "role": "stav",
             "vec": "microSD"
           },
           "hex.karta": {
-            "role": "hodnota",
+            "role": "stav",
             "vec": "microSD"
           },
           "settings.hodiny": {
-            "role": "hodnota",
+            "role": "stav",
             "vec": "hodiny"
           },
           "hlavicka.karta": {

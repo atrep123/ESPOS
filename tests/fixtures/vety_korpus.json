@@ -36,7 +36,11 @@
     "Error",
     "Live",
     "Mock",
-    "Smalt"
+    "Smalt",
+    "Znak",
+    "IClock",
+    "ISettings",
+    "OutOfMemory"
   ],
   "vety": [
     {
@@ -177,10 +181,11 @@
     },
     {
       "text": "IHWDIAGNOSTICS",
-      "verdikt": "mlci",
-      "trida": "SDK_VERZALKY",
-      "duvod": "text CELY verzalkami je STITEK a devaty tvar se v nem NEMERI: hodnoty enumu SDK jsou bezna slova (Error, Live, Smalt), takze stitek 'SMALT' by se s nimi trefil. Je to ZMERENA MEZ pravidla, ne opomenuti - a je to zaroven misto, kde se obe brany do 9. 9. 2026 rozchazely (jadro: jmeno rozhrani, ESPOS: ticho).",
-      "kde": "kritik, bod 5"
+      "verdikt": "krici",
+      "trida": "SDK_ROZHRANI_STITEK",
+      "duvod": "ROZHODNUTI KOORDINATORA 9. 9. 2026 (reziduum R3 kritika): jmeno rozhrani I+CamelCase se dvema hrby je vada F4 i ve stitku verzalkami. Do te doby tu bylo zapsane jako 'mlci' a obe brany na nem mlcely - byla to zmerena, ale spatna mez.",
+      "kde": "SysMon a Diagnostics, fotoprotokol panelu (patka ZDROJ)",
+      "kus": "IHWDIAGNOSTICS"
     },
     {
       "text": "INVERSE zapnuta",
@@ -260,6 +265,57 @@
       "trida": "CISTA",
       "duvod": "tataz informace jako u rx_ctrl.noise_floor, jen bez strojoveho jmena - dukaz, ze pravidlo nezakazuje TEMA, ale TVAR",
       "kde": "navrh opravy SvorkaNetwork"
+    },
+    {
+      "text": "ZDROJ IHWDIAGNOSTICS",
+      "verdikt": "krici",
+      "kus": "IHWDIAGNOSTICS",
+      "trida": "SDK_ROZHRANI_STITEK",
+      "duvod": "cely stitek verzalkami; jmeno rozhrani se v nem meri, bezne slovo ze SDK ne",
+      "kde": "Diagnostics, fotoprotokol panelu 8. 9. 2026"
+    },
+    {
+      "text": "SMALT",
+      "verdikt": "mlci",
+      "trida": "SDK_ROZHRANI_STITEK",
+      "duvod": "KONTROLNI SKUPINA k tvaru vyse: 'Smalt' JE hodnota enumu v SDK, ale neni to jmeno rozhrani - stitek verzalkami se s beznymi slovy nemeri",
+      "kde": "slovnik smaltoveho ciferniku (SvorkaJazyk)"
+    },
+    {
+      "text": "ZNAK",
+      "verdikt": "mlci",
+      "trida": "SDK_ROZHRANI_STITEK",
+      "duvod": "tataz kontrolni skupina: 'Znak' je hodnota enumu v SDK",
+      "kde": "slovnik smaltoveho ciferniku (SvorkaJazyk)"
+    },
+    {
+      "text": "ICLOCK",
+      "verdikt": "mlci",
+      "trida": "SDK_ROZHRANI_STITEK",
+      "duvod": "VEDOMY OKRAJ: 'IClock' ma jen JEDEN hrb, takze se ve stitku verzalkami nemeri - jednohrba verzalkova podoba uz muze byt bezne slovo. Kdyby mez byla jeden hrb, museli by se hlidat i IASYNC, ILOGGER a ISETTINGS.",
+      "kde": "zmereno nad SDK 0.7.0 (23 rozhrani, 18 dvouhrbych)"
+    },
+    {
+      "text": "ERROR cteni: NotFound",
+      "verdikt": "krici",
+      "kus": "NotFound",
+      "trida": "SDK_CAMEL",
+      "duvod": "ROZHODNUTI KOORDINATORA k rezidu R4: CamelCase jmeno ze SDK se ve vete hlasi a cituje se PRED verzalkovym slovem, protoze 'NotFound' je ostrejsi dukaz nez 'ERROR' (bezne slovo severity). Radek terminalu ukazuje slovnik SDK misto ceske vety.",
+      "kde": "SvorkaTerminal, ostry beh brany 9. 9. 2026"
+    },
+    {
+      "text": "stav TabOS je v poradku",
+      "verdikt": "mlci",
+      "trida": "SDK_CAMEL",
+      "duvod": "KONTROLNI SKUPINA k tvaru vyse: 'TabOS' ma tvar CamelCase se dvema hrby, ale v SDK NENI. Bez teto pulky by brana rudla na vlastnim jmenu pristroje.",
+      "kde": "hlavicka brana_vety.py 3. 9. 2026 ('MOCK DATA, TabOS i USB-A jsou legitimni')"
+    },
+    {
+      "text": "Bus Lab nacetl 12 registru",
+      "verdikt": "mlci",
+      "trida": "SDK_CAMEL",
+      "duvod": "dve velka pismena ve DVOU slovech nejsou CamelCase; vzor chce slovo bez mezery",
+      "kde": "kontrolni tvar"
     }
   ]
 }

@@ -1,0 +1,126 @@
+{
+ "_puvod": "System Monitor, fotoprotokol 2026-09-08. VADY: TEPLOTA RADIA je prazdny smalt bez slova (R138), pod nim veta 'ISystemMetrics::radioTemp nedostupne' (R142), zalozky PREHLED/ULOHY jsou 150x48 = pod podlahou 58 px (Rule 135). Karta i zalozky maji souradnice ze skutecne sceny _scena_SystemMonitor.dc.json; rozmer zalozek je z panelu (artboard ma 112x81).",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "button",
+     "x": 20,
+     "y": 97,
+     "width": 150,
+     "height": 48,
+     "text": "Přehled",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "btn_volba_vybrana.14"
+    },
+    {
+     "type": "button",
+     "x": 186,
+     "y": 97,
+     "width": 150,
+     "height": 48,
+     "text": "Úlohy",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "btn_volba.15"
+    },
+    {
+     "type": "panel",
+     "x": 648,
+     "y": 455,
+     "width": 612,
+     "height": 245,
+     "text": "",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#1C2016",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "panel.52"
+    },
+    {
+     "type": "label",
+     "x": 664,
+     "y": 471,
+     "width": 130,
+     "height": 15,
+     "text": "Teplota rádia",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "karta_l.53"
+    },
+    {
+     "type": "label",
+     "x": 1169,
+     "y": 469,
+     "width": 74,
+     "height": 24,
+     "text": "",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "karta_v.54"
+    },
+    {
+     "type": "label",
+     "x": 664,
+     "y": 497,
+     "width": 300,
+     "height": 13,
+     "text": "ISystemMetrics::radioTemp nedostupné",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "karta_r.56"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ]
+    },
+    "prvky": {
+     "karta_v.54": {
+      "role": "smalt"
+     }
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

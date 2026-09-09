@@ -297,7 +297,9 @@ def test_tab5_text_length_boundary_is_256_characters():
 def test_tab5_accepts_all_shipped_glyphs():
     assert PROFILE_TAB5.font_chars is not None
     text = "".join(sorted(PROFILE_TAB5.font_chars))
-    assert len(text) == 141
+    # 201 = 141 textovych glyfu + 60 symbolu LVGL. Zdroj pravdy je cmap
+    # `lv_font_tabos_*.c`; toto cislo pribiji test_jeden_zdroj_pravdy.py.
+    assert len(text) == 201
 
     msgs = _msgs(
         _make(

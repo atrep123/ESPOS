@@ -1,0 +1,51 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 120,
+     "width": 300,
+     "height": 12,
+     "text": "vzorkuje po 2 s",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "drobne.1"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 150,
+     "width": 300,
+     "height": 7,
+     "text": "D0 D1 D2 D3",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "nano.2"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "drobne.1": {
+      "font_size": 10
+     },
+     "nano.2": {
+      "font_size": 5
+     }
+    }
+   }
+  }
+ }
+}

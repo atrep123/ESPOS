@@ -1,0 +1,126 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 39,
+     "width": 101,
+     "height": 23,
+     "text": "Settings",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "titulek.8"
+    },
+    {
+     "type": "label",
+     "x": 995,
+     "y": 42,
+     "width": 141,
+     "height": 12,
+     "text": "ukládá se do NVS",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "stav.9"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 113,
+     "width": 116,
+     "height": 19,
+     "text": "Jas displeje",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "jm.14"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "titulek.8": {
+      "rodic": [
+       36,
+       8,
+       1100,
+       81
+      ],
+      "orez": {
+       "sirka_obsahu": 101,
+       "sirka_schranky": 101,
+       "vyska_obsahu": 29,
+       "vyska_schranky": 29
+      },
+      "font_size": 24
+     },
+     "stav.9": {
+      "rodic": [
+       36,
+       8,
+       1100,
+       81
+      ],
+      "orez": {
+       "sirka_obsahu": 141,
+       "sirka_schranky": 141,
+       "vyska_obsahu": 19,
+       "vyska_schranky": 19
+      },
+      "font_size": 16
+     },
+     "jm.14": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "orez": {
+       "sirka_obsahu": 116,
+       "sirka_schranky": 116,
+       "vyska_obsahu": 24,
+       "vyska_schranky": 24
+      },
+      "font_size": 20
+     }
+    },
+    "paleta": [
+     "#14170F",
+     "#1C2016",
+     "#1C2016",
+     "#A9C24A",
+     "#9BA28D",
+     "#E9A63C",
+     "#FF7B5E",
+     "#A9C24A",
+     "#E4DFCC",
+     "#E27BE2",
+     "#6F7764",
+     "#E6E1CE",
+     "#12150E",
+     "#5A5F4C",
+     "#6B6653"
+    ]
+   }
+  }
+ }
+}

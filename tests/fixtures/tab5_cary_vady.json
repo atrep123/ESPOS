@@ -1,0 +1,56 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 537,
+     "y": 240,
+     "width": 686,
+     "height": 12,
+     "text": "Zatim neni co ukazovat",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "kostra.52"
+    }
+   ],
+   "navrh": {
+    "cary": [
+     [
+      537,
+      192,
+      688,
+      1
+     ],
+     [
+      537,
+      244,
+      688,
+      1
+     ],
+     [
+      537,
+      296,
+      688,
+      1
+     ],
+     [
+      537,
+      348,
+      688,
+      1
+     ]
+    ]
+   }
+  }
+ }
+}

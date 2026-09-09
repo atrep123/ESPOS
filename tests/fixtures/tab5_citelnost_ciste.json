@@ -1,0 +1,51 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 28,
+     "y": 500,
+     "width": 116,
+     "height": 18,
+     "text": "q",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "klavesa.1"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 640,
+     "width": 300,
+     "height": 18,
+     "text": "SOUBOR · OKNO · ZOBRAZENO",
+     "color_fg": "#E4DFCC",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "patka.2"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "klavesa.1": {
+      "font_size": 12
+     },
+     "patka.2": {
+      "font_size": 14
+     }
+    }
+   }
+  }
+ }
+}

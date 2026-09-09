@@ -1,0 +1,185 @@
+{
+ "_puvod": "Terminal, fotoprotokol 2026-09-08 ('smalt PORT prazdny, PRIJATO prazdne (C4)'). VSECHNA CISLA JSOU Z ARTBOARDU SvorkaTerminal.dc.html (_scena_ z 2026-09-09): k.15 PORT 52,128 54x12; v.16 52,151 116x14; k.24 PRIJATO 1144,125 83x15; v.25 1144,151 71x14; rad_chyba.37 36,536 243x15; popis.40 36,631 56x12; txt.41 36,661 192x14. Z PANELU jsou jen TEXTY: artboard do v.16 sazi 'USB-C CDC' a do v.25 '4 812 B', panel obe plochy nechal prazdne; a do txt.41 sazi artboard 'USB-C CDC 115 200', panel 'UART1 G53/G54 115 200'. VETA 'ERROR cteni: NotFound' je doslova z artboardu i z panelu - je to zivy nalez R142, ktery brana hlasi i dnes nad 62 listy. CISTA TRIDA: obe hodnoty doplneny textem z artboardu a veta prepsana do lidske podoby; PATKA 'UART1 G53/G54 115 200' ZUSTAVA i tady, protoze je to vada BEZ MERIDLA - kdyby se opravila, test na ticho by nemel na cem merit, ze o ni brana skutecne mlci. Patka se do pasu 'razitko' HLASI (navrh.prvky[..].pas), protoze do nej opravdu patri - jinak by R136 kricela na spravne nakreslenou patku a fixtura by merila vlastni opomenuti misto vady z panelu.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 52,
+     "y": 128,
+     "width": 54,
+     "height": 12,
+     "text": "PORT",
+     "color_fg": "#5A5F4C",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "k.15"
+    },
+    {
+     "type": "label",
+     "x": 52,
+     "y": 151,
+     "width": 116,
+     "height": 14,
+     "text": "USB-C CDC",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.16"
+    },
+    {
+     "type": "label",
+     "x": 1144,
+     "y": 125,
+     "width": 83,
+     "height": 15,
+     "text": "PŘIJATO",
+     "color_fg": "#5A5F4C",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "k.24"
+    },
+    {
+     "type": "label",
+     "x": 1144,
+     "y": 151,
+     "width": 71,
+     "height": 14,
+     "text": "4 812 B",
+     "color_fg": "#12150E",
+     "color_bg": "#E4DFCC",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.25"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 536,
+     "width": 243,
+     "height": 15,
+     "text": "Čtení selhalo: soubor na kartě není.",
+     "color_fg": "#FF7B5E",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "rad_chyba.37"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 631,
+     "width": 56,
+     "height": 12,
+     "text": "PORT",
+     "color_fg": "#9BA28D",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.40"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 661,
+     "width": 192,
+     "height": 14,
+     "text": "UART1 · G53/G54 · 115 200",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.41"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "k.15": {
+      "role": "popisek"
+     },
+     "v.16": {
+      "role": "smalt"
+     },
+     "k.24": {
+      "role": "popisek"
+     },
+     "v.25": {
+      "role": "smalt"
+     },
+     "popis.40": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.41": {
+      "role": "hodnota",
+      "pas": "razitko"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

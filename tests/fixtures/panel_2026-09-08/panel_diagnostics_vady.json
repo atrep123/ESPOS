@@ -1,0 +1,142 @@
+{
+ "_puvod": "Diagnostics, fotoprotokol 2026-09-08. VADY: patka 'ZDROJ IHwDiagnostics' (R142, sesty tvar - jmeno rozhrani) a tyz stitek VERZALKAMI 'ZDROJ IHWDIAGNOSTICS' (R142, devaty tvar: verzalkove jmeno ze SDK; do 2026-09-09 o nem mlcely obe brany). Souradnice patky jsou ze skutecne sceny _scena_SvorkaDiagnostics.dc.json. Veta o karte 'vlozena, nepripojena' je stav ZE SLOVNIKU a R143 na ni mlci v obou tridach - je to kontrolni skupina: slovnik nekrici na vsem.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 631,
+     "width": 70,
+     "height": 12,
+     "text": "ZDROJ",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.43"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 660,
+     "width": 300,
+     "height": 19,
+     "text": "IHwDiagnostics",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.44"
+    },
+    {
+     "type": "label",
+     "x": 400,
+     "y": 660,
+     "width": 400,
+     "height": 19,
+     "text": "ZDROJ IHWDIAGNOSTICS",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.45"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 354,
+     "width": 300,
+     "height": 15,
+     "text": "vložena, nepřipojena",
+     "color_fg": "#E6E1CE",
+     "color_bg": "#14170F",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.27"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "txt.44": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "txt.45": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.43": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.27": {
+      "role": "stav",
+      "vec": "microSD"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}
