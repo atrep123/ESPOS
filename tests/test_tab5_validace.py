@@ -221,6 +221,51 @@ def test_TRIDY_se_shoduji_s_branou():
     assert tab5_validace.tridy_behem_behu(DO_ESPOS) == tab5_validace.TRIDY
 
 
+@pytest.mark.skipif(not DO_ESPOS.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+def test_CELA_tabulka_trid_se_shoduje_s_branou():
+    """Tridy pravidel 136-143 musi editor znat taky, a to VE STEJNEM PORADI.
+
+    `TRIDY` sama uz nestaci: od 2026-09-08 brana tridi jeste nalezy pravidel
+    136-143 a jejich vzory nejsou retezce ve zdroji, ale znacky hlasek
+    (`validate_design.ZNACKA_R136_RODIC` a spol.). Staticke cteni je proto
+    nezvedne a jedina poctiva kontrola je behova - proti tomu, co brana
+    SKUTECNE pouzije.
+
+    Poradi je vyznamne stejne jako u `TRIDY`: trida se urcuje PRVNIM
+    vzorem, ktery ve zprave sedi. Kdyby editor mel tytez dvojice v jinem
+    poradi, obarvil by cast nalezu jinak nez brana - a to je presne ten
+    rozpor, kvuli kteremu tenhle soubor drzi kopii.
+    """
+    ocekavano = tab5_validace.tridy_merena() + tab5_validace.TRIDY
+    assert tab5_validace.tridy_merena_behem_behu(DO_ESPOS) == ocekavano
+
+
+@pytest.mark.skipif(not DO_ESPOS.exists(), reason="tabos-ui-kit/navrh-appky/do_espos.py neni")
+def test_kazda_znacka_novych_pravidel_ma_svou_tridu():
+    """Pozitivni kontrola predchoziho testu.
+
+    Shoda dvou seznamu by platila i tehdy, kdyby OBA byly prazdne nebo
+    kdyby v obou nejaka znacka chybela. Tenhle test tvrdi neco jineho:
+    ke KAZDE verejne znacce pravidel 136-143 existuje trida, a zadna z
+    nich neni "netrideno".
+    """
+    from tools import validate_design as vd
+
+    znacky = [
+        vd.ZNACKA_R136_RODIC, vd.ZNACKA_R136_PAS,
+        vd.ZNACKA_R137, vd.ZNACKA_R137_NEMERENO,
+        vd.ZNACKA_R138, vd.ZNACKA_R138_OZNACENI,
+        vd.ZNACKA_R139,
+        vd.ZNACKA_R140, vd.ZNACKA_R140_NEMERENO,
+        vd.ZNACKA_R141, vd.ZNACKA_R141_NEMERENO,
+        vd.ZNACKA_R142,
+        vd.ZNACKA_R143, vd.ZNACKA_R143_NEMERENO,
+        vd.ZNACKA_NAVRH_VADNY,
+    ]
+    for znacka in znacky:
+        assert tab5_validace.trida_zpravy(f"main: {znacka}: ...") !=             tab5_validace.NETRIDENO, znacka
+
+
 # ---- ctyri obchazky, ktere drive prosly zelene (revize A, nalez B1) -------- #
 
 _ZAKLAD_TRID = (

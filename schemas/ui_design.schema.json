@@ -72,6 +72,38 @@
           "items": {
             "$ref": "#/$defs/rule"
           }
+        },
+        "navrh": {
+          "type": "object",
+          "description": "Merena data z artboardu (most tabos-ui-kit -> ESPOS): vyhrazene pasy (patka/razitko), rodicovske ramecky prvku a sirky zmerene SKUTECNYM fontem v prohlizeci. Nese je scena, ne widget: widget ma additionalProperties:false a je obousmerne svazany s ui_models.WidgetConfig, kdezto scena ma additionalProperties:true. Tvar je tu POPSANY, ale zamerne nevynucovany - o vadny blok se stara tools/validate_design.py (znacka 'vadny blok navrh'), aby tentyz preklep nehlasila dve mista.",
+          "properties": {
+            "pasy": {
+              "type": "object",
+              "description": "Vyhrazene pasy sceny: jmeno -> [x, y, sirka, vyska]."
+            },
+            "prvky": {
+              "type": "object",
+              "description": "_widget_id -> {rodic: [x, y, sirka, vyska], rodic_id, pas, role, sirka_textu, sirka_bunky, prazdne, presah, vec}. rodic_id je _widget_id nejblizsiho predka, ktery je taky ve scene - jim se Rule 138 pta na POTOMKY misto na pouhy prekryv."
+            },
+            "mrizky": {
+              "type": "array",
+              "description": "Mrizky sceny: {jmeno, kapacita, polozek}."
+            },
+            "slovnik": {
+              "type": "object",
+              "description": "Vec -> povolene stavy, ktere o ni smi listy rikat."
+            },
+            "druh": {
+              "type": "string",
+              "enum": ["obrazovka", "vyklad"],
+              "description": "Druh listu: obrazovka (co bude na skle pristroje) nebo vyklad o navrhu (rozvrzeni ramce, slovnik smaltu, stavova karta). Rule 142 (jazykovy zakon F4) meri jen obrazovky - vyklad vadu CITUJE. Chybejici klic = obrazovka."
+            },
+            "jmena_sdk": {
+              "type": "array",
+              "description": "Jmena rozhrani a hodnot enumu z hlavicek SDK (validate_design.jmena_ze_sdk). Rule 142 jimi rozhoduje o verzalkovem slove uvnitr vety: seznam se NEOPISUJE, vozi ho most z pinnutych hlavicek jadra."
+            }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": true

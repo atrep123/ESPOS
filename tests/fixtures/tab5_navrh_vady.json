@@ -1,0 +1,132 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "panel",
+     "x": 20,
+     "y": 97,
+     "width": 1240,
+     "height": 603,
+     "text": "",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "border": true,
+     "border_style": "single",
+     "_widget_id": "obsah"
+    },
+    {
+     "type": "label",
+     "x": 700,
+     "y": 540,
+     "width": 250,
+     "height": 76,
+     "text": "RF SONDA",
+     "color_fg": "#a9c24a",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "dlazdice.11"
+    },
+    {
+     "type": "label",
+     "x": 446,
+     "y": 240,
+     "width": 386,
+     "height": 76,
+     "text": "SPOTREBA",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "dlazdice.07"
+    },
+    {
+     "type": "label",
+     "x": 40,
+     "y": 630,
+     "width": 388,
+     "height": 24,
+     "text": "V0.4-71-gee91351-dirty ·",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "text_overflow": "ellipsis",
+     "_widget_id": "razitko.firmware"
+    },
+    {
+     "type": "label",
+     "x": 245,
+     "y": 560,
+     "width": 302,
+     "height": 19,
+     "text": "normalni rezim",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "razitko.uteklo"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "dlazdice.11": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ]
+     },
+     "dlazdice.07": {
+      "rodic": [
+       446,
+       240,
+       374,
+       72
+      ]
+     },
+     "razitko.firmware": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "pas": "razitko",
+      "sirka_textu": 402.7,
+      "sirka_bunky": 388.0
+     },
+     "razitko.uteklo": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "pas": "razitko",
+      "role": "hodnota"
+     }
+    }
+   }
+  }
+ }
+}

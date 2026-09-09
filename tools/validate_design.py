@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate ESP32OS UI design JSON — comprehensive 135-rule checker.
+Validate ESP32OS UI design JSON — comprehensive 143-rule checker.
 
 Covers:
 - required fields + basic types
@@ -37,6 +37,13 @@ Covers:
   missed, not a design decision
 - touch targets measured in millimetres: 44 px is 9.3 mm at 120 PPI and
   3.8 mm at 294 PPI
+- measured data from the artboard (scene block "navrh", carried by the kit
+  bridge): elements clipped by their own parent or by a reserved band, text
+  overflow measured with the REAL font instead of a character estimate, value
+  roles that promise a reading and deliver none, a dash standing in for a
+  sentence, grid capacity against the number of items to place, firmware DPI
+  against panel PPI, machine names inside sentences written for a human, and
+  one vocabulary per thing across screens
 
 Usage:
   python tools/validate_design.py main_scene.json
@@ -188,6 +195,291 @@ CONTAINER_WIDGET_TYPES = {"panel", "box"}
 # Widget types a finger actually has to hit. Size limits below apply to these.
 TOUCH_WIDGET_TYPES = {"button", "checkbox", "radiobutton", "slider", "textbox"}
 
+# ── Blok "navrh": merena data z artboardu (most tabos-ui-kit -> ESPOS) ──────
+#
+# Nektere vady se z holych souradnic widgetu poznat NEDAJI: ze scena rekne
+# "stitek 388x24, text 'V0.4-71-gee91351-dirty'" nikdo nevyctete, jestli se
+# ten text do stitku vejde - zalezi na skutecnem fontu, ne na odhadu z poctu
+# znaku (Rule 7). A ze dlazdice presahuje svuj kontejner nebo leze do patky
+# neni videt, dokud scena nenese, KDO je jeji rodic. Tahle mereni delaji
+# generatory a most (headless Chrome nad artboardem) a vozi je sem.
+#
+# Nosic je JEDEN SCENOVY KLIC "navrh", ne nova pole widgetu. Duvod je tvrdy:
+# widget ma ve schematu "additionalProperties": false a je obousmerne svazany
+# s `ui_models.WidgetConfig` (tests/test_schema_sync.py), takze nove pole
+# widgetu by `asdict` vysypal do KAZDEHO ulozeneho navrhu. Scena ma
+# "additionalProperties": true - blok je tam zadarmo a nikoho dalsiho se
+# netyka.
+#
+# Tvar (vsechny klice nepovinne):
+#   "navrh": {
+#     "pasy":  {"razitko": [x, y, sirka, vyska]},
+#     "prvky": {"<_widget_id>": {"rodic": [x, y, sirka, vyska],
+#                                "pas": "razitko",
+#                                "sirka_textu": 402.7,
+#                                "sirka_bunky": 388.0}}
+#   }
+#
+# Kdyz blok CHYBI, pravidla nad nim MLCI - a je to zamer, ne diera: dokument,
+# ktery si editor stavi sam, merena data z prohlizece legitimne nema, a
+# poctivost patri tam, kde mereni vznika (most `do_espos.py` je fail-closed
+# a scenu bez mereni nevyda). Kdyz blok JE, ale je vadny, rekne se to NAHLAS:
+# preklep v datech nesmi pravidlo tise vypnout.
+NAVRH_KLIC = "navrh"
+
+# Druh listu. Artboard je bud OBRAZOVKA (co bude na skle pristroje), nebo
+# VYKLAD o navrhu (rozvrzeni ramce, slovnik smaltu, stavova karta, hlaseni
+# "dnes na zarizeni"). Rozdil neni kosmeticky: jazykovy zakon F4 mluvi
+# o textu NA PRISTROJI, kdezto vyklad o vade tu vadu CITUJE - veta
+# "V ceske sestave patri carka; %.1f ji neda." je spravne napsany vyklad,
+# ne poruseni zakona. Bez tohohle rozliseni hlasila brana na 62 listech
+# osm nalezu na ctyrech vykladovych listech (Main, Dnes, FilesStavy,
+# SvorkaJazyk) a vsechny byly citace.
+#
+# Rozhoduje GENERATOR atributem `data-list` na korenu listu; chybejici
+# atribut znamena obrazovka, tedy dnesni chovani (mereni). Ticho neni
+# neviditelne: na vykladovem listu se ohlasi jednou `ZNACKA_R142_VYKLAD`
+# (WARN), takze v souhrnu brany je videt, ze se pravidlo NEMERILO.
+DRUHY_LISTU = ("obrazovka", "vyklad")
+
+# Pevne ASCII znacky hlasek. Most si je bere behovou hodnotou z tohohle
+# modulu (`vd.ZNACKA_R136_RODIC`), aby se trideni nalezu v kitu nemohlo
+# rozejit s textem, ktery brana skutecne vydava.
+ZNACKA_NAVRH_VADNY = "vadny blok navrh"
+ZNACKA_R136_RODIC = "presahuje sveho rodice"
+ZNACKA_R136_PAS = "zasahuje do pasu"
+ZNACKA_R136_PAS_VEN = "vycniva ze sveho pasu"
+ZNACKA_R136_OZNACENI = "oznaceni zamerneho presahu"
+ZNACKA_R137 = "text pretece bunku"
+ZNACKA_R137_NEMERENO = "preteceni textu se NEMERILO"
+ZNACKA_R138 = "prazdny smalt"
+ZNACKA_R138_OZNACENI = "oznaceni zamerne prazdneho"
+ZNACKA_R139 = "pomlcka misto hodnoty"
+ZNACKA_R139_ZASTUPNY = "zastupny znak misto hodnoty"
+ZNACKA_R140 = "mrizka nepojme vsechny polozky"
+ZNACKA_R140_NEMERENO = "kapacita mrizky se NEMERILA"
+ZNACKA_R141 = "DPI firmwaru nesouhlasi"
+ZNACKA_R141_NEMERENO = "DPI firmwaru nezmereno"
+ZNACKA_R141_ODCHYLKA = "DPI firmwaru je vedoma odchylka"
+ZNACKA_R142 = "veta pro cloveka"
+ZNACKA_R142_NEMERENO = "jmena SDK nedodana"
+ZNACKA_R142_VYKLAD = "list je vyklad o navrhu"
+ZNACKA_R143 = "jiny stav teze veci"
+ZNACKA_R143_NEMERENO = "slovnik stavu chybi"
+
+# R136: most zaokrouhluje OBE hrany obdelniku zvlast (viz komentar v
+# `do_espos.MERIC`: zaokrouhlovani hrany a SIRKY zvlast vyrobilo jedenact
+# fantomovych prekryvu o 1 px na jednom listu). Jednopixelovy rozdil je
+# proto artefakt mereni, ne vada; hlasi se od 1 px vys.
+R136_PRAH_PX = 1
+# R137: Chrome pocita v 1/64 px a `Range.getClientRects()` vraci subpixely,
+# takze rovnost se nikdy netrefi presne. Pul pixelu je pod rozlisenim oka
+# i panelu.
+R137_TOLERANCE_PX = 0.5
+
+# Role prvku: co ta plocha SLIBUJE. Hodnotova role slibuje sdeleni ("jaky
+# port", "kolik", "jaky stav"), popiskova role je jen navesti nad cizim
+# sdelenim. Rule 138 a Rule 139 meri jen sliby: prazdny nadpis vada neni a
+# pomlcka mezi cisly rozsahu taky ne. Roli vozi generator (`data-role`
+# v kitu) - scena sama nese jen obdelniky a texty, o slibech nevi nic.
+ROLE_HODNOTY = frozenset({"hodnota", "smalt", "stitek", "cislo"})
+ROLE_POPISKU = frozenset({"popisek", "patka", "titulek"})
+ROLE_ZNAME = ROLE_HODNOTY | ROLE_POPISKU
+
+# R139: vsechny tvary, kterymi se na panelu psalo "nic nevim". Jen tyhle
+# JEDNOZNAKOVE tvary a jen jako CELY text; "1-13" se nehlasi (viz
+# `_r139_nalezy`).
+#
+# U+2010 HYPHEN a U+2011 NON-BREAKING HYPHEN doplneny 2026-09-09: mnozina
+# zacinala az u U+2012, takze "obycejna" typograficka pomlcka prosla mlckym
+# a byla to jedina znama dira, kterou se dalo napsat "nic nevim" tvarem,
+# ktery vypada uplne stejne jako U+2013.
+POMLCKY = frozenset(
+    {"-", "\u2010", "\u2011", "\u2012", "\u2013", "\u2014", "\u2015", "\u2212"}
+)
+
+# Nulove sirky. `strip()` je NEODSTRANI (nejsou to bile znaky), takze prvek
+# s U+200B vypada prazdne, ale Rule 138 na nej nesahne - a Rule 139 by ho
+# taky nechala byt, protoze v POMLCKY neni. Byl to jediny znamy tvar, ktery
+# obchazel OBE pravidla naraz.
+NULOVE_SIRKY = "\u200b\u200c\u200d\ufeff\u2060"
+
+# Zastupne znaky: "nic nevim" napsane necim jinym nez pomlckou. Tataz vada
+# jako pomlcka (ctenar z toho nepozna, jestli se veci nikdo neptal, jestli
+# odpoved nedosla, nebo jestli je vysledek prazdny), proto stejna hlaska
+# a stejna zavaznost - jen jine pojmenovani, aby se opravovalo to, co tam
+# doopravdy stoji. Porovnava se CELY text po `strip()` a bez ohledu na
+# velikost pismen ("n/a" i "N/A").
+ZASTUPNE = frozenset({"\u2022", "\u2026", "...", "?", "??", "n/a", "--", "---", "\u2014\u2014"})
+
+# ── Rule 142: co ve vete pro cloveka byt nesmi ─────────────────────────────
+#
+# Sedm tvaru, u kterych je odpoved ano/ne a nezalezi na vkusu. Vzory jsou
+# BYTE-IDENTICKE s `tabos-core/tools/brana_vety.py` (zakon F4, charta
+# docs/CHARTA_JAZYKA_VET.md) a jsou VEREJNE schvalne: kit si je bere behovou
+# hodnotou a porovnava obe brany proti sobe. Opsana kopie vzoru by se
+# s originalem drive nebo pozdeji rozesla a jedna z bran by pak mlcela prave
+# o tom, co druha hlasi.
+#
+# Delba prace mezi obema branami: `brana_vety.py` cte ZDROJ (retezcove
+# literaly uvnitr znamych vyusteni), ESPOS cte SCENU (hotovy text na plose).
+# Z toho plynou presne dva rozdily a oba jsou napsane u sveho vzoru nize.
+
+# Jmeno v kodu: `tabos::ui::znacka`, `ISystemMetrics::radioTemp`.
+_V_SCOPE = re.compile(r"::")
+# Jmeno hlavicky: `smalt.h`, `data_source.hpp`. Prava tecka pred priponou.
+_V_HLAVICKA = re.compile(r"\b[A-Za-z_][\w./\\-]*\.(?:h|hpp|hh|cpp|cc|c)\b")
+# Prevodni znacka, kterou clovek uvidi doslova ("%.1f" v Settings).
+#
+# ROZDIL PROTI `brana_vety.py` C. 1: tam se `%` u formatujicich vyusteni
+# (`lv_label_set_text_fmt`) NEHLASI, protoze format se teprve zpracuje. Ve
+# scene je text HOTOVY - zadne dosazovani uz neprijde, takze procento na
+# plose je vzdy chyba. Nejde o jinou mez, jde o jine misto mereni.
+#
+# SAMOTNA MEZERA NENI PRIZNAK. Puvodni trida priznaku `[-+ #0]*` obsahovala
+# mezeru (printf ji zna jako priznak znamenka, `% d`), takze v cestine, kde
+# se pred procentem mezera PISE, spolkla mezeru a nasledujici slovo zacinajici
+# na d/i/o/u/x/e/f/g/a/c/s/p/n prohlasila za prevodni znacku:
+#     '... vzrostl z 1,2 % na 18,6 %'  ->  '% n'   (SvorkaRfKoex, ostry beh)
+#     'vyuziti 12,5 % pameti RAM'      ->  '% p'
+#     'signal 80 % dobry'              ->  '% d'
+# Vsechny tri vety jsou spravne cesky. Brana, ktera rudne na spravne vete,
+# uci cloveka rudou barvu ignorovat - a prave tady se ma cist. Mezera je
+# proto z tridy priznaku PRYC; cenou je, ze `% d` psane s mezerou (v C legalni
+# tvar) projde. Ta cena je ZMERENA: v korpusu ESPOS ani na 62 listech kitu
+# neni ani jeden takovy tvar, zatimco ceskych vet s procentem uprostred jsou
+# desitky. Vzor zustava byte-identicky s `brana_vety.PROCENTO`.
+_V_PROCENTO = re.compile(r"%[-+#0]*[\d.*]*(?:hh|h|ll|l|j|z|t|L)?[diouxXeEfgGaAcspn%]")
+# Volani funkce ve vete: `startScan()`, `measureChannel()`.
+_V_VOLANI = re.compile(r"\b[A-Za-z_]\w*\(\s*\)")
+# Strojovy CLEN: `rx_ctrl.noise_floor`, `wifi_ap_record.rssi`. Pristup na
+# polozku struktury cizi knihovny. Zivy protejsek je na listu Network Tools
+# ("chybi API (rx_ctrl.noise_floor v promiskuitnim rezimu)") a nechytal ho
+# ani jeden ze sedmi puvodnich tvaru: `rx` neni v PREDPONY_SDK, `.noise_floor`
+# neni pripona hlavicky a zavorky tam nejsou.
+#
+# Rozhodovaci pravidlo: identifikator s PODTRZITKEM, tecka, dalsi
+# identifikator. Podtrzitko je ta rozhodujici pulka - v ceske vete se
+# nevyskytuje, takze `veta. Dalsi veta` ani `tabos.cc` sem nespadnou.
+# `_V_HLAVICKA` rozhoduje driv, takze `data_source.h` zustava jmenem hlavicky.
+#
+# JMENO SOUBORU NENI CLEN. Zmereno na 62 listech kitu: bez teto vyjimky
+# hlasil vzor `capture_0412.la`, `uart_dump.bin`, `mereni_i2c_100_khz.la`
+# i `cat zaznam_042.la | hex` - deset nalezu a ani jeden neni vada.
+# Jmeno souboru je pro cloveka TOTEZ co cesta na karte: prijde si ho
+# precist do Souboru a musi souhlasit do pismene (tataz uvaha jako
+# u pojmenovane vyjimky "/sd/"). Rozhoduje PRIPONA a je to seznam, ne
+# domysleni - kdyz pribude format, pribude radek. Pripony ZDROJOVEHO kodu
+# se sem schvalne nedavaji: `data_source.h` rozhoduje `_V_HLAVICKA`, ktera
+# je v poradi driv.
+PRIPONY_SOUBORU = (
+    "la", "bin", "csv", "tsv", "txt", "log", "json", "raw", "vcd", "dat",
+    "wav", "png", "bmp", "jpg", "gif", "zip", "tar", "gz", "pdf", "md",
+    "cfg", "ini", "toml", "yaml", "yml", "bak", "tmp", "hex", "elf", "img",
+)  # fmt: skip
+_V_CLEN = re.compile(
+    r"\b[A-Za-z_]\w*_\w+\.(?!(?i:"
+    + "|".join(PRIPONY_SOUBORU)
+    + r")\b)[A-Za-z_]\w*\b"
+)
+# Strojovy stitek chybejiciho backendu: `esp_hosted:GetRadioInfo@fazeA`.
+_V_STITEK = re.compile(r"\b[A-Za-z_]\w*:[A-Za-z_]\w*@[A-Za-z_]\w*\b")
+# Jmeno rozhrani podle konvence repa: velke I a hned za nim dalsi velke
+# pismeno (`IHwDiagnostics`, `INetworkService`, `I802154Service`).
+_V_ROZHRANI = re.compile(r"\bI(?=[A-Z0-9])[A-Za-z0-9]{3,}\b")
+
+# Predpony cizich SDK (IDF, LVGL, FreeRTOS). Za predponou musi byt NEJMENE
+# DVA dalsi useky - to je hranice mezi jmenem FUNKCE (`esp_wifi_ftm_initiate_
+# session`) a jmenem SOUCASTI (`esp_hosted`), ktere clovek nahrava do C6 a
+# musi souhlasit do pismene. Obsah i PORADI je shodne s
+# `brana_vety.PREDPONY_SDK` vcetne cleneni radku, aby se obe mista dala
+# porovnat i ocima. Na PORADI zalezi: sklada se z nej alternace nize.
+VETY_PREDPONY_SDK = (
+    "esp", "lv", "nvs", "gpio", "i2c", "i2s", "spi", "uart", "ledc", "rmt",
+    "mcpwm", "adc", "dac", "rtc", "usb", "sdmmc", "periph", "heap", "lwip",
+    "netif", "mbedtls", "pthread", "ieee802154", "ot",
+    "xTask", "vTask", "xQueue", "xSemaphore", "xEventGroup",
+)  # fmt: skip
+_V_API_JMENO = re.compile(
+    r"\b(?:" + "|".join(VETY_PREDPONY_SDK) + r")_[A-Za-z0-9]+(?:_[A-Za-z0-9]+|_\*)+"
+)
+
+# Slova, ktera vypadaji jako jmeno rozhrani, ale jsou to bezne udaje.
+# Seznam je shodny s `brana_vety.NENI_ROZHRANI`.
+VETY_NENI_ROZHRANI = frozenset({"IPv4", "IPv6", "I2C", "I2S", "IEEE", "ID", "IO", "IRQ"})
+
+# ── Verzalkove slovo uvnitr vety (osmy tvar) ───────────────────────────────
+#
+# Puvodni vyjimka znela "slovo cele verzalkami neni jmeno rozhrani" a byla
+# PRILIS SIROKA: umlcela `IHWDIAGNOSTICS` i `vraci UNAVAILABLE`, coz jsou
+# obe zive vady F4 z panelu (smalt se sazi verzalkami, takze jmeno typu
+# v nem verzalkove JE). Zaroven ale musi zustat ticho na `USB`, `RAM`,
+# `LVGL`, `TEPLOTA CPU` - a to jsou taky verzalky. Tvar slova tedy
+# nerozhoduje; rozhoduje, jestli to slovo NEKDE V SDK JE.
+#
+# Trida se deli na dve a hranice je mereny, ne vkusovy:
+#
+#  (a) **Text CELY verzalkami je STITEK** a tahle trida se v nem NEMERI.
+#      Duvod: hodnoty enumu SDK jsou bezna slova (`Error`, `Stav`, `Info`,
+#      `Live`, `Mock`, `Uroven`), takze stitek `STAV` nebo `CHYBA` by se
+#      s nimi trefil a brana by obvinila spravny popisek. V celoverzalkovem
+#      textu se ty dve veci rozlisit nedaji.
+#  (b) **Uvnitr vety, ktera ma i mala pismena**, je verzalkove slovo
+#      neobvykle a shoda uz neco znamena: porovna se BEZ OHLEDU NA VELIKOST
+#      PISMEN se jmeny ze SDK (`jmena_ze_sdk`). Shoda = ERROR, jinak ticho.
+#
+# Seznam jmen se NEOPISUJE: cte ho `jmena_ze_sdk()` z hlavicek SDK a vozi
+# ho most ve scene (`navrh.jmena_sdk`). Opsany seznam by zestarl prvni
+# zmenou v SDK a brana by mlcela prave o novem jmenu.
+_V_VERZALKY = re.compile(r"\b[A-Z][A-Z0-9_]{2,}\b")
+
+# Verzalkova slova, ktera se se jmenem ze SDK trefi TVAREM, ale na panelu
+# znamenaji neco jineho. Kazde jmenovite a s duvodem; seznam je shodny
+# s `brana_vety.NENI_JMENO_SDK`.
+VETY_NENI_JMENO_SDK = frozenset(
+    {
+        # `Mock` je hodnota `DataState`, ale "MOCK DATA" je ceduka o tom, ze
+        # cisla jsou nastrcena - clovek to cte jako pridavne jmeno, ne jako
+        # odpoved sluzby. Rozhodnuti je starsi nez tahle trida (hlavicka
+        # brany vet, 3. 9. 2026: "MOCK DATA, TabOS i USB-A jsou legitimni").
+        # Zmereno: bez teto vyjimky pribylo v jadre a v appkach sedm nalezu
+        # a vsech sedm bylo na retezcich typu "MOCK DATA - desktop".
+        "MOCK",
+    }
+)
+
+# Hlavicky SDK: `class IHwDiagnostics`, `struct IRadioInfo`.
+_SDK_ROZHRANI = re.compile(r"\b(?:class|struct)\s+(I[A-Z][A-Za-z0-9]*)\b")
+# `enum class Error : uint16_t { None = 0, InvalidArgument, ... }`. Telo se
+# bere az po prvni `}`; hodnoty jsou identifikatory pred `=` nebo `,`.
+_SDK_ENUM = re.compile(r"\benum\s+(?:class\s+|struct\s+)?[A-Za-z_]\w*[^{;]*\{([^}]*)\}")
+_SDK_HODNOTA = re.compile(r"\b([A-Za-z_]\w*)\s*(?:=[^,]*)?(?:,|$)")
+
+# Pojmenovane vyjimky, shodne s `brana_vety.VYJIMKY`. Kazda ma duvod;
+# vyjimka bez duvodu je diera.
+VETY_VYJIMKY = (
+    # Cesta na karte je pro cloveka MISTO, ne jmeno v kodu.
+    (re.compile(r"^/(?:sd|dev|sys)/"), "cesta na uloziste je udaj pro cloveka"),
+    # Prazdny retezec a jednoznaky oddelovac nejsou veta.
+    (re.compile(r"^.{0,1}$"), "neni veta"),
+)
+
+# (klic v `brana_vety.py`, pojmenovani v hlasce, vzor). Poradi je poradi
+# rozhodovani ve `brana_vety.strojove_jmeno` - jmeno rozhrani az naposled,
+# protoze je z celeho sedmilistku nejsirsi. Klic je tu proto, aby test
+# shody v kitu porovnal dvojice HODNOTAMI (`getattr(brana_vety, klic)`),
+# ne ocima.
+VETY_VZORY = (
+    ("SCOPE", "jmeno v kodu", _V_SCOPE),
+    ("HLAVICKA", "jmeno hlavicky", _V_HLAVICKA),
+    ("PROCENTO", "prevodni znacka", _V_PROCENTO),
+    ("VOLANI", "volani funkce", _V_VOLANI),
+    ("CLEN", "strojovy clen", _V_CLEN),
+    ("STITEK", "strojovy stitek", _V_STITEK),
+    ("API_JMENO", "jmeno funkce SDK", _V_API_JMENO),
+    ("ROZHRANI", "jmeno rozhrani", _V_ROZHRANI),
+)
+
 # ── Device profiles ────────────────────────────────────────────────────────
 #
 # Every constant above describes ONE panel: the 256x128 4bpp OLED with the
@@ -242,6 +534,10 @@ class DeviceProfile:
     ppi: float
     min_touch_px: int  # below this a touch target is an ERROR
     warn_touch_px: int  # below this it is a WARN
+    # Rule 142: plati na tomhle panelu jazykovy zakon F4 (veta pro
+    # cloveka nesmi nest strojove jmeno)? Je to zakon TabOSu, ne
+    # vlastnost displeje - cizi navrh se jim soudit nema.
+    vety_pro_cloveka: bool = False
 
     def mm(self, px: float) -> float:
         """Physical size of ``px`` on this panel, in millimetres."""
@@ -267,6 +563,10 @@ PROFILE_OLED256 = DeviceProfile(
     ppi=0.0,  # no touch panel; size limits below are disabled by 0
     min_touch_px=0,
     warn_touch_px=0,
+    # Zmereno, ne odhadnuto: `widget_catalog.json` (256x128) nese text
+    # "INVERSE", ktery vzor jmena rozhrani chyta. Cizi navrh neni
+    # TabOS a jazykovym zakonem F4 se soudit nema.
+    vety_pro_cloveka=False,
 )
 
 # The 141 glyphs actually cut into the shipped LVGL font (ASCII + Czech +
@@ -376,6 +676,9 @@ PROFILE_TAB5 = DeviceProfile(
     # between a warning and an error.
     min_touch_px=58,
     warn_touch_px=81,
+    # Tady zakon F4 plati: jsou to listy TabOSu (charta
+    # docs/CHARTA_JAZYKA_VET.md).
+    vety_pro_cloveka=True,
 )
 
 PROFILES: dict[str, DeviceProfile] = {
@@ -833,6 +1136,1543 @@ def _overlap_is_benign(
     return b_type in CONTAINER_WIDGET_TYPES and _rect_contains(rect_b, rect_a)
 
 
+# ── Cteni bloku "navrh" a pravidla, ktera z nej ziji ───────────────────────
+
+
+def _obdelnik4(v: object) -> tuple[int, int, int, int] | None:
+    """``[x, y, sirka, vyska]`` jako ctyri cela cisla, jinak ``None``."""
+    if not isinstance(v, (list, tuple)) or len(v) != 4:
+        return None
+    if not all(_is_int(c) for c in v):
+        return None
+    return (int(v[0]), int(v[1]), int(v[2]), int(v[3]))
+
+
+def _nezaporne_cislo(v: object) -> float | None:
+    """Nezaporne cislo v px (int i float), jinak ``None``. Bool cislo NENI."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    return float(v) if v >= 0 else None
+
+
+def _zhustit_mezery(text: str) -> str:
+    """Text bez okrajovych mezer a s jednou mezerou misto kazde skupiny.
+
+    Rule 143 porovnava vety, ne bajty: sazba muze pridat mezeru navic
+    (nebo pevnou mezeru z generatoru) a slovnik by pak neplatil pro nic.
+    """
+    return " ".join(text.split())
+
+
+def _vycet_a(casti: list[str]) -> str:
+    """Cesky vycet: ``['a', 'b', 'c']`` -> ``'a, b a c'``."""
+    if len(casti) == 1:
+        return casti[0]
+    return ", ".join(casti[:-1]) + " a " + casti[-1]
+
+
+def _navrh_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+    znama_id: set[str],
+) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[int, int, int, int]], list[Issue]]:
+    """Precte scenovy blok ``navrh`` -> (prvky, pasy, nalezy o vadnem bloku).
+
+    Chybejici blok = prazdno a ZADNY nalez (pravidla nad merenim pak mlci).
+    Vadny blok = nalez ke KAZDEMU vadnemu klici a zahozeni jen te jedne
+    hodnoty; zbytek prvku se cte dal. Merene cislo, ktere se tise zahodi, je
+    horsi nez zadne mereni: pravidlo by pak mlcelo a vypadalo by to jako
+    "v poradku".
+    """
+    issues: list[Issue] = []
+    prvky: dict[str, dict[str, Any]] = {}
+    pasy: dict[str, tuple[int, int, int, int]] = {}
+
+    blok = scene.get(NAVRH_KLIC)
+    if blok is None:
+        return prvky, pasy, issues
+    if not isinstance(blok, dict):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: '{NAVRH_KLIC}' ma byt objekt, "
+                f"je {type(blok).__name__}",
+            )
+        )
+        return prvky, pasy, issues
+
+    pasy_raw = blok.get("pasy")
+    if pasy_raw is not None:
+        if not isinstance(pasy_raw, dict):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'pasy' ma byt objekt, "
+                    f"je {type(pasy_raw).__name__}",
+                )
+            )
+        else:
+            for jmeno, rect_raw in pasy_raw.items():
+                rect = _obdelnik4(rect_raw)
+                if rect is None or rect[2] <= 0 or rect[3] <= 0:
+                    issues.append(
+                        Issue(
+                            "ERROR",
+                            f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'pasy.{jmeno}' ma byt ctyri cela "
+                            f"cisla [x, y, sirka, vyska] s kladnymi rozmery, je {rect_raw!r}",
+                        )
+                    )
+                    continue
+                pasy[str(jmeno)] = rect
+
+    prvky_raw = blok.get("prvky")
+    if prvky_raw is None:
+        return prvky, pasy, issues
+    if not isinstance(prvky_raw, dict):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky' ma byt objekt, "
+                f"je {type(prvky_raw).__name__}",
+            )
+        )
+        return prvky, pasy, issues
+
+    for wid_raw, prvek_raw in prvky_raw.items():
+        wid = str(wid_raw)
+        if not isinstance(prvek_raw, dict):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}' ma byt objekt, "
+                    f"je {type(prvek_raw).__name__}",
+                )
+            )
+            continue
+        if wid not in znama_id:
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}' neodpovida zadnemu widgetu "
+                    f"sceny - merena data se zahazuji",
+                )
+            )
+        # Nezname klice (role, prazdne, vec ...) se nesou dal beze zmeny:
+        # patri pravidlum, ktera se sem teprve pridaji.
+        prvek: dict[str, Any] = {
+            k: v
+            for k, v in prvek_raw.items()
+            if k
+            not in (
+                "rodic",
+                "pas",
+                "sirka_textu",
+                "sirka_bunky",
+                "role",
+                "prazdne",
+                "presah",
+                "vec",
+            )
+        }
+        rodic_raw = prvek_raw.get("rodic")
+        if rodic_raw is not None:
+            rodic = _obdelnik4(rodic_raw)
+            if rodic is None:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.rodic' ma byt ctyri cela "
+                        f"cisla [x, y, sirka, vyska], je {rodic_raw!r}",
+                    )
+                )
+            else:
+                prvek["rodic"] = rodic
+        pas_raw = prvek_raw.get("pas")
+        if pas_raw is not None:
+            if not isinstance(pas_raw, str) or not pas_raw.strip():
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.pas' ma byt jmeno pasu, "
+                        f"je {pas_raw!r}",
+                    )
+                )
+            elif pas_raw not in pasy:
+                # Prvek se hlasi do pasu, ktery scena nezna: vyjimka by se
+                # neuplatnila na nic a pravidlo by prvek obvinilo z cizi viny.
+                znam = ", ".join(sorted(pasy)) or "zadny"
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.pas' odkazuje na neznamy "
+                        f"pas '{pas_raw}' (znam: {znam})",
+                    )
+                )
+            else:
+                prvek["pas"] = pas_raw
+        rodic_id_raw = prvek_raw.get("rodic_id")
+        if rodic_id_raw is not None:
+            # Jmeno nejblizsiho predka, ktery je taky ve scene. Rule 138 se
+            # jim pta na PRISLUSNOST misto na prekryv (viz `_text_uvnitr`).
+            # Odkaz na neznamy prvek se zahazuje NAHLAS: tise by z nej byl
+            # vypnuty rodokmen a vyjimka "uvnitr sebe" by prestala platit
+            # bez jedineho slova.
+            if not isinstance(rodic_id_raw, str) or not rodic_id_raw.strip():
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.rodic_id' ma byt jmeno "
+                        f"prvku, je {rodic_id_raw!r}",
+                    )
+                )
+            elif rodic_id_raw.strip() not in znama_id:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.rodic_id' odkazuje na "
+                        f"prvek '{rodic_id_raw}', ktery ve scene neni",
+                    )
+                )
+            elif rodic_id_raw.strip() == wid:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.rodic_id' ukazuje sam "
+                        f"na sebe",
+                    )
+                )
+            else:
+                prvek["rodic_id"] = rodic_id_raw.strip()
+        role_raw = prvek_raw.get("role")
+        if role_raw is not None:
+            if not isinstance(role_raw, str) or not role_raw.strip():
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.role' ma byt jmeno role, "
+                        f"je {role_raw!r}",
+                    )
+                )
+            elif role_raw.strip().lower() not in ROLE_ZNAME:
+                # Preklep v roli nesmi pravidlo TISE vypnout: role je jediny
+                # klic, kterym se Rule 138/139 vubec pousti, takze 'hodnta'
+                # misto 'hodnota' by prazdny smalt umlcelo natrvalo.
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.role' je nezname jmeno role "
+                        f"'{role_raw}' (znam: {', '.join(sorted(ROLE_ZNAME))}) - merena data "
+                        f"se zahazuji",
+                    )
+                )
+            else:
+                prvek["role"] = role_raw.strip().lower()
+        # Zamerny presah rodice. Tataz uvaha jako u `prazdne` u Rule 138:
+        # bez oznaceni se prvni zamerne precnivajici prvek (odznak pres roh
+        # karty, popisek zony NAD svym boxem) stane duvodem, proc nekdo
+        # vypne cele pravidlo. Zmereno: na listu Main kitu jsou dva takove
+        # popisky (`u.35`, `u.54`, 20 px nad boxem zony) a nic se na nich
+        # neoreze - `.zona` nema `overflow:hidden`.
+        #
+        # Oznaceni umlci JEN rodicovskou pulku. Zasah do vyhrazeneho pasu
+        # a utek clena z pasu se jim vypnout NEDA: pas je slib o miste,
+        # ktere patri nekomu jinemu, a ten slib nemuze zrusit ten, kdo ho
+        # porusuje.
+        presah_raw = prvek_raw.get("presah")
+        if presah_raw is not None:
+            if not isinstance(presah_raw, str):
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.presah' ma byt veta o tom, "
+                        f"proc prvek precniva, je {presah_raw!r}",
+                    )
+                )
+            elif not presah_raw.strip():
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.presah' je prazdne oznaceni "
+                        f"bez vety - vypinac pravidla bez duvodu se zahazuje",
+                    )
+                )
+            else:
+                prvek["presah"] = presah_raw.strip()
+        prazdne_raw = prvek_raw.get("prazdne")
+        if prazdne_raw is not None:
+            if not isinstance(prazdne_raw, str):
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.prazdne' ma byt veta o tom, "
+                        f"proc je prvek prazdny, je {prazdne_raw!r}",
+                    )
+                )
+            elif not prazdne_raw.strip():
+                # Oznaceni bez vety je jen vypinac pravidla. Zahazuje se, aby
+                # Rule 138 dobehla - a rekne se to nahlas, jinak by po nem
+                # zbylo ticho vypadajici jako "v poradku".
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.prazdne' je prazdne oznaceni "
+                        f"- zamer bez vety neni zamer, oznaceni se zahazuje",
+                    )
+                )
+            else:
+                prvek["prazdne"] = prazdne_raw
+        vec_raw = prvek_raw.get("vec")
+        if vec_raw is not None:
+            # Vec je lidske slovo ("microSD"), ne identifikator: nechava se,
+            # jak ji napsal generator, a paruje se se slovnikem bez ohledu na
+            # velikost pismen (viz `_slovnik_ze_sceny`).
+            if not isinstance(vec_raw, str) or not vec_raw.strip():
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.vec' ma byt jmeno veci, "
+                        f"o ktere prvek mluvi, je {vec_raw!r}",
+                    )
+                )
+            else:
+                prvek["vec"] = vec_raw.strip()
+        for klic in ("sirka_textu", "sirka_bunky"):
+            hod_raw = prvek_raw.get(klic)
+            if hod_raw is None:
+                continue
+            hod = _nezaporne_cislo(hod_raw)
+            if hod is None:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.{klic}' ma byt nezaporne "
+                        f"cislo v px, je {hod_raw!r}",
+                    )
+                )
+            else:
+                prvek[klic] = hod
+        prvky[wid] = prvek
+
+    return prvky, pasy, issues
+
+
+def _r136_nalezy(
+    wl: str,
+    prvek: dict[str, Any],
+    rect: tuple[int, int, int, int],
+    scena: tuple[int, int],
+    pasy: dict[str, tuple[int, int, int, int]],
+) -> list[Issue]:
+    """Rule 136: prvek presahuje sveho rodice / leze do vyhrazeneho pasu.
+
+    Dva tvary tehoz oriznuti. Zivy protejsek obou: dlazdice RF Sonda na
+    Domove, ktere patka usekla spodni hranu.
+
+    Kdo tu MLCI a proc (jinak by na jednom pixelu stala dve meridla):
+
+    * **Rodic je scena** -> mlci. Hranice sceny uz meri Rule 63 (vic nez
+      75 % venku), Rule 79 (vetsi nez scena) a Rule 80.
+    * **Panel za svym obsahem** -> mlci. Dite uvnitr sveho rodice je prave ta
+      "intentional layering", kterou hlasi Rule 21; R136 se pta obracene nez
+      Rule 21 ("je dite uvnitr sveho rodice?"), takze spravne slozeny panel
+      projde obema.
+    * **Prvek, ktery do pasu patri** (``pas`` == jmeno pasu) -> do nej smi,
+      ale musi v nem lezet CELY. Jeho presah VEN meri treti pulka pravidla
+      (`ZNACKA_R136_PAS_VEN`).
+
+      OPRAVENO 2026-09-09, a je to poucne. Docstring tu do te chvile tvrdil,
+      ze treti meridlo neni potreba, protoze "v kitu je obal pasu zaroven
+      ``offsetParent`` jeho obsahu, takze ``rodic`` takoveho prvku JE
+      obdelnik pasu". Kritik to ZMERIL na vsech 62 listech a vyslo:
+      **0 z 368 clenu pasu ma rodice rovneho obdelniku pasu** - most vydava
+      ``rodic = ramecek(el.offsetParent)`` a ``offsetParent`` clenu razitka
+      je ``.obsah``, ne obal pasu. Hodnota razitka nakreslena 52 px NAD
+      pasem prosla mlckym. Diru zaviraly jen data, ktera most nikdy
+      neposilal - a fixtura ji pribijela ve tvaru, ktery most nevyrabi.
+      Poucení: predpoklad o datech mostu se overuje MERENIM nad skutecnymi
+      scenami, ne cetbou generatoru.
+    * **Prvek CELY uvnitr pasu** -> jen WARN, ne ERROR: oriznout ho pas nemuze,
+      chybi mu jen prihlaska (nebo zabloudil pod patku). Oriznuti je prave a
+      jen preteti HRANY pasu.
+    * **Prvek, ktery pas CELY obsahuje** -> mlci. Obal obsahu, uvnitr ktereho
+      patka sedi, pas nenarusuje: je to podklad, na kterem pas lezi.
+    * **``visible: false``** -> preskok, stejne jako v Rule 135.
+
+    Pas se naproti tomu meri i prvku, ktery v bloku vlastni zaznam NEMA - pas
+    je vlastnost sceny, ne prvku, a nezmereny prvek by jinak patku prosel
+    mlcky. Rodic se meri jen tomu, kdo ho zmereneho ma.
+
+    Pozor na jeden nevysloveny predpoklad: u popisku posila most INKOUST, ne
+    ramecek, takze inkoust je vzdy uvnitr boxu a falesny nalez z tohohle
+    titulu vzniknout nemuze. Az most zacne posilat box, tenhle odstavec
+    prestane platit.
+    """
+    issues: list[Issue] = []
+    x, y, w, h = rect
+    x2, y2 = x + w, y + h
+    sw, sh = scena
+
+    def _presahy(ox: int, oy: int, ox2: int, oy2: int) -> dict[str, str]:
+        """{smer: 'smer o N px'} pro hrany, ktere prvek pretl aspon o prah."""
+        return {
+            smer: f"{smer} o {kolik} px"
+            for smer, kolik in (
+                ("vlevo", ox - x),
+                ("nahore", oy - y),
+                ("vpravo", x2 - ox2),
+                ("dole", y2 - oy2),
+            )
+            if kolik >= R136_PRAH_PX
+        }
+
+    muj_pas = prvek.get("pas")
+    # Treti meridlo: clen pasu musi lezet CELY uvnitr sveho pasu. Bez nej
+    # projde mlckym prvek, ktery se z pasu vysunul - a prave to je oriznuti
+    # patkou, kvuli kteremu pravidlo vzniklo. Meri se jen prvku, ktery se do
+    # pasu HLASI a jehoz pas scena zna (neznamy pas hlasi ctecka bloku).
+    #
+    # Meri se PRVNI, protoze pas lezi uvnitr rodice: kdyz clen pretece obe
+    # hranice tymz smerem (patka razitka sedi na spodni hrane `.obsah`, takze
+    # se dolni hrany kryji), je to JEDNA obet a nalez ma nest to TESNEJSI
+    # meridlo. Rodicovska pulka pak tenhle smer uz nehlasi.
+    ven_smery: set[str] = set()
+    if muj_pas in pasy:
+        px, py, pw, ph = pasy[muj_pas]
+        ven = _presahy(px, py, px + pw, py + ph)
+        if ven:
+            ven_smery = set(ven)
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{wl}: {ZNACKA_R136_PAS_VEN} '{muj_pas}' {_vycet_a(list(ven.values()))} "
+                    f"(prvek {x},{y} {w}x{h}, pas {px},{py} {pw}x{ph})",
+                )
+            )
+
+    rodic = prvek.get("rodic")
+    if rodic is not None:
+        rx, ry, rw, rh = rodic
+        rx2, ry2 = rx + rw, ry + rh
+        je_scena = rx <= 0 and ry <= 0 and rx2 >= sw and ry2 >= sh
+        if not je_scena:
+            presahy = [
+                popis
+                for smer, popis in _presahy(rx, ry, rx2, ry2).items()
+                if smer not in ven_smery
+            ]
+            oznaceni = prvek.get("presah")
+            if presahy and oznaceni:
+                # Zamerny presah: rekne se to, ale jako WARN. Uplne ticho by
+                # znamenalo, ze oznaceni je vypinac, o kterem se v souhrnu
+                # nikdo nedozvi.
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: {ZNACKA_R136_OZNACENI}: {_vycet_a(presahy)} - "
+                        f"{oznaceni}",
+                    )
+                )
+            elif presahy:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{wl}: {ZNACKA_R136_RODIC} {_vycet_a(presahy)} "
+                        f"(prvek {x},{y} {w}x{h}, rodic {rx},{ry} {rw}x{rh})",
+                    )
+                )
+            elif oznaceni:
+                # Oznaceni na prvku, ktery nikam nepresahuje. Tataz vada jako
+                # u `prazdne` na prvku s textem: zustalo tu po zmene, kterou
+                # uz nikdo nehlida, a pristi presah umlci mlcky.
+                issues.append(
+                    Issue(
+                        "WARN",
+                        f"{wl}: {ZNACKA_R136_OZNACENI}: prvek je oznaceny jako zamerne "
+                        f"precnivajici ('{oznaceni}'), ale sveho rodice nepresahuje - "
+                        f"oznaceni uz neplati",
+                    )
+                )
+
+    for jmeno in sorted(pasy):
+        if jmeno == muj_pas:
+            continue
+        px, py, pw, ph = pasy[jmeno]
+        px2, py2 = px + pw, py + ph
+        # Dotek neni zasah: pas je polootevreny interval, presah pod prah
+        # mereni je artefakt zaokrouhleni mostu.
+        if min(x2, px2) - max(x, px) < R136_PRAH_PX:
+            continue
+        if min(y2, py2) - max(y, py) < R136_PRAH_PX:
+            continue
+        # Prvek, ktery pas CELY obsahuje, je podklad, na kterem pas lezi
+        # (obal obsahu, uvnitr ktereho patka sedi), ne narusitel - tataz
+        # vyjimka, jakou ma Rule 21 pro panel za svym obsahem.
+        if _rect_contains((x, y, x2, y2), (px, py, px2, py2)):
+            continue
+        # Prvek CELY uvnitr pasu nemuze byt oriznuty - je to bud vlastni obsah
+        # pasu, kteremu jen chybi prihlaska (`pas`), nebo prvek zabloudily pod
+        # patku. Oriznuti to ale NENI, takze to nesmi nest tutez zavaznost:
+        # ERROR by tu meril jinou velicinu, nez pravidlo slibuje.
+        if _rect_contains((px, py, px2, py2), (x, y, x2, y2)):
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{wl}: {ZNACKA_R136_PAS} '{jmeno}': lezi cely uvnitr pasu, ale nehlasi "
+                    f"se do nej (prvek {x},{y} {w}x{h}, pas {px},{py} {pw}x{ph}); kdyz do "
+                    f"pasu patri, ma to rict navrh.prvky[<id>].pas",
+                )
+            )
+            continue
+        # Nejmelci pruhyb rekne, KTEROU hranu prvek pretl - to je cislo,
+        # ktere se opravuje.
+        hloubka, popis = min(
+            (
+                (y2 - py, f"prvek konci na y={y2}, pas zacina na y={py}"),
+                (py2 - y, f"prvek zacina na y={y}, pas konci na y={py2}"),
+                (x2 - px, f"prvek konci na x={x2}, pas zacina na x={px}"),
+                (px2 - x, f"prvek zacina na x={x}, pas konci na x={px2}"),
+            ),
+            key=lambda dvojice: dvojice[0],
+        )
+        issues.append(Issue("ERROR", f"{wl}: {ZNACKA_R136_PAS} '{jmeno}' o {hloubka} px ({popis})"))
+    return issues
+
+
+def _r137_nalezy(wl: str, prvek: dict[str, Any], text: str) -> list[Issue]:
+    """Rule 137: zmerena sirka textu > sirka jeho bunky.
+
+    Nahrada Rule 7 pro panely, kde most mericem v prohlizeci zmeril SKUTECNY
+    font. Rule 7 je znakovy odhad pro font 6x8 a na tab5 ma ``char_w=2`` jako
+    dolni mez, tj. je zamerne neobvinujici - proto se pro zmereny widget jeho
+    vodorovna pulka vypina (svisla zustava, ta meri vysku, ne sirku). Dve
+    meridla s ruznymi predpoklady na jednom pixelu by byla presne ta druha
+    pravda, kterou tahle brana ma odstranit.
+
+    ``text_overflow: "ellipsis"`` NEOMLOUVA: useknuty stitek FIRMWARE
+    "V0.4-71-gee91351-dirty" na skutecnem panelu je prave ten pripad -
+    trojtecka neni sdeleni, je to ztraceny konec.
+
+    Kdyz je zmerena jen jedna z obou sirek, kontrola NEPROBEHLA a rekne se to
+    (WARN), misto aby pravidlo mlcelo, jako by bylo cisto.
+    """
+    sirka_textu = prvek.get("sirka_textu")
+    sirka_bunky = prvek.get("sirka_bunky")
+    if sirka_textu is not None and sirka_bunky is not None:
+        pretok = sirka_textu - sirka_bunky
+        if pretok > R137_TOLERANCE_PX:
+            # Text se cituje tak, jak ho scena nese. Prazdne uvozovky nejsou
+            # chyba hlasky: znamenaji, ze most sirku zmeril, ale text sam do
+            # sceny neposlal (dnes se to deje u sazby uvnitr <b>/<u>/<s>).
+            return [
+                Issue(
+                    "ERROR",
+                    f"{wl}: {ZNACKA_R137}: zmereno {sirka_textu:.1f} px, bunka ma "
+                    f"{sirka_bunky:.1f} px (pretok {pretok:.1f} px), text '{text}'",
+                )
+            ]
+        return []
+    if sirka_textu is not None:
+        return [
+            Issue(
+                "WARN",
+                f"{wl}: {ZNACKA_R137_NEMERENO}: chybi 'sirka_bunky' "
+                f"(zmerena je jen sirka textu {sirka_textu:.1f} px)",
+            )
+        ]
+    if sirka_bunky is not None:
+        return [
+            Issue(
+                "WARN",
+                f"{wl}: {ZNACKA_R137_NEMERENO}: chybi 'sirka_textu' "
+                f"(znama je jen sirka bunky {sirka_bunky:.1f} px)",
+            )
+        ]
+    return []
+
+
+def _texty_sceny(
+    widgets: list[Any],
+) -> list[tuple[int, str, tuple[int, int, int, int], str]]:
+    """Viditelne texty sceny: ``(poradi, id, obdelnik (x,y,x2,y2), text)``.
+
+    Rule 138 potrebuje vedet, kdo je ciho POTOMKA - a to se ze samotnych
+    obdelniku vycist neda. Prislusnost vozi most (``navrh.prvky[id].
+    rodic_id``); tenhle seznam je druha pulka paru, aby se nemusel prochazet
+    cely seznam widgetu pri kazdem dotazu.
+    """
+    ven: list[tuple[int, str, tuple[int, int, int, int], str]] = []
+    for i, cw in enumerate(widgets):
+        if not isinstance(cw, dict) or cw.get("visible") is False:
+            continue
+        ct = cw.get("text")
+        if not isinstance(ct, str) or not ct.strip():
+            continue
+        if not all(_is_int(cw.get(k)) for k in ("x", "y", "width", "height")):
+            continue
+        cx, cy = int(cw["x"]), int(cw["y"])
+        wid = str(cw.get("_widget_id") or cw.get("id") or "")
+        ven.append((i, wid, (cx, cy, cx + int(cw["width"]), cy + int(cw["height"])), ct))
+    return ven
+
+
+# Kolik urovni stromu se u `rodic_id` projde, nez to pravidlo vzda. Strom
+# artboardu ma dnes nejvyse 5 urovni; 32 je strop proti CYKLU v datech
+# (a > b > a), ktery by jinak zacyklil validator misto toho, aby ohlasil
+# vadny blok.
+R138_HLOUBKA = 32
+
+
+def _je_potomek(wid: str, predek: str, prvky: dict[str, dict[str, Any]]) -> bool:
+    """Je ``wid`` potomkem ``predek`` podle retezu ``rodic_id``?"""
+    cur = wid
+    for _ in range(R138_HLOUBKA):
+        rodic = prvky.get(cur, {}).get("rodic_id")
+        if not isinstance(rodic, str):
+            return False
+        if rodic == predek:
+            return True
+        cur = rodic
+    return False
+
+
+def _text_uvnitr(
+    idx: int,
+    wid: str,
+    rect: tuple[int, int, int, int],
+    rect_prvku: tuple[int, int, int, int],
+    texty: list[tuple[int, str, tuple[int, int, int, int], str]],
+    prvky: dict[str, dict[str, Any]],
+    zna_rodic_id: bool,
+) -> str | None:
+    """Prvni text, ktery prvek ``wid`` nese UVNITR SEBE. ``None`` = zadny.
+
+    OPRAVENO 2026-09-09. Puvodni podoba se ptala jen GEOMETRICKY ("lezi cely
+    uvnitr meho obdelniku?") a to je prilis siroka vyjimka: kritik ji obesel
+    tim, ze pod prazdny smalt polozil CIZI popisek, ktery s nim nema nic
+    spolecneho - a pravidlo zmlklo. Prazdny smalt umlci cokoli, co pod nim
+    nahodou lezi.
+
+    "Uvnitr sebe" proto plati jen pro POTOMKY:
+
+    * kdyz most vydava ``rodic_id`` (jmeno nejblizsiho predka, ktery je taky
+      ve scene), jde se po retezu nahoru - to je presna DOM prislusnost;
+    * kdyz ``rodic_id`` ve scene neni ANI JEDNOU (starsi scena, dokument
+      editoru), pouzije se ``rodic`` = obdelnik ``offsetParent``u: text,
+      jehoz offsetParent je PRESNE tenhle prvek, je jeho potomek. Je to
+      hrubsi meridlo, ale porad se pta na PRISLUSNOST, ne na prekryv.
+
+    Geometrie zustava jako druha podminka v obou vetvich: potomek, ktery
+    z rodice utekl, uvnitr nej neni (a jeho oriznuti meri Rule 136).
+    """
+    for i, cid, r, ct in texty:
+        if i == idx or not _rect_contains(rect, r):
+            continue
+        if zna_rodic_id:
+            if _je_potomek(cid, wid, prvky):
+                return ct
+            continue
+        if tuple(prvky.get(cid, {}).get("rodic") or ()) == rect_prvku:
+            return ct
+    return None
+
+
+def _r138_nalezy(
+    wl: str,
+    wid: str,
+    role: str,
+    prvek: dict[str, Any],
+    text: str,
+    text_uvnitr: str | None,
+) -> list[Issue]:
+    """Rule 138: hodnotova role, ktera nenese zadne sdeleni.
+
+    Zive protejsky: Terminal smalt PORT i PRIJATO prazdne, Files smalt VOLNO,
+    USB sloupec "CO TO JE", SysMon TEPLOTA RADIA. Ze souradnic to videt neni:
+    scena nese text, ale ne to, jestli ta plocha nejakou hodnotu SLIBUJE.
+    Slib vozi ``role`` z generatoru; bez nej pravidlo mlci (datove gatovani,
+    plati na kazdem panelu).
+
+    Prazdno se hleda GEOMETRICKY, ne pres DOM: `ram.svorkovnice()` sazi text
+    do deti (``<b>``), takze obal sam PRIMY text nema. Kdyz uvnitr obdelniku
+    lezi cely jiny prvek s textem, sdeleni tam JE a pravidlo mlci.
+    Cena teto vyjimky je poctiva mez, kterou je nutne znat: sedi-li ``role``
+    na OBALU, ktery uvnitr nese svuj vlastni popisek ("PORT"), pravidlo
+    chybejici hodnotu neuvidi. Role proto patri na hodnotu, ne na obal - a
+    "zelena" na listu, kde je role na obalech, nic netvrdi.
+
+    Kdo tu mlci a proc (jinak by jednu obet obvinila dve meridla):
+
+    * **Rule 25** ("text widget with no text") uz dnes mlci u kazdeho prvku,
+      ktery ma ``_widget_id`` - a prvek s merenou roli ho ma vzdy, protoze
+      podle nej se merena data paruji. Dvojity nalez tedy vzniknout nemuze.
+    * **Rule 139** meri NEPRAZDNY text; prazdny patri vyhradne sem.
+    * **Rule 91** (text neni retezec) meri vadny TYP, ne prazdno - pri
+      necitelnem textu se Rule 138 nepousti vubec.
+
+    ``prazdne`` je jediny ustup: veta o tom, proc je plocha prazdna zamerne.
+    Prazdny retezec ustupem NENI (zahazuje ho uz ctecka bloku) a stare
+    oznaceni na prvku, ktery text zase nese, se pripomene - jinak by v datech
+    zustal trvaly vypinac pravidla.
+    """
+    prazdne = prvek.get("prazdne")
+    if text.strip():
+        if prazdne:
+            return [
+                Issue(
+                    "WARN",
+                    f"{wl}: {ZNACKA_R138_OZNACENI}: prvek je oznaceny jako zamerne prazdny "
+                    f"('{prazdne}'), ale text nese: '{text}'",
+                )
+            ]
+        return []
+    if prazdne or text_uvnitr is not None:
+        return []
+    return [
+        Issue(
+            "ERROR",
+            f"{wl}: {ZNACKA_R138}: role '{role}' nenese zadny text ani uvnitr sebe; "
+            f"nedostupnost se rekne vetou, nebo se prvek oznaci jako zamerne prazdny "
+            f"(navrh.prvky['{wid}'].prazdne)",
+        )
+    ]
+
+
+_R139_SLOT = re.compile(
+    r"(?<!\S)(\S+)[ \t]+(?:" + "|".join(re.escape(p) for p in sorted(POMLCKY)) + r")(?!\S)"
+)
+
+
+def _r139_prazdne_sloty(text: str) -> list[str]:
+    """Jmena slotu, ktere v jednom prvku nesou pomlcku misto hodnoty.
+
+    Hleda DVE A VIC po sobe jdoucich skupin "slovo mezera pomlcka", tedy tvar
+    ``SOUBOR - OKNO - ZOBRAZENO -`` (patka Hexu z fotoprotokolu). Prazdny
+    seznam = nic takoveho tam neni.
+
+    Proc az od dvou: JEDNA skupina se od spravne hodnoty s oddelovacem
+    nerozezna. "vlozena - nepripojena" ma presne tentyz tvar (slovo, mezera,
+    pomlcka, ...) a je to hodnota v poradku. Cena je poctive priznana
+    v `_r139_nalezy`: osamely slot s pomlckou projde.
+    """
+    sloty: list[str] = []
+    konec = -1
+    for m in _R139_SLOT.finditer(text):
+        if sloty and text[konec:m.start()].strip():
+            # Mezi skupinami stoji jeste jine slovo -> nejde o vycet slotu,
+            # ale o vetu, ve ktere se pomlcka vyskytla dvakrat. Pocita se
+            # znovu od teto skupiny.
+            sloty = []
+        sloty.append(m.group(1))
+        konec = m.end()
+    return sloty if len(sloty) >= 2 else []
+
+
+def _r139_nalezy(wl: str, text: str) -> list[Issue]:
+    """Rule 139: pomlcka (nebo jiny zastupny znak) misto hodnoty.
+
+    Zive protejsky: Logic Analyzer "SPOUST —" a patka "—", prazdna patka
+    v Hexu, hodnota dlazdice RF Sonda. Pomlcka je znacka, ne sdeleni: ctenar
+    z ni nepozna, jestli se veci nikdo neptal, jestli odpoved nedosla, nebo
+    jestli je vysledek prazdny. Nedostupnost se rika vetou (C4: pet forem
+    nedostupnosti se ma sejit v jednu).
+
+    Tri podoby teze vady, kazda s vlastnim pojmenovanim (opravuje se to, co
+    tam doopravdy stoji), ale se stejnou zavaznosti:
+
+    1. **Cely text je pomlcka** (``POMLCKY``, vcetne U+2010 a U+2011).
+    2. **Cely text je zastupny znak** (``ZASTUPNE``: •, …, ?, n/a, --) nebo
+       po odstraneni nulovych sirek nezbyde nic. Tvar je jiny, sdeleni
+       stejne zadne. U+200B byl navic jediny znamy tvar, ktery obchazel
+       Rule 138 i Rule 139 naraz: `strip()` ho nesmaze, takze prvek nebyl
+       "prazdny", a v POMLCKY nebyl taky.
+    3. **Vic slotu v jednom prvku** - patka Hexu "SOUBOR — OKNO —
+       ZOBRAZENO —". Pravidlo merilo jen CELY text, takze generator, ktery
+       nesazi kazdou hodnotu jako vlastni prvek, tri prazdne sloty protahl.
+
+    Hranice tretiho tvaru je uzka schvalne a MA dolozitelnou cenu: hlasi se
+    az DVE PO SOBE JDOUCI skupiny "slovo pomlcka", protoze jedna jedina se
+    nedá odlisit od hodnoty s oddelovacem ("vlozena - nepripojena" je
+    spravna hodnota se stejnym tvarem). Jeden osamely slot s pomlckou tedy
+    projde - a je to napsane nahlas, misto aby to schoval sirsi vzor, ktery
+    by zacal obvinovat spravne hodnoty.
+
+    Kdo tu jeste mlci a proc:
+
+    * PRAZDNY text patri VYHRADNE Rule 138 - jedna obet, jeden nalez;
+    * pomlcka UVNITR delsiho textu ("1-13", "A-B") je oddelovac;
+    * popiskova role (patka, popisek, titulek) pomlcku jako oddelovac mit
+      smi - pravidlo se na ni vubec nepousti (viz volajici).
+    """
+    holy = text.strip()
+    if not holy:
+        # Prazdny text patri VYHRADNE Rule 138. Bez teto zavory by ho druha
+        # vetev nize ("po odstraneni nulovych sirek nezbyde nic") obvinila
+        # podruhe - jedna obet, dva nalezy.
+        return []
+    if holy in POMLCKY:
+        return [
+            Issue(
+                "ERROR",
+                f"{wl}: {ZNACKA_R139}: text '{text}' neni veta; rekni, co se stalo "
+                f"(napr. 'spoust nenastavena')",
+            )
+        ]
+    bez_nulovych = holy.strip(NULOVE_SIRKY).strip()
+    if holy.lower() in ZASTUPNE or not bez_nulovych:
+        return [
+            Issue(
+                "ERROR",
+                f"{wl}: {ZNACKA_R139_ZASTUPNY}: text {text!r} neni veta; rekni, co se "
+                f"stalo (napr. 'spoust nenastavena')",
+            )
+        ]
+    sloty = _r139_prazdne_sloty(holy)
+    if sloty:
+        return [
+            Issue(
+                "ERROR",
+                f"{wl}: {ZNACKA_R139}: {len(sloty)} slotu v jednom prvku nema hodnotu "
+                f"({', '.join(sloty)}) - text '{text}'",
+            )
+        ]
+    return []
+
+
+def _mrizky_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[list[dict[str, Any]], list[Issue]]:
+    """Precte ``navrh.mrizky`` -> (mrizky, nalezy o vadnem bloku).
+
+    Cte tyz scenovy blok jako `_navrh_ze_sceny`, ale JEN klic ``mrizky``.
+    Zamerne zvlast: mrizka je vlastnost SCENY (kolik dlazdic se na list
+    vejde), ne vlastnost widgetu, takze ji pravidla nad prvky nemaji jak
+    predat, a spolecna signatura by je svazala dohromady bez duvodu.
+    Chybejici nebo neobjektovy blok se tu **mlci** preskoci - ohlasilo ho
+    uz `_navrh_ze_sceny` a tyz preklep nesmi hlasit dve mista (zakon
+    "dva nalezy, jedna obet").
+
+    Kazda vadna hodnota = nalez a zahozeni te JEDNE mrizky; zbytek se cte
+    dal. Mrizka se zahozenym poctem polozek uz z bloku nevystoupi vubec,
+    takze nedostane jeste druhy nalez "kontrola NEPROBEHLA": o tom, ze se
+    nezmerilo, mluvi prave ten ERROR.
+    """
+    issues: list[Issue] = []
+    mrizky: list[dict[str, Any]] = []
+
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return mrizky, issues
+    raw = blok.get("mrizky")
+    if raw is None:
+        return mrizky, issues
+    if not isinstance(raw, list):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky' ma byt seznam, "
+                f"je {type(raw).__name__}",
+            )
+        )
+        return mrizky, issues
+
+    for i, polozka in enumerate(raw):
+        if not isinstance(polozka, dict):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky[{i}]' ma byt objekt, "
+                    f"je {type(polozka).__name__}",
+                )
+            )
+            continue
+        jmeno_raw = polozka.get("jmeno")
+        if not isinstance(jmeno_raw, str) or not jmeno_raw.strip():
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky[{i}].jmeno' ma byt jmeno "
+                    f"mrizky, je {jmeno_raw!r}",
+                )
+            )
+            continue
+        jmeno = jmeno_raw.strip()
+        kapacita_raw = polozka.get("kapacita")
+        if not _is_int(kapacita_raw) or int(kapacita_raw) < 1:
+            # Kapacita 0 nebo zaporna neni mrizka: pravidlo by pak obvinilo
+            # kazdou polozku a vypadalo by to jako vada navrhu, ne dat.
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky[{jmeno}].kapacita' ma byt cele "
+                    f"cislo >= 1, je {kapacita_raw!r}",
+                )
+            )
+            continue
+        polozek_raw = polozka.get("polozek")
+        polozek: int | None = None
+        if polozek_raw is not None:
+            if not _is_int(polozek_raw) or int(polozek_raw) < 0:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky[{jmeno}].polozek' ma byt cele "
+                        f"cislo >= 0, je {polozek_raw!r}",
+                    )
+                )
+                continue
+            polozek = int(polozek_raw)
+        mrizky.append({"jmeno": jmeno, "kapacita": int(kapacita_raw), "polozek": polozek})
+
+    return mrizky, issues
+
+
+def _r140_nalezy(pfx: str, mrizky: list[dict[str, Any]]) -> list[Issue]:
+    """Rule 140: mrizka s deklarovanou kapacitou nepojme vsechny polozky.
+
+    Zivy protejsek: Domu ma dvanact slotu (`data-kapacita`), registr appek
+    `tabos-core` jich dnes zna jedenact - a az jich bude trinact, ztrati se
+    dvanacta a trinacta MIMO list, kde je zadne meridlo nad souradnicemi
+    widgetu neuvidi: ve scene proste nebudou. Kapacita je proto jedina vec,
+    kterou lze zmerit driv, nez se to stane.
+
+    * ``polozek > kapacita`` -> ERROR (vic polozek, nez je kam dat).
+    * ``polozek == kapacita`` i ``polozek < kapacita`` -> TICHO. Prazdny
+      slot je v tomhle jazyce nosic, ne vada ("Dvanacty slot je prazdny
+      a prazdny zustava", `gen_dalsi.py`); prazdna mrizka (``polozek == 0``)
+      je jiny nalez a patri kostre, ne sem.
+    * kapacita bez poctu polozek -> WARN, ze kontrola NEPROBEHLA. Vzor je
+      Rule 133: meridlo, ktere se nepustilo, se hlasi nahlas, jinak vyjde
+      ticho k nerozeznani od "v poradku".
+
+    Pocet polozek artboard NEZNA a znat nemuze: kresli sloty, ne appky.
+    Musi ho dodat most (z registru appek `tabos-core`, dnes jedenact) - do
+    te doby je tenhle WARN jediny poctivy vysledek a jeho ubytek je merou
+    toho, jak daleko je most hotovy.
+    """
+    issues: list[Issue] = []
+    for m in mrizky:
+        jmeno = m["jmeno"]
+        kapacita = m["kapacita"]
+        polozek = m["polozek"]
+        if polozek is None:
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R140_NEMERENO}: mrizka '{jmeno}' ma kapacitu "
+                    f"{kapacita}, ale pocet polozek nikdo nedodal - kontrola NEPROBEHLA",
+                )
+            )
+            continue
+        if polozek > kapacita:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_R140}: '{jmeno}' ma kapacitu {kapacita}, polozek "
+                    f"je {polozek} (o {polozek - kapacita} vic)",
+                )
+            )
+    return issues
+
+
+# R141: LV_DPI_DEF z lv_conf.h (`#define LV_DPI_DEF 130     /*[px/inch]*/`)
+# a CONFIG_LV_DPI_DEF ze sdkconfigu (`CONFIG_LV_DPI_DEF=130`). Zakomentovany
+# radek ani `# CONFIG_LV_DPI_DEF is not set` se chytit nesmi - to je prave
+# ten pripad "hodnota tu neni", ktery se hlasi jako nezmereno.
+_R141_LV_DPI = re.compile(r"^[ \t]*#[ \t]*define[ \t]+LV_DPI_DEF[ \t]+\(?[ \t]*(\d+)", re.M)
+_R141_SDK_DPI = re.compile(r"^[ \t]*CONFIG_LV_DPI_DEF[ \t]*=[ \t]*\"?(\d+)\"?[ \t]*$", re.M)
+
+
+def _r141_dokumentovana(
+    blok: Any,
+    profil: str,
+) -> tuple[int, str | None, Issue | None]:
+    """Precte dokumentovanou hodnotu -> (cil, duvod, nalez o vadnem bloku).
+
+    Blok je ``tokens.json -> firmware.lv_dpi_def`` = ``{"hodnota": 130,
+    "duvod": "..."}``. Preklep v nem je ERROR, ne ticho a ne tichy navrat
+    k profilu: oboji by za majitele rozhodlo, ze odchylka neplati - a prave
+    takove tiche rozhodnuti tahle brana jinde odstranuje.
+    """
+    if not isinstance(blok, dict):
+        return 0, None, Issue(
+            "ERROR",
+            f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF ma byt objekt "
+            f"s klici 'hodnota' a 'duvod', je {type(blok).__name__}",
+        )
+    hodnota = blok.get("hodnota")
+    if not _is_int(hodnota) or int(hodnota) <= 0:
+        return 0, None, Issue(
+            "ERROR",
+            f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF ma byt kladne "
+            f"cele cislo, je {hodnota!r}",
+        )
+    duvod = blok.get("duvod")
+    if not isinstance(duvod, str) or not duvod.strip():
+        # Odchylka bez duvodu neni rozhodnuti, je to vypinac brany. Tataz
+        # uvaha jako u `prazdne` v Rule 138.
+        return 0, None, Issue(
+            "ERROR",
+            f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF {int(hodnota)} "
+            f"nema 'duvod' - odchylka bez duvodu neni rozhodnuti, je to vypinac brany "
+            f"(profil '{profil}')",
+        )
+    return int(hodnota), duvod.strip(), None
+
+
+def _r141_zdroj(
+    jmeno: str,
+    klic: str,
+    vzor: re.Pattern[str],
+    text: str,
+    profil: str,
+    cil: int,
+    duvod: str | None = None,
+    ppi: int = 0,
+) -> list[Issue]:
+    """Jeden zdroj DPI (soubor firmwaru) proti jedne cilove hodnote."""
+    hodnoty = [int(m.group(1)) for m in vzor.finditer(text)]
+    if not hodnoty:
+        return [
+            Issue(
+                "WARN",
+                f"{ZNACKA_R141_NEMERENO}: v {jmeno} neni radek {klic} - "
+                f"kontrola NEPROBEHLA",
+            )
+        ]
+    ruzne = sorted(set(hodnoty))
+    if len(ruzne) > 1:
+        return [
+            Issue(
+                "ERROR",
+                f"{ZNACKA_R141_NEMERENO}: v {jmeno} je {klic} nekolikrat a ruzne "
+                f"({', '.join(str(h) for h in ruzne)}) - nevim, ktera hodnota plati",
+            )
+        ]
+    if ruzne[0] != cil:
+        if duvod is None:
+            return [
+                Issue(
+                    "ERROR",
+                    f"{ZNACKA_R141} s panelem: {jmeno} {klic}={ruzne[0]}, profil "
+                    f"'{profil}' ma {cil} px/palec",
+                )
+            ]
+        return [
+            Issue(
+                "ERROR",
+                f"{ZNACKA_R141} s dokumentaci: {jmeno} {klic}={ruzne[0]}, ale "
+                f"tokens.json dokumentuje {cil} - firmware a dokumentace se rozesly",
+            )
+        ]
+    if duvod is not None:
+        # Shoda s DOKUMENTOVANOU hodnotou. Neni to ticho: odchylka od panelu
+        # tam porad je, jen o ni nekdo rozhodl a napsal proc. WARN je presne
+        # ta uroven - brana kit neshodi, ale odchylka zustane videt.
+        return [
+            Issue(
+                "WARN",
+                f"{ZNACKA_R141_ODCHYLKA}: {jmeno} {klic}={ruzne[0]}, vedoma odchylka "
+                f"od profilu {ppi}, duvod: {duvod}",
+            )
+        ]
+    return []
+
+
+def zkontroluj_dpi(
+    lv_conf_text: str,
+    sdkconfig_text: str,
+    prof: DeviceProfile,
+    dokumentovano: Any = None,
+) -> list[Issue]:
+    """Rule 141: DPI firmwaru proti PPI panelu. CISTE TEXTOVA funkce.
+
+    LVGL prepocitava vsechno, co je zadane v milimetrech nebo v "dip"
+    (odsazeni, tloustky, dotykove meze), pres ``LV_DPI_DEF``. Kdyz tam stoji
+    130 a panel ma 294 px/palec, firmware pocita s pixely, ktere jsou 2,26x
+    vetsi, nez ve skutecnosti jsou - a navrh, ktery branou projde, se na
+    desce presto rozpadne. Zadny pohled na scenu tohle neuvidi: cislo je
+    v konfiguraci firmwaru, ne v navrhu.
+
+    **Proc textova funkce a ne pravidlo uvnitr `validate_data`.** Validator
+    smi cist JEN dokument, ktery dostal. `tests/test_tab5_validace.py`
+    porovnava beh v pameti s behem CLI v podprocesu; cteni souboru z disku
+    uvnitr pravidla by obe cesty rozeslo a mereni by zaviselo na tom, odkud
+    se pusti. Soubory proto cte MOST (`do_espos.dpi_firmwaru`) a sem posila
+    jejich TEXT. ESPOS drzi mez a jazyk hlasky, aby si most cislo 294
+    neopsal - opsana mez je druha pravda.
+
+    Nulova tolerance je zamer: ``#define`` neni mereni, nema sum. Bud tam
+    je cislo panelu, nebo tam je jine cislo. Panel ma 293,7 px/palec, cili
+    se porovnava se zaokrouhlenym 294 - a hlaska to cele cislo rekne, aby
+    se nehledalo, proti cemu se merilo.
+
+    Chybejici radek je WARN "nezmereno" (LVGL by vzalo svou vlastni vychozi
+    hodnotu a co plati, z textu poznat nejde); dva ruzne radky jsou ERROR
+    ze stejneho duvodu, jen naopak: hodnoty jsou dve a kontrola nema kterou
+    vzit. Ticho by v obou pripadech vypadalo jako "souhlasi".
+    """
+    cil = round(prof.ppi)
+    if cil <= 0:
+        # Profil bez panelu (OLED nema ppi): neni proti cemu merit. Rict to
+        # nahlas je jediny poctivy vysledek - nula by lhala, ze se merilo.
+        return [
+            Issue(
+                "WARN",
+                f"{ZNACKA_R141_NEMERENO}: profil '{prof.name}' nema ppi - "
+                f"neni proti cemu merit",
+            )
+        ]
+    issues: list[Issue] = []
+    duvod: str | None = None
+    if dokumentovano is not None:
+        cil_doc, duvod, vadny = _r141_dokumentovana(dokumentovano, prof.name)
+        if vadny is not None:
+            # Preklep v dokumentaci NESMI byt ticho ani navrat k profilu:
+            # oboji by tise rozhodlo za majitele. Bez pouzitelne dokumentace
+            # se nemeri vubec a rekne se to.
+            return [vadny]
+        cil = cil_doc
+    for jmeno, klic, vzor, text in (
+        ("lv_conf.h", "LV_DPI_DEF", _R141_LV_DPI, lv_conf_text),
+        ("sdkconfig", "CONFIG_LV_DPI_DEF", _R141_SDK_DPI, sdkconfig_text),
+    ):
+        issues.extend(
+            _r141_zdroj(jmeno, klic, vzor, text, prof.name, cil, duvod, round(prof.ppi))
+        )
+    return issues
+
+
+def jmena_ze_sdk(koren: Any) -> frozenset[str]:
+    """Jmena rozhrani a hodnot enumu z hlavicek SDK. CTE DISK.
+
+    Osmy tvar pravidla 142 (verzalkove slovo uvnitr vety) potrebuje vedet,
+    ktera slova jsou v SDK jmeny. Ten seznam se **neopisuje**: opsany by
+    zestarl prvni zmenou v SDK a brana by mlcela prave o novem jmenu -
+    tataz past, jakou uz jednou zpusobila opsana dotykova mez (`sonda.py`
+    DOTYK = 48 proti `tokens.json`).
+
+    **Proc funkce a ne pravidlo.** Tataz delba jako u `zkontroluj_dpi`:
+    `validate_data` smi zaviset JEN na dokumentu, ktery dostal (testy
+    porovnavaji beh v pameti s behem CLI v podprocesu, cteni z disku uvnitr
+    pravidla by obe cesty rozeslo). Hlavicky proto cte MOST, tuhle funkci
+    zavola s cestou z lockfile jadra a vysledek posle ve scene
+    (`navrh.jmena_sdk`).
+
+    Cte dva tvary a oba jsou rozhodnutelne strojove:
+
+    * ``class IHwDiagnostics`` / ``struct IRadioInfo`` - jmeno rozhrani;
+    * telo ``enum class Error : uint16_t { None = 0, Unavailable, ... }`` -
+      hodnoty enumu (`Unavailable` je presne to slovo, ktere na panelu stoji
+      jako `vraci UNAVAILABLE`).
+
+    Vraci jmena tak, jak jsou napsana v hlavicce; porovnava se pozdeji bez
+    ohledu na velikost pismen. Prazdna mnozina = nic se neprecetlo, a to
+    volajici MUSI rict nahlas (`ZNACKA_R142_NEMERENO`), ne spolknout jako
+    "cisto".
+    """
+    koren = Path(koren)
+    jmena: set[str] = set()
+    soubory = [koren] if koren.is_file() else sorted(koren.rglob("*.h"))
+    for cesta in soubory:
+        try:
+            text = cesta.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        jmena.update(m.group(1) for m in _SDK_ROZHRANI.finditer(text))
+        for m in _SDK_ENUM.finditer(text):
+            for radek in m.group(1).split(","):
+                h = _SDK_HODNOTA.match(radek.strip())
+                if h:
+                    jmena.add(h.group(1))
+    return frozenset(jmena)
+
+
+def _veta_strojove_jmeno(
+    text: str,
+    jmena_sdk: frozenset[str] = frozenset(),
+) -> tuple[str, str] | None:
+    """Duvod, proc `text` NENI veta pro cloveka -> (pojmenovani, nalezeny kus).
+
+    `None` = veta je v poradku. Poradi rozhodovani i vzory jsou shodne
+    s `brana_vety.strojove_jmeno` - viz komentar u `VETY_VZORY`.
+    """
+    if any(vzor.search(text) for vzor, _ in VETY_VYJIMKY):
+        return None
+    for klic, pojmenovani, vzor in VETY_VZORY:
+        if klic == "ROZHRANI":
+            for m in vzor.finditer(text):
+                slovo = m.group(0)
+                # Slovo psane cele verzalkami neni jmeno rozhrani PODLE TVARU:
+                # konvence repa je I + CamelCase (`IHwDiagnostics`,
+                # `INetworkService`, `I802154Service`), vsechna maji uvnitr
+                # male pismeno. Bez teto vyjimky by na listech plnych verzalek
+                # vznikaly nalezy typu IDENTITA, INKOUST, INVERSE - a jeden
+                # takovy text v tomhle repu opravdu je ("INVERSE" ve
+                # `widget_catalog.json`).
+                #
+                # POZOR: tohle uz NENI konec pribehu. Verzalkove slovo se
+                # nezahazuje - propada do tridy `_verzalkove_jmeno()` nize,
+                # kde se porovna se jmeny ze SDK. Diru "vraci UNAVAILABLE"
+                # a "IHWDIAGNOSTICS" zaviral drive nikdo.
+                if slovo in VETY_NENI_ROZHRANI or slovo.isupper():
+                    continue
+                return pojmenovani, slovo
+            continue
+        m = vzor.search(text)
+        if m:
+            return pojmenovani, m.group(0)
+    return _verzalkove_jmeno(text, jmena_sdk)
+
+
+def _verzalkove_jmeno(
+    text: str,
+    jmena_sdk: frozenset[str],
+) -> tuple[str, str] | None:
+    """Osmy tvar: verzalkove slovo uvnitr vety, ktere je jmenem ze SDK.
+
+    Hranice je popsana u `_V_VERZALKY`. Strucne:
+
+    * text CELY verzalkami je STITEK a tahle trida se v nem nemeri (hodnoty
+      enumu jsou bezna slova, takze stitek `STAV` by se trefil s `Stav`);
+    * ve vete, ktera ma i mala pismena, se verzalkove slovo porovna bez
+      ohledu na velikost pismen; shoda se jmenem ze SDK = nalez.
+
+    Bez seznamu jmen (`jmena_sdk` prazdna) trida MLCI - a to, ze se nemerila,
+    rekne volajici (`ZNACKA_R142_NEMERENO`). Ticho vydavane za "cisto" je
+    prave ta vada, kterou tahle kampan jinde odstranuje.
+    """
+    if not jmena_sdk:
+        return None
+    if not any(z.islower() for z in text):
+        return None
+    velka = {j.upper() for j in jmena_sdk}
+    for m in _V_VERZALKY.finditer(text):
+        slovo = m.group(0)
+        if slovo in VETY_NENI_ROZHRANI or slovo in VETY_NENI_JMENO_SDK:
+            continue
+        if slovo.upper() in velka:
+            return "jmeno ze SDK", slovo
+    return None
+
+
+def _r142_ma_verzalkove_slovo(text: str) -> bool:
+    """Je v tomhle textu co merit osmym tvarem? (pro hlaseni "nezmereno")
+
+    Tataz podminka jako `_verzalkove_jmeno`, jen bez seznamu jmen. Bez ni by
+    WARN "jmena SDK nedodana" vyskocil i na listech, kde by stejne nebylo
+    co porovnavat - a varovani, ktere sviti porad, nikdo necte.
+    """
+    if not any(z.islower() for z in text):
+        return False
+    return any(
+        m.group(0) not in VETY_NENI_ROZHRANI
+        and m.group(0) not in VETY_NENI_JMENO_SDK
+        for m in _V_VERZALKY.finditer(text)
+    )
+
+
+def _druh_listu_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[str, list[Issue]]:
+    """Precte ``navrh.druh`` -> (druh, nalezy o vadnem bloku).
+
+    Chybejici klic = ``"obrazovka"``, tedy chovani, jake brana mela pred
+    zavedenim vykladovych listu: kdo nic nerekl, je mereny. Preklep se
+    NEPROMLCI - neznamy druh je ERROR, protoze tise prijaty preklep by
+    pravidlo 142 vypnul na celem listu a nikdo by se to nedozvedel.
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return DRUHY_LISTU[0], issues
+    raw = blok.get("druh")
+    if raw is None:
+        return DRUHY_LISTU[0], issues
+    if not isinstance(raw, str) or raw.strip().lower() not in DRUHY_LISTU:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'druh' ma byt jeden z "
+                f"{list(DRUHY_LISTU)}, je {raw!r}",
+            )
+        )
+        return DRUHY_LISTU[0], issues
+    return raw.strip().lower(), issues
+
+
+def _jmena_sdk_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[frozenset[str], list[Issue]]:
+    """Precte ``navrh.jmena_sdk`` -> (jmena, nalezy o vadnem bloku).
+
+    Tentyz scenovy blok jako `_navrh_ze_sceny`, jen klic ``jmena_sdk``.
+    Vozi ho most z `jmena_ze_sdk()`; validator hlavicky necte sam (viz
+    docstring te funkce). Chybejici klic se tu **mlci** preskoci - o tom,
+    ze se osmy tvar nemeril, mluvi az `ZNACKA_R142_NEMERENO` u prvniho
+    textu, kde by bylo co merit.
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return frozenset(), issues
+    raw = blok.get("jmena_sdk")
+    if raw is None:
+        return frozenset(), issues
+    if not isinstance(raw, list):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'jmena_sdk' ma byt seznam jmen, "
+                f"je {type(raw).__name__}",
+            )
+        )
+        return frozenset(), issues
+    jmena: set[str] = set()
+    for i, j in enumerate(raw):
+        if not isinstance(j, str) or not j.strip():
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'jmena_sdk[{i}]' ma byt jmeno ze "
+                    f"SDK, je {j!r}",
+                )
+            )
+            continue
+        jmena.add(j.strip())
+    return frozenset(jmena), issues
+
+
+def _r142_nalezy(
+    wl: str,
+    text: str,
+    jmena_sdk: frozenset[str] = frozenset(),
+) -> list[Issue]:
+    """Rule 142: veta pro cloveka nese strojove jmeno.
+
+    Zive protejsky ze snimku panelu: Settings "IHwDiagnostics" a "%.1f",
+    Network "INetworkService::startScan() vraci UNAVAILABLE", SysMon
+    "ISystemMetrics::radioTemp nedostupne", patka Diagnostics
+    "ZDROJ IHwDiagnostics". Ctenar z nich nepozna, co ma delat: jmeno typu je
+    adresa v kodu, ne odpoved na otazku "co se stalo".
+
+    **Gatovani je PROFILOVE, ne datove**, a duvod je zmereny: F4 je jazykovy
+    zakon TabOSu, ne vlastnost kazdeho panelu. Na korpusu ESPOS chyta tenhle
+    sedmilistek jediny text, `"INVERSE"` ve `widget_catalog.json` (256x128,
+    tedy profil oled256) - a je to nalez falesny. Bez profiloveho gatovani by
+    pravidlo obvinilo cizi navrh z porusovani zakona, ktery pro nej neplati.
+    (Tentyz text mlci i na tab5, ale az druhou vyjimkou - verzalkami; obe
+    umlceni maji svuj test, protoze kazde umi zmizet zvlast.)
+
+    Jeden text = NEJVYS jeden nalez: hlasi se prvni tvar v poradi
+    `VETY_VZORY`, stejne jako ve `brana_vety.py`. Vyjmenovat u jedne vety
+    vsechny jeji hrichy znamena psat tutez opravu nekolikrat.
+
+    Osmy tvar (verzalkove slovo, ktere je jmenem ze SDK) potrebuje seznam
+    jmen z hlavicek. Kdyz ho most nedodal, trida se NEMERI a rekne se to
+    (WARN) - ale jen u textu, kde by opravdu bylo co porovnavat.
+    """
+    duvod = _veta_strojove_jmeno(text, jmena_sdk)
+    if duvod is None:
+        if not jmena_sdk and _r142_ma_verzalkove_slovo(text):
+            return [
+                Issue(
+                    "WARN",
+                    f"{wl}: {ZNACKA_R142_NEMERENO}: verzalkove slovo se nema s cim "
+                    f"porovnat (navrh.jmena_sdk chybi) - text '{text}'",
+                )
+            ]
+        return []
+    pojmenovani, kus = duvod
+    return [
+        Issue(
+            "ERROR",
+            f"{wl}: {ZNACKA_R142} nese {pojmenovani}: '{kus}' - text '{text}'",
+        )
+    ]
+
+
+def _slovnik_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[dict[str, dict[str, Any]], list[Issue]]:
+    """Precte ``navrh.slovnik`` -> (slovnik stavu, nalezy o vadnem bloku).
+
+    Klic vysledku je jmeno veci slozene na mala pismena (``microsd``),
+    hodnota ``{"jmeno": "microSD", "stavy": ("vlozena, pripojena", ...)}``:
+    jmeno veci je lidske slovo, ne identifikator, takze se paruje bez ohledu
+    na velikost pismen - ale do hlasky patri tak, jak ho napsal generator.
+
+    Tentyz scenovy blok jako `_navrh_ze_sceny`, jen klic ``slovnik``.
+    Chybejici nebo neobjektovy blok se tu **mlci** preskoci: ohlasil ho uz
+    `_navrh_ze_sceny` a tyz preklep nesmi hlasit dve mista (zakon "dva
+    nalezy, jedna obet").
+
+    Vec, ktera se do slovniku dostane dvakrat pod dvema tvary jmena
+    (``microSD`` a ``microsd``), je ERROR a NEBERE se ani jedna: dva slovniky
+    teze veci jsou prave ta rozdvojena pravda, kterou Rule 143 meri.
+    """
+    issues: list[Issue] = []
+    slovnik: dict[str, dict[str, Any]] = {}
+
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return slovnik, issues
+    raw = blok.get("slovnik")
+    if raw is None:
+        return slovnik, issues
+    if not isinstance(raw, dict):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik' ma byt objekt, "
+                f"je {type(raw).__name__}",
+            )
+        )
+        return slovnik, issues
+
+    for vec_raw, stavy_raw in raw.items():
+        vec = str(vec_raw).strip()
+        if not vec:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik' ma vec bez jmena ({vec_raw!r})",
+                )
+            )
+            continue
+        if not isinstance(stavy_raw, list) or not stavy_raw:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik.{vec}' ma byt neprazdny seznam "
+                    f"stavu, je {stavy_raw!r}",
+                )
+            )
+            continue
+        stavy: list[str] = []
+        for stav_raw in stavy_raw:
+            if not isinstance(stav_raw, str) or not stav_raw.strip():
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik.{vec}' ma byt seznam vet, "
+                        f"je v nem {stav_raw!r}",
+                    )
+                )
+                stavy = []
+                break
+            stavy.append(_zhustit_mezery(stav_raw))
+        if not stavy:
+            continue
+        klic = vec.casefold()
+        if klic in slovnik:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik' zna vec "
+                    f"'{slovnik[klic]['jmeno']}' i '{vec}' - dve jmena teze veci, nevim, "
+                    f"ktery slovnik plati",
+                )
+            )
+            del slovnik[klic]
+            continue
+        slovnik[klic] = {"jmeno": vec, "stavy": tuple(stavy)}
+
+    return slovnik, issues
+
+
+def _r143_nalezy(
+    wl: str,
+    prvek: dict[str, Any],
+    role: str | None,
+    text: str,
+    slovnik: dict[str, dict[str, Any]],
+) -> list[Issue]:
+    """Rule 143: o teze veci mluvi kazdy list jinak (WARNING).
+
+    Zivy protejsek: microSD. Diagnostics rika "vlozena, nepripojena", Files
+    "karta neni vlozena nebo mount selhal", Hex "nedostupne" - tri vety o teze
+    karte, z toho jedna tvrdi, ze vlozena neni. Ctenar si z toho jeden obraz
+    sveta nesestavi a nema jak poznat, ktera appka lze.
+
+    **Krizeni listu se meri BEZ globalniho stavu.** Validator vidi jeden
+    dokument; rozpor mezi tremi appkami se chyta tim, ze vsechny tri se meri
+    proti JEDNOMU slovniku (kit ho vozi z `tokens.json` do sceny). Tim se
+    otazka "shodnou se listy?" prevede na otazku "drzi se list slovniku?",
+    kterou lze zodpovedet z jednoho listu. Kdo to bude chtit "vylepsit" na
+    porovnavani mezi soubory, at si nejdriv rozmysli, ze pravidlo pak
+    prestane platit pro jeden list pusteny samostatne.
+
+    **Zavaznost je WARNING**, ne ERROR: neni to vada rozvrzeni (nic se
+    neoreze, nic nepretece), je to rozpor ve slovniku. Rozhodl tak majitel.
+
+    Kdo tu mlci a proc:
+
+    * bez hodnotove role - hlavicka sloupce "microSD" vec jmenuje, ale zadny
+      stav netvrdi; slib nese role, ne slovo;
+    * prazdny text patri Rule 138 a samotna pomlcka Rule 139 - jedna obet,
+      jeden nalez;
+    * text, ktery je JEN jmenem veci ("microSD"), je navesti, ne tvrzeni.
+
+    **Mez, kterou je poctive znat.** Meri se PODRETEZEC (bez ohledu na
+    velikost pismen a na nasobne mezery), takze veta, ktera povoleny stav
+    pouzije a jeste neco pridá ("karta neni vlozena nebo mount selhal"),
+    PROJDE. Slovnik meri SLOVNIK, ne pocet tvrzeni v jedne vete; veta, ktera
+    rika dve veci najednou, je jina vada a potrebuje jine meridlo. Diakritika
+    se na hola pismena neprevadi: "vlozena" a "vložena" jsou pro panel dve
+    ruzna slova (vestaveny font LVGL to umi dokazat - ceske pismeno v nem
+    proste neni), takze slovnik musi byt psany touz abecedou jako texty.
+
+    Vec vozi generator (``data-vec``), jinak se hleda podretezcem jmena
+    v textu. Vec BEZ slovniku je WARN "kontrola NEPROBEHLA" (vzor Rule 133
+    a Rule 140): most o veci neco tvrdil, meridlo se nepustilo - a ticho by
+    vypadalo k nerozeznani od "v poradku".
+    """
+    if role not in ROLE_HODNOTY:
+        return []
+    vec = prvek.get("vec")
+    if vec is None and not slovnik:
+        return []
+    t = _zhustit_mezery(text)
+    if not t or t in POMLCKY:
+        return []
+    tl = t.casefold()
+
+    if isinstance(vec, str):
+        zaznam = slovnik.get(vec.casefold())
+        if zaznam is None:
+            znam = ", ".join(sorted(z["jmeno"] for z in slovnik.values())) or "zadnou vec"
+            return [
+                Issue(
+                    "WARN",
+                    f"{wl}: {ZNACKA_R143_NEMERENO}: prvek mluvi o veci '{vec}', ale slovnik "
+                    f"stavu pro ni nikdo nedodal (znam: {znam}) - kontrola NEPROBEHLA",
+                )
+            ]
+        zaznamy = [zaznam]
+    else:
+        zaznamy = [z for klic, z in slovnik.items() if klic in tl]
+
+    issues: list[Issue] = []
+    for zaznam in zaznamy:
+        jmeno = zaznam["jmeno"]
+        if tl == jmeno.casefold():
+            continue
+        if any(stav.casefold() in tl for stav in zaznam["stavy"]):
+            continue
+        issues.append(
+            Issue(
+                "WARN",
+                f"{wl}: {ZNACKA_R143} '{jmeno}': text '{text}' nepouziva zadny stav ze "
+                f"slovniku ({' | '.join(zaznam['stavy'])})",
+            )
+        )
+    return issues
+
+
 # ── Main validator ─────────────────────────────────────────────────────────
 
 
@@ -921,6 +2761,63 @@ def validate_data(
         if not widgets:
             issues.append(Issue("WARN", f"{pfx}: scene has 0 widgets"))
 
+        # ── Merena data z artboardu: scenovy blok "navrh" ──
+        # Bez bloku vyjde prazdno a pravidla nad merenim mlci; vadny blok se
+        # ohlasi (viz `_navrh_ze_sceny`).
+        znama_id = {
+            str(w.get("_widget_id") or w.get("id"))
+            for w in widgets
+            if isinstance(w, dict) and (w.get("_widget_id") or w.get("id"))
+        }
+        navrh_prvky, navrh_pasy, navrh_nalezy = _navrh_ze_sceny(scene, pfx, znama_id)
+        issues.extend(navrh_nalezy)
+
+        # ── Rule 140: mrizka nepojme vsechny polozky ──
+        # Scenove pravidlo, ne widgetove: mrizka je vlastnost LISTU. Bez
+        # deklarovane kapacity mlci; s kapacitou a bez poctu polozek se
+        # prizna, ze nemerila (viz `_r140_nalezy`).
+        navrh_mrizky, mrizky_nalezy = _mrizky_ze_sceny(scene, pfx)
+        issues.extend(mrizky_nalezy)
+        issues.extend(_r140_nalezy(pfx, navrh_mrizky))
+
+        # ── Rule 143: slovnik stavu teze veci ──
+        # Slovnik je vlastnost SCENY, stejne jako mrizky: kit ho vozi
+        # z `tokens.json` a kazdy list se meri proti temuz. Tim se rozpor
+        # NAPRIC listy meri bez globalniho stavu (viz `_r143_nalezy`).
+        navrh_slovnik, slovnik_nalezy = _slovnik_ze_sceny(scene, pfx)
+        issues.extend(slovnik_nalezy)
+
+        # ── Rule 142, osmy tvar: jmena ze SDK ──
+        # Seznam se neopisuje, cte ho `jmena_ze_sdk()` z hlavicek a vozi ho
+        # most ve scene. Validator sam na disk nesaha (viz `zkontroluj_dpi`).
+        navrh_jmena_sdk, jmena_nalezy = _jmena_sdk_ze_sceny(scene, pfx)
+        issues.extend(jmena_nalezy)
+
+        # ── Rule 142: obrazovka, nebo vyklad o navrhu? ──
+        # Vykladovy list vadu CITUJE misto aby ji delal (viz `DRUHY_LISTU`).
+        # Ticho je videt: rekne se jednou za list, at nikdo necte nemereno
+        # jako v poradku.
+        druh_listu, druh_nalezy = _druh_listu_ze_sceny(scene, pfx)
+        issues.extend(druh_nalezy)
+        if prof.vety_pro_cloveka and druh_listu == "vyklad":
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R142_VYKLAD}, ne obrazovka - pravidlo 142 "
+                    f"se na nem NEMERI (zakon F4 mluvi o textu na pristroji, "
+                    f"vyklad vadu cituje)",
+                )
+            )
+        # Rule 138 se pta "nese sdeleni nekdo UVNITR me?" geometricky, takze
+        # potrebuje texty cele sceny predem. Bez merenych dat se nestavi.
+        texty_sceny = _texty_sceny(widgets) if navrh_prvky else []
+        # Vozi most rodokmen? Kdyz ANO, Rule 138 se pta na POTOMKY;
+        # kdyz NE (starsi scena, dokument editoru), spadne na hrubsi
+        # meridlo `rodic` = obdelnik offsetParentu. Ptat se jen
+        # geometricky uz ne - prazdny smalt tak umlcel kazdy cizi
+        # popisek, ktery pod nim nahodou lezel (viz `_text_uvnitr`).
+        zna_rodic_id = any("rodic_id" in p for p in navrh_prvky.values())
+
         seen_ids: set[str] = set()
 
         for idx, w in enumerate(widgets):
@@ -953,6 +2850,10 @@ def validate_data(
             has_border = w.get("border", False)
             runtime_raw = w.get("runtime", "")
             runtime = str(runtime_raw) if isinstance(runtime_raw, str) else ""
+
+            # Merena data mostu pro tento widget. Prazdny slovnik = nemereno.
+            wid_navrh = w.get("_widget_id") or w.get("id")
+            navrh_prvek = navrh_prvky.get(wid_navrh, {}) if isinstance(wid_navrh, str) else {}
 
             # ── Rule 5: Integer coordinates ──
             all_int = True
@@ -1059,7 +2960,17 @@ def validate_data(
                             f"{wl}: text cannot fit: h={hh} (inner_h={inner_h}) < font_h={CHAR_H}",
                         )
                     )
-                if max_chars > 0 and len(text) > max_chars:
+                # Zmerena sirka textu (blok "navrh") vypina VODOROVNOU pulku
+                # Rule 7 pro tento widget: znakovy odhad pro font 6x8 a mereni
+                # skutecneho fontu jsou dve meridla s ruznymi predpoklady a
+                # nesmi soudit tyz pixel. Rule 137 nastupuje misto nej; kdyz
+                # se nedomeri, rekne to nahlas. Svisla pulka (vyska radku)
+                # zustava, tu Rule 137 nemeri.
+                if (
+                    max_chars > 0
+                    and len(text) > max_chars
+                    and navrh_prvek.get("sirka_textu") is None
+                ):
                     issues.append(
                         Issue(
                             "WARN",
@@ -1105,6 +3016,80 @@ def validate_data(
                             f"= {prof.warn_touch_px} px on this panel)",
                         )
                     )
+
+            # ── Rule 136: oriznuti (presah rodice / zasah do vyhrazeneho pasu) ──
+            #
+            # Vada, kterou ze samotnych souradnic widgetu poznat nelze: scena
+            # nese absolutni obdelniky, ne to, KDO je ciho rodic. Mereni vozi
+            # most; bez nej pravidlo mlci. Gatovani je proto DATOVE, ne
+            # profilove - oriznuty prvek je vada na kazdem panelu.
+            # Pas se meri KAZDEMU viditelnemu prvku, i tomu, ktery vlastni
+            # zaznam v bloku nema: pas je vlastnost SCENY. Rodic se meri jen
+            # tomu, kdo ho ma zmereneho. Kdyby se cely R136 vazal na zaznam,
+            # prvek bez mereni by patku prosel mlcky.
+            if (
+                (navrh_prvek or navrh_pasy)
+                and w.get("visible") is not False
+                and _is_int(x)
+                and _is_int(y)
+                and _is_int(ww)
+                and _is_int(hh)
+            ):
+                issues.extend(
+                    _r136_nalezy(wl, navrh_prvek, (x, y, ww, hh), (sw, sh), navrh_pasy)
+                )
+
+            # ── Rule 137: preteceni textu zmerenym fontem ──
+            if navrh_prvek and w.get("visible") is not False:
+                issues.extend(_r137_nalezy(wl, navrh_prvek, text))
+
+            # ── Rule 138 + Rule 139: hodnotova role bez sdeleni ──
+            #
+            # Dve podoby teze vady, kterou koordinator nasel ocima na panelu:
+            # smalt bez slova (Terminal PORT, Files VOLNO, USB "CO TO JE") a
+            # pomlcka misto vety (LA "SPOUST —", patky "—"). Prazdny text meri
+            # VYHRADNE Rule 138, neprazdny Rule 139 - jedna obet, jeden nalez.
+            # Text, ktery neni retezec, patri Rule 91; obe pravidla proto na
+            # necitelny text nesahaji.
+            role = navrh_prvek.get("role")
+            if role in ROLE_HODNOTY and isinstance(text_raw, str) and w.get("visible") is not False:
+                uvnitr = (
+                    None
+                    if text.strip()
+                    else _text_uvnitr(
+                        idx,
+                        str(wid_navrh),
+                        (x, y, x + ww, y + hh),
+                        (x, y, ww, hh),
+                        texty_sceny,
+                        navrh_prvky,
+                        zna_rodic_id,
+                    )
+                )
+                issues.extend(
+                    _r138_nalezy(wl, str(wid_navrh), role, navrh_prvek, text, uvnitr)
+                )
+                issues.extend(_r139_nalezy(wl, text))
+
+            # ── Rule 142: veta pro cloveka nese strojove jmeno ──
+            #
+            # Jedine z novych pravidel gatovane PROFILEM, ne daty: F4 je
+            # jazykovy zakon TabOSu, ne vlastnost panelu. Meri se hotovy text
+            # na plose, takze zadny format uz se nedosadi (viz `_V_PROCENTO`).
+            if (
+                prof.vety_pro_cloveka
+                and druh_listu != "vyklad"
+                and isinstance(text_raw, str)
+                and w.get("visible") is not False
+            ):
+                issues.extend(_r142_nalezy(wl, text, navrh_jmena_sdk))
+
+            # ── Rule 143: slovnik stavu teze veci ──
+            #
+            # Datove gatovane: bez slovniku a bez `vec` mlci. Bezi i mimo
+            # hodnotovou roli? Ne - slib nese role (viz `_r143_nalezy`).
+            if isinstance(text_raw, str) and w.get("visible") is not False:
+                issues.extend(_r143_nalezy(wl, navrh_prvek, role, text, navrh_slovnik))
 
             # ── Rule 19: z_index is an integer ──
             z = w.get("z_index", 0)

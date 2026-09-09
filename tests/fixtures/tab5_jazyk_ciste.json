@@ -1,0 +1,194 @@
+{
+  "device": "tab5",
+  "width": 1280,
+  "height": 720,
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 1280,
+      "height": 720,
+      "bg_color": "#14170f",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 20,
+          "y": 97,
+          "width": 1240,
+          "height": 603,
+          "text": "",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "obsah",
+          "border": true,
+          "border_style": "single"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 140,
+          "width": 560,
+          "height": 32,
+          "text": "microSD: vložena, nepřipojena",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "diag.karta"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 200,
+          "width": 560,
+          "height": 32,
+          "text": "microSD: vložena, připojena · 28,4 GB volno",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "files.karta"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 260,
+          "width": 560,
+          "height": 32,
+          "text": "microSD: není vložena",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "hex.karta"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 320,
+          "width": 560,
+          "height": 32,
+          "text": "hodiny nenastaveny",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "settings.hodiny"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 380,
+          "width": 200,
+          "height": 32,
+          "text": "microSD",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "hlavicka.karta"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 440,
+          "width": 560,
+          "height": 32,
+          "text": "I2C externí: nezměřeno",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "diag.i2c"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 500,
+          "width": 560,
+          "height": 32,
+          "text": "IPv4 10.0.0.91",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "diag.adresa"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 560,
+          "width": 560,
+          "height": 32,
+          "text": "/sd/tabos",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "files.cesta"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 620,
+          "width": 200,
+          "height": 32,
+          "text": "MOCK DATA",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "smalt.rezim"
+        }
+      ],
+      "navrh": {
+        "slovnik": {
+          "microSD": [
+            "vložena, připojena",
+            "vložena, nepřipojena",
+            "není vložena"
+          ],
+          "hodiny": [
+            "hodiny nastaveny",
+            "hodiny nenastaveny"
+          ]
+        },
+        "prvky": {
+          "diag.karta": {
+            "role": "hodnota",
+            "vec": "microSD"
+          },
+          "files.karta": {
+            "role": "hodnota",
+            "vec": "microSD"
+          },
+          "hex.karta": {
+            "role": "hodnota",
+            "vec": "microSD"
+          },
+          "settings.hodiny": {
+            "role": "hodnota",
+            "vec": "hodiny"
+          },
+          "hlavicka.karta": {
+            "role": "popisek",
+            "vec": "microSD"
+          },
+          "diag.i2c": {
+            "role": "hodnota"
+          },
+          "diag.adresa": {
+            "role": "hodnota"
+          },
+          "files.cesta": {
+            "role": "hodnota"
+          },
+          "smalt.rezim": {
+            "role": "hodnota"
+          }
+        }
+      }
+    }
+  }
+}

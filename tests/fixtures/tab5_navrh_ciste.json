@@ -1,0 +1,90 @@
+{
+  "device": "tab5",
+  "width": 1280,
+  "height": 720,
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 1280,
+      "height": 720,
+      "bg_color": "#14170f",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 20,
+          "y": 97,
+          "width": 1240,
+          "height": 603,
+          "text": "",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "border": true,
+          "border_style": "single",
+          "_widget_id": "obsah"
+        },
+        {
+          "type": "label",
+          "x": 700,
+          "y": 540,
+          "width": 250,
+          "height": 64,
+          "text": "RF SONDA",
+          "color_fg": "#a9c24a",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "dlazdice.11"
+        },
+        {
+          "type": "label",
+          "x": 400,
+          "y": 240,
+          "width": 388,
+          "height": 24,
+          "text": "ZIVOTNI FUNKCE",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "smalt.nadpis"
+        },
+        {
+          "type": "label",
+          "x": 40,
+          "y": 630,
+          "width": 388,
+          "height": 24,
+          "text": "FIRMWARE V0.4",
+          "color_fg": "#9ba28d",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "razitko.firmware"
+        }
+      ],
+      "navrh": {
+        "pasy": {
+          "razitko": [20, 612, 1240, 88]
+        },
+        "prvky": {
+          "dlazdice.11": {
+            "rodic": [692, 97, 548, 507]
+          },
+          "smalt.nadpis": {
+            "rodic": [20, 97, 1240, 603],
+            "sirka_textu": 300.0,
+            "sirka_bunky": 388.0
+          },
+          "razitko.firmware": {
+            "rodic": [20, 612, 1240, 88],
+            "pas": "razitko",
+            "sirka_textu": 387.6,
+            "sirka_bunky": 388.0
+          }
+        }
+      }
+    }
+  }
+}

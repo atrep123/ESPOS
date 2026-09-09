@@ -1,0 +1,265 @@
+{
+  "_o_souboru": [
+    "SDILENY KORPUS VET pro obe brany jazyka F4: `validate_design` (ESPOS, cte HOTOVY",
+    "text ve scene) a `tabos-core/tools/brana_vety.py` (cte retezcove literaly ve",
+    "zdroji). Vzory obou bran jsou byte-identicke, ale test SHODY VZORU neodhalil, ze",
+    "se obe brany na temze retezci rozhodovaly OPACNE - vyjimka `slovo.isupper()`",
+    "zila v KODU, ne v porovnavane konstante (kritik 9. 9. 2026: 'IHWDIAGNOSTICS' =",
+    "jmeno rozhrani v jadre, TICHO v ESPOSu). Proto se parita meri CHOVANIM na",
+    "seznamu retezcu, ne shodou vzoru.",
+    "",
+    "Soubor je ZDROJ PRO OBE STRANY. Test v ESPOSu ho cte primo; test v jadre ho cte",
+    "pres ../research/ESPOS a kdyz ESPOS vedle neni, PRESKOCI SE S POJMENOVANYM",
+    "DUVODEM (ne tise - tise preskoceny test je zeleny nad nicim).",
+    "",
+    "Klice zaznamu:",
+    "  text        mereny retezec",
+    "  verdikt     'krici' = obe brany musi nalez NAJIT, 'mlci' = obe musi mlcet",
+    "  kus         u 'krici': podretezec, ktery MUSI byt v hlasce obou bran",
+    "  trida       strojovy klic tvaru (dokumentace pro cloveka, netestuje se)",
+    "  duvod       proc je verdikt takovy",
+    "  kde         odkud veta pochazi (artboard, panel, kampan)",
+    "",
+    "POJMENOVANI tvaru se u obou bran lisi ('prevodni znacka' vs 'formatovaci",
+    "znacka', 'strojovy stitek' vs 'strojovy stitek backendu'). Je to znama",
+    "kosmeticka odchylka: obe brany hlasi TYZ retezec (`kus`), jen ho jinak",
+    "pojmenuji. Korpus proto meri verdikt a citovany kus, ne slovo v hlasce."
+  ],
+  "jmena_sdk": [
+    "IHwDiagnostics",
+    "INetworkService",
+    "ISystemMetrics",
+    "IFileService",
+    "Unavailable",
+    "NotFound",
+    "InvalidArgument",
+    "Error",
+    "Live",
+    "Mock",
+    "Smalt"
+  ],
+  "vety": [
+    {
+      "text": "ISystemMetrics::radioTemp nedostupne",
+      "verdikt": "krici",
+      "kus": "::",
+      "trida": "SCOPE",
+      "duvod": "jmeno v kodu; ctenar z nej nepozna, co ma delat",
+      "kde": "SysMon, fotoprotokol panelu"
+    },
+    {
+      "text": "INetworkService::startScan() vraci UNAVAILABLE",
+      "verdikt": "krici",
+      "kus": "::",
+      "trida": "SCOPE",
+      "duvod": "trojnasobny hrich (::, volani, jmeno ze SDK); hlasi se PRVNI tvar v poradi, at se oprava nepise trikrat",
+      "kde": "Network Tools, fotoprotokol panelu"
+    },
+    {
+      "text": "chyba v smalt.h",
+      "verdikt": "krici",
+      "kus": "smalt.h",
+      "trida": "HLAVICKA",
+      "duvod": "jmeno hlavicky",
+      "kde": "kontrolni tvar"
+    },
+    {
+      "text": "V ceske sestave patri carka; %.1f ji neda.",
+      "verdikt": "krici",
+      "kus": "%.1f",
+      "trida": "PROCENTO",
+      "duvod": "prevodni znacka, kterou clovek uvidi doslova",
+      "kde": "Settings, fotoprotokol panelu"
+    },
+    {
+      "text": "nacteno %d souboru",
+      "verdikt": "krici",
+      "kus": "%d",
+      "trida": "PROCENTO",
+      "duvod": "prevodni znacka bez priznaku",
+      "kde": "kontrolni tvar"
+    },
+    {
+      "text": "PER 802.15.4 vzrostl z 1,2 % na 18,6 %",
+      "verdikt": "mlci",
+      "trida": "PROCENTO",
+      "duvod": "BLOKUJICI OPRAVA B2: puvodni trida priznaku obsahovala MEZERU, takze '% n' vypadalo jako prevodni znacka. Veta je spravne cesky.",
+      "kde": "SvorkaRfKoex, ostry beh brany 8. 9. 2026 (2 z 29 chyb)"
+    },
+    {
+      "text": "vyuziti 12,5 % pameti RAM",
+      "verdikt": "mlci",
+      "trida": "PROCENTO",
+      "duvod": "tataz past: '% p'. Navic RAM je verzalkove slovo, ktere v SDK neni.",
+      "kde": "reprodukce kritika"
+    },
+    {
+      "text": "signal 80 % dobry",
+      "verdikt": "mlci",
+      "trida": "PROCENTO",
+      "duvod": "tataz past: '% d'",
+      "kde": "reprodukce kritika"
+    },
+    {
+      "text": "prumer 12,5 %",
+      "verdikt": "mlci",
+      "trida": "PROCENTO",
+      "duvod": "procento na KONCI vety mlcelo i pred opravou - kontrolni skupina, ktera vadu neodhali",
+      "kde": "reprodukce kritika"
+    },
+    {
+      "text": "startScan() nema koho zavolat",
+      "verdikt": "krici",
+      "kus": "startScan()",
+      "trida": "VOLANI",
+      "duvod": "volani funkce ve vete",
+      "kde": "Network Tools"
+    },
+    {
+      "text": "Sum se nemeri - chybi API (rx_ctrl.noise_floor v promiskuitnim rezimu)",
+      "verdikt": "krici",
+      "kus": "rx_ctrl.noise_floor",
+      "trida": "CLEN",
+      "duvod": "strojovy clen struktury cizi knihovny; do 9. 9. 2026 ho nechytal ani jeden ze sedmi tvaru",
+      "kde": "SvorkaNetwork, fotoprotokol panelu"
+    },
+    {
+      "text": "capture_0412.la",
+      "verdikt": "mlci",
+      "trida": "CLEN",
+      "duvod": "jmeno souboru na karte je pro cloveka MISTO, ne jmeno v kodu (tataz uvaha jako u vyjimky '/sd/'). Bez teto hranice hlasil vzor CLEN deset jmen souboru na listech Souboru, Hexu a klavesnice.",
+      "kde": "SvorkaFiles, SvorkaHex, NegativFiles"
+    },
+    {
+      "text": "cat zaznam_042.la | hex",
+      "verdikt": "mlci",
+      "trida": "CLEN",
+      "duvod": "prikaz, ktery clovek do terminalu opravdu napsal; jmeno souboru musi souhlasit do pismene",
+      "kde": "SvorkaTerminalKl"
+    },
+    {
+      "text": "esp_hosted:GetRadioInfo@fazeA",
+      "verdikt": "krici",
+      "kus": "esp_hosted:GetRadioInfo@fazeA",
+      "trida": "STITEK",
+      "duvod": "strojovy stitek chybejiciho backendu; appka ho ma PRELOZIT",
+      "kde": "RF sluzby, faze 0"
+    },
+    {
+      "text": "chybi RPC esp_wifi_ftm_initiate_session",
+      "verdikt": "krici",
+      "kus": "esp_wifi_ftm_initiate_session",
+      "trida": "API_JMENO",
+      "duvod": "jmeno funkce ciziho SDK (predpona + nejmene dva useky)",
+      "kde": "SvorkaRfFtm"
+    },
+    {
+      "text": "esp_hosted nenahrany",
+      "verdikt": "mlci",
+      "trida": "API_JMENO",
+      "duvod": "jmeno SOUCASTI, ne funkce: clovek ji nahrava do C6 a musi souhlasit do pismene",
+      "kde": "hranice mezi jmenem funkce a jmenem soucasti"
+    },
+    {
+      "text": "ZDROJ IHwDiagnostics",
+      "verdikt": "krici",
+      "kus": "IHwDiagnostics",
+      "trida": "ROZHRANI",
+      "duvod": "jmeno rozhrani v patce; adresa v kodu, ne odpoved na otazku co se stalo",
+      "kde": "Diagnostics, fotoprotokol panelu"
+    },
+    {
+      "text": "IPv4 adresa nepridelena",
+      "verdikt": "mlci",
+      "trida": "ROZHRANI",
+      "duvod": "pojmenovana vyjimka: bezny udaj, ne typ",
+      "kde": "SvorkaNetwork"
+    },
+    {
+      "text": "IHWDIAGNOSTICS",
+      "verdikt": "mlci",
+      "trida": "SDK_VERZALKY",
+      "duvod": "text CELY verzalkami je STITEK a devaty tvar se v nem NEMERI: hodnoty enumu SDK jsou bezna slova (Error, Live, Smalt), takze stitek 'SMALT' by se s nimi trefil. Je to ZMERENA MEZ pravidla, ne opomenuti - a je to zaroven misto, kde se obe brany do 9. 9. 2026 rozchazely (jadro: jmeno rozhrani, ESPOS: ticho).",
+      "kde": "kritik, bod 5"
+    },
+    {
+      "text": "INVERSE zapnuta",
+      "verdikt": "mlci",
+      "trida": "SDK_VERZALKY",
+      "duvod": "verzalkove slovo uvnitr vety, ktere v SDK NENI; smalt se sazi verzalkami, takze tvar sam o sobe nic neznamena",
+      "kde": "widget_catalog.json"
+    },
+    {
+      "text": "Sken nedostupny - sluzba vraci UNAVAILABLE",
+      "verdikt": "krici",
+      "kus": "UNAVAILABLE",
+      "trida": "SDK_VERZALKY",
+      "duvod": "verzalkove slovo uvnitr vety s malymi pismeny, ktere JE hodnotou enumu SDK (Unavailable) - ziva vada F4 z panelu",
+      "kde": "Network Tools, fotoprotokol panelu"
+    },
+    {
+      "text": "Wi-Fi: UNAVAILABLE (viz Network Tools)",
+      "verdikt": "krici",
+      "kus": "UNAVAILABLE",
+      "trida": "SDK_VERZALKY",
+      "duvod": "tataz vada v jadre (shell.cpp:861, v HEAD od driv); devaty tvar ji nasel jako prvni",
+      "kde": "tabos-core/core/src/shell.cpp"
+    },
+    {
+      "text": "MOCK DATA - desktop, ne deska",
+      "verdikt": "mlci",
+      "trida": "SDK_VERZALKY",
+      "duvod": "pojmenovana vyjimka MOCK: 'Mock' je sice hodnota DataState, ale 'MOCK DATA' je ceduka o tom, ze cisla jsou nastrcena. Rozhodnuto uz v hlavicce brany vet 3. 9. 2026.",
+      "kde": "shell.cpp, logic-analyzer, usb-inspector (7 zmerenych retezcu)"
+    },
+    {
+      "text": "USB-A pripojeno, RAM je plna, LVGL kresli",
+      "verdikt": "mlci",
+      "trida": "SDK_VERZALKY",
+      "duvod": "verzalky, ktere v SDK nejsou - kontrolni skupina devateho tvaru",
+      "kde": "kontrolni tvar"
+    },
+    {
+      "text": "TEPLOTA CPU",
+      "verdikt": "mlci",
+      "trida": "SDK_VERZALKY",
+      "duvod": "cely popisek verzalkami = stitek; navic ani jedno slovo v SDK neni",
+      "kde": "SvorkaJazyk, SvorkaSettings"
+    },
+    {
+      "text": "/sd/tabos",
+      "verdikt": "mlci",
+      "trida": "VYJIMKA",
+      "duvod": "pojmenovana vyjimka: cesta na uloziste je udaj pro cloveka",
+      "kde": "SvorkaFiles"
+    },
+    {
+      "text": "/sd/tabos.h",
+      "verdikt": "mlci",
+      "trida": "VYJIMKA",
+      "duvod": "vyjimky se ptaji PRVNI; kdyby az za vzory, obe brany by rekly neco jineho",
+      "kde": "kontrolni tvar poradi"
+    },
+    {
+      "text": "-",
+      "verdikt": "mlci",
+      "trida": "VYJIMKA",
+      "duvod": "jednoznaky oddelovac neni veta (pomlcku misto hodnoty meri pravidlo 139, ne 142)",
+      "kde": "SvorkaRfVodopadPrazdny"
+    },
+    {
+      "text": "Vlozena, nepripojena.",
+      "verdikt": "mlci",
+      "trida": "CISTA",
+      "duvod": "presne to, jak ma veta pro cloveka vypadat",
+      "kde": "SvorkaDiagnostics"
+    },
+    {
+      "text": "Sum se nemeri, protoze ovladac neumi promiskuitni rezim.",
+      "verdikt": "mlci",
+      "trida": "CISTA",
+      "duvod": "tataz informace jako u rx_ctrl.noise_floor, jen bez strojoveho jmena - dukaz, ze pravidlo nezakazuje TEMA, ale TVAR",
+      "kde": "navrh opravy SvorkaNetwork"
+    }
+  ]
+}

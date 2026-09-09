@@ -1,0 +1,133 @@
+{
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "widgets": [
+    {
+     "type": "panel",
+     "x": 20,
+     "y": 97,
+     "width": 1240,
+     "height": 603,
+     "text": "",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "obsah",
+     "border": true,
+     "border_style": "single"
+    },
+    {
+     "type": "label",
+     "x": 48,
+     "y": 140,
+     "width": 300,
+     "height": 32,
+     "text": "115 200 Bd",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "smalt.port.hodnota"
+    },
+    {
+     "type": "panel",
+     "x": 48,
+     "y": 200,
+     "width": 300,
+     "height": 88,
+     "text": "",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "smalt.prijato",
+     "border": true,
+     "border_style": "single"
+    },
+    {
+     "type": "label",
+     "x": 60,
+     "y": 230,
+     "width": 200,
+     "height": 32,
+     "text": "1 428 B",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "smalt.prijato.cislo"
+    },
+    {
+     "type": "label",
+     "x": 48,
+     "y": 320,
+     "width": 300,
+     "height": 32,
+     "text": "",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "smalt.zdroj"
+    },
+    {
+     "type": "label",
+     "x": 48,
+     "y": 400,
+     "width": 40,
+     "height": 32,
+     "text": "—",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "patka.oddelovac"
+    },
+    {
+     "type": "label",
+     "x": 48,
+     "y": 460,
+     "width": 300,
+     "height": 32,
+     "text": "1–13",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "smalt.rozsah"
+    }
+   ],
+   "navrh": {
+    "prvky": {
+     "smalt.port.hodnota": {
+      "role": "hodnota"
+     },
+     "smalt.prijato": {
+      "role": "smalt"
+     },
+     "smalt.zdroj": {
+      "role": "hodnota",
+      "prazdne": "port drzi jiny modul, hodnota se doplni po pripojeni"
+     },
+     "patka.oddelovac": {
+      "role": "patka"
+     },
+     "smalt.rozsah": {
+      "role": "hodnota"
+     },
+     "smalt.prijato.cislo": {
+      "rodic_id": "smalt.prijato"
+     }
+    }
+   }
+  }
+ }
+}

@@ -82,6 +82,13 @@ TRIDY: Tuple[Tuple[str, str], ...] = (
     ("nevejde", "cannot fit"),
     ("ovladani", "focusable"),
     ("pocet", "exceeds recommended"),
+    ("dvojnik", "share identical geometry"),
+    ("opakovany text", "consider runtime binding"),
+    # Trida doplnena 2026-09-09. Do te doby padal nalez do "netrideno":
+    # jde o Rule 26 (delka textu proti profilu) a objevil se az potom, co
+    # most prestal preskakovat vnorene znacky - drive se ten text do sceny
+    # vubec nedostal (kritik: 181 ztracenych textu na 17 listech).
+    ("delka textu", "overflows max"),
 )
 
 NETRIDENO = "netrideno"
@@ -181,8 +188,86 @@ def klic_zpravy(zprava: str) -> str:
     return _KLIC_RE.sub("", zprava)
 
 
+# Znacka hlasky -> trida nalezu. JMENA ZNACEK, ne jejich hodnoty: hodnota se
+# bere behove z `validate_design`, aby zmena hlasky nezustala jako tise
+# prazdna kategorie. Tataz tabulka zije v `do_espos.tridy()`; obe se
+# porovnavaji behove (`test_CELA_tabulka_trid_se_shoduje_s_branou`), protoze
+# dve rucne psane kopie se drive nebo pozdeji rozejdou.
+#
+# UPLNOST se kontroluje strojove: kazda verejna konstanta `ZNACKA_*`
+# validatoru tu musi mit tridu a naopak. Prirazeni je rozhodnuti (jmeno
+# tridy je vec vkusu), uplnost uz ne.
+_MAPA_ZNACEK = {
+    "ZNACKA_R136_RODIC": "oriznuti",
+    "ZNACKA_R136_PAS": "oriznuti",
+    "ZNACKA_R136_PAS_VEN": "oriznuti",
+    "ZNACKA_R136_OZNACENI": "oriznuti",
+    "ZNACKA_R137": "preteceni",
+    "ZNACKA_R137_NEMERENO": "preteceni",
+    "ZNACKA_R138": "prazdny-smalt",
+    "ZNACKA_R138_OZNACENI": "prazdny-smalt",
+    "ZNACKA_R139": "pomlcka",
+    "ZNACKA_R139_ZASTUPNY": "pomlcka",
+    "ZNACKA_R140": "kapacita",
+    "ZNACKA_R140_NEMERENO": "kapacita",
+    "ZNACKA_R141": "dpi",
+    "ZNACKA_R141_NEMERENO": "dpi",
+    "ZNACKA_R141_ODCHYLKA": "dpi",
+    "ZNACKA_R142": "vety",
+    "ZNACKA_R142_NEMERENO": "vety",
+    "ZNACKA_R142_VYKLAD": "vety",
+    "ZNACKA_R143": "slovnik",
+    "ZNACKA_R143_NEMERENO": "slovnik",
+    "ZNACKA_NAVRH_VADNY": "vadny navrh",
+}
+
+_TRIDY_MERENA: Optional[Tuple[Tuple[str, str], ...]] = None
+
+
+def tridy_merena() -> Tuple[Tuple[str, str], ...]:
+    """Tridy pravidel 136-143, tedy `do_espos.tridy()` bez zakladu.
+
+    NENI to literal jako `TRIDY` a byt nemuze: vzor kazde tridy je znacka
+    hlasky, kterou sklada `validate_design` (`ZNACKA_R136_RODIC` a dalsi).
+    Opsany retezec by prezil zmenu hlasky jako tise prazdna kategorie -
+    nalez by spadl do "netrideno" a vypadal by jako neco, co editor nezna,
+    misto aby vypadal jako to, co je. Proto se bere BEHOVOU HODNOTOU
+    z tehoz modulu, kterym editor validuje.
+
+    Import je liny ze stejneho duvodu jako u `validate_data` nize: modul
+    `tools` je na `sys.path` az za behu editoru, ne pri importu adapteru.
+
+    Poradi: nove tridy jdou PRED zaklad, protoze jsou uzsi - doslova jako
+    v `do_espos.tridy()`. Shodu obou tabulek hlida test proti behove
+    hodnote brany.
+    """
+    global _TRIDY_MERENA
+    if _TRIDY_MERENA is None:
+        from tools import validate_design as vd
+
+        zname = {j for j in dir(vd) if j.startswith("ZNACKA_")}
+        chybi = sorted(zname - set(_MAPA_ZNACEK))
+        if chybi:
+            raise RuntimeError(
+                "tab5_validace: validate_design ma znacky bez tridy: "
+                + ", ".join(chybi)
+                + " - nalez by spadl do 'netrideno' a vypadal by jako nezname hlaseni"
+            )
+        prebyva = sorted(set(_MAPA_ZNACEK) - zname)
+        if prebyva:
+            raise RuntimeError(
+                "tab5_validace: `_MAPA_ZNACEK` zna znacky, ktere validate_design uz "
+                "nema: " + ", ".join(prebyva) + " - trida by zustala tise prazdna"
+            )
+        poradi = sorted(_MAPA_ZNACEK, key=lambda j: -len(getattr(vd, j)))
+        _TRIDY_MERENA = tuple(
+            (_MAPA_ZNACEK[j], str(getattr(vd, j))) for j in poradi
+        )
+    return _TRIDY_MERENA
+
+
 def trida_zpravy(zprava: str) -> str:
-    for jmeno, vzor in TRIDY:
+    for jmeno, vzor in tridy_merena() + TRIDY:
         if vzor in zprava:
             return jmeno
     return NETRIDENO
@@ -276,8 +361,20 @@ _KOD_TRIDY = (
     "sys.stdout.write(json.dumps([[str(a), str(b)] for a, b in do_espos.TRIDY]))"
 )
 
+# Cela tabulka brany, tedy `do_espos.tridy(validate_design)`. Staticky ji
+# precist nelze - vzory pravidel 136-143 jsou behove hodnoty konstant, ne
+# retezce ve zdroji - takze jedina poctiva kontrola je behova.
+_KOD_TRIDY_MERENA = (
+    "import json,sys;"
+    "sys.path.insert(0, sys.argv[1]);"
+    "import do_espos;"
+    "sys.stdout.write(json.dumps("
+    "[[str(a), str(b)] for a, b in do_espos.tridy(do_espos.validator())]))"
+)
 
-def tridy_behem_behu(cesta: pathlib.Path, *, timeout: float = 60.0) -> Tuple[Tuple[str, str], ...]:
+
+def tridy_behem_behu(cesta: pathlib.Path, *, timeout: float = 60.0,
+                     kod: str = _KOD_TRIDY) -> Tuple[Tuple[str, str], ...]:
     """Precte BEHOVOU hodnotu `do_espos.TRIDY` podprocesem.
 
     Podproces, ne import do naseho procesu: `navrh-appky` je cizi strom
@@ -291,7 +388,7 @@ def tridy_behem_behu(cesta: pathlib.Path, *, timeout: float = 60.0) -> Tuple[Tup
     if not cesta.exists():
         raise ValueError(f"do_espos.py neexistuje: {cesta}")
     hot = subprocess.run(
-        [sys.executable, "-c", _KOD_TRIDY, str(cesta.parent)],
+        [sys.executable, "-c", kod, str(cesta.parent)],
         # PYTHONDONTWRITEBYTECODE: do ciziho stromu (`navrh-appky`) se nesmi
         # nic zapisovat. Import podprocesem by jinak prepsal `__pycache__/
         # do_espos.cpython-312.pyc` - a prave ten .pyc slouzil revizi A jako
@@ -312,6 +409,17 @@ def tridy_behem_behu(cesta: pathlib.Path, *, timeout: float = 60.0) -> Tuple[Tup
     except json.JSONDecodeError as exc:
         raise ValueError(f"behova TRIDY z {cesta} neni JSON: {exc}") from exc
     return tuple((str(a), str(b)) for a, b in polozky)
+
+
+def tridy_merena_behem_behu(
+    cesta: pathlib.Path, *, timeout: float = 60.0
+) -> Tuple[Tuple[str, str], ...]:
+    """CELA tabulka brany (`do_espos.tridy(...)`) behovou hodnotou.
+
+    Tataz cesta jako `tridy_behem_behu` a stejne fail-closed: kdyz se
+    nezmeri, vyhodi vyjimku misto prazdna.
+    """
+    return tridy_behem_behu(cesta, timeout=timeout, kod=_KOD_TRIDY_MERENA)
 
 
 # --------------------------------------------------------------------------- #

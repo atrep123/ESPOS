@@ -1,0 +1,127 @@
+{
+  "device": "tab5",
+  "width": 1280,
+  "height": 720,
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 1280,
+      "height": 720,
+      "bg_color": "#14170f",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 20,
+          "y": 97,
+          "width": 1240,
+          "height": 603,
+          "text": "",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "obsah",
+          "border": true,
+          "border_style": "single"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 140,
+          "width": 560,
+          "height": 32,
+          "text": "ZDROJ IHwDiagnostics",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "patka.zdroj"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 200,
+          "width": 560,
+          "height": 32,
+          "text": "INetworkService::startScan() vrací UNAVAILABLE",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "net.stav"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 260,
+          "width": 560,
+          "height": 32,
+          "text": "vyšlo na displeji: %.1f",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "settings.presnost"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 320,
+          "width": 560,
+          "height": 32,
+          "text": "nedostupné",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "hex.karta"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 380,
+          "width": 560,
+          "height": 32,
+          "text": "chybí API",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "settings.hodiny"
+        }
+      ],
+      "navrh": {
+        "slovnik": {
+          "microSD": [
+            "vložena, připojena",
+            "vložena, nepřipojena",
+            "není vložena"
+          ],
+          "hodiny": [
+            "hodiny nastaveny",
+            "hodiny nenastaveny"
+          ]
+        },
+        "prvky": {
+          "patka.zdroj": {
+            "role": "patka"
+          },
+          "net.stav": {
+            "role": "hodnota"
+          },
+          "settings.presnost": {
+            "role": "hodnota"
+          },
+          "hex.karta": {
+            "role": "hodnota",
+            "vec": "microSD"
+          },
+          "settings.hodiny": {
+            "role": "hodnota",
+            "vec": "hodiny"
+          }
+        }
+      }
+    }
+  }
+}

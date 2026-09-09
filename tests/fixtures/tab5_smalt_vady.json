@@ -1,0 +1,82 @@
+{
+  "device": "tab5",
+  "width": 1280,
+  "height": 720,
+  "scenes": {
+    "main": {
+      "name": "main",
+      "width": 1280,
+      "height": 720,
+      "bg_color": "#14170f",
+      "widgets": [
+        {
+          "type": "panel",
+          "x": 20,
+          "y": 97,
+          "width": 1240,
+          "height": 603,
+          "text": "",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "obsah",
+          "border": true,
+          "border_style": "single"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 140,
+          "width": 300,
+          "height": 32,
+          "text": "",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "smalt.port"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 200,
+          "width": 300,
+          "height": 32,
+          "text": "   ",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "smalt.prijato"
+        },
+        {
+          "type": "label",
+          "x": 48,
+          "y": 260,
+          "width": 300,
+          "height": 32,
+          "text": "—",
+          "color_fg": "#e6e1ce",
+          "color_bg": "#14170f",
+          "align": "left",
+          "valign": "middle",
+          "_widget_id": "smalt.spoust"
+        }
+      ],
+      "navrh": {
+        "prvky": {
+          "smalt.port": {
+            "role": "hodnota"
+          },
+          "smalt.prijato": {
+            "role": "cislo"
+          },
+          "smalt.spoust": {
+            "role": "hodnota"
+          }
+        }
+      }
+    }
+  }
+}
