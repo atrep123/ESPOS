@@ -1,0 +1,227 @@
+{
+ "_puvod": "Hex Viewer, fotoprotokol 2026-09-09 (screeny3/19), stranka VYBER NA KARTE bez microSD. VSECHNA CISLA jsou z artboardu SvorkaHex.dc.html (_scena_ z 2026-09-09): popis.247 36,631 89x12; txt.248 36,657 191x22 (bunka 358); popis.249 426,631; txt.250 426,661 166x14 (bunka 314); popis.252 772,631; txt.253 772,661 168x14 (bunka 322); popis.255 1126,631; txt.256 1126,661 70x14. Z PANELU jsou jen TEXTY: artboard sazi '/sd/capture_0412.la', '0x0000-0x00BF', '192 z 4 194 304 B'; panel nechal tri sloty SOUBOR/OKNO/ZOBRAZENO PRAZDNE (deska_regrese: inkoust 0,0 % ve vsech trech bunkach), OD STARTU nese '0:01:53'. Trida se lisi od panel_2026-09-08/panel_hex (tam JEDEN prvek s pomlckami, R139): tady jsou tri SAMOSTATNE prvky bez textu = R138 x3. Veta 'microSD: nedostupne' je z panelu (R143 WARN jako 2026-09-08); cista trida rika slovnikove 'neni vlozena'.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 631,
+     "width": 89,
+     "height": 12,
+     "text": "SOUBOR",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.247"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 657,
+     "width": 191,
+     "height": 22,
+     "text": "",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.248"
+    },
+    {
+     "type": "label",
+     "x": 426,
+     "y": 631,
+     "width": 62,
+     "height": 12,
+     "text": "OKNO",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.249"
+    },
+    {
+     "type": "label",
+     "x": 426,
+     "y": 661,
+     "width": 166,
+     "height": 14,
+     "text": "",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.250"
+    },
+    {
+     "type": "label",
+     "x": 772,
+     "y": 631,
+     "width": 130,
+     "height": 12,
+     "text": "ZOBRAZENO",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.252"
+    },
+    {
+     "type": "label",
+     "x": 772,
+     "y": 661,
+     "width": 168,
+     "height": 14,
+     "text": "",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.253"
+    },
+    {
+     "type": "label",
+     "x": 1126,
+     "y": 631,
+     "width": 118,
+     "height": 12,
+     "text": "OD STARTU",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.255"
+    },
+    {
+     "type": "label",
+     "x": 1126,
+     "y": 661,
+     "width": 70,
+     "height": 14,
+     "text": "0:01:53",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.256"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 149,
+     "width": 224,
+     "height": 19,
+     "text": "microSD: nedostupné",
+     "color_fg": "#ff7b5e",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "stav.9"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "popis.247": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.248": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.249": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.250": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.252": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.253": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.255": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.256": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "stav.9": {
+      "role": "stav",
+      "vec": "microSD"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

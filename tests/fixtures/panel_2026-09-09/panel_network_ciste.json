@@ -1,0 +1,259 @@
+{
+ "_puvod": "Network Tools, fotoprotokol 2026-09-09 (screeny3/22). Cisla z artboardu SvorkaNetwork.dc.html (razitko popis.120/122/125/128 + txt.121/123/126/129; smalt v.16 52,158 stav site; v.18 297,158 sila; popis.67 36,343 KDO TAM JE). Z PANELU: SITI (txt.126) je PRAZDNE (deska_regrese: 0,0 % v bunce 656..934 x 660..675), SKENU 'nedostupne', OD STARTU '0:02:04', SILA '-42 dBm'. Vadna trida: 1 prvek bez textu = R138. Seznam siti pod KDO TAM JE (y 452..570) je na panelu prazdna PLOCHA bez prvku - to zadne pravidlo nemeri (viz test na ticho).",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 628,
+     "width": 74,
+     "height": 15,
+     "text": "PÁSMO",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.120"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 660,
+     "width": 233,
+     "height": 19,
+     "text": "2,4 GHz · C6 jiné neumí",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.121"
+    },
+    {
+     "type": "label",
+     "x": 346,
+     "y": 628,
+     "width": 71,
+     "height": 15,
+     "text": "SKENŮ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.122"
+    },
+    {
+     "type": "label",
+     "x": 346,
+     "y": 661,
+     "width": 87,
+     "height": 18,
+     "text": "nedostupné",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.123"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 628,
+     "width": 40,
+     "height": 15,
+     "text": "SÍTÍ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.125"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 660,
+     "width": 130,
+     "height": 15,
+     "text": "žádná · sken nedostupný",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.126"
+    },
+    {
+     "type": "label",
+     "x": 966,
+     "y": 631,
+     "width": 118,
+     "height": 12,
+     "text": "OD STARTU",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.128"
+    },
+    {
+     "type": "label",
+     "x": 966,
+     "y": 661,
+     "width": 66,
+     "height": 14,
+     "text": "0:02:04",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.129"
+    },
+    {
+     "type": "label",
+     "x": 52,
+     "y": 158,
+     "width": 212,
+     "height": 19,
+     "text": "připojena · NERTERA",
+     "color_fg": "#12150e",
+     "color_bg": "#e6e1ce",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.16"
+    },
+    {
+     "type": "label",
+     "x": 297,
+     "y": 158,
+     "width": 91,
+     "height": 15,
+     "text": "−42 dBm",
+     "color_fg": "#12150e",
+     "color_bg": "#e6e1ce",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "v.18"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 343,
+     "width": 127,
+     "height": 12,
+     "text": "KDO TAM JE",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.67"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "popis.120": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.121": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.122": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.123": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.125": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.126": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.128": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.129": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "v.16": {
+      "role": "stav",
+      "vec": "síť"
+     },
+     "v.18": {
+      "role": "hodnota"
+     },
+     "popis.67": {
+      "role": "popisek"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

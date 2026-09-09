@@ -1,0 +1,1828 @@
+{
+ "_o_souboru": [
+  "KONTROLNI SKUPINA osmeho a devateho tvaru pravidla 142 (verzalkove slovo",
+  "= jmeno ze SDK). Vsechny texty kitu (tabos-ui-kit HEAD fe66ed0, 67 listu",
+  "navrh-appky/*.dc.html, html.parser bez <script>/<style>), ve kterych je",
+  "verzalkove slovo mimo VETY_NENI_ROZHRANI a VETY_NENI_JMENO_SDK.",
+  "`vety` = texty s malymi pismeny (trida se v nich MERI), `stitky` = texty",
+  "cele verzalkami (stitek, trida se v nich NEMERI). `jmena_sdk` je zivy",
+  "vysledek validate_design.jmena_ze_sdk nad hlavickami SDK v den porizeni.",
+  "`etalon_nalezu` = jedine pravdive nalezy; cokoli navic je FANTOM (rohatka 0).",
+  "Kritik espos-oprava R2: 20 z 57 jmen SDK jsou bezna slova (SMALT, ZNAK,",
+  "PRIMO, INFO...); dnes 0 fantomu - tahle fixtura z toho dela mereni.",
+  "Regenerace: scratchpad testy/gen_fixtury_kolo1.py (sekce R142)."
+ ],
+ "kit": "fe66ed0",
+ "jmena_sdk": {
+  "odkud": "tabos.lock.json: sdk 0.7.0 @ e156dea",
+  "jmena": [
+   "BadState",
+   "Blika",
+   "Busy",
+   "Cached",
+   "Castecna",
+   "Debug",
+   "DetekceNedostupna",
+   "Error",
+   "Estimated",
+   "Hlavni",
+   "HostitelNedostupny",
+   "IAsync",
+   "IBleService",
+   "IClock",
+   "IFileService",
+   "IFtmService",
+   "IFx2Bringup",
+   "IGeneratorVzoru",
+   "IGpioService",
+   "IHwDiagnostics",
+   "ILocaleService",
+   "ILogger",
+   "INetworkService",
+   "INotificationService",
+   "IPowerService",
+   "IRadioInfo",
+   "ISettings",
+   "ISystemMetrics",
+   "ITelemetry",
+   "IThemeService",
+   "IUartService",
+   "IUsbBulkDevice",
+   "IUsbControlDevice",
+   "IUsbService",
+   "Info",
+   "Internal",
+   "InvalidArgument",
+   "Io",
+   "Jmeno",
+   "Live",
+   "MimoRozsah",
+   "Mock",
+   "Nenastaveno",
+   "Nezmereno",
+   "Neznama",
+   "Neznamy",
+   "None",
+   "NotFound",
+   "Ok",
+   "OutOfMemory",
+   "Pan154",
+   "PermissionDenied",
+   "Primo",
+   "Selhat",
+   "Smalt",
+   "Sviti",
+   "Unavailable",
+   "Uplna",
+   "VRozsahu",
+   "Warn",
+   "Warning",
+   "WifiHosted",
+   "Zadna",
+   "Zhasnuto",
+   "Znak"
+  ]
+ },
+ "vety": [
+  {
+   "text": ", hardware tam tedy je. Ale IHwDiagnostics žádné čtení RTC nemá, takže čas v razítkách běží jen od startu.",
+   "listy": [
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "1 × 2,4 GHz · TDM",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "16 kanálů · UART/I2C/SPI",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "294 PPI: 1 px = 0,0864 mm.",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "AFH mapa kanálů",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "AP NERTERA · kanál 6",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "Audit soukromí (RPA)",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "BLE spoj",
+   "listy": [
+    "SvorkaRfVyber"
+   ]
+  },
+  {
+   "text": "BLE spojení + Thread router",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "BLE: Coded PHY S2/S8, extended advertising",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "CSI analyzátor",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "CSI snímání přítomnosti",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "CSL · spánková diagnostika",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "Coded PHY prodlužuje pakety a zhoršuje soužití s Wi-Fi · viz list JEDNO RÁDIO",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "D1 má periodu 10,2 µs; D0 se mění jen při SCL v nule. Ověřte, že D1 vede na pin SCL.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "DESKRIPTOR ZAŘÍZENÍ 1 · to už jsou jen data",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "DOSTUPNOST NA TAB5 · odvozeno z hlaviček SDK a z tabulky handlerů esp_hosted 1.4.0, ne změřeno na zářízení",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "DTM TX/RX: výrobní test rádia po kanálech · vyžaduje druhý přístroj nebo tester",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "DTM test rádia",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "Dvě díry v SDK. Blokují každou záchrannou cestu z mrtvého konce — do té doby je jediná poctivá varianta text:",
+   "listy": [
+    "Dnes"
+   ]
+  },
+  {
+   "text": "ERROR cteni: NotFound",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "ESP-NOW / LR test",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "ESP-NOW RX + BLE sken",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "ESP32-C6 · 2,4 GHz",
+   "listy": [
+    "SvorkaRfVyber"
+   ]
+  },
+  {
+   "text": "ESP32-C6 · jediné rádio 2,4 GHz · časové dělení",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "ESP32-C6 · rev v0.2 · IDF 6.0.2",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "ESP32-P4 rev v1.3",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "ESP32-P4 rev v1.3, 2 jádra, 360 MHz",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "FIRMWARE ZÁMĚRNĚ: jmenovatel „ze 112“ vynechává — kolik adres projel, se neměří",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "FIRMWARE ZÁMĚRNĚ: místo SKEN píše ADRESNÍ PROSTOR — sonda začíná až na 0x10 a projetý rozsah nehlásí",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "FIRMWARE ZÁMĚRNĚ: takt 100 kHz netiskne — přístroj ho neměří",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "FPS · RAM · teplota",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "FT232R · USB–sériový převodník",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "FTM iniciátor",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "FTM laboratoř",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "Font má všech 30 českých písmen a od 25. 8. i − µ ± × → ← ′ Ω Δ (+1,6 kB). LVGL chybějící glyf",
+   "listy": [
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "G54 je hodinová svorka portu A a musí být volná: budí se do ní obdélník. Frekvence jsou pevné, aby známá pravda byla pokaždé stejná.",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "G54 · volná",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "HCI vlastní trasa",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "Hnuly se jen D0 a D1. D2–D15 drží nulu celé okno.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "I2C 100 kHz (98,0 nam.) · SCL = D1, SDA = D0",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "I2C sken · GPIO",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "IPv6 · iPerf · RCP testy",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "LA1010 pripojena 16 kanalu 1 MHz 4096 vzorku",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "LA1010 připojena",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "LA1010 · logický analyzátor",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "LA1010 · připojena",
+   "listy": [
+    "LogicAnalyzer"
+   ]
+  },
+  {
+   "text": "LA1010 · připojena · 16 kanálů",
+   "listy": [
+    "SvorkaLA"
+   ]
+  },
+  {
+   "text": "LA1010 · připojena · zóny A–D = skupiny po 4 kanálech",
+   "listy": [
+    "NegativLA"
+   ]
+  },
+  {
+   "text": "LA1010: nepřipojena",
+   "listy": [
+    "LogicAnalyzerPrazdny"
+   ]
+  },
+  {
+   "text": "NELZE VYLOŽIT · zvyšte vzorkování na 8 MHz",
+   "listy": [
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "NERTERA · náš spoj",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "NERTERA · responder ano",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "NERTERA · −58 dBm · kanál 6",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "NVS prostor",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "NVS · oddíl nvs",
+   "listy": [
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "Na USB-A je zařízení Cypress FX2 v zaváděcí podobě (77A1:01A2), adresa 1.",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "Nelze doložit, že data přišla z LA1010.",
+   "listy": [
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "OSA 12 s · KDY KTERÝ PROTOKOL POSLOUCHAL",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "PCAP → Wireshark (ot_rcp + Pyspinel); dešifrování jen s klíči vlastní sítě.",
+   "listy": [
+    "SvorkaRf154"
+   ]
+  },
+  {
+   "text": "PHY / propustnost",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "PHY kalibrace",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "PSRAM · volno",
+   "listy": [
+    "SystemMonitor",
+    "SystemMonitorPrazdny"
+   ]
+  },
+  {
+   "text": "Po 8. bitu SDA v jedničce. 0x1E je 7bitová; master může posílat 0x3C — ověřte v listu, než měníte čip.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "Podle štítku v paměti je to Kingst LA1010.",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "RAM interní · volno",
+   "listy": [
+    "SystemMonitor",
+    "SystemMonitorPrazdny"
+   ]
+  },
+  {
+   "text": "README.txt",
+   "listy": [
+    "Files",
+    "NegativFiles"
+   ]
+  },
+  {
+   "text": "RF sonda · BLE spoj",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "RF sonda · FTM vzdálenost",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "RRRR-MM-DD_mereni.la",
+   "listy": [
+    "SvorkaKlavesnice"
+   ]
+  },
+  {
+   "text": "RSSI po kanálech z C6 · 16-40 sloupců",
+   "listy": [
+    "SvorkaRfVodopadPrazdny"
+   ]
+  },
+  {
+   "text": "RTL-SDR v USB-A · 1 024 binů · jemné spektrum",
+   "listy": [
+    "SvorkaRfVodopadPrazdny"
+   ]
+  },
+  {
+   "text": "RTL-SDR · 1 024 binů · 10 řádků/s",
+   "listy": [
+    "SvorkaRfVodopad"
+   ]
+  },
+  {
+   "text": "Rozpoznání tvaru chce aspoň 3′. Proto padly stavy nesené typem čáry, které nezávisle navrhly tři návrhy ze čtyř. Na výkrese na A3 fungují; na 294 PPI ne.",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "SKEN 0x00–0x7F",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "Slave drží SCL v nule 42 µs po 9. hraně.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "Sniffer rámců + PCAP",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "TSF · časování beaconů",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "TWT energetický profil",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "TabOS 0.9.3 ESP32-P4 rev v1.3 IDF 5.4.2",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "Teplota CPU",
+   "listy": [
+    "SystemMonitor",
+    "SystemMonitorPrazdny"
+   ]
+  },
+  {
+   "text": "Tři celé transakce v okně. Čtvrtou uřízl konec záznamu — chcete-li ji celou, dejte spoušť na její START.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "Třikrát NACK na adresu 0x1E.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "UART 115 200 · 38 bajtů · 0 chyb",
+   "listy": [
+    "NegativLA",
+    "SvorkaLA"
+   ]
+  },
+  {
+   "text": "UART · 212 bajtů · 0 chyb",
+   "listy": [
+    "LogicAnalyzer"
+   ]
+  },
+  {
+   "text": "USB Inspector",
+   "listy": [
+    "SvorkaDomu",
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "USB-A host",
+   "listy": [
+    "SvorkaDiagnostics",
+    "SvorkaDomu",
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "USB-A · full-speed",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "VZTAH K NÁM · výklad",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "Vypadá to jako I2C. D1 = SCL, D0 = SDA.",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "Vypnutý. Zapnutím obsadím svorku G54; děličku tahle deska nemá.",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "Wi-Fi (ESP32-C6)",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "Wi-Fi 6: TWT, OFDMA, BSS Color",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "Wi-Fi STA + Thread koncové zařízení",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "Wi-Fi TCP TX + BLE Coded spojení",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "Wi-Fi UDP RX + BLE advertising",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "Wi-Fi · BLE · 802.15.4",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "Zatím žádná data · připoj sondu a stiskni START",
+   "listy": [
+    "LogicAnalyzerPrazdny"
+   ]
+  },
+  {
+   "text": "bLength 18, typ DEVICE",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "bez značky = HNED · značí se jen výjimka:",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "datasheet + errata + IDF 6.0.2",
+   "listy": [
+    "SvorkaRfMapa",
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "datum napřed by řadilo líp — RTC nelze číst",
+   "listy": [
+    "SvorkaKlavesnice"
+   ]
+  },
+  {
+   "text": "delší pakety Coded PHY žerou koexistenci s Wi-Fi",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "funkce je v API hlavičce, capability matrix čipu říká ne",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "graf → ciferník · průběh → svorkovnice D0–D15 · seznam → sloupec čísel řádku",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "lepších výsledků se dosahuje mezi dvěma ESP zařízeními",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "max. paket EP0 = 64 B",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "nezměřeno — chybí API",
+   "listy": [
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "plná kalibrace se spouští při poškozených datech, změně MAC nebo PHY knihovny; stojí ~100 ms navíc",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "porovnej RSSI a PER",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "protějšek musí být FTM responder; většina domácích AP není",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "přehled sweep · výřez RTL-SDR",
+   "listy": [
+    "SvorkaRfVodopadDva"
+   ]
+  },
+  {
+   "text": "přenos ESP-NOW v esp_hosted není doložen, scénář nejde spustit",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "připojena · NERTERA",
+   "listy": [
+    "SvorkaDomu",
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "připojena · NERTERA · −58 dBm · 2,4 GHz",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "smaž PHY kalibrační data",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "spící koncová zařízení během měření nevysílala — jsou neviditelná; úplný obraz vyžaduje klíče sítě a ZDO dotazy.",
+   "listy": [
+    "SvorkaRf154"
+   ]
+  },
+  {
+   "text": "sweep RSSI SX1262 · 862-928 MHz · hrubější krok",
+   "listy": [
+    "SvorkaRfVodopadPrazdny"
+   ]
+  },
+  {
+   "text": "ukládá se do NVS",
+   "listy": [
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "v RPC esp_hosted není přenos, jen konfigurační pole",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "z TX +4 dBm a RSSI −78 dBm",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "z rádia nebo SDK",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "z časů přijetí; norma přidává náhodnou prodlevu 0-10 ms, přesný interval cizího zařízení NELZE změřit",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "zařízení připojena · LA1010 + FT232R",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "· PER 802.15.4 vzrostl z 1,2 % na 18,6 %",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "· kanál 12 (802.15.4) leží uvnitř Wi-Fi CH1",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "ě→e · í→i · mezera→_ · velká→malá — projde FAT (CP437) i terminálem",
+   "listy": [
+    "SvorkaKlavesnice"
+   ]
+  },
+  {
+   "text": "Šum se neměří — chybí API (rx_ctrl.noise_floor v promiskuitním režimu). A dvě AP téhož SSID splynou, protože ApInfo nenese BSSID.",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "širokopásmové spektrum (TinySA) · SWR / return loss · Bluetooth Channel Sounding · odposlech cizích BLE spojení",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "— API pro ně není",
+   "listy": [
+    "Dnes"
+   ]
+  }
+ ],
+ "stitky": [
+  {
+   "text": "#A9C24A",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "#E4DFCC",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "#E6E1CE",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "#E9A63C",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "#FF7B5E",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "0 ZDROJ",
+   "listy": [
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "0.9.3 · IDF 5.4.2",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "5 OBSAH",
+   "listy": [
+    "SvorkaPreklad",
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "ADRESA",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "ADVERTISING STABILITA",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "ASCII",
+   "listy": [
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "BAJTY",
+   "listy": [
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "BLE",
+   "listy": [
+    "SvorkaRfKoex",
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "BLE HOST",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "BLOK",
+   "listy": [
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "BMI270",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "BUDIČ ZNÁMÉHO VZORU",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "CESTA",
+   "listy": [
+    "FilesPrazdny",
+    "NegativFiles",
+    "SvorkaFiles"
+   ]
+  },
+  {
+   "text": "CO JE NA DESCE",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "CO JEŠTĚ MĚŘENÍ ODHALILO",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "CO Z TOHO VYPADLO PRO KÓD",
+   "listy": [
+    "Dnes"
+   ]
+  },
+  {
+   "text": "CO ZA TO ČLOVĚK DOSTANE",
+   "listy": [
+    "SvorkaCislice"
+   ]
+  },
+  {
+   "text": "CSI",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "D1 · PERIODA",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "D10",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "D11",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "D12",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "D13",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "D14",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "D15",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "DOKLADY",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "DOPLNIT",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "DOSTUPNOST",
+   "listy": [
+    "SvorkaRf154"
+   ]
+  },
+  {
+   "text": "DVĚ CESTY VEN Z MRTVÉHO KONCE · ANI JEDNA DNES NEJDE",
+   "listy": [
+    "FilesStavy"
+   ]
+  },
+  {
+   "text": "DŘÍVE ODHADNUTO",
+   "listy": [
+    "SvorkaCislice"
+   ]
+  },
+  {
+   "text": "END·············",
+   "listy": [
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "ES7210",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "ES8388",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "ESP-NOW",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "ESP32-C6",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "EXPORT",
+   "listy": [
+    "SvorkaRf154"
+   ]
+  },
+  {
+   "text": "FIRMWARE",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "FPS",
+   "listy": [
+    "NegativMonitor",
+    "SvorkaMonitor",
+    "SystemMonitor",
+    "SystemMonitorPrazdny"
+   ]
+  },
+  {
+   "text": "FTM",
+   "listy": [
+    "SvorkaRfVyber"
+   ]
+  },
+  {
+   "text": "HOST",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "HRAN NA D0",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "IDF",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "INA226",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "INTERVAL",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "KALIBRACE",
+   "listy": [
+    "SvorkaRfFtm",
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "KALIBRACE RF",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "KAN.",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "KARTA",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "KDE JE VOLNO",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "KDO TAM JE",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "KOSTRA GRAFU",
+   "listy": [
+    "Main"
+   ]
+  },
+  {
+   "text": "KOSTRA SEZNAMU",
+   "listy": [
+    "Main"
+   ]
+  },
+  {
+   "text": "MAPA 37 DATOVÝCH KANÁLŮ",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "METODA",
+   "listy": [
+    "SvorkaCislice"
+   ]
+  },
+  {
+   "text": "NA KTERÉ SVORCE",
+   "listy": [
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "NA USB-A HOSTU",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "NAMĚŘENO — PLATÍ BEZ OHLEDU NA VÝKLAD",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "NAMĚŘENÁ HODNOTA",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "OBNOVA",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "OD STARTU",
+   "listy": [
+    "FilesPrazdny",
+    "HexPrazdny",
+    "NegativFiles",
+    "SvorkaBusLab",
+    "SvorkaDiagnostics",
+    "SvorkaDomu",
+    "SvorkaFiles",
+    "SvorkaHex",
+    "SvorkaLA",
+    "SvorkaLASmycka",
+    "SvorkaLASpoust",
+    "SvorkaMonitor",
+    "SvorkaNetwork",
+    "SvorkaPreklad",
+    "SvorkaPrekladOdmitnuti",
+    "SvorkaRf154",
+    "SvorkaRfBle",
+    "SvorkaRfFtm",
+    "SvorkaRfKoex",
+    "SvorkaRfMapa",
+    "SvorkaRfSystem",
+    "SvorkaRfVodopad",
+    "SvorkaRfVodopadDva",
+    "SvorkaRfVodopadPrazdny",
+    "SvorkaRfVyber",
+    "SvorkaSettings",
+    "SvorkaTerminal",
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "ODHAD PATH LOSS",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "ODVOZENO",
+   "listy": [
+    "SvorkaPreklad",
+    "SvorkaRf154",
+    "SvorkaRfBle",
+    "SvorkaRfFtm",
+    "SvorkaRfKoex",
+    "SvorkaRfMapa",
+    "SvorkaRfVodopad",
+    "SvorkaRfVodopadDva"
+   ]
+  },
+  {
+   "text": "OFFSET",
+   "listy": [
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "OKNO",
+   "listy": [
+    "HexPrazdny",
+    "SvorkaHex",
+    "SvorkaPreklad",
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "OMEZENÍ METODY",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "PALETA · ZMĚŘENÝ KONTRAST",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "PARAMETRY SPOJE",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "PAUZA",
+   "listy": [
+    "SvorkaRfVodopad",
+    "SvorkaRfVodopadDva"
+   ]
+  },
+  {
+   "text": "PEAK HOLD",
+   "listy": [
+    "SvorkaRfVodopadDva"
+   ]
+  },
+  {
+   "text": "PHY",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "PI4IOE1",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "PI4IOE2",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "PID",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "PORT",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "POSLEDNÍ START",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "POZOROVANÁ SÍŤ · ZIGBEE · KANÁL 20",
+   "listy": [
+    "SvorkaRf154"
+   ]
+  },
+  {
+   "text": "PROPUSTNOST",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "PSRAM · VOLNO",
+   "listy": [
+    "NegativMonitor",
+    "SvorkaMonitor"
+   ]
+  },
+  {
+   "text": "RAM INTERNÍ · VOLNO",
+   "listy": [
+    "NegativMonitor",
+    "SvorkaMonitor"
+   ]
+  },
+  {
+   "text": "RAMPA",
+   "listy": [
+    "SvorkaRfVodopad",
+    "SvorkaRfVodopadDva",
+    "SvorkaRfVodopadPrazdny"
+   ]
+  },
+  {
+   "text": "REVIZE",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "RF LAB",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "ROZHODNE",
+   "listy": [
+    "SvorkaCislice"
+   ]
+  },
+  {
+   "text": "ROZPTYL MĚŘENÍ",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "ROZSAH",
+   "listy": [
+    "NegativMonitor",
+    "SvorkaMonitor"
+   ]
+  },
+  {
+   "text": "RTC RX8130",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "RTL-SDR R820T2 · USB-A",
+   "listy": [
+    "SvorkaRfVodopad"
+   ]
+  },
+  {
+   "text": "RYCHLOST",
+   "listy": [
+    "SvorkaRfVodopad",
+    "SvorkaRfVodopadDva",
+    "SvorkaRfVodopadPrazdny",
+    "SvorkaTerminal",
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "RÁDIO ANO, FIRMWARE NE",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "SAFE MODE",
+   "listy": [
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "SC202CS",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "SCHOPNOSTI",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "SCL=D1 SDA=D0···",
+   "listy": [
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "SONDA",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "SOUBOR",
+   "listy": [
+    "HexPrazdny",
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "SPI",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA"
+   ]
+  },
+  {
+   "text": "SPOJ",
+   "listy": [
+    "SvorkaRfBle"
+   ]
+  },
+  {
+   "text": "ST7123",
+   "listy": [
+    "SvorkaBusLab"
+   ]
+  },
+  {
+   "text": "ST7123 · 1280×720 · 294 PPI",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "START",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA"
+   ]
+  },
+  {
+   "text": "STAV",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "STAV NESE TVAR RUČKY, NE BARVA",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "STOP",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA"
+   ]
+  },
+  {
+   "text": "SVORKA",
+   "listy": [
+    "SvorkaLASmycka",
+    "SvorkaLASpoust"
+   ]
+  },
+  {
+   "text": "TEPLOTA",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "TEPLOTA CPU",
+   "listy": [
+    "NegativMonitor",
+    "SvorkaCislice",
+    "SvorkaJazyk",
+    "SvorkaMonitor",
+    "SvorkaSettings"
+   ]
+  },
+  {
+   "text": "TRUBKA",
+   "listy": [
+    "SvorkaRfMapa"
+   ]
+  },
+  {
+   "text": "UART",
+   "listy": [
+    "LogicAnalyzer",
+    "LogicAnalyzerPrazdny",
+    "NegativLA",
+    "SvorkaLA"
+   ]
+  },
+  {
+   "text": "UPC1234567",
+   "listy": [
+    "SvorkaNetwork"
+   ]
+  },
+  {
+   "text": "UPTIME",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "USB 2.00",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "USB-A · CO TAM OPRAVDU JE",
+   "listy": [
+    "SvorkaLASmycka"
+   ]
+  },
+  {
+   "text": "USB-C",
+   "listy": [
+    "SvorkaDiagnostics"
+   ]
+  },
+  {
+   "text": "USB-C 5,05 V",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
+   "text": "USB-C CDC",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "USB-C CDC 115 200",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "UTF-8",
+   "listy": [
+    "SvorkaTerminal"
+   ]
+  },
+  {
+   "text": "VELIKOST",
+   "listy": [
+    "FilesPrazdny",
+    "NegativFiles",
+    "SvorkaFiles"
+   ]
+  },
+  {
+   "text": "VERDIKT",
+   "listy": [
+    "SvorkaRfKoex"
+   ]
+  },
+  {
+   "text": "VID",
+   "listy": [
+    "SvorkaUsb"
+   ]
+  },
+  {
+   "text": "VOLNO",
+   "listy": [
+    "FilesPrazdny",
+    "NegativFiles",
+    "SvorkaFiles"
+   ]
+  },
+  {
+   "text": "VZDÁLENOST K AP NERTERA",
+   "listy": [
+    "SvorkaRfFtm"
+   ]
+  },
+  {
+   "text": "VZORKY",
+   "listy": [
+    "NegativLA",
+    "SvorkaLA",
+    "SvorkaPreklad",
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "VÝKLAD SOFTWARU",
+   "listy": [
+    "SvorkaPrekladOdmitnuti"
+   ]
+  },
+  {
+   "text": "VÝKLAD SOFTWARU — VŠE OZNAČENÉ ODVOZENO NA NĚM STOJÍ",
+   "listy": [
+    "SvorkaPreklad"
+   ]
+  },
+  {
+   "text": "ZAPNUTO",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "ZDROJ",
+   "listy": [
+    "SvorkaDiagnostics",
+    "SvorkaRfMapa",
+    "SvorkaRfSystem",
+    "SvorkaRfVodopad",
+    "SvorkaRfVodopadDva",
+    "SvorkaRfVodopadPrazdny",
+    "SvorkaRfVyber"
+   ]
+  },
+  {
+   "text": "ZOBRAZENO",
+   "listy": [
+    "HexPrazdny",
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "ZOOM",
+   "listy": [
+    "SvorkaRfVodopadDva"
+   ]
+  },
+  {
+   "text": "ZÁKON POLARITY",
+   "listy": [
+    "SvorkaJazyk"
+   ]
+  },
+  {
+   "text": "··READY·········",
+   "listy": [
+    "SvorkaHex"
+   ]
+  },
+  {
+   "text": "ŘÍZENÝ TEST · 6 KROKŮ",
+   "listy": [
+    "SvorkaRfSystem"
+   ]
+  },
+  {
+   "text": "ŽIVOTNÍ FUNKCE",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  }
+ ],
+ "etalon_nalezu": [
+  {
+   "text": "ERROR cteni: NotFound",
+   "pojmenovani": "jmeno ze SDK",
+   "kus": "NotFound",
+   "kde": "SvorkaTerminal",
+   "proc": "hodnota enumu Error ze SDK v radku terminalu - pravdivy nalez F4 (kritik R4: cituje se ostrejsi CamelCase kus, ne ERROR)"
+  }
+ ]
+}

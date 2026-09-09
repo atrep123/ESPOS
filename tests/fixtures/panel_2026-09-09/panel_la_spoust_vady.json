@@ -1,0 +1,99 @@
+{
+ "_puvod": "panel_la_spoust, fotoprotokol 2026-09-09. Panel kresli titulek panelu UVNITR obsahu (pnadpis.15 z artboardu SvorkaLASpoust.dc.html), pas hlavicky 8..89 je PRAZDNY (jen Zpet shellu) a cara razitka na y=612 CHYBI (deska_regrese/ramec: 'cara razitka: inkoust 0 % sirky', 'titulek: v pasu hlavicky zadny inkoust'; rdf-overeni 7A). VADNA trida = panel jak je: pasy 'hlavicka' a 'razitko' jsou deklarovane, ale NEMAJI ZADNEHO CLENA. CISTA trida doplnuje titulek do pasu hlavicky a razitko z artboardu. ESPOS o pasu bez clena MLCI (R136 meri jen prvky proti pasum) - obe tridy jsou bez chyby a test to pribiji jako vadu BEZ MERIDLA. Souradnice ZAVRIT 1061,107 180x83 jsou z panelu (screeny3/12).",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 141,
+     "width": 455,
+     "height": 21,
+     "text": "SPOUŠŤ · co udělá značku v záznamu",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "pnadpis.15"
+    },
+    {
+     "type": "label",
+     "x": 1061,
+     "y": 107,
+     "width": 180,
+     "height": 83,
+     "text": "ZAVŘÍT",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "zavrit.1"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {},
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

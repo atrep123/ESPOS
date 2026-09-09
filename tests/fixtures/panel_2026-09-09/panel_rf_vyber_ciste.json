@@ -1,0 +1,257 @@
+{
+ "_puvod": "RF sonda / VYBER LISTU, fotoprotokol 2026-09-09 (screeny3/05). Titulek, stav a prvni tlacitko z artboardu SvorkaRfVyber.dc.html (titulek.8 36,39; stav.9 931,39; ovl_vybran.14 36,105 1208x81). Z PANELU: cara razitka na y=612 CHYBI a razitko nema zadneho clena (deska_regrese/ramec: 'cara razitka: inkoust 0 % sirky'; sest tlacitek jde az k y=676). VADNA trida = pas 'razitko' deklarovany bez clena; CISTA doplnuje razitko z artboardu. ESPOS o tom MLCI - vada BEZ MERIDLA (viz test).",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 39,
+     "width": 181,
+     "height": 23,
+     "text": "RF sonda · listy",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "titulek.8"
+    },
+    {
+     "type": "label",
+     "x": 931,
+     "y": 39,
+     "width": 205,
+     "height": 18,
+     "text": "jedno rádio, šest pohledů",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "stav.9"
+    },
+    {
+     "type": "button",
+     "x": 36,
+     "y": 105,
+     "width": 1208,
+     "height": 81,
+     "text": "Mapa",
+     "color_fg": "#a9c24a",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "ovl_vybran.14"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 628,
+     "width": 68,
+     "height": 15,
+     "text": "RÁDIO",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.21"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 661,
+     "width": 190,
+     "height": 17,
+     "text": "ESP32-C6 · 2,4 GHz",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.22"
+    },
+    {
+     "type": "label",
+     "x": 407,
+     "y": 628,
+     "width": 59,
+     "height": 15,
+     "text": "LISTŮ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.23"
+    },
+    {
+     "type": "label",
+     "x": 407,
+     "y": 660,
+     "width": 179,
+     "height": 19,
+     "text": "6 · otevřený Mapa",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.24"
+    },
+    {
+     "type": "label",
+     "x": 761,
+     "y": 631,
+     "width": 70,
+     "height": 12,
+     "text": "ZDROJ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.26"
+    },
+    {
+     "type": "label",
+     "x": 761,
+     "y": 660,
+     "width": 185,
+     "height": 15,
+     "text": "datasheet + errata",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.27"
+    },
+    {
+     "type": "label",
+     "x": 1125,
+     "y": 631,
+     "width": 118,
+     "height": 12,
+     "text": "OD STARTU",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.29"
+    },
+    {
+     "type": "label",
+     "x": 1125,
+     "y": 661,
+     "width": 73,
+     "height": 14,
+     "text": "6:44:02",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.30"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "titulek.8": {
+      "role": "titulek",
+      "pas": "hlavicka"
+     },
+     "stav.9": {
+      "role": "popisek",
+      "pas": "hlavicka"
+     },
+     "popis.21": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.22": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.23": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.24": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.26": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.27": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.29": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.30": {
+      "role": "hodnota",
+      "pas": "razitko"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

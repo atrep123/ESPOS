@@ -219,6 +219,12 @@ _MAPA_ZNACEK = {
     "ZNACKA_R143": "slovnik",
     "ZNACKA_R143_NEMERENO": "slovnik",
     "ZNACKA_R143_ROLE_NEMERENO": "slovnik",
+    # Prurez listu (`validate_design.slovnik_prurez`) - most ho vola nad
+    # vsemi scenami; znacky ma validator, trida musi byt i tady (kolo 1).
+    "ZNACKA_R143_PRUREZ": "slovnik",
+    "ZNACKA_R143_VEC_NEMERENO": "slovnik",
+    # Rule 152: nakreslena mrizka bez `data-kapacita` (kapacita se NEMERILA).
+    "ZNACKA_R152_NEMERENO": "kapacita",
     "ZNACKA_R144": "oriznuti-schrankou",
     "ZNACKA_R145": "pretekl-dolu",
     "ZNACKA_R146": "polarita",

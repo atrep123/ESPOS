@@ -1,0 +1,319 @@
+{
+ "_puvod": "RF sonda / Koex, fotoprotokol 2026-09-09 (screeny3/07). Razitko: cisla z artboardu SvorkaRfKoex.dc.html (popis.104 36,628; txt.105 36,660 161x15 bunka 278; popis.106 346,628; txt.107 346,661 46x14; popis.109 656,628; txt.110 656,661; popis.112 966,631; txt.113 966,661). Z PANELU: POKRYTI (txt.107) je PRAZDNE (deska_regrese: inkoust 0,0 % v bunce 346..624 x 661..675), RADIO '1 x 2,4 GHz TDM', SCENARU '5', OD STARTU '0:00:52'. Tabulka scenaru: hlavicky PROPUSTNOST 810,429 / ZTRATY 978,426 / VERDIKT 1072,429 jsou z artboardu; bunky radku A (prop.A 810,461 153x14; ztr.A 978,461 78x14; verd.A 1128,461) jsou z PANELU - artboard v tech sloupcich zadny prvek NEMA (kresli jen verdikt), panel je kresli s hlavickou a bez hodnoty v peti radcich (kritik obrazovek 5: 'sloupce PROPUSTNOST a ZTRATY 0/0 px'). Ve vadne tride jsou tri prvky bez textu = R138 x3; cista trida rika 'nezmereno'.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 628,
+     "width": 68,
+     "height": 15,
+     "text": "RÁDIO",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.104"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 660,
+     "width": 161,
+     "height": 15,
+     "text": "1 × 2,4 GHz · TDM",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.105"
+    },
+    {
+     "type": "label",
+     "x": 346,
+     "y": 628,
+     "width": 90,
+     "height": 15,
+     "text": "POKRYTÍ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.106"
+    },
+    {
+     "type": "label",
+     "x": 346,
+     "y": 661,
+     "width": 46,
+     "height": 14,
+     "text": "nezměřeno",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.107"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 628,
+     "width": 99,
+     "height": 15,
+     "text": "SCÉNÁŘŮ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.109"
+    },
+    {
+     "type": "label",
+     "x": 656,
+     "y": 661,
+     "width": 11,
+     "height": 14,
+     "text": "5",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.110"
+    },
+    {
+     "type": "label",
+     "x": 966,
+     "y": 631,
+     "width": 118,
+     "height": 12,
+     "text": "OD STARTU",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.112"
+    },
+    {
+     "type": "label",
+     "x": 966,
+     "y": 661,
+     "width": 67,
+     "height": 14,
+     "text": "0:00:52",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.113"
+    },
+    {
+     "type": "label",
+     "x": 810,
+     "y": 429,
+     "width": 153,
+     "height": 12,
+     "text": "PROPUSTNOST",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.65"
+    },
+    {
+     "type": "label",
+     "x": 978,
+     "y": 426,
+     "width": 78,
+     "height": 15,
+     "text": "ZTRÁTY",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.66"
+    },
+    {
+     "type": "label",
+     "x": 1072,
+     "y": 429,
+     "width": 172,
+     "height": 12,
+     "text": "VERDIKT",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.67"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 461,
+     "width": 15,
+     "height": 14,
+     "text": "A",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt_mut.68"
+    },
+    {
+     "type": "label",
+     "x": 810,
+     "y": 461,
+     "width": 153,
+     "height": 14,
+     "text": "nezměřeno",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "prop.A"
+    },
+    {
+     "type": "label",
+     "x": 978,
+     "y": 461,
+     "width": 78,
+     "height": 14,
+     "text": "nezměřeno",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "ztr.A"
+    },
+    {
+     "type": "label",
+     "x": 1128,
+     "y": 461,
+     "width": 116,
+     "height": 14,
+     "text": "nezměřeno",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "verd.A"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "popis.104": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.105": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.106": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.107": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.109": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.110": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.112": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.113": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.65": {
+      "role": "popisek"
+     },
+     "popis.66": {
+      "role": "popisek"
+     },
+     "popis.67": {
+      "role": "popisek"
+     },
+     "prop.A": {
+      "role": "hodnota"
+     },
+     "ztr.A": {
+      "role": "hodnota"
+     },
+     "verd.A": {
+      "role": "hodnota"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

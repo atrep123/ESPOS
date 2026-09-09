@@ -1,0 +1,44 @@
+{
+ "_puvod": [
+  "R147 a SVISLA cara. Vodorovne cary meri tab5_cary_vady.json; tahle dvojice",
+  "nese caru [x, 612, 1, 88] = sloupec razitka (rdf-overeni 7B/7F, mapa mezer).",
+  "Cisla inkoustu jsou ve tvaru, jaky vozi most u popisku (viz tab5_cary_vady).",
+  "VADY: cara x=640 jde skrz inkoust 600..700. CISTE: cara x=590 je 10 px vlevo."
+ ],
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "navrh": {
+    "cary": [
+     [
+      590,
+      612,
+      1,
+      88
+     ]
+    ]
+   },
+   "widgets": [
+    {
+     "type": "label",
+     "x": 600,
+     "y": 640,
+     "width": 100,
+     "height": 12,
+     "text": "kanal 7 spoust",
+     "color_fg": "#e6e1ce",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "hodnota.7"
+    }
+   ]
+  }
+ }
+}

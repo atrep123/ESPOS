@@ -1,0 +1,253 @@
+{
+ "_puvod": "panel_la_smycka, fotoprotokol 2026-09-09. Panel kresli titulek panelu UVNITR obsahu (pnadpis.15 z artboardu SvorkaLASmycka.dc.html), pas hlavicky 8..89 je PRAZDNY (jen Zpet shellu) a cara razitka na y=612 CHYBI (deska_regrese/ramec: 'cara razitka: inkoust 0 % sirky', 'titulek: v pasu hlavicky zadny inkoust'; rdf-overeni 7A). VADNA trida = panel jak je: pasy 'hlavicka' a 'razitko' jsou deklarovane, ale NEMAJI ZADNEHO CLENA. CISTA trida doplnuje titulek do pasu hlavicky a razitko z artboardu. ESPOS o pasu bez clena MLCI (R136 meri jen prvky proti pasum) - obe tridy jsou bez chyby a test to pribiji jako vadu BEZ MERIDLA. Souradnice ZAVRIT 1061,107 180x83 jsou z panelu (screeny3/13). Veta panelu 'VYPNUTO. Zapnutim obsadim G54 (zaklad) a G54 (delicka /8) - to je Port A.' je VECNE spatne (kritik A-2) a zadne pravidlo nad navrhem to nemeri - proto tu neni; meri ji tabos-core/tools/brana_piny.py nad zdrojem.",
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170F",
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 141,
+     "width": 482,
+     "height": 26,
+     "text": "SMYČKA · zavedení sondy a budič vzoru",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "pnadpis.15"
+    },
+    {
+     "type": "label",
+     "x": 1061,
+     "y": 107,
+     "width": 180,
+     "height": 83,
+     "text": "ZAVŘÍT",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "zavrit.1"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 39,
+     "width": 300,
+     "height": 23,
+     "text": "Logic Analyzer · smyčka",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "titulek.8"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 631,
+     "width": 74,
+     "height": 12,
+     "text": "SONDA",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.33"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 660,
+     "width": 144,
+     "height": 15,
+     "text": "kandidát čeká",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.34"
+    },
+    {
+     "type": "label",
+     "x": 478,
+     "y": 628,
+     "width": 67,
+     "height": 15,
+     "text": "BUDIČ",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.35"
+    },
+    {
+     "type": "label",
+     "x": 478,
+     "y": 660,
+     "width": 82,
+     "height": 19,
+     "text": "vypnutý",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.36"
+    },
+    {
+     "type": "label",
+     "x": 765,
+     "y": 631,
+     "width": 84,
+     "height": 12,
+     "text": "SVORKA",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.38"
+    },
+    {
+     "type": "label",
+     "x": 765,
+     "y": 660,
+     "width": 111,
+     "height": 15,
+     "text": "G54 · volná",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.39"
+    },
+    {
+     "type": "label",
+     "x": 1125,
+     "y": 631,
+     "width": 118,
+     "height": 12,
+     "text": "OD STARTU",
+     "color_fg": "#9ba28d",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "popis.41"
+    },
+    {
+     "type": "label",
+     "x": 1125,
+     "y": 661,
+     "width": 62,
+     "height": 14,
+     "text": "4:20:11",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "txt.42"
+    }
+   ],
+   "navrh": {
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ],
+     "navigace": [
+      1148,
+      8,
+      112,
+      81
+     ],
+     "razitko": [
+      20,
+      612,
+      1240,
+      88
+     ]
+    },
+    "prvky": {
+     "titulek.8": {
+      "role": "titulek",
+      "pas": "hlavicka"
+     },
+     "popis.33": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.34": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.35": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.36": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.38": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.39": {
+      "role": "hodnota",
+      "pas": "razitko"
+     },
+     "popis.41": {
+      "role": "popisek",
+      "pas": "razitko"
+     },
+     "txt.42": {
+      "role": "hodnota",
+      "pas": "razitko"
+     }
+    },
+    "slovnik": {
+     "microSD": [
+      "detekce nedostupná",
+      "není vložena",
+      "vložena, nepřipojena",
+      "připojena"
+     ],
+     "hodiny": [
+      "nenastaveny",
+      "nastaveny podle sítě",
+      "nezměřeno"
+     ],
+     "USB-A host": [
+      "hostitel nedostupný",
+      "bez zařízení",
+      "zařízení připojena"
+     ],
+     "síť": [
+      "nepřipojena",
+      "připojena",
+      "nezměřeno"
+     ]
+    },
+    "jmena_sdk": [
+     "IHwDiagnostics",
+     "ISystemMetrics",
+     "INetworkService",
+     "IClock",
+     "ISettings",
+     "ILogger",
+     "NotFound",
+     "InvalidArgument",
+     "Unavailable"
+    ]
+   }
+  }
+ }
+}

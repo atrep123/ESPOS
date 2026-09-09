@@ -282,6 +282,12 @@ ZNACKA_R142_VYKLAD = "list je vyklad o navrhu"
 ZNACKA_R143 = "jiny stav teze veci"
 ZNACKA_R143_NEMERENO = "slovnik stavu chybi"
 ZNACKA_R143_ROLE_NEMERENO = "slovnik stavu: zadny prvek s roli stav"
+# Prurez listu (cista funkce `slovnik_prurez`; vola ji most nad VSEMI
+# scenami najednou, validator sam vidi jen jeden dokument): dva listy
+# tvrdi o teze veci dva ruzne stavy ze slovniku, a vec ze slovniku,
+# o ktere zadny list netvrdi STAV (zavora per-VEC, ne per-list).
+ZNACKA_R143_PRUREZ = "listy si odporuji o stavu teze veci"
+ZNACKA_R143_VEC_NEMERENO = "slovnik stavu: vec bez jedineho tvrzeni"
 ZNACKA_R144 = "text oriznuty schrankou"
 ZNACKA_R145 = "text pretekl dolu"
 ZNACKA_R146 = "cizi text na smaltu"
@@ -295,6 +301,11 @@ ZNACKA_R150_NEMERENO = "paleta navrhu nedodana"
 ZNACKA_R150_ODCHYLKA = "list ma vlastni paletu"
 ZNACKA_R151 = "text se lepi na ram"
 ZNACKA_R151_NEMERENO = "soustava odsazeni nedodana"
+# Rule 152: mrizka, kterou artboard NAKRESLIL (sest a vic stejnych prvku
+# teze tridy srovnanych do radku a sloupcu), ale NEDEKLAROVAL
+# (`navrh.mrizky` bez zaznamu tehoz jmena). Rule 140 nad ni nema co merit
+# a jeji ticho vypadalo jako zelena - viz `_r152_nalezy`.
+ZNACKA_R152_NEMERENO = "mrizka bez kapacity"
 # Rule 17: neaktivni ovladac je z kontrastu VYNATY (WCAG 2.1, 1.4.3). Ticho
 # ale musi byt VIDET, jinak se vyjimka neda odlisit od zmereneho "v poradku"
 # - hlasi se proto tehdy (a jen tehdy), kdyz opravdu neco vyjmula.
@@ -3282,6 +3293,92 @@ def _r140_nalezy(pfx: str, mrizky: list[dict[str, Any]]) -> list[Issue]:
     return issues
 
 
+# R152: od kolika stejnych prvku je to mrizka. Pet a min je rada nebo
+# dvojice sloupcu (razitko ma ctyri sloty, zalozky tri); sest je nejmensi
+# pocet, ktery se uz musi lamat do druheho radku nebo sloupce, a prave
+# tam se pri zmene poctu polozek ztraci ta posledni. Zive protejsky:
+# Domov 4x3 = 12 slotu (artboard), firmware kreslil 2x5 = 10 na 11 appek.
+R152_MIN_PRVKU = 6
+
+
+def _r152_nalezy(
+    pfx: str,
+    widgets: list[Any],
+    mrizky: list[dict[str, Any]],
+    blok_navrh: bool,
+) -> list[Issue]:
+    """Rule 152: nakreslena mrizka bez deklarovane kapacity (WARN, NEMERENO).
+
+    Rule 140 meri kapacitu proti poctu polozek, ale JEN tam, kde generator
+    napsal `data-kapacita`. Na 62 listech kitu to byly DVA (kritik
+    espos-brany, bod 8): jedenact dlazdic bez deklarace = uplne ticho, a to
+    ticho vypadalo v souhrnu brany stejne jako "zmereno, sedi". Tohle
+    pravidlo tu diru zavira z druhe strany: kdyz scena OBSAHUJE neco, co
+    vypada jako mrizka, a `navrh.mrizky` o tom neni zaznam, rekne se
+    NAHLAS, ze se kapacita NEMERILA. Most kitu je fail-closed (kazda znacka
+    `*_NEMERENO` = nenulovy navratovy kod), takze list s nedeklarovanou
+    mrizkou uz zelene neprojde.
+
+    CO JE MRIZKA - a je to zmerena mez, ne vkus:
+
+    * prvky TEZE TRIDY (skupina podle `_widget_id` pred prvni teckou, tedy
+      jmeno tridy z generatoru: `dlazdice.0` ... `dlazdice.11`),
+    * TEZE VELIKOSTI (stejna sirka i vyska; razitko ma sloty ruznych sirek
+      a mrizka to neni - to je kontrolni skupina pravidla),
+    * je jich nejmene `R152_MIN_PRVKU`,
+    * a stoji v NEJMENE DVOU sloupcich a NEJMENE DVOU radcich (aspon dve
+      ruzne leve a dve ruzne horni hrany). Jeden sloupec je SEZNAM, ne
+      mrizka: seznam souboru nebo sestnact kanalu analyzatoru ma pocet
+      radku dany daty a roluje, kapacita tam neni vlastnost kresby.
+      Tohle je POJMENOVANA MEZ pravidla: seznam o sestnacti radcich,
+      ktery neroluje, projde. Kdo ho chce hlidat, deklaruje `data-kapacita`
+      rukou (gen_appky to u LA uz dela) - Rule 140 ho pak meri.
+
+    Deklarace se hleda podle JMENA: zaznam v `navrh.mrizky` se jmenem
+    skupiny. Zaznam bez poctu polozek staci - o tom, ze se nemerilo,
+    mluvi uz Rule 140 (`ZNACKA_R140_NEMERENO`) a tataz obet nesmi dostat
+    dva nalezy.
+
+    Gatovano DATY: bez bloku `navrh` pravidlo mlci (dokument editoru
+    merena data legitimne nema, viz `NAVRH_KLIC`). Neviditelne prvky se
+    preskakuji jako v Rule 135 a 136.
+    """
+    if not blok_navrh:
+        return []
+    deklarovane = {m["jmeno"] for m in mrizky}
+    skupiny: dict[tuple[str, int, int], list[tuple[int, int]]] = {}
+    for w in widgets:
+        if not isinstance(w, dict) or w.get("visible") is False:
+            continue
+        skupina = _widget_group(w)
+        if not skupina:
+            continue
+        x, y, ww, hh = (w.get(k) for k in ("x", "y", "width", "height"))
+        if not all(_is_int(v) for v in (x, y, ww, hh)) or ww <= 0 or hh <= 0:
+            continue
+        skupiny.setdefault((skupina, int(ww), int(hh)), []).append((int(x), int(y)))
+    issues: list[Issue] = []
+    for (skupina, ww, hh), rohy in sorted(skupiny.items()):
+        if len(rohy) < R152_MIN_PRVKU:
+            continue
+        sloupcu = len({x for x, _ in rohy})
+        radku = len({y for _, y in rohy})
+        if sloupcu < 2 or radku < 2:
+            continue
+        if skupina in deklarovane:
+            continue
+        issues.append(
+            Issue(
+                "WARN",
+                f"{pfx}: {ZNACKA_R152_NEMERENO}: skupina '{skupina}' ma {len(rohy)} "
+                f"stejnych prvku {ww}x{hh} ve {sloupcu} sloupcich a {radku} radcich, "
+                f"ale navrh.mrizky o ni nema zaznam - kapacita se NEMERILA "
+                f"(generator ma napsat data-kapacita a data-polozky)",
+            )
+        )
+    return issues
+
+
 # R141: LV_DPI_DEF z lv_conf.h (`#define LV_DPI_DEF 130     /*[px/inch]*/`)
 # a CONFIG_LV_DPI_DEF ze sdkconfigu (`CONFIG_LV_DPI_DEF=130`). Zakomentovany
 # radek ani `# CONFIG_LV_DPI_DEF is not set` se chytit nesmi - to je prave
@@ -4163,6 +4260,95 @@ def _r143_nalezy(
     return issues
 
 
+def slovnik_prurez(
+    tvrzeni: dict[str, list[tuple[str, str]]],
+    slovnik: dict[str, dict[str, Any]],
+) -> list[Issue]:
+    """Prurez listu: co o teze veci tvrdi VSECHNY listy dohromady. CISTA.
+
+    Rule 143 meri kazdy list ZVLAST proti jednomu slovniku ("drzi se list
+    slovniku?"). To ale nechyti rozpor, kde oba listy slovnik DRZI a presto
+    si odporuji: Diagnostics rika o microSD "vlozena, nepripojena", Files
+    "neni vlozena" - obe vety JSOU ve slovniku, jen kazda popisuje jiny
+    svet. Fotoprotokol A-4: pet appek, pet vet o jedne karte. Validator
+    vidi jeden dokument, takze tohle je funkce pro MOST, ktery ma vsechny
+    sceny najednou; sem patri proto, ze slovnik i shoda stavu se maji merit
+    JEDNIM kodem, ne dvema opisy.
+
+    Vstup:
+
+    * ``tvrzeni``: ``{jmeno_listu: [(vec, text), ...]}`` - JEN prvky s roli
+      `stav` (slib nese role, ne slovo - tataz zavora jako u Rule 143);
+    * ``slovnik``: vysledek `_slovnik_ze_sceny` (klic = vec casefold,
+      hodnota ``{"jmeno", "stavy"}``).
+
+    Vystup je seznam nalezu, deterministicky serazeny podle veci:
+
+    * **`ZNACKA_R143_PRUREZ`** (WARN): o jedne veci tvrdi dva a vic listu
+      dva a vic RUZNYCH stavu ze slovniku. Hlaska vyjmenuje, ktery list
+      tvrdi co - to je ta veta, kterou clovek potrebuje, aby vybral JEDEN
+      zdroj pravdy.
+    * **`ZNACKA_R143_VEC_NEMERENO`** (WARN): vec ze slovniku, o ktere zadny
+      list netvrdi stav. Zavora je per-VEC: kritik (espos-vse-oprava, 4.5)
+      dolozil, ze `USB-A host` a `sit` nemaji roli `stav` na zadnem ze 62
+      listu, a per-listova zavora Rule 143 o tom nerekla ani slovo - dve ze
+      ctyr polozek slovniku se nikdy s nicim neporovnaly a "0 nalezu" se
+      cetlo jako "0 rozporu".
+
+    Normalizace je tataz jako v Rule 143: bez ohledu na velikost pismen a na
+    nasobne mezery, diakritika se NEPREVADI. Stav se hleda PODRETEZCEM
+    a bere se NEJDELSI shoda: "pripojena" je podretezcem "vlozena,
+    nepripojena", takze bez teto volby by veta "vlozena, nepripojena"
+    tvrdila DVA stavy naraz a prurez by obvinil sam sebe. Text, ktery
+    zadny stav neobsahuje, sem NEPATRI - hlasi ho Rule 143 na svem listu
+    a dva nalezy na jednu obet se nepisou. Tentyz list, ktery tvrdi dva
+    ruzne stavy, je rozpor stejne jako dva listy: obrazovka nemuze o karte
+    tvrdit dve veci naraz.
+    """
+    issues: list[Issue] = []
+    # vec (casefold) -> stav -> serazena jmena listu
+    tvrdi: dict[str, dict[str, set[str]]] = {klic: {} for klic in slovnik}
+    for list_jmeno, polozky in tvrzeni.items():
+        for vec, text in polozky:
+            zaznam = slovnik.get(str(vec).casefold())
+            if zaznam is None:
+                continue
+            t = _zhustit_mezery(str(text)).casefold()
+            if not t or t in POMLCKY:
+                continue
+            shody = [s for s in zaznam["stavy"] if s.casefold() in t]
+            if not shody:
+                continue
+            stav = max(shody, key=len)
+            tvrdi[str(vec).casefold()].setdefault(stav, set()).add(str(list_jmeno))
+    for klic in sorted(tvrdi):
+        jmeno = slovnik[klic]["jmeno"]
+        stavy = tvrdi[klic]
+        if not stavy:
+            issues.append(
+                Issue(
+                    "WARN",
+                    f"{ZNACKA_R143_VEC_NEMERENO}: o veci '{jmeno}' netvrdi stav zadny "
+                    f"list (slovnik zna: {' | '.join(slovnik[klic]['stavy'])}) - "
+                    f"slovnik se s nicim NEPOROVNAL",
+                )
+            )
+            continue
+        if len(stavy) < 2:
+            continue
+        popis = "; ".join(
+            f"'{stav}' tvrdi {', '.join(sorted(listy))}" for stav, listy in sorted(stavy.items())
+        )
+        issues.append(
+            Issue(
+                "WARN",
+                f"{ZNACKA_R143_PRUREZ}: '{jmeno}' ma {len(stavy)} ruzne stavy "
+                f"na {len(set().union(*stavy.values()))} listech: {popis}",
+            )
+        )
+    return issues
+
+
 # ── Main validator ─────────────────────────────────────────────────────────
 
 
@@ -4269,6 +4455,13 @@ def validate_data(
         navrh_mrizky, mrizky_nalezy = _mrizky_ze_sceny(scene, pfx)
         issues.extend(mrizky_nalezy)
         issues.extend(_r140_nalezy(pfx, navrh_mrizky))
+
+        # ── Rule 152: nakreslena mrizka bez deklarovane kapacity ──
+        # Druha strana teze diry: Rule 140 mlci bez `data-kapacita`, tohle
+        # rekne, ze mlcela (viz `_r152_nalezy`). Gatovano blokem `navrh`.
+        issues.extend(
+            _r152_nalezy(pfx, widgets, navrh_mrizky, isinstance(scene.get(NAVRH_KLIC), dict))
+        )
 
         # ── Rule 143: slovnik stavu teze veci ──
         # Slovnik je vlastnost SCENY, stejne jako mrizky: kit ho vozi
