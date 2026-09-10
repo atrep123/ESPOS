@@ -1,7 +1,7 @@
 {
  "_o_souboru": [
   "KONTROLNI SKUPINA osmeho a devateho tvaru pravidla 142 (verzalkove slovo",
-  "= jmeno ze SDK). Vsechny texty kitu (tabos-ui-kit HEAD fe66ed0, 67 listu",
+  "= jmeno ze SDK). Vsechny texty kitu (tabos-ui-kit, 42 listu",
   "navrh-appky/*.dc.html, html.parser bez <script>/<style>), ve kterych je",
   "verzalkove slovo mimo VETY_NENI_ROZHRANI a VETY_NENI_JMENO_SDK.",
   "`vety` = texty s malymi pismeny (trida se v nich MERI), `stitky` = texty",
@@ -10,9 +10,15 @@
   "`etalon_nalezu` = jedine pravdive nalezy; cokoli navic je FANTOM (rohatka 0).",
   "Kritik espos-oprava R2: 20 z 57 jmen SDK jsou bezna slova (SMALT, ZNAK,",
   "PRIMO, INFO...); dnes 0 fantomu - tahle fixtura z toho dela mereni.",
-  "Regenerace: scratchpad testy/gen_fixtury_kolo1.py (sekce R142)."
+  "Regenerace: `python tests/fixtures/gen_verzalky_kit.py` (od 10. 9. 2026",
+  "v repu; do te doby lezela jen ve scratchpadu, takze slib testu",
+  "`test_zivy_kit_snimek_nezastaral` -- 'fixtura se ma prepsat, ne tise",
+  "starnout' -- nemel cim byt splnen). Generator prepisuje JEN `vety`",
+  "a `stitky`; `jmena_sdk` a `etalon_nalezu` jsou lidske rozhodnuti.",
+  "Snimek 10. 9. 2026: kampan kit-dorovnani (System Monitor 4 -> 6 velicin,",
+  "Domov bez Zpet, veta hodin 'chybi API' -> 'pristroj cas necte')."
  ],
- "kit": "fe66ed0",
+ "kit": "a660d7b+kit-dorovnani",
  "jmena_sdk": {
   "odkud": "tabos.lock.json: sdk 0.7.0 @ e156dea",
   "jmena": [
@@ -681,6 +687,12 @@
    ]
   },
   {
+   "text": "auto 60 s (FPS, RAM)",
+   "listy": [
+    "SvorkaMonitor"
+   ]
+  },
+  {
    "text": "bLength 18, typ DEVICE",
    "listy": [
     "SvorkaUsb"
@@ -733,12 +745,6 @@
    "text": "max. paket EP0 = 64 B",
    "listy": [
     "SvorkaUsb"
-   ]
-  },
-  {
-   "text": "nezměřeno — chybí API",
-   "listy": [
-    "SvorkaSettings"
    ]
   },
   {
@@ -1637,6 +1643,12 @@
    ]
   },
   {
+   "text": "TEPLOTA RÁDIA · C6",
+   "listy": [
+    "SvorkaMonitor"
+   ]
+  },
+  {
    "text": "TRUBKA",
    "listy": [
     "SvorkaRfMapa"
@@ -1731,6 +1743,12 @@
     "FilesPrazdny",
     "NegativFiles",
     "SvorkaFiles"
+   ]
+  },
+  {
+   "text": "VYTÍŽENÍ CPU",
+   "listy": [
+    "SvorkaMonitor"
    ]
   },
   {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate ESP32OS UI design JSON — comprehensive 151-rule checker.
+Validate ESP32OS UI design JSON — comprehensive 153-rule checker.
 
 Covers:
 - required fields + basic types
@@ -58,6 +58,11 @@ Covers:
   distance, so the same 14 px passes on one panel and fails on another),
   a colour that is not in the palette, and text glued to the frame instead
   of sitting on the mandatory indent
+- the shape of the navigation tree: a Back control belongs on every screen
+  EXCEPT the root, and on the root it is a promise with nothing behind it.
+  Both classes are measured, and which one a screen is in comes from a flag
+  the generator emits (`navrh.koren`), never from the absence of the button -
+  that absence is the very thing the rule is there to judge
 
 Usage:
   python tools/validate_design.py main_scene.json
@@ -232,8 +237,17 @@ TOUCH_WIDGET_TYPES = {"button", "checkbox", "radiobutton", "slider", "textbox"}
 #     "prvky": {"<_widget_id>": {"rodic": [x, y, sirka, vyska],
 #                                "pas": "razitko",
 #                                "sirka_textu": 402.7,
-#                                "sirka_bunky": 388.0}}
+#                                "sirka_bunky": 388.0}},
+#     "koren": false,
+#     "navigace": {"x": 1148, "y": 8, "w": 112, "h": 81}
 #   }
+#
+# `koren` a `navigace` patri Rule 153 a plati o `koren` neco, co o zadnem
+# jinem klici neplati: VOZI SE VZDY, i jako `false`. Nepritomny klic znamena
+# "generator o tom nerekl nic" a to je pro tohle pravidlo JINA odpoved nez
+# "neni koren" - bez rozdilu mezi nimi by se nedalo poznat, ze listu tlacitko
+# Zpet CHYBI. `navigace` je naopak DEKLARACE mista z `tokens.json` a chybet
+# smi; poloha se pak nemeri a rekne se to nahlas.
 #
 # Kdyz blok CHYBI, pravidla nad nim MLCI - a je to zamer, ne diera: dokument,
 # ktery si editor stavi sam, merena data z prohlizece legitimne nema, a
@@ -306,6 +320,19 @@ ZNACKA_R151_NEMERENO = "soustava odsazeni nedodana"
 # (`navrh.mrizky` bez zaznamu tehoz jmena). Rule 140 nad ni nema co merit
 # a jeji ticho vypadalo jako zelena - viz `_r152_nalezy`.
 ZNACKA_R152_NEMERENO = "mrizka bez kapacity"
+# Rule 153: "Zpet jen mimo koren". Navigace je STROM a Zpet je slib, ze
+# se z listu da vratit o patro vys. Na KORENI (Domov) takove patro NENI,
+# takze tlacitko tam je slib bez pokryti - tentyz druh vady jako zakazane
+# tlacitko, ktere nic nespusti. A obracene: na kazdem NEKORENOVEM listu
+# je Zpet JEDINA cesta zpatky, takze jeho chybeni je slepa ulicka.
+# Obe tridy jsou vada a obe se meri; rozhoduje priznak `navrh.koren`,
+# ktery vydava GENERATOR (viz `_r153_nalezy`).
+ZNACKA_R153_KOREN = "koren ma tlacitko Zpet"
+ZNACKA_R153_CHYBI = "list nema tlacitko Zpet"
+ZNACKA_R153_MISTO = "tlacitko Zpet mimo sve misto"
+ZNACKA_R153_VIC = "list ma vic tlacitek Zpet"
+ZNACKA_R153_NEMERENO = "priznak korene nedodan"
+ZNACKA_R153_MISTO_NEMERENO = "misto pro Zpet nedodano"
 # Rule 17: neaktivni ovladac je z kontrastu VYNATY (WCAG 2.1, 1.4.3). Ticho
 # ale musi byt VIDET, jinak se vyjimka neda odlisit od zmereneho "v poradku"
 # - hlasi se proto tehdy (a jen tehdy), kdyz opravdu neco vyjmula.
@@ -3104,6 +3131,263 @@ def _soustava_ze_sceny(
     return ven, issues
 
 
+# R153: cim se pozna OVLADAC ZPET. Dva podpisy teze veci, a schvalne dva:
+#
+#   * TRIDA z generatoru (`_widget_id` "zpet.10" -> skupina "zpet"), tedy
+#     jmeno, ktere te veci dal ten, kdo ji kreslil;
+#   * PAS "navigace", tedy misto, ktere je pro navigaci vyhrazene.
+#
+# Kdyby stacil jeden, ma pravidlo jedno misto, kde se da umlcet: prejmenovana
+# trida schova Zpet nakresleny na koreni (falesna zelena), a zapomenuty
+# `data-pas` zase udela z existujiciho tlacitka "chybi". Sjednoceni obou
+# podpisu tuhle diru zavira z obou stran.
+#
+# Pas ma ale UZSI podminku: musi to byt DOTYKOVY prvek. Duvod je zivy, ne
+# teoreticky - artboard `Ramec` kresli do tehoz pasu obdelnik `.zona`, ktery
+# jen UKAZUJE, kde navigace lezi. Je to panel, ne tlacitko, a bez teto pulky
+# by ho pravidlo obvinilo, ze je Zpet. To je kontrolni skupina pravidla.
+R153_TRIDA = "zpet"
+R153_PAS = "navigace"
+
+
+def _koren_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[bool | None, list[Issue]]:
+    """Precte ``navrh.koren`` -> (True/False/None, nalezy).
+
+    ``None`` znamena "generator o tom nerekl nic" - NE "neni koren".
+    Prave proto vozi most klic VZDY, i jako ``false``: kdyby ticho znamenalo
+    obe veci naraz, nemelo by pravidlo z ceho poznat, ze listu Zpet CHYBI.
+
+    Retezec ani cislo se nepreklada: ``"false"`` je v Pythonu PRAVDIVY, takze
+    by tise otocilo obe tridy naruby (tataz uvaha jako u ``prvky.*.enabled``).
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return None, issues
+    raw = blok.get("koren")
+    if raw is None:
+        return None, issues
+    if not _is_bool(raw):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'koren' ma byt true nebo false, "
+                f"je {raw!r}",
+            )
+        )
+        return None, issues
+    return bool(raw), issues
+
+
+def _navigace_ze_sceny(
+    scene: dict[str, Any],
+    pfx: str,
+) -> tuple[tuple[int, int, int, int] | None, list[Issue]]:
+    """Precte ``navrh.navigace`` -> ((x, y, w, h), nalezy).
+
+    DEKLAROVANE misto tlacitka Zpet. Kit ho vozi z `tokens.json: layout`
+    (``zpet.x``, ``zpet.w``, ``hlavicka.y``, ``hlavicka.h``), tedy z tehoz
+    mista, ze ktereho je bere generator i firmware - stejne jako soustavu
+    odsazeni pro Rule 151.
+
+    PROC SE NEDA VZIT ZE SCENY. Nabizely se dve zkratky a obe jsou spatne:
+
+    * ``navrh.pasy["navigace"]`` je obdelnik prvku, ktery pas ZAKLADA - a na
+      listech kitu je to SAMO tlacitko Zpet (``.zpet`` nese ``data-pas`` i
+      ``data-pas-vyska``). Merilo by se tedy tlacitko proti sobe samemu:
+      posun o 10 px posune obe strany rovnice a nalez nevznikne nikdy.
+    * ``screen.w - soustava.pole_x`` da spravnych 1260, ale jen NAHODOU.
+      ``tokens.json`` ma ``hlavicka``, ``zpet`` a ``obsah`` jako TRI NEZAVISLE
+      polozky a zadnou z nich z druhe neodvozuje; kdo si tu odvozeninu
+      vymysli, meri proti pravidlu, ktere v soustave neni.
+
+    Vodorovna cisla proto POTREBUJI dodanou deklaraci. Kdyz nedojde, rekne se
+    to nahlas (`ZNACKA_R153_MISTO_NEMERENO`) - poloha se NEMERI a ticho se
+    nesmi cist jako "sedi".
+    """
+    issues: list[Issue] = []
+    blok = scene.get(NAVRH_KLIC)
+    if not isinstance(blok, dict):
+        return None, issues
+    raw = blok.get("navigace")
+    if raw is None:
+        return None, issues
+    if not isinstance(raw, dict):
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'navigace' ma byt objekt "
+                f"{{'x': .., 'y': .., 'w': .., 'h': ..}}, je {type(raw).__name__}",
+            )
+        )
+        return None, issues
+    ven: list[int] = []
+    for klic in ("x", "y", "w", "h"):
+        hod = raw.get(klic)
+        if not _is_int(hod) or hod < 0:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'navigace.{klic}' ma byt nezaporne "
+                    f"cele cislo v px, je {hod!r}",
+                )
+            )
+            return None, issues
+        ven.append(int(hod))
+    if ven[2] <= 0 or ven[3] <= 0:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'navigace' ma mit kladnou sirku i vysku, "
+                f"je {ven[2]}x{ven[3]} - nulovy slot nema proti cemu merit",
+            )
+        )
+        return None, issues
+    return (ven[0], ven[1], ven[2], ven[3]), issues
+
+
+def _r153_ovladace_zpet(
+    widgets: list[Any],
+    prvky: dict[str, dict[str, Any]],
+) -> list[tuple[str, tuple[int, int, int, int]]]:
+    """Ovladace Zpet ve scene -> [(jmeno, (x, y, w, h))].
+
+    Neviditelny prvek se preskakuje jako v Rule 135, 136 a 152: schovane
+    tlacitko neni slib (firmware Domova ho schovava presne timhle -
+    `LV_OBJ_FLAG_HIDDEN` - a je to spravne chovani, ne vada).
+    """
+    ven: list[tuple[str, tuple[int, int, int, int]]] = []
+    for i, w in enumerate(widgets):
+        if not isinstance(w, dict) or w.get("visible") is False:
+            continue
+        wid = str(w.get("_widget_id") or w.get("id") or f"widget[{i}]")
+        pas = (prvky.get(wid) or {}).get("pas")
+        v_pasu = pas == R153_PAS and w.get("type") in TOUCH_WIDGET_TYPES
+        if _widget_group(w) != R153_TRIDA and not v_pasu:
+            continue
+        x, y, ww, hh = (w.get(k) for k in ("x", "y", "width", "height"))
+        if not all(_is_int(v) for v in (x, y, ww, hh)):
+            continue
+        ven.append((wid, (int(x), int(y), int(ww), int(hh))))
+    return ven
+
+
+def _r153_nalezy(
+    pfx: str,
+    widgets: list[Any],
+    prvky: dict[str, dict[str, Any]],
+    koren: bool | None,
+    misto: tuple[int, int, int, int] | None,
+    z_mostu: bool,
+) -> list[Issue]:
+    """Rule 153: Zpet jen mimo koren (ERROR; nedodana data = NEMERENO).
+
+    Navigace TabOSu je strom s jednim korenem (Domov). Z toho plynou DVE
+    tridy, ne jedna, a pravidlo meri obe:
+
+    * **koren** (``navrh.koren`` je ``true``) tlacitko Zpet mit NESMI. Nema
+      kam vest, takze je to slib bez pokryti - tentyz nalez jako zakazane
+      tlacitko "Srovnat podle site", ktere nic nespusti. Deska to uz tak
+      kresli (`shell.cpp` Zpet na Domove skryva); lhal navrh.
+    * **kazdy jiny list** ho mit MUSI, a to na sve deklarovane poloze. List
+      bez Zpet je slepa ulicka: prstem se z nej neda odejit.
+
+    Kontrolni skupina je zabudovana v samotnem tvaru pravidla: obe tridy
+    maji vlastni nalez, takze "prijmi vse" ani "odmitni vse" neprojde -
+    kazde takove pravidlo by na te druhe tride okamzite zcervenalo.
+
+    ROZHODUJE PRIZNAK, NE CHYBEJICI TLACITKO. Bylo by lakave usoudit "kdyz
+    Zpet neni, byl to asi koren" - jenze "tlacitko chybi" je PRAVE TEN JEV,
+    ktery ma pravidlo soudit, takze by brana merila sama sebe a jedna z obou
+    trid by zmizela. Priznak proto vydava GENERATOR (`data-koren` na korenu
+    listu) a most ho vozi VZDY, i jako ``false``.
+
+    CO ZNAMENA TICHO (fail-closed jako 136-151):
+
+    * scena bez bloku `navrh` (dokument editoru) - pravidlo MLCI, merena
+      data legitimne nema;
+    * scena Z MOSTU bez priznaku `koren` - `ZNACKA_R153_NEMERENO`, tedy
+      NAHLAS. Zavora "je to scena z mostu" je klic ``orez`` na prvcich:
+      posila ho JEN most kitu a jen tehdy, kdyz prvek zmeril (tataz zavora
+      jako u Rule 150 a 151). Cizi navrh se tim neobvinuje;
+    * ne-koren se Zpet, ale bez deklarovaneho mista -
+      `ZNACKA_R153_MISTO_NEMERENO`: pritomnost se zmerila, POLOHA ne.
+
+    POLOHA SE MERI NA PIXEL, bez tolerance. Neni to prisnost pro prisnost:
+    slot i tlacitko jsou cela cisla z tehoz `tokens.json` a mezi nimi neni
+    zadny prevod, ktery by zaokrouhloval (na rozdil od Rule 136, kde se
+    zaokrouhluji dve hrany zvlast a 1 px je proto artefakt mereni). Posun
+    o jediny pixel uz znamena, ze se generator a rozvrzeni rozesly.
+    """
+    if koren is None:
+        if z_mostu:
+            return [
+                Issue(
+                    "WARN",
+                    f"{pfx}: {ZNACKA_R153_NEMERENO}: scena je z mostu, ale 'navrh.koren' "
+                    f"v ni neni - nevi se, jestli je to koren navigace, takze se "
+                    f"pritomnost tlacitka Zpet NEMERILA",
+                )
+            ]
+        return []
+    nalezene = _r153_ovladace_zpet(widgets, prvky)
+    issues: list[Issue] = []
+    if koren:
+        for wid, (x, y, w, h) in nalezene:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{pfx}: {ZNACKA_R153_KOREN}: '{wid}' ({w}x{h} na {x},{y}) je "
+                    f"tlacitko Zpet, ale list je KOREN navigace - neni kam se vratit, "
+                    f"takze je to slib bez pokryti",
+                )
+            )
+        return issues
+    if not nalezene:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_R153_CHYBI}: list neni koren navigace, ale nema "
+                f"ovladac tridy '{R153_TRIDA}' ani dotykovy prvek v pasu "
+                f"'{R153_PAS}' - z listu se neda odejit",
+            )
+        )
+        return issues
+    if len(nalezene) > 1:
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_R153_VIC}: {len(nalezene)} ovladacu Zpet "
+                f"({', '.join(wid for wid, _ in nalezene)}) - zpatky vede jedna cesta, "
+                f"ne nekolik",
+            )
+        )
+    if misto is None:
+        issues.append(
+            Issue(
+                "WARN",
+                f"{pfx}: {ZNACKA_R153_MISTO_NEMERENO}: tlacitko Zpet na listu JE, ale "
+                f"'navrh.navigace' nedoslo - jeho POLOHA se NEMERILA",
+            )
+        )
+        return issues
+    for wid, obd in nalezene:
+        if obd == misto:
+            continue
+        issues.append(
+            Issue(
+                "ERROR",
+                f"{pfx}: {ZNACKA_R153_MISTO}: '{wid}' stoji {obd[2]}x{obd[3]} na "
+                f"{obd[0]},{obd[1]}, ale deklarovane misto je {misto[2]}x{misto[3]} "
+                f"na {misto[0]},{misto[1]}",
+            )
+        )
+    return issues
+
+
 def _r151_nalezy(
     wl: str,
     prvek: dict[str, Any],
@@ -4554,6 +4838,27 @@ def validate_data(
         # ── Rule 151: soustava odsazeni ──
         navrh_soustava, soustava_nalezy = _soustava_ze_sceny(scene, pfx)
         issues.extend(soustava_nalezy)
+
+        # ── Rule 153: Zpet jen mimo koren ──
+        # Scenove pravidlo, ne widgetove: KOREN je vlastnost celeho listu.
+        # Zavora "scena je z mostu" je klic `orez` na prvcich - tentyz klic
+        # a tataz uvaha jako u Rule 150 a 151: posila ho jen most kitu a jen
+        # tam, kde prvek opravdu zmeril, takze cizi navrh (dokument editoru)
+        # se z nedodaneho priznaku neobvinuje, kdezto scena kitu ano.
+        navrh_koren, koren_nalezy = _koren_ze_sceny(scene, pfx)
+        issues.extend(koren_nalezy)
+        navrh_navigace, navigace_nalezy = _navigace_ze_sceny(scene, pfx)
+        issues.extend(navigace_nalezy)
+        issues.extend(
+            _r153_nalezy(
+                pfx,
+                widgets,
+                navrh_prvky,
+                navrh_koren,
+                navrh_navigace,
+                any("orez" in pr for pr in navrh_prvky.values()),
+            )
+        )
 
         # ── Rule 142: obrazovka, nebo vyklad o navrhu? ──
         # Vykladovy list vadu CITUJE misto aby ji delal (viz `DRUHY_LISTU`).

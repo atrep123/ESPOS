@@ -122,6 +122,14 @@
               "type": "string",
               "description": "Veta o tom, ze CELY list ma vlastni identitu (list v negativu, zamerne stara obrazovka). Rule 150 pak vyda jeden WARN s duvodem misto vyctu barev. Prazdne oznaceni je vypinac bez duvodu a zahazuje se."
             },
+            "koren": {
+              "type": "boolean",
+              "description": "Je tenhle list KOREN navigace (Domov)? Rule 153: koren tlacitko Zpet mit NESMI (nema kam vest, je to slib bez pokryti), kazdy jiny list ho mit MUSI (jinak je slepa ulicka). Rozhoduje GENERATOR atributem data-koren, ne odvozeni z toho, ze tlacitko neni videt - 'tlacitko chybi' je prave ten jev, ktery ma pravidlo soudit. Most kitu klic vozi VZDY, i jako false: chybejici klic znamena NEZMERENO (znacka 'priznak korene nedodan'), ne 'neni koren'."
+            },
+            "navigace": {
+              "type": "object",
+              "description": "Deklarovane misto tlacitka Zpet: {x, y, w, h} v px. Rule 153 proti nemu meri POLOHU nalezeneho tlacitka, a to na pixel presne (obe strany jsou cela cisla z tehoz tokens.json, takze mezi nimi neni zadny zaokrouhlujici prevod - na rozdil od Rule 136, kde je 1 px artefakt mereni). Kit ho vozi z tokens.json: layout - zpet.x a zpet.w vodorovne, hlavicka.y a hlavicka.h svisle. NESMI se brat z navrh.pasy['navigace']: ten pas na listech kitu zaklada sam prvek .zpet, takze by se tlacitko merilo proti sobe samemu. Kdyz klic nedojde, poloha se NEMERI a rekne se to (znacka 'misto pro Zpet nedodano')."
+            },
             "soustava": {
               "type": "object",
               "description": "Soustava odsazeni: {pole_x, vsazka} z tokens.json layout (obsah.x a ram.vsazka). Rule 151 jimi meri text, ktery zacina MEZI hranou pole a zavaznou vsazkou, tedy se lepi na ram. Blok s vlastni vsazkou (prvky[*].vsazka) se meri proti sve, ne proti teto."

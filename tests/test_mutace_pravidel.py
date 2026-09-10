@@ -203,6 +203,42 @@ MUTACE = [
         _fix("tab5_mrizka_bez_kapacity_ciste.json", vd.ZNACKA_R152_NEMERENO),
         "test_validate_rules_152.py::test_fixtura_vady_projde_schematem_a_hlasi_prave_jednou",
     ),
+    # Rule 153 ma CTYRI oddelena rozhodnuti a kazde z nich se da umlcet
+    # zvlast, takze kazde ma vlastni mutaci. Zvlast dulezita je ta posledni:
+    # kdyby se umlcelo NEMERENO, prestal by list ze starsiho mostu padat a
+    # zelena brana by tvrdila neco, co nikdo nemeril.
+    Mutace(
+        "R153_koren_se_na_tlacitka_nepta",
+        "        for wid, (x, y, w, h) in nalezene:",
+        "        for wid, (x, y, w, h) in []:",
+        _fix("tab5_zpet_koren_vady.json", vd.ZNACKA_R153_KOREN, "ERROR"),
+        _fix("tab5_zpet_koren_ciste.json", vd.ZNACKA_R153_KOREN),
+        "test_validate_rules_153.py::test_r153_fixtury_vad_hlasi_kazda_PRAVE_JEDNU_svou_tridu",
+    ),
+    Mutace(
+        "R153_chybejici_Zpet_neni_vada",
+        "    if not nalezene:\n        issues.append(",
+        "    if not nalezene and False:\n        issues.append(",
+        _fix("tab5_zpet_chybi_vady.json", vd.ZNACKA_R153_CHYBI, "ERROR"),
+        _fix("tab5_zpet_ciste.json", vd.ZNACKA_R153_CHYBI),
+        "test_validate_rules_153.py::test_r153_fixtury_vad_hlasi_kazda_PRAVE_JEDNU_svou_tridu",
+    ),
+    Mutace(
+        "R153_poloha_vzdy_sedi",
+        "        if obd == misto:",
+        "        if obd == misto or True:",
+        _fix("tab5_zpet_misto_vady.json", vd.ZNACKA_R153_MISTO, "ERROR"),
+        _fix("tab5_zpet_ciste.json", vd.ZNACKA_R153_MISTO),
+        "test_validate_rules_153.py::test_r153_hranice_je_jediny_pixel_ve_vsech_ctyrech_cislech",
+    ),
+    Mutace(
+        "R153_nemereni_se_zamlci",
+        "        if z_mostu:",
+        "        if z_mostu and False:",
+        _fix("tab5_zpet_nemereno_vady.json", vd.ZNACKA_R153_NEMERENO, "WARN"),
+        _fix("tab5_zpet_ciste.json", vd.ZNACKA_R153_NEMERENO),
+        "test_validate_rules_153.py::test_r153_scena_z_mostu_bez_priznaku_je_NEMERENO",
+    ),
     Mutace(
         "PRUREZ_dva_stavy_nejsou_rozpor",
         "if len(stavy) < 2:",

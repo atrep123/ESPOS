@@ -238,6 +238,15 @@ _MAPA_ZNACEK = {
     "ZNACKA_R150_ODCHYLKA": "paleta",
     "ZNACKA_R151": "odsazeni",
     "ZNACKA_R151_NEMERENO": "odsazeni",
+    # Rule 153: Zpet jen mimo koren. Jedna trida nalezu pro obe strany -
+    # "koren ma Zpet" i "listu Zpet chybi" je tataz vada navigace, jen
+    # z opacneho konce, a patri do tehoz sloupce souhrnu.
+    "ZNACKA_R153_KOREN": "navigace",
+    "ZNACKA_R153_CHYBI": "navigace",
+    "ZNACKA_R153_MISTO": "navigace",
+    "ZNACKA_R153_VIC": "navigace",
+    "ZNACKA_R153_NEMERENO": "navigace",
+    "ZNACKA_R153_MISTO_NEMERENO": "navigace",
     "ZNACKA_R17_NEAKTIVNI": "kontrast",
     "ZNACKA_NAVRH_VADNY": "vadny navrh",
 }

@@ -1,0 +1,189 @@
+{
+ "_puvod": [
+  "R153 NEGATIVNI TRIDA: KOREN navigace bez tlacitka Zpet - dnesni",
+  "SvorkaDomu a dnesni deska. Kontrolni skupina k",
+  "tab5_zpet_chybi_vady.json: tataz kresba, opacny verdikt, a lisi je",
+  "jedine priznak `navrh.koren`."
+ ],
+ "device": "tab5",
+ "width": 1280,
+ "height": 720,
+ "scenes": {
+  "main": {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "bg_color": "#14170f",
+   "navrh": {
+    "koren": true,
+    "navigace": {
+     "x": 1148,
+     "y": 8,
+     "w": 112,
+     "h": 81
+    },
+    "pasy": {
+     "hlavicka": [
+      36,
+      8,
+      1100,
+      81
+     ]
+    },
+    "prvky": {
+     "titulek.8": {
+      "pas": "hlavicka",
+      "orez": {
+       "sirka_obsahu": 79,
+       "sirka_schranky": 79,
+       "vyska_obsahu": 18,
+       "vyska_schranky": 18
+      },
+      "font_size": 20,
+      "inkoust": "#e4dfcc",
+      "podklad": "#14170f"
+     },
+     "obsah.20": {
+      "orez": {
+       "sirka_obsahu": 1240,
+       "sirka_schranky": 1240,
+       "vyska_obsahu": 603,
+       "vyska_schranky": 603
+      }
+     },
+     "veta.21": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "rodic_id": "obsah.20",
+      "orez": {
+       "sirka_obsahu": 420,
+       "sirka_schranky": 420,
+       "vyska_obsahu": 24,
+       "vyska_schranky": 24
+      },
+      "font_size": 20,
+      "inkoust": "#12150e",
+      "podklad": "#e6e1ce"
+     },
+     "dlazdice.0": {
+      "rodic": [
+       20,
+       97,
+       1240,
+       603
+      ],
+      "rodic_id": "obsah.20",
+      "orez": {
+       "sirka_obsahu": 386,
+       "sirka_schranky": 386,
+       "vyska_obsahu": 120,
+       "vyska_schranky": 120
+      },
+      "font_size": 24,
+      "inkoust": "#12150e",
+      "podklad": "#e6e1ce"
+     }
+    },
+    "skala": {
+     "rezy": [
+      14,
+      16,
+      20,
+      24,
+      32
+     ],
+     "vyjimky": {}
+    },
+    "paleta": [
+     "#14170F",
+     "#1C2016",
+     "#A9C24A",
+     "#9BA28D",
+     "#E9A63C",
+     "#FF7B5E",
+     "#E4DFCC",
+     "#E27BE2",
+     "#6F7764",
+     "#E6E1CE",
+     "#12150E",
+     "#5A5F4C",
+     "#6B6653"
+    ],
+    "soustava": {
+     "pole_x": 20,
+     "vsazka": 16
+    },
+    "jmena_sdk": [
+     "ITabOsApp",
+     "IHwDiagnostics"
+    ]
+   },
+   "widgets": [
+    {
+     "type": "label",
+     "x": 36,
+     "y": 39,
+     "width": 79,
+     "height": 18,
+     "text": "Soubory",
+     "color_fg": "#e4dfcc",
+     "color_bg": "#14170f",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "titulek.8"
+    },
+    {
+     "type": "panel",
+     "x": 20,
+     "y": 97,
+     "width": 1240,
+     "height": 603,
+     "text": "",
+     "color_fg": "#12150e",
+     "color_bg": "#e6e1ce",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "obsah.20"
+    },
+    {
+     "type": "label",
+     "x": 36,
+     "y": 129,
+     "width": 420,
+     "height": 24,
+     "text": "Zaznam kanalu je pripraveny.",
+     "color_fg": "#12150e",
+     "color_bg": "#e6e1ce",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "veta.21"
+    },
+    {
+     "type": "button",
+     "x": 48,
+     "y": 320,
+     "width": 386,
+     "height": 120,
+     "text": "Terminal",
+     "color_fg": "#12150e",
+     "color_bg": "#e6e1ce",
+     "border": false,
+     "border_style": "none",
+     "align": "left",
+     "valign": "middle",
+     "_widget_id": "dlazdice.0"
+    }
+   ]
+  }
+ }
+}

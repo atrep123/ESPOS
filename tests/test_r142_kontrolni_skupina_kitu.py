@@ -18,7 +18,8 @@ soubor z toho dela mereni s rohatkou:
 * MUTACE DAT: pridat do jmen SDK bezne kitove slovo (BLE, USB, ...) musi
   vyrobit fantom -> dokazuje, ze test meri kitove texty, ne prazdno.
 * ZIVY KIT: kdyz kit lezi vedle, tataz rohatka jede i nad dnesnimi listy
-  (fixtura je snimek k fe66ed0; drift se pozna, ne prehlasi).
+  (fixtura je snimek k `kit`; drift se pozna, ne prehlasi, a prepisuje ho
+  `tests/fixtures/gen_verzalky_kit.py`).
 
 Fixtura: tests/fixtures/verzalky_kit_2026-09-09.json (odkud a jak, viz jeji
 `_o_souboru`).
@@ -75,7 +76,11 @@ def _verzalky(text):
 
 def test_fixtura_je_nabita_a_ma_puvod():
     f = _fixtura()
-    assert f["kit"] == "fe66ed0"
+    # Revize kitu, ze ktere je snimek. Meni se s KAZDOU regeneraci
+    # (`tests/fixtures/gen_verzalky_kit.py`) - je to jedine misto, kde
+    # se pozna, ze fixtura NENI z dnesnich listu, kdyby nekdo prepsal
+    # jen texty a puvod nechal stat.
+    assert f["kit"] == "a660d7b+kit-dorovnani"
     assert len(f["vety"]) >= 100 and len(f["stitky"]) >= 100 and len(_jmena(f)) >= 50
     assert all(_verzalky(v["text"]) for v in f["vety"] + f["stitky"])
     assert all(any(z.islower() for z in v["text"]) for v in f["vety"])
