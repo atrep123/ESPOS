@@ -34,7 +34,7 @@ This repo is a lightweight embedded UI toolkit + designer. Security is handled i
 
 ### Known dependency advisory exceptions
 
-- **Starlette advisory via PlatformIO** — `pip-audit` currently reports `starlette 0.52.1` from the core/dev dependency set because `platformio>=6.1,<7` depends on Starlette below the fixed `1.0.1` line for `PYSEC-2026-161` / `CVE-2026-48710` / `GHSA-86qp-5c8j-p5mr`.
+- **Starlette advisories via PlatformIO** — `pip-audit` currently reports `starlette 0.52.1` from the core/dev dependency set because `platformio>=6.1,<7` depends on Starlette below the fixed lines for `PYSEC-2026-161` / `CVE-2026-48710` / `GHSA-86qp-5c8j-p5mr` (fixed in `1.0.1`) and the follow-up advisories `PYSEC-2026-2280` / `PYSEC-2026-2281` (fixed in `1.1.0`), `PYSEC-2026-248` (fixed in `1.3.0`) and `PYSEC-2026-249` (fixed in `1.3.1`). All are HTTP-surface issues (request-URL authority confusion, urlencoded form limits, non-standard-verb dispatch, Windows `StaticFiles` UNC SSRF).
 - **Why it is not upgraded here** — Starlette is transitive through PlatformIO, not a direct ESPOS runtime dependency. Forcing `starlette>=1.0.1` conflicts with every published `platformio 6.1.x` release and would break the managed build/flash dependency resolver.
 - **Current mitigation** — ESPOS does not expose a Starlette/FastAPI HTTP surface. PlatformIO is invoked as local CLI tooling for firmware build/upload (`python -m platformio` or `pio`), while the optional MCP server uses stdio transport.
 - **Tracking rule** — do not silently ignore this advisory. Re-check when PlatformIO publishes a compatible Starlette range, then remove this exception and upgrade normally.

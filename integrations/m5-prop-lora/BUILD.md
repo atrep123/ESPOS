@@ -43,6 +43,23 @@ idf.py -C firmware/dial-tx -p COMz flash
 ```
 M5 Dial = ESP32-S3. `SELFTEST_FIRE=0` (produkce — vysílač se sám neodpaluje).
 
+## Host testy (bez hardwaru)
+
+Bezpečnostní logika odpalu (ARM/STOP/TTL, replay okno, palety) je testovatelná
+na PC bez ESP toolchainu — stejné testy běží i v CI (joby Python a Firmware):
+
+```bash
+# C++ host testy (safety_logic / palette / led_payload) — stačí g++
+python tools/run_host_tests.py            # Linux/macOS/Windows
+# nebo na Windows ekvivalentně: tools/run_host_tests.ps1
+
+# Python safety subset (protokol, fuzz parseru, link simulace)
+python -m pytest -q tests/test_protocol.py tests/test_protocol_fuzz.py \
+  tests/test_protocol_roundtrip_sim.py tests/test_sim_link_safety.py
+```
+
+Hazardní scénáře a jejich pokrytí: `docs/FMEA.md`.
+
 ## Acceptance levels
 
 **Dry smoke:** bench-only validation with dummy LEDs or another non-actuator load.
