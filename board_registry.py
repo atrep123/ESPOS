@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional
 try:
     from ui_designer import HARDWARE_PROFILES
 except Exception:  # pragma: no cover - designer import is optional for pio use
-    HARDWARE_PROFILES = {}  # type: ignore[assignment]
+    HARDWARE_PROFILES = {}
 
 REGISTRY_PATH = Path(__file__).resolve().parent / "boards.json"
 
@@ -426,7 +426,7 @@ def _main(argv: Optional[List[str]] = None) -> int:
         for b in reg.boards:
             kind = (
                 f"display {b.display.w}x{b.display.h} ({b.display_profile})"
-                if b.has_display
+                if b.has_display and b.display is not None
                 else "headless"
             )
             print(f"  {b.id:22s} {b.platformio_board:22s} {kind}")

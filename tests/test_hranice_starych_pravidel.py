@@ -3,14 +3,8 @@
 Stara pravidla maji testy na "uprostred tridy"; hranice na pixel nikdo
 nedrzel. Kazdy test tu ma obe strany hranice.
 
-A JEDEN SKUTECNY NALEZ, ktery se tu NEOPRAVUJE (pravidlo kampane): Rule 123
-("min gap between non-grouped widgets") je MRTVE. Podminka zni
-``0 < gap < MIN_WIDGET_GAP_PX`` a ``MIN_WIDGET_GAP_PX = 1``; mezera je cele
-cislo, takze interval (0, 1) je prazdny a pravidlo nemuze vystrelit nikdy.
-Dukaz ve trech krocich: (1) dotykajici se cizi widgety (mezera 0) mlci
-(xfail strict - ma hlasit), (2) mezera 1 px mlci (to je spravne),
-(3) KONTROLNI SKUPINA: s mezi 2 px (monkeypatch) tataz scena s mezerou 1 px
-HLASI - mechanika pravidla zije, zabiji ho konstanta.
+Rule 123 zahrnuje nulovou mezeru mezi cizimi widgety se spolecnym pasem.
+Jednopixelova mezera, stejna skupina, prekryv a pouhy dotek rohu mlci.
 """
 
 from __future__ import annotations
@@ -69,7 +63,7 @@ def _obsahuji(zpravy, kus):
 
 
 # --------------------------------------------------------------------------- #
-# Rule 123 - mrtve pravidlo
+# Rule 123 - minimalni mezera
 # --------------------------------------------------------------------------- #
 
 R123 = "widgets too close"
@@ -83,12 +77,6 @@ def test_r123_mez_je_jeden_pixel():
     assert MIN_WIDGET_GAP_PX == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="SKUTECNA VADA: Rule 123 je mrtve - `0 < gap < MIN_WIDGET_GAP_PX` s mezi 1 "
-    "na celych cislech nikdy neplati; dotykajici se cizi widgety (mezera 0) mlci. "
-    "Neopravovat v testu; viz testy/kolo1.md.",
-)
 def test_r123_dotykajici_se_cizi_widgety_maji_dostat_nalez():
     assert _obsahuji(_msgs(_dva(0)), R123)
 
@@ -103,16 +91,17 @@ def test_r123_tataz_skupina_mlci_i_pri_mezere_0():
 
 
 def test_r123_KONTROLNI_SKUPINA_s_mezi_2px_pravidlo_zije(monkeypatch):
-    """Mechanika je v poradku - mezera 1 < 2 vystreli. Zabiji ji konstanta 1."""
+    """Mezera 1 < 2 vystreli; presne 2 px uz vyhovuji."""
     monkeypatch.setattr(vd, "MIN_WIDGET_GAP_PX", 2)
     nalezy = _obsahuji(_msgs(_dva(1)), R123)
     assert nalezy and "(1px < 2px min gap)" in nalezy[0]
     assert _obsahuji(_msgs(_dva(2)), R123) == []
 
 
-def test_r123_interval_je_prazdny_pro_kazdou_celou_mezeru():
-    """Primy dukaz nad podminkou: zadne cele cislo neni v (0, 1)."""
-    assert not any(0 < g < MIN_WIDGET_GAP_PX for g in range(0, 1000))
+@pytest.mark.parametrize(("bx", "by"), [(9, 0), (10, 10), (11, 11)])
+def test_r123_overlap_corner_and_diagonal_do_not_count_as_shared_band(bx, by):
+    d = _make([_w("a.1", 0, 0, 10, 10), _w("b.1", bx, by, 10, 10)])
+    assert _obsahuji(_msgs(d), R123) == []
 
 
 # --------------------------------------------------------------------------- #
@@ -212,8 +201,18 @@ def test_r80_nulovy_a_zaporny_okraj_mlci():
 
 def _orez(so, ss, vo, vs):
     prvek = _w("t.1", 40, 200, 300, 20, text="V0.4-71-gee91351-dirty")
-    navrh = {"prvky": {"t.1": {"orez": {"sirka_obsahu": so, "sirka_schranky": ss,
-                                        "vyska_obsahu": vo, "vyska_schranky": vs}}}}
+    navrh = {
+        "prvky": {
+            "t.1": {
+                "orez": {
+                    "sirka_obsahu": so,
+                    "sirka_schranky": ss,
+                    "vyska_obsahu": vo,
+                    "vyska_schranky": vs,
+                }
+            }
+        }
+    }
     return _make([prvek], navrh=navrh, scene_w=1280, scene_h=720, device="tab5")
 
 

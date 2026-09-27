@@ -80,7 +80,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -425,9 +425,7 @@ ROLE_ZNAME = ROLE_HODNOTY | ROLE_POPISKU
 # zacinala az u U+2012, takze "obycejna" typograficka pomlcka prosla mlckym
 # a byla to jedina znama dira, kterou se dalo napsat "nic nevim" tvarem,
 # ktery vypada uplne stejne jako U+2013.
-POMLCKY = frozenset(
-    {"-", "\u2010", "\u2011", "\u2012", "\u2013", "\u2014", "\u2015", "\u2212"}
-)
+POMLCKY = frozenset({"-", "\u2010", "\u2011", "\u2012", "\u2013", "\u2014", "\u2015", "\u2212"})
 
 # Nulove sirky. `strip()` je NEODSTRANI (nejsou to bile znaky), takze prvek
 # s U+200B vypada prazdne, ale Rule 138 na nej nesahne - a Rule 139 by ho
@@ -509,9 +507,7 @@ PRIPONY_SOUBORU = (
     "cfg", "ini", "toml", "yaml", "yml", "bak", "tmp", "hex", "elf", "img",
 )  # fmt: skip
 _V_CLEN = re.compile(
-    r"\b[A-Za-z_]\w*_\w+\.(?!(?i:"
-    + "|".join(PRIPONY_SOUBORU)
-    + r")\b)[A-Za-z_]\w*\b"
+    r"\b[A-Za-z_]\w*_\w+\.(?!(?i:" + "|".join(PRIPONY_SOUBORU) + r")\b)[A-Za-z_]\w*\b"
 )
 # Strojovy stitek chybejiciho backendu: `esp_hosted:GetRadioInfo@fazeA`.
 _V_STITEK = re.compile(r"\b[A-Za-z_]\w*:[A-Za-z_]\w*@[A-Za-z_]\w*\b")
@@ -761,9 +757,7 @@ class DeviceProfile:
         """
         if not self.ppi or not self.cteci_vzdalenost_mm:
             return 0.0
-        return math.degrees(
-            2.0 * math.atan(self.mm(px) / (2.0 * self.cteci_vzdalenost_mm))
-        ) * 60.0
+        return math.degrees(2.0 * math.atan(self.mm(px) / (2.0 * self.cteci_vzdalenost_mm))) * 60.0
 
 
 PROFILE_OLED256 = DeviceProfile(
@@ -1037,7 +1031,7 @@ class Issue:
     message: str
 
 
-def _is_int(v: object) -> bool:
+def _is_int(v: object) -> TypeGuard[int]:
     return isinstance(v, int) and not isinstance(v, bool)
 
 
@@ -1176,9 +1170,9 @@ def _validate_action(
                 Issue("ERROR", f"{where}: set_var expr {ex!r} too complex (only 'A' or 'A op B')")
             )
     elif t == "gpio_write":
-        if not _is_int(a.get("pin")):
-            out.append(Issue("ERROR", f"{where}: gpio_write needs int 'pin'"))
-        if a.get("level") not in (0, 1):
+        if not _is_int(a.get("pin")) or not 0 <= a["pin"] <= 48:
+            out.append(Issue("ERROR", f"{where}: gpio_write needs int 'pin' in 0..48"))
+        if not _is_int(a.get("level")) or a.get("level") not in (0, 1):
             out.append(Issue("ERROR", f"{where}: gpio_write 'level' must be 0 or 1"))
     elif t == "toast":
         if not isinstance(a.get("text"), str):
@@ -1298,13 +1292,12 @@ def _validate_logic(
                 if tt not in _LOGIC_TRIGGERS:
                     issues.append(Issue("ERROR", f"{rl}: bad trigger type {tt!r}"))
                 elif tt == "timer":
-                    if not _is_int(trig.get("timer_id")) or not (
-                        0 <= int(trig.get("timer_id")) <= 15
-                    ):
+                    timer_id = trig.get("timer_id")
+                    if not _is_int(timer_id) or not 0 <= timer_id <= 15:
                         issues.append(Issue("ERROR", f"{rl}: timer 'timer_id' must be 0..15"))
                 elif tt == "gpio_in":
-                    if not _is_int(trig.get("pin")):
-                        issues.append(Issue("ERROR", f"{rl}: gpio_in needs int 'pin'"))
+                    if not _is_int(trig.get("pin")) or not 0 <= trig["pin"] <= 48:
+                        issues.append(Issue("ERROR", f"{rl}: gpio_in needs int 'pin' in 0..48"))
                     edge = str(trig.get("edge", "any")).lower()
                     if edge not in ("any", "rising", "falling"):
                         issues.append(Issue("ERROR", f"{rl}: gpio_in bad 'edge' {edge!r}"))
@@ -1640,8 +1633,7 @@ def _navrh_ze_sceny(
                 issues.append(
                     Issue(
                         "ERROR",
-                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.rodic_id' ukazuje sam "
-                        f"na sebe",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.rodic_id' ukazuje sam na sebe",
                     )
                 )
             else:
@@ -1993,9 +1985,7 @@ def _r136_nalezy(
         je_scena = rx <= 0 and ry <= 0 and rx2 >= sw and ry2 >= sh
         if not je_scena:
             presahy = [
-                popis
-                for smer, popis in _presahy(rx, ry, rx2, ry2).items()
-                if smer not in ven_smery
+                popis for smer, popis in _presahy(rx, ry, rx2, ry2).items() if smer not in ven_smery
             ]
             oznaceni = prvek.get("presah")
             if presahy and oznaceni:
@@ -2005,8 +1995,7 @@ def _r136_nalezy(
                 issues.append(
                     Issue(
                         "WARN",
-                        f"{wl}: {ZNACKA_R136_OZNACENI}: {_vycet_a(presahy)} - "
-                        f"{oznaceni}",
+                        f"{wl}: {ZNACKA_R136_OZNACENI}: {_vycet_a(presahy)} - {oznaceni}",
                     )
                 )
             elif presahy:
@@ -2294,7 +2283,7 @@ def _r139_prazdne_sloty(text: str) -> list[str]:
     sloty: list[str] = []
     konec = -1
     for m in _R139_SLOT.finditer(text):
-        if sloty and text[konec:m.start()].strip():
+        if sloty and text[konec : m.start()].strip():
             # Mezi skupinami stoji jeste jine slovo -> nejde o vycet slotu,
             # ale o vetu, ve ktere se pomlcka vyskytla dvakrat. Pocita se
             # znovu od teto skupiny.
@@ -2488,8 +2477,7 @@ def _plochy_ze_sceny(
             issues.append(
                 Issue(
                     "ERROR",
-                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'plochy[{i}]' ma byt jmeno prvku, "
-                    f"je {jm_raw!r}",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'plochy[{i}]' ma byt jmeno prvku, je {jm_raw!r}",
                 )
             )
             continue
@@ -2662,7 +2650,8 @@ def _r147_nalezy(
         cx2, cy2 = cx + cw, cy + ch
         if min(x2, cx2) - max(x, cx) < 1:
             continue
-        if cy - y < R147_ODSTUP_PX or y2 - cy2 < R147_ODSTUP_PX:
+        # Check the interior ink band, including separators extending past it.
+        if min(y2 - R147_ODSTUP_PX, cy2) <= max(y + R147_ODSTUP_PX, cy):
             continue
         issues.append(
             Issue(
@@ -2843,9 +2832,7 @@ def _r148_nalezy(
         rez = float(rez)
         if rez in skala["rezy"]:
             continue
-        nalezy.setdefault(rez, []).append(
-            (str(wid or f"widget[{i}]"), text)
-        )
+        nalezy.setdefault(rez, []).append((str(wid or f"widget[{i}]"), text))
     issues: list[Issue] = []
     for rez in sorted(nalezy):
         kdo = nalezy[rez]
@@ -2904,11 +2891,7 @@ def _r149_nalezy(
     if minut >= R149_MEZ_LETMO:
         return []
     uroven = "ERROR" if minut < R149_MEZ_TVAR else "WARN"
-    co = (
-        "tvar glyfu se nerozezna"
-        if minut < R149_MEZ_TVAR
-        else "letmym pohledem se to neprecte"
-    )
+    co = "tvar glyfu se nerozezna" if minut < R149_MEZ_TVAR else "letmym pohledem se to neprecte"
     return [
         Issue(
             uroven,
@@ -2977,8 +2960,7 @@ def _paleta_ze_sceny(
         issues.append(
             Issue(
                 "ERROR",
-                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'paleta' ma byt neprazdny seznam hexu, "
-                f"je {raw!r}",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'paleta' ma byt neprazdny seznam hexu, je {raw!r}",
             )
         )
         return None, issues
@@ -3048,8 +3030,7 @@ def _r150_nalezy(
         return [
             Issue(
                 "WARN",
-                f"{pfx}: {ZNACKA_R150_ODCHYLKA}: {vlastni} - barvy prvku se proti "
-                f"palete NEMERI",
+                f"{pfx}: {ZNACKA_R150_ODCHYLKA}: {vlastni} - barvy prvku se proti palete NEMERI",
             )
         ]
     nalezy: dict[tuple[str, str], list[str]] = {}
@@ -3174,8 +3155,7 @@ def _koren_ze_sceny(
         issues.append(
             Issue(
                 "ERROR",
-                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'koren' ma byt true nebo false, "
-                f"je {raw!r}",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'koren' ma byt true nebo false, je {raw!r}",
             )
         )
         return None, issues
@@ -3269,7 +3249,7 @@ def _r153_ovladace_zpet(
         if _widget_group(w) != R153_TRIDA and not v_pasu:
             continue
         x, y, ww, hh = (w.get(k) for k in ("x", "y", "width", "height"))
-        if not all(_is_int(v) for v in (x, y, ww, hh)):
+        if not (_is_int(x) and _is_int(y) and _is_int(ww) and _is_int(hh)):
             continue
         ven.append((wid, (int(x), int(y), int(ww), int(hh))))
     return ven
@@ -3472,8 +3452,7 @@ def _mrizky_ze_sceny(
         issues.append(
             Issue(
                 "ERROR",
-                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky' ma byt seznam, "
-                f"je {type(raw).__name__}",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'mrizky' ma byt seznam, je {type(raw).__name__}",
             )
         )
         return mrizky, issues
@@ -3638,7 +3617,7 @@ def _r152_nalezy(
         if not skupina:
             continue
         x, y, ww, hh = (w.get(k) for k in ("x", "y", "width", "height"))
-        if not all(_is_int(v) for v in (x, y, ww, hh)) or ww <= 0 or hh <= 0:
+        if not (_is_int(x) and _is_int(y) and _is_int(ww) and _is_int(hh)) or ww <= 0 or hh <= 0:
             continue
         skupiny.setdefault((skupina, int(ww), int(hh)), []).append((int(x), int(y)))
     issues: list[Issue] = []
@@ -3683,27 +3662,39 @@ def _r141_dokumentovana(
     takove tiche rozhodnuti tahle brana jinde odstranuje.
     """
     if not isinstance(blok, dict):
-        return 0, None, Issue(
-            "ERROR",
-            f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF ma byt objekt "
-            f"s klici 'hodnota' a 'duvod', je {type(blok).__name__}",
+        return (
+            0,
+            None,
+            Issue(
+                "ERROR",
+                f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF ma byt objekt "
+                f"s klici 'hodnota' a 'duvod', je {type(blok).__name__}",
+            ),
         )
     hodnota = blok.get("hodnota")
     if not _is_int(hodnota) or int(hodnota) <= 0:
-        return 0, None, Issue(
-            "ERROR",
-            f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF ma byt kladne "
-            f"cele cislo, je {hodnota!r}",
+        return (
+            0,
+            None,
+            Issue(
+                "ERROR",
+                f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF ma byt kladne "
+                f"cele cislo, je {hodnota!r}",
+            ),
         )
     duvod = blok.get("duvod")
     if not isinstance(duvod, str) or not duvod.strip():
         # Odchylka bez duvodu neni rozhodnuti, je to vypinac brany. Tataz
         # uvaha jako u `prazdne` v Rule 138.
-        return 0, None, Issue(
-            "ERROR",
-            f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF {int(hodnota)} "
-            f"nema 'duvod' - odchylka bez duvodu neni rozhodnuti, je to vypinac brany "
-            f"(profil '{profil}')",
+        return (
+            0,
+            None,
+            Issue(
+                "ERROR",
+                f"{ZNACKA_R141_NEMERENO}: dokumentovana hodnota LV_DPI_DEF {int(hodnota)} "
+                f"nema 'duvod' - odchylka bez duvodu neni rozhodnuti, je to vypinac brany "
+                f"(profil '{profil}')",
+            ),
         )
     return int(hodnota), duvod.strip(), None
 
@@ -3724,8 +3715,7 @@ def _r141_zdroj(
         return [
             Issue(
                 "WARN",
-                f"{ZNACKA_R141_NEMERENO}: v {jmeno} neni radek {klic} - "
-                f"kontrola NEPROBEHLA",
+                f"{ZNACKA_R141_NEMERENO}: v {jmeno} neni radek {klic} - kontrola NEPROBEHLA",
             )
         ]
     ruzne = sorted(set(hodnoty))
@@ -3807,8 +3797,7 @@ def zkontroluj_dpi(
         return [
             Issue(
                 "WARN",
-                f"{ZNACKA_R141_NEMERENO}: profil '{prof.name}' nema ppi - "
-                f"neni proti cemu merit",
+                f"{ZNACKA_R141_NEMERENO}: profil '{prof.name}' nema ppi - neni proti cemu merit",
             )
         ]
     issues: list[Issue] = []
@@ -3825,17 +3814,13 @@ def zkontroluj_dpi(
         ("lv_conf.h", "LV_DPI_DEF", _R141_LV_DPI, lv_conf_text),
         ("sdkconfig", "CONFIG_LV_DPI_DEF", _R141_SDK_DPI, sdkconfig_text),
     ):
-        issues.extend(
-            _r141_zdroj(jmeno, klic, vzor, text, prof.name, cil, duvod, round(prof.ppi))
-        )
+        issues.extend(_r141_zdroj(jmeno, klic, vzor, text, prof.name, cil, duvod, round(prof.ppi)))
     return issues
 
 
 # Cmap vygenerovaneho LVGL fontu: `.range_start`/`.range_length` a bud
 # `NULL` (souvisly rozsah), nebo `unicode_list_N` (rozptylene kodove body).
-_FONT_SEZNAM = re.compile(
-    r"static const uint16_t (unicode_list_\d+)\[\] = \{(.*?)\};", re.S
-)
+_FONT_SEZNAM = re.compile(r"static const uint16_t (unicode_list_\d+)\[\] = \{(.*?)\};", re.S)
 _FONT_CISLO = re.compile(r"0x[0-9a-fA-F]+|\d+")
 _FONT_ROZSAH = re.compile(
     r"\.range_start\s*=\s*(\d+)\s*,\s*\.range_length\s*=\s*(\d+)\s*,"
@@ -3905,8 +3890,7 @@ def skala_rozpory(
         muj = radkovy_box(rez, asc, desc)
         if rez in box and box[rez] != muj:
             nalezy.append(
-                f"box rezu {rez}: generator sazi {box[rez]}, "
-                f"hhea {asc:g}/{desc:g} dava {muj}"
+                f"box rezu {rez}: generator sazi {box[rez]}, hhea {asc:g}/{desc:g} dava {muj}"
             )
         if rez in roztec and roztec[rez] != muj + roztec_pricti:
             nalezy.append(
@@ -3914,10 +3898,7 @@ def skala_rozpory(
                 f"box+{roztec_pricti} je {muj + roztec_pricti}"
             )
         if rez in otisk_box and otisk_box[rez] != muj:
-            nalezy.append(
-                f"box rezu {rez}: specifikace 3.1 rika {otisk_box[rez]}, "
-                f"spocitano {muj}"
-            )
+            nalezy.append(f"box rezu {rez}: specifikace 3.1 rika {otisk_box[rez]}, spocitano {muj}")
         if rez in otisk_minut:
             m = prof.minuty(prof.verzalka_pomer * rez)
             if abs(m - otisk_minut[rez]) > mez_minut:
@@ -3930,25 +3911,18 @@ def skala_rozpory(
         nalezy.append(f"generator zna rezy {chybi}, ktere tahle skala nemeri")
     prebyva = sorted(mereno - set(otisk_minut))
     if prebyva:
-        nalezy.append(
-            f"skala sazi rezy {prebyva}, ktere zavazna tabulka 3.1 nezna"
-        )
+        nalezy.append(f"skala sazi rezy {prebyva}, ktere zavazna tabulka 3.1 nezna")
     schazi = sorted(set(otisk_minut) - mereno)
     if schazi:
-        nalezy.append(
-            f"zavazna tabulka 3.1 predepisuje rezy {schazi}, ktere skala nesazi"
-        )
+        nalezy.append(f"zavazna tabulka 3.1 predepisuje rezy {schazi}, ktere skala nesazi")
     for klic, rez in token_role.items():
         zaznam = pozn_typografie.get(klic)
         if not isinstance(zaznam, dict):
-            nalezy.append(
-                f"_pozn_typografie nema zaznam '{klic}' (role rezu {rez})"
-            )
+            nalezy.append(f"_pozn_typografie nema zaznam '{klic}' (role rezu {rez})")
         else:
             if zaznam.get("rez_px") != rez:
                 nalezy.append(
-                    f"_pozn_typografie.{klic}.rez_px = {zaznam.get('rez_px')}, "
-                    f"generator ma {rez}"
+                    f"_pozn_typografie.{klic}.rez_px = {zaznam.get('rez_px')}, generator ma {rez}"
                 )
             if zaznam.get("radkovy_box_px") != radkovy_box(rez, asc, desc):
                 nalezy.append(
@@ -3972,14 +3946,11 @@ def skala_rozpory(
         ceka = f"tabos_{rez}"
         if str(typography[klic]) != ceka:
             nalezy.append(
-                f"typography.{klic} = '{typography[klic]}', role ma rez "
-                f"{rez} px (ceka '{ceka}')"
+                f"typography.{klic} = '{typography[klic]}', role ma rez {rez} px (ceka '{ceka}')"
             )
     navic = sorted(set(typography) - set(token_role))
     if navic:
-        nalezy.append(
-            f"typography ma navic klice {navic}, ktere zadne roli neodpovidaji"
-        )
+        nalezy.append(f"typography ma navic klice {navic}, ktere zadne roli neodpovidaji")
     return nalezy
 
 
@@ -4149,9 +4120,9 @@ def _veta_strojove_jmeno(
                     continue
                 return pojmenovani, slovo
             continue
-        m = vzor.search(text)
-        if m:
-            return pojmenovani, m.group(0)
+        match = vzor.search(text)
+        if match:
+            return pojmenovani, match.group(0)
     return _verzalkove_jmeno(text, jmena_sdk)
 
 
@@ -4213,14 +4184,9 @@ def _r142_ma_verzalkove_slovo(text: str) -> bool:
     WARN "jmena SDK nedodana" vyskocil i na listech, kde by stejne nebylo
     co porovnavat - a varovani, ktere sviti porad, nikdo necte.
     """
-    vzory = (
-        (_V_VERZALKY,)
-        if not any(z.islower() for z in text)
-        else (_V_VERZALKY, _V_CAMEL)
-    )
+    vzory = (_V_VERZALKY,) if not any(z.islower() for z in text) else (_V_VERZALKY, _V_CAMEL)
     return any(
-        m.group(0) not in VETY_NENI_ROZHRANI
-        and m.group(0) not in VETY_NENI_JMENO_SDK
+        m.group(0) not in VETY_NENI_ROZHRANI and m.group(0) not in VETY_NENI_JMENO_SDK
         for vzor in vzory
         for m in vzor.finditer(text)
     )
@@ -4290,8 +4256,7 @@ def _jmena_sdk_ze_sceny(
             issues.append(
                 Issue(
                     "ERROR",
-                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'jmena_sdk[{i}]' ma byt jmeno ze "
-                    f"SDK, je {j!r}",
+                    f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'jmena_sdk[{i}]' ma byt jmeno ze SDK, je {j!r}",
                 )
             )
             continue
@@ -4381,8 +4346,7 @@ def _slovnik_ze_sceny(
         issues.append(
             Issue(
                 "ERROR",
-                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik' ma byt objekt, "
-                f"je {type(raw).__name__}",
+                f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'slovnik' ma byt objekt, je {type(raw).__name__}",
             )
         )
         return slovnik, issues
@@ -4767,13 +4731,12 @@ def validate_data(
         # 150 a 151: "pulka smlouvy dosla, druha ne".
         if navrh_slovnik:
             veci_listu = {
-                pr["vec"].casefold() for pr in navrh_prvky.values()
+                pr["vec"].casefold()
+                for pr in navrh_prvky.values()
                 if isinstance(pr.get("vec"), str)
             } & set(navrh_slovnik)
-            if veci_listu and not any(
-                    pr.get("role") == ROLE_STAV for pr in navrh_prvky.values()):
-                jmena = ", ".join(sorted(navrh_slovnik[k]["jmeno"]
-                                         for k in veci_listu))
+            if veci_listu and not any(pr.get("role") == ROLE_STAV for pr in navrh_prvky.values()):
+                jmena = ", ".join(sorted(navrh_slovnik[k]["jmeno"] for k in veci_listu))
                 issues.append(
                     Issue(
                         "WARN",
@@ -4897,7 +4860,8 @@ def validate_data(
         # cestou nez mostem. Stara zavora byla spravna, jen prilis uzka -
         # nerusi se, rozsiruje se.
         if navrh_soustava is None and any(
-                ("orez" in pr or "vsazka" in pr) for pr in navrh_prvky.values()):
+            ("orez" in pr or "vsazka" in pr) for pr in navrh_prvky.values()
+        ):
             issues.append(
                 Issue(
                     "WARN",
@@ -4996,18 +4960,15 @@ def validate_data(
             navrh_prvek = navrh_prvky.get(wid_navrh, {}) if isinstance(wid_navrh, str) else {}
 
             # ── Rule 5: Integer coordinates ──
-            all_int = True
+            coordinates: list[int] = []
             for dim_name, dim_val in [("x", x), ("y", y), ("width", ww), ("height", hh)]:
                 if not _is_int(dim_val):
                     issues.append(Issue("ERROR", f"{wl}: {dim_name} must be int"))
-                    all_int = False
-            if not all_int:
+                else:
+                    coordinates.append(int(dim_val))
+            if len(coordinates) != 4:
                 continue
-            xi = int(x)
-            yi = int(y)
-            wwi = int(ww)
-            hhi = int(hh)
-            x, y, ww, hh = xi, yi, wwi, hhi
+            x, y, ww, hh = coordinates
 
             # ── Rule 3: Positive dimensions ──
             if ww < 1 or hh < 1:
@@ -5175,9 +5136,7 @@ def validate_data(
                 and _is_int(ww)
                 and _is_int(hh)
             ):
-                issues.extend(
-                    _r136_nalezy(wl, navrh_prvek, (x, y, ww, hh), (sw, sh), navrh_pasy)
-                )
+                issues.extend(_r136_nalezy(wl, navrh_prvek, (x, y, ww, hh), (sw, sh), navrh_pasy))
 
             # ── Rule 137: preteceni textu zmerenym fontem ──
             if navrh_prvek and w.get("visible") is not False:
@@ -5217,12 +5176,7 @@ def validate_data(
                 )
 
             # ── Rule 147: delici cara pres text ──
-            if (
-                prof.delici_cary
-                and navrh_cary
-                and text.strip()
-                and w.get("visible") is not False
-            ):
+            if prof.delici_cary and navrh_cary and text.strip() and w.get("visible") is not False:
                 issues.extend(_r147_nalezy(wl, (x, y, ww, hh), text, navrh_cary))
 
             # ── Rule 149: co z rezu udela oko na 450 mm ──
@@ -5247,9 +5201,7 @@ def validate_data(
             # zaznam, prvek bez merenych dat by se nalepil na ram mlcky.
             # Zaznam rozhoduje jen o tom, jestli blok ma VLASTNI vsazku.
             if navrh_soustava and w.get("visible") is not False and _is_int(x):
-                issues.extend(
-                    _r151_nalezy(wl, navrh_prvek, int(x), text, navrh_soustava)
-                )
+                issues.extend(_r151_nalezy(wl, navrh_prvek, int(x), text, navrh_soustava))
 
             # ── Rule 138 + Rule 139: hodnotova role bez sdeleni ──
             #
@@ -5274,9 +5226,7 @@ def validate_data(
                         zna_rodic_id,
                     )
                 )
-                issues.extend(
-                    _r138_nalezy(wl, str(wid_navrh), role, navrh_prvek, text, uvnitr)
-                )
+                issues.extend(_r138_nalezy(wl, str(wid_navrh), role, navrh_prvek, text, uvnitr))
                 issues.extend(_r139_nalezy(wl, text))
 
             # ── Rule 142: veta pro cloveka nese strojove jmeno ──
@@ -5472,7 +5422,7 @@ def validate_data(
                 issues.append(Issue("WARN", f"{wl}: {wt} with no text and no runtime binding"))
 
             # ── Rule 26: Font charset compliance ──
-            if wt in TEXT_TYPES and text:
+            if wt in TEXT_TYPES and text and FONT_CHARS is not None:
                 # font6x8 has no lowercase and maps it to uppercase; a font
                 # that carries real lowercase must be compared as written.
                 fold = "a" not in FONT_CHARS
@@ -5798,7 +5748,8 @@ def validate_data(
                         )
 
             # ── Rule 71: max_lines excessively large ──
-            if _is_int(w.get("max_lines")) and w.get("max_lines") > 100:
+            max_lines71 = w.get("max_lines")
+            if _is_int(max_lines71) and max_lines71 > 100:
                 issues.append(
                     Issue("WARN", f"{wl}: max_lines={w.get('max_lines')} seems excessive (>100)")
                 )
@@ -6640,18 +6591,16 @@ def validate_data(
                         continue
                     bx2, by2 = bx + bw, by + bh
                     # Compute axis-aligned gap between bounding boxes
-                    x_gap = max(0, max(ax, bx) - min(ax2, bx2))
-                    y_gap = max(0, max(ay, by) - min(ay2, by2))
+                    x_gap = max(ax, bx) - min(ax2, bx2)
+                    y_gap = max(ay, by) - min(ay2, by2)
                     # Only flag when rects share a band on the perpendicular axis
-                    too_close = False
-                    if (x_gap == 0 and 0 < y_gap < MIN_WIDGET_GAP_PX) or (
-                        y_gap == 0 and 0 < x_gap < MIN_WIDGET_GAP_PX
-                    ):
-                        too_close = True
+                    too_close = (x_gap < 0 and 0 <= y_gap < MIN_WIDGET_GAP_PX) or (
+                        y_gap < 0 and 0 <= x_gap < MIN_WIDGET_GAP_PX
+                    )
                     if too_close:
                         ref_a = _wref(scene_name, a, i)
                         ref_b = _wref(scene_name, b, j)
-                        gap = min(g for g in (x_gap, y_gap) if g > 0)
+                        gap = max(x_gap, y_gap)
                         issues.append(
                             Issue(
                                 "WARN",

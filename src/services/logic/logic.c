@@ -199,8 +199,12 @@ static void timer_disarm(int32_t id)
     }
 }
 
-static void gpio_watch_add(uint8_t pin)
+static void gpio_watch_add(int32_t pin)
 {
+    if (pin < 0 || pin >= 64 || !GPIO_IS_VALID_GPIO(pin)) {
+        ESP_LOGW(TAG, "gpio_in: invalid pin %ld", (long)pin);
+        return;
+    }
     for (uint8_t i = 0; i < s_gpio_count; ++i) {
         if (s_gpio[i].used && s_gpio[i].pin == pin) {
             return;
@@ -267,6 +271,10 @@ static void run_actions(const UiLogicAction *acts, uint16_t n)
                 }
                 break;
             case UI_ACT_GPIO_WRITE: {
+                if (a->i0 < 0 || a->i0 >= 64 || !GPIO_IS_VALID_OUTPUT_GPIO(a->i0)) {
+                    ESP_LOGW(TAG, "gpio_write: invalid output pin %ld", (long)a->i0);
+                    break;
+                }
                 gpio_num_t pin = (gpio_num_t)a->i0;
                 gpio_config_t cfg = {
                     .pin_bit_mask = (1ULL << a->i0),
@@ -275,8 +283,13 @@ static void run_actions(const UiLogicAction *acts, uint16_t n)
                     .pull_down_en = GPIO_PULLDOWN_DISABLE,
                     .intr_type = GPIO_INTR_DISABLE,
                 };
-                (void)gpio_config(&cfg);
-                (void)gpio_set_level(pin, a->i1 ? 1 : 0);
+                esp_err_t err = gpio_config(&cfg);
+                if (err != ESP_OK) {
+                    ESP_LOGW(TAG, "gpio_write: config failed: %s", esp_err_to_name(err));
+                    break;
+                }
+                err = gpio_set_level(pin, a->i1 ? 1 : 0);
+                if (err != ESP_OK) ESP_LOGW(TAG, "gpio_write: write failed: %s", esp_err_to_name(err));
                 break;
             }
             case UI_ACT_TOAST:
@@ -405,7 +418,7 @@ static void configure_gpio_watches(void)
         for (uint16_t r = 0; r < p->rule_count; ++r) {
             const UiLogicRule *rule = &p->rules[r];
             if (rule->trig == UI_TRIG_GPIO_IN && rule->trig_i0 >= 0) {
-                gpio_watch_add((uint8_t)rule->trig_i0);
+                gpio_watch_add(rule->trig_i0);
             }
         }
     }

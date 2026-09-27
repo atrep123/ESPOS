@@ -112,8 +112,10 @@ def _navrh(*, koren=False, misto=True, z_mostu=True, prvky=None, pasy=None):
         # `orez` je klic, ktery na prvek posila JEN most kitu - tim se pozna
         # scena, o ktere se SMI rict, ze v ni priznak chybi.
         blok["prvky"].setdefault("neco.0", {})["orez"] = {
-            "sirka_obsahu": 10, "sirka_schranky": 10,
-            "vyska_obsahu": 10, "vyska_schranky": 10,
+            "sirka_obsahu": 10,
+            "sirka_schranky": 10,
+            "vyska_obsahu": 10,
+            "vyska_schranky": 10,
         }
     return blok
 
@@ -183,8 +185,7 @@ def test_r153_koren_se_na_polohu_uz_nepta():
 
 
 def test_r153_nekoren_bez_Zpet_je_ERROR():
-    d = _scena([_w("stitek.0", 36, 129, 200, 24, text="Soubory", t="label")],
-               _navrh(koren=False))
+    d = _scena([_w("stitek.0", 36, 129, 200, 24, text="Soubory", t="label")], _navrh(koren=False))
     nalezy = _obsahuji(_errors(d), ZNACKA_R153_CHYBI)
     assert len(nalezy) == 1
     assert R153_TRIDA in nalezy[0] and R153_PAS in nalezy[0]
@@ -196,8 +197,7 @@ def test_r153_KONTROLNI_SKUPINA_jiny_dotykovy_ovladac_Zpet_nenahradi():
     Bez teto kontroly by stacilo, aby na listu byl jakykoli knoflik, a
     pravidlo by se dalo splnit necim jinym, nez o cem mluvi.
     """
-    d = _scena([_w("dlazdice.0", 48, 320, 386, 120, text="Terminal")],
-               _navrh(koren=False))
+    d = _scena([_w("dlazdice.0", 48, 320, 386, 120, text="Terminal")], _navrh(koren=False))
     assert _obsahuji(_errors(d), ZNACKA_R153_CHYBI)
 
 
@@ -224,14 +224,14 @@ def test_r153_schovane_tlacitko_neni_slib():
     ("obdelnik", "ceka_nalez"),
     [
         ((1148, 8, 112, 81), False),  # deklarovane misto
-        ((1149, 8, 112, 81), True),   # o 1 px vpravo
-        ((1147, 8, 112, 81), True),   # o 1 px vlevo
-        ((1148, 9, 112, 81), True),   # o 1 px niz
-        ((1148, 7, 112, 81), True),   # o 1 px vys
-        ((1148, 8, 113, 81), True),   # o 1 px sirsi
-        ((1148, 8, 111, 81), True),   # o 1 px uzsi
-        ((1148, 8, 112, 82), True),   # o 1 px vyssi
-        ((1148, 8, 112, 80), True),   # o 1 px nizsi
+        ((1149, 8, 112, 81), True),  # o 1 px vpravo
+        ((1147, 8, 112, 81), True),  # o 1 px vlevo
+        ((1148, 9, 112, 81), True),  # o 1 px niz
+        ((1148, 7, 112, 81), True),  # o 1 px vys
+        ((1148, 8, 113, 81), True),  # o 1 px sirsi
+        ((1148, 8, 111, 81), True),  # o 1 px uzsi
+        ((1148, 8, 112, 82), True),  # o 1 px vyssi
+        ((1148, 8, 112, 80), True),  # o 1 px nizsi
     ],
     ids=["na miste", "x+1", "x-1", "y+1", "y-1", "w+1", "w-1", "h+1", "h-1"],
 )
@@ -261,9 +261,9 @@ def test_r153_poloha_se_NEMERI_proti_pasu_navigace():
     posunuty = (1149, 8, 112, 81)
     d = _scena(
         [_zpet(posunuty)],
-        _navrh(koren=False,
-               pasy={"navigace": list(posunuty)},
-               prvky={"zpet.10": {"pas": R153_PAS}}),
+        _navrh(
+            koren=False, pasy={"navigace": list(posunuty)}, prvky={"zpet.10": {"pas": R153_PAS}}
+        ),
     )
     zpravy = _msgs(d)
     assert _obsahuji(zpravy, ZNACKA_R136_PAS_VEN) == [], "Rule 136 tu nema co merit"
@@ -291,8 +291,9 @@ def test_r153_druhy_podpis_dotykovy_prvek_v_pasu_navigace():
     """
     d = _scena(
         [_w("navrat.10", *OBDELNIK)],
-        _navrh(koren=True, pasy={"navigace": list(OBDELNIK)},
-               prvky={"navrat.10": {"pas": R153_PAS}}),
+        _navrh(
+            koren=True, pasy={"navigace": list(OBDELNIK)}, prvky={"navrat.10": {"pas": R153_PAS}}
+        ),
     )
     assert len(_obsahuji(_errors(d), ZNACKA_R153_KOREN)) == 1
 
@@ -305,8 +306,7 @@ def test_r153_KONTROLNI_SKUPINA_panel_v_pasu_navigace_neni_Zpet():
     """
     d = _scena(
         [_w("zona.3", *OBDELNIK, text="", t="panel")],
-        _navrh(koren=True, pasy={"navigace": list(OBDELNIK)},
-               prvky={"zona.3": {"pas": R153_PAS}}),
+        _navrh(koren=True, pasy={"navigace": list(OBDELNIK)}, prvky={"zona.3": {"pas": R153_PAS}}),
     )
     assert _obsahuji(_msgs(d), ZNACKA_R153_KOREN) == []
 
@@ -332,8 +332,7 @@ def test_r153_nekoren_se_Zpet_na_miste_mlci():
 
 
 def test_r153_koren_bez_Zpet_mlci():
-    d = _scena([_w("dlazdice.0", 48, 320, 386, 120, text="Terminal")],
-               _navrh(koren=True))
+    d = _scena([_w("dlazdice.0", 48, 320, 386, 120, text="Terminal")], _navrh(koren=True))
     assert _obsahuji(_msgs(d), "Zpet") == []
 
 
@@ -388,8 +387,7 @@ def test_r153_NEMERENO_i_kdyz_tlacitko_uplne_chybi():
 
     nezmereny list bez Zpet tvaril jako v poradku.
     """
-    d = _scena([_w("stitek.0", 36, 129, 200, 24, text="Soubory", t="label")],
-               _navrh(koren=None))
+    d = _scena([_w("stitek.0", 36, 129, 200, 24, text="Soubory", t="label")], _navrh(koren=None))
     assert len(_obsahuji(_warns(d), ZNACKA_R153_NEMERENO)) == 1
 
 
@@ -420,12 +418,21 @@ def test_r153_obe_znacky_NEMERENO_konci_jmennou_konvenci_mostu():
     """
     assert ZNACKA_R153_NEMERENO.isascii()
     assert ZNACKA_R153_MISTO_NEMERENO.isascii()
-    for z in (ZNACKA_R153_KOREN, ZNACKA_R153_CHYBI, ZNACKA_R153_MISTO,
-              ZNACKA_R153_VIC):
+    for z in (ZNACKA_R153_KOREN, ZNACKA_R153_CHYBI, ZNACKA_R153_MISTO, ZNACKA_R153_VIC):
         assert z.isascii()
-    assert len({ZNACKA_R153_KOREN, ZNACKA_R153_CHYBI, ZNACKA_R153_MISTO,
-                ZNACKA_R153_VIC, ZNACKA_R153_NEMERENO,
-                ZNACKA_R153_MISTO_NEMERENO}) == 6
+    assert (
+        len(
+            {
+                ZNACKA_R153_KOREN,
+                ZNACKA_R153_CHYBI,
+                ZNACKA_R153_MISTO,
+                ZNACKA_R153_VIC,
+                ZNACKA_R153_NEMERENO,
+                ZNACKA_R153_MISTO_NEMERENO,
+            }
+        )
+        == 6
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -454,9 +461,14 @@ def test_r153_koren_musi_byt_PRAVDIVOSTNI_hodnota(hodnota):
 
 @pytest.mark.parametrize(
     "navigace",
-    [[1148, 8, 112, 81], "1148,8", {"x": 1148, "y": 8, "w": 112},
-     {"x": 1148, "y": 8, "w": 0, "h": 81}, {"x": -1, "y": 8, "w": 112, "h": 81},
-     {"x": 1148, "y": 8, "w": 112.5, "h": 81}],
+    [
+        [1148, 8, 112, 81],
+        "1148,8",
+        {"x": 1148, "y": 8, "w": 112},
+        {"x": 1148, "y": 8, "w": 0, "h": 81},
+        {"x": -1, "y": 8, "w": 112, "h": 81},
+        {"x": 1148, "y": 8, "w": 112.5, "h": 81},
+    ],
     ids=["seznam", "retezec", "chybi h", "nulova sirka", "zaporne x", "desetinne"],
 )
 def test_r153_vadna_deklarace_mista_je_ERROR_a_ne_ticho(navigace):
@@ -485,8 +497,9 @@ def test_r153_fixtury_vad_nemaji_ZADNY_jiny_ERROR():
     ze cerveno je od pravidla 153.
     """
     for cesta in (KOREN_VADY, CHYBI_VADY, MISTO_VADY):
-        chyby = [i.message for i in validate_file(cesta, warnings_as_errors=False)
-                 if i.level == "ERROR"]
+        chyby = [
+            i.message for i in validate_file(cesta, warnings_as_errors=False) if i.level == "ERROR"
+        ]
         assert len(chyby) == 1, (cesta.name, chyby)
 
 
@@ -494,8 +507,9 @@ def test_r153_ciste_fixtury_o_Zpet_MLCI():
     for cesta in (CISTE, KOREN_CISTE):
         zpravy = [i.message for i in validate_file(cesta, warnings_as_errors=False)]
         assert _obsahuji(zpravy, "Zpet") == [], cesta.name
-        assert [i for i in validate_file(cesta, warnings_as_errors=False)
-                if i.level == "ERROR"] == []
+        assert [
+            i for i in validate_file(cesta, warnings_as_errors=False) if i.level == "ERROR"
+        ] == []
 
 
 def test_r153_dvojice_fixtur_se_lisi_JEDINYM_klicem():
@@ -538,8 +552,9 @@ def test_r153_odebrani_deklarace_z_ciste_fixtury_zmlkne_o_poloze():
 
 
 def test_r153_dva_behy_tyz_vysledek():
-    d = _scena([_zpet((1149, 8, 112, 81)), _zpet((1150, 8, 112, 81), wid="zpet.11")],
-               _navrh(koren=False))
+    d = _scena(
+        [_zpet((1149, 8, 112, 81)), _zpet((1150, 8, 112, 81), wid="zpet.11")], _navrh(koren=False)
+    )
     assert _msgs(d) == _msgs(d)
 
 
@@ -547,9 +562,7 @@ def test_r153_dva_behy_tyz_vysledek():
 # Cisla proti primarnimu udaji (kdyz je kit po ruce)
 # --------------------------------------------------------------------------- #
 
-KIT_TOKENY = (
-    pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "tokens.json"
-)
+KIT_TOKENY = pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "tokens.json"
 
 
 @pytest.mark.skipif(not KIT_TOKENY.is_file(), reason="kit neni vedle ESPOSu")

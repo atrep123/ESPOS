@@ -70,8 +70,11 @@ def _nalezy_sdk(texty, jmena):
 
 
 def _verzalky(text):
-    return [m.group(0) for m in _V_VERZALKY.finditer(text)
-            if m.group(0) not in VETY_NENI_ROZHRANI and m.group(0) not in VETY_NENI_JMENO_SDK]
+    return [
+        m.group(0)
+        for m in _V_VERZALKY.finditer(text)
+        if m.group(0) not in VETY_NENI_ROZHRANI and m.group(0) not in VETY_NENI_JMENO_SDK
+    ]
 
 
 def test_fixtura_je_nabita_a_ma_puvod():
@@ -80,7 +83,7 @@ def test_fixtura_je_nabita_a_ma_puvod():
     # (`tests/fixtures/gen_verzalky_kit.py`) - je to jedine misto, kde
     # se pozna, ze fixtura NENI z dnesnich listu, kdyby nekdo prepsal
     # jen texty a puvod nechal stat.
-    assert f["kit"] == "a660d7b+kit-dorovnani"
+    assert f["kit"] == "dfbdbbb+dirty-faze0-2026-09-27"
     assert len(f["vety"]) >= 100 and len(f["stitky"]) >= 100 and len(_jmena(f)) >= 50
     assert all(_verzalky(v["text"]) for v in f["vety"] + f["stitky"])
     assert all(any(z.islower() for z in v["text"]) for v in f["vety"])
@@ -107,21 +110,47 @@ def test_stitky_kitu_verzalkami_se_NEMERI():
 def test_etalon_je_pravdivy_nalez_i_pres_celou_branu():
     f = _fixtura()
     for e in f["etalon_nalezu"]:
-        scene = {"width": 1280, "height": 720, "navrh": {"jmena_sdk": sorted(_jmena(f))},
-                 "widgets": [{"type": "label", "x": 40, "y": 200, "width": 400, "height": 20,
-                              "text": e["text"], "color_fg": "#e6e1ce", "color_bg": "#14170f",
-                              "align": "left", "valign": "middle", "_widget_id": "radek.1"}]}
-        zpravy = [i.message for i in validate_data({"device": "tab5", "scenes": {"main": scene}},
-                                                   file_label="t", warnings_as_errors=False)]
+        scene = {
+            "width": 1280,
+            "height": 720,
+            "navrh": {"jmena_sdk": sorted(_jmena(f))},
+            "widgets": [
+                {
+                    "type": "label",
+                    "x": 40,
+                    "y": 200,
+                    "width": 400,
+                    "height": 20,
+                    "text": e["text"],
+                    "color_fg": "#e6e1ce",
+                    "color_bg": "#14170f",
+                    "align": "left",
+                    "valign": "middle",
+                    "_widget_id": "radek.1",
+                }
+            ],
+        }
+        zpravy = [
+            i.message
+            for i in validate_data(
+                {"device": "tab5", "scenes": {"main": scene}},
+                file_label="t",
+                warnings_as_errors=False,
+            )
+        ]
         assert [z for z in zpravy if ZNACKA_R142 in z and f"'{e['kus']}'" in z]
 
 
 def _bezna_slova_sdk(jmena):
     """Jmena SDK, ktera vypadaji jako bezne slovo: bez I-rozhrani, jednohrba."""
-    return sorted(j for j in jmena
-                  if not _V_ROZHRANI.fullmatch(j) and len(j) >= 3
-                  and sum(1 for z in j[1:] if z.isupper()) == 0
-                  and j.upper() not in VETY_NENI_JMENO_SDK)
+    return sorted(
+        j
+        for j in jmena
+        if not _V_ROZHRANI.fullmatch(j)
+        and len(j) >= 3
+        and sum(1 for z in j[1:] if z.isupper()) == 0
+        and j.upper() not in VETY_NENI_JMENO_SDK
+    )
 
 
 def test_kontrolni_skupina_bezna_slova_SDK_jako_STITEK_mlci_ale_ve_VETE_hlasi():
@@ -143,7 +172,9 @@ def test_kitove_stitky_ktere_jsou_zaroven_jmenem_SDK_jsou_dnes_nula():
     prvni, ma tu pribyt do seznamu a test ho ma pojmenovat, ne umlcet."""
     f = _fixtura()
     velka = {j.upper() for j in _jmena(f)}
-    kolize = sorted(s["text"] for s in f["stitky"] if any(v.upper() in velka for v in _verzalky(s["text"])))
+    kolize = sorted(
+        s["text"] for s in f["stitky"] if any(v.upper() in velka for v in _verzalky(s["text"]))
+    )
     assert kolize == []
 
 

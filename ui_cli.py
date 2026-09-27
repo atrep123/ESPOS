@@ -857,13 +857,13 @@ def create_cli_interface(
                     continue
                 try:
                     _wh = parts[1].lower().split("x")
-                    _w = int(_wh[0])
-                    _h = int(_wh[1])
+                    _bp_width = int(_wh[0])
+                    _bp_height = int(_wh[1])
                     if designer.current_scene and designer.current_scene in designer.scenes:
                         _sc = designer.scenes[designer.current_scene]
-                        _sc.width = _w
-                        _sc.height = _h
-                        print(f"[OK] Breakpoint applied: {_w}x{_h}")
+                        _sc.width = _bp_width
+                        _sc.height = _bp_height
+                        print(f"[OK] Breakpoint applied: {_bp_width}x{_bp_height}")
                 except (ValueError, IndexError):
                     print("Usage: bp <WxH>")
 
@@ -940,12 +940,14 @@ def create_cli_interface(
                         print(MSG_INVALID_INDEX)
                         continue
                     _w = _scene.widgets[_idx]
-                    _keys = sorted((_w.state_overrides or {}).keys())
-                    _cur = _w.state or "default"
-                    if not _keys:
-                        print(f"(no overrides). Current state: {_cur}")
+                    _state_names = sorted((_w.state_overrides or {}).keys())
+                    _current_state = _w.state or "default"
+                    if not _state_names:
+                        print(f"(no overrides). Current state: {_current_state}")
                     else:
-                        print(f"States for widget {_idx} (current: {_cur}): {', '.join(_keys)}")
+                        print(
+                            f"States for widget {_idx} (current: {_current_state}): {', '.join(_state_names)}"
+                        )
                 elif _sub == "clear":
                     if len(parts) < 4:
                         print("Usage: state clear <idx> <name>")
@@ -976,8 +978,8 @@ def create_cli_interface(
                 _builtins = ["bounce", "slideinleft", "pulse", "fadein"]
                 if _sub == "list":
                     print("\nAnimations:")
-                    for _n in _builtins:
-                        print(f"  - {_n}")
+                    for _animation_name in _builtins:
+                        print(f"  - {_animation_name}")
                     print()
                     continue
                 if not (designer.current_scene and designer.current_scene in designer.scenes):

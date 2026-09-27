@@ -611,6 +611,13 @@ _EMPTY_EXPR = (
 )
 
 
+def _logic_gpio_pin(value: object) -> int:
+    # Do not coerce strings, floats or bools to another hardware pin.
+    if type(value) is not int or not 0 <= value <= 48:
+        raise LogicCodegenError("GPIO pin must be an integer in 0..48")
+    return value
+
+
 def _emit_action(
     a: dict[str, Any],
     scene_idx: dict[str, int],
@@ -646,8 +653,11 @@ def _emit_action(
         i0 = vt.intern(str(a.get("var", "") or ""))
         expr = _emit_expr(a.get("expr", ""), vt)
     elif t == "gpio_write":
-        i0 = as_int(a.get("pin", 0), 0)
-        i1 = 1 if as_int(a.get("level", 0), 0) else 0
+        i0 = _logic_gpio_pin(a.get("pin"))
+        level = a.get("level")
+        if type(level) is not int or level not in (0, 1):
+            raise LogicCodegenError("gpio_write level must be 0 or 1")
+        i1 = level
     elif t == "toast":
         s0 = _str_ref(pool, str(a.get("text", "") or ""))
     elif t == "start_timer":
@@ -737,7 +747,7 @@ def build_logic_tables(
             if ttype == "timer":
                 trig_i0 = as_int(trig.get("timer_id", 0), 0)
             elif ttype == "gpio_in":
-                trig_i0 = as_int(trig.get("pin", 0), 0)
+                trig_i0 = _logic_gpio_pin(trig.get("pin"))
                 trig_edge = _EDGE_MAP.get(
                     str(trig.get("edge", "any")).strip().lower(), "UI_EDGE_ANY"
                 )

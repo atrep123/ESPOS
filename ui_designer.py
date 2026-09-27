@@ -216,6 +216,14 @@ def _clamp_int(value: Optional[int], minimum: int = 0, maximum: Optional[int] = 
     return max(minimum, v)
 
 
+def _widget_size(widget: WidgetConfig) -> Tuple[int, int]:
+    """Read optional dimensions without hiding zero/negative sizes from preflight."""
+    return (
+        widget.width if widget.width is not None else 0,
+        widget.height if widget.height is not None else 0,
+    )
+
+
 def _widget_dims(widget: WidgetConfig) -> Tuple[int, int]:
     """Return safe (width, height) with minimum of 1."""
     w = getattr(widget, "width", 1)
@@ -759,11 +767,11 @@ class UIDesigner:
         self.snap_tolerance = max(1, min(3, self.grid_size // 2 if self.grid_size else 3))
 
     @property
-    def snap_to_grid(self) -> bool:  # type: ignore[override]
+    def snap_to_grid(self) -> bool:
         return getattr(self, "_snap_to_grid", False)
 
     @snap_to_grid.setter
-    def snap_to_grid(self, value: Any) -> None:  # type: ignore[override]
+    def snap_to_grid(self, value: Any) -> None:
         if value is None:
             self._snap_to_grid = False
             return
@@ -1241,8 +1249,9 @@ class UIDesigner:
             if getattr(widget, "locked", False):
                 return
             self._save_state()
-            widget.width = max(1, widget.width + dw)
-            widget.height = max(1, widget.height + dh)
+            ww, hh = _widget_size(widget)
+            widget.width = max(1, ww + dw)
+            widget.height = max(1, hh + dh)
 
     def delete_widget(self, widget_idx: int, scene_name: Optional[str] = None):
         """Delete widget"""
@@ -1366,8 +1375,8 @@ class UIDesigner:
         self.symbols[name] = {
             "items": items,
             "size": (
-                max(w.x + w.width for w in sel) - min_x,
-                max(w.y + w.height for w in sel) - min_y,
+                max(w.x + _widget_size(w)[0] for w in sel) - min_x,
+                max(w.y + _widget_size(w)[1] for w in sel) - min_y,
             ),
         }
         return True
@@ -1899,19 +1908,19 @@ class UIDesigner:
     def _layout_vertical(self, scene: SceneConfig, spacing: int) -> None:
         y_offset = spacing
         for widget in scene.widgets:
-            max_x = max(0, scene.width - widget.width)
-            widget.x = _clamp_int((scene.width - widget.width) // 2, 0, max_x)
-            widget.y = _clamp_int(y_offset, 0, max(0, scene.height - widget.height))
-            y_offset += widget.height + spacing
+            ww, hh = _widget_size(widget)
+            max_x = max(0, scene.width - ww)
+            widget.x = _clamp_int((scene.width - ww) // 2, 0, max_x)
+            widget.y = _clamp_int(y_offset, 0, max(0, scene.height - hh))
+            y_offset += hh + spacing
 
     def _layout_horizontal(self, scene: SceneConfig, spacing: int) -> None:
         x_offset = spacing
         for widget in scene.widgets:
-            widget.x = _clamp_int(x_offset, 0, max(0, scene.width - widget.width))
-            widget.y = _clamp_int(
-                (scene.height - widget.height) // 2, 0, max(0, scene.height - widget.height)
-            )
-            x_offset += widget.width + spacing
+            ww, hh = _widget_size(widget)
+            widget.x = _clamp_int(x_offset, 0, max(0, scene.width - ww))
+            widget.y = _clamp_int((scene.height - hh) // 2, 0, max(0, scene.height - hh))
+            x_offset += ww + spacing
 
     def _layout_grid(self, scene: SceneConfig, spacing: int) -> None:
         cols = max(1, int((scene.width + spacing) / (40 + spacing)))  # Assume 40px avg width
@@ -1919,10 +1928,11 @@ class UIDesigner:
         y_offset = spacing
         col = 0
         for widget in scene.widgets:
-            widget.x = _clamp_int(x_offset, 0, max(0, scene.width - widget.width))
-            widget.y = _clamp_int(y_offset, 0, max(0, scene.height - widget.height))
+            ww, hh = _widget_size(widget)
+            widget.x = _clamp_int(x_offset, 0, max(0, scene.width - ww))
+            widget.y = _clamp_int(y_offset, 0, max(0, scene.height - hh))
             col += 1
-            x_offset += widget.width + spacing
+            x_offset += ww + spacing
             if col >= cols:
                 col = 0
                 x_offset = spacing
@@ -1972,9 +1982,9 @@ class UIDesigner:
     def _align_right(self, widgets: List[WidgetConfig]) -> None:
         """Align widgets to rightmost edge"""
         if widgets:
-            target = max(w.x + w.width for w in widgets)
+            target = max(w.x + _widget_size(w)[0] for w in widgets)
             for w in widgets:
-                w.x = target - w.width
+                w.x = target - _widget_size(w)[0]
 
     def _align_top(self, widgets: List[WidgetConfig]) -> None:
         """Align widgets to topmost edge"""
@@ -1986,9 +1996,9 @@ class UIDesigner:
     def _align_bottom(self, widgets: List[WidgetConfig]) -> None:
         """Align widgets to bottommost edge"""
         if widgets:
-            target = max(w.y + w.height for w in widgets)
+            target = max(w.y + _widget_size(w)[1] for w in widgets)
             for w in widgets:
-                w.y = target - w.height
+                w.y = target - _widget_size(w)[1]
 
     def distribute_widgets(
         self, direction: str, widget_indices: List[int], scene_name: Optional[str] = None
@@ -2026,9 +2036,9 @@ class UIDesigner:
 
     def _calculate_center(self, widgets: List[WidgetConfig], axis: str) -> int:
         centers = (
-            [int(w.x + w.width // 2) for w in widgets]
+            [int(w.x + _widget_size(w)[0] // 2) for w in widgets]
             if axis == "x"
-            else [int(w.y + w.height // 2) for w in widgets]
+            else [int(w.y + _widget_size(w)[1] // 2) for w in widgets]
         )
         return sum(centers) // len(centers) if centers else 0
 
@@ -2047,7 +2057,7 @@ class UIDesigner:
         end = _safe_int(key(items[-1])) + max(0, int(size(items[-1]) or 0))
         total_span = sum(max(0, int(size(w) or 0)) for w in items)
         spacing = (end - start - total_span) / max(1, (len(items) - 1))
-        pos = start
+        pos = float(start)
         for _, widget in items:
             if axis == "x":
                 widget.x = int(pos)
@@ -2258,8 +2268,9 @@ class UIDesigner:
 
         x0 = int(widget.x) + border_pad + pad_x
         y0 = int(widget.y) + border_pad + pad_y
-        x1 = int(widget.x) + int(widget.width) - border_pad - pad_x - 1
-        y1 = int(widget.y) + int(widget.height) - border_pad - pad_y - 1
+        ww, hh = _widget_size(widget)
+        x1 = int(widget.x) + ww - border_pad - pad_x - 1
+        y1 = int(widget.y) + hh - border_pad - pad_y - 1
 
         inner_w = x1 - x0 + 1
         inner_h = y1 - y0 + 1
@@ -2447,15 +2458,16 @@ class UIDesigner:
 
         amp = max(1, min(3, scene.height // 10))
         dy = round(amp * math.sin(2 * math.pi * (t % steps) / steps))
-        widget.y = max(0, min(scene.height - widget.height, widget.y + dy))
+        widget.y = max(0, min(scene.height - _widget_size(widget)[1], widget.y + dy))
 
     def _anim_slide_in_left(
         self, widget: WidgetConfig, scene: SceneConfig, t: int, steps: int
     ) -> None:
-        start = -widget.width
+        ww, _ = _widget_size(widget)
+        start = -ww
         end = widget.x
         pos = start + (end - start) * (t % steps) / steps
-        widget.x = max(-widget.width, min(scene.width - 1, int(pos)))
+        widget.x = max(-ww, min(scene.width - 1, int(pos)))
 
     def _anim_pulse(self, widget: WidgetConfig, t: int) -> None:
         widget.border_style = "bold" if (t % 2) == 0 else "single"
@@ -2486,8 +2498,9 @@ class UIDesigner:
 
         x0 = int(widget.x) + border_pad + pad_x
         y0 = int(widget.y) + border_pad + pad_y
-        x1 = int(widget.x) + int(widget.width) - border_pad - pad_x - 1
-        y1 = int(widget.y) + int(widget.height) - border_pad - pad_y - 1
+        ww, hh = _widget_size(widget)
+        x1 = int(widget.x) + ww - border_pad - pad_x - 1
+        y1 = int(widget.y) + hh - border_pad - pad_y - 1
 
         inner_w = x1 - x0 + 1
         inner_h = y1 - y0 + 1
@@ -2607,8 +2620,9 @@ class UIDesigner:
         """Return (x_start, y_start, inner_width, inner_height) considering border."""
         x_start = widget.x + (1 if widget.border else 0)
         y_start = widget.y + (1 if widget.border else 0)
-        inner_w = widget.width - (2 if widget.border else 0)
-        inner_h = widget.height - (2 if widget.border else 0)
+        ww, hh = _widget_size(widget)
+        inner_w = ww - (2 if widget.border else 0)
+        inner_h = hh - (2 if widget.border else 0)
         return x_start, y_start, inner_w, inner_h
 
     def _calc_progress_value(self, value: int, max_value: int, span: int) -> int:
@@ -2629,7 +2643,7 @@ class UIDesigner:
         x0, _y0, inner_w, _inner_h = self._inner_box(widget)
         fill_ratio = self._calc_fill_ratio(widget)
         progress = int(fill_ratio * max(0, inner_w))
-        bar_y = widget.y + widget.height // 2
+        bar_y = widget.y + _widget_size(widget)[1] // 2
 
         if not (0 <= bar_y < height):
             return
@@ -2689,8 +2703,9 @@ class UIDesigner:
         """Draw gauge (simple bar)"""
         _x0, _y0, _inner_w, inner_h = self._inner_box(widget)
         progress = self._calc_progress_value(widget.value, widget.max_value, inner_h)
-        gauge_x = widget.x + widget.width // 2
-        gauge_y_start = widget.y + widget.height - (1 if widget.border else 0) - 1
+        ww, hh = _widget_size(widget)
+        gauge_x = widget.x + ww // 2
+        gauge_y_start = widget.y + hh - (1 if widget.border else 0) - 1
         for i in range(inner_h):
             y = gauge_y_start - i
             if 0 <= y < height and 0 <= gauge_x < width:
@@ -2700,7 +2715,8 @@ class UIDesigner:
         self, canvas: List[List[str]], widget: WidgetConfig, width: int, height: int
     ):
         """Draw checkbox"""
-        check_y = widget.y + widget.height // 2
+        ww, hh = _widget_size(widget)
+        check_y = widget.y + hh // 2
         check_x = widget.x + (1 if widget.border else 0) + 1
 
         if 0 <= check_y < height and 0 <= check_x < width:
@@ -2711,7 +2727,7 @@ class UIDesigner:
             pad_x = int(getattr(widget, "padding_x", 0) or 0)
             border_pad = 1 if bool(getattr(widget, "border", True)) else 0
             text_x = check_x + 2
-            inner_right = widget.x + widget.width - border_pad - pad_x - 1
+            inner_right = widget.x + ww - border_pad - pad_x - 1
             max_len = int(inner_right - text_x + 1)
             if max_len > 0:
                 line = self._ellipsize_text(str(widget.text or "").replace("\n", " "), max_len)
@@ -2721,7 +2737,7 @@ class UIDesigner:
         """Draw slider"""
         x0, _y0, inner_w, _inner_h = self._inner_box(widget)
         slider_pos = self._calc_slider_pos(widget.value, widget.max_value, max(0, inner_w - 1))
-        slider_y = widget.y + widget.height // 2
+        slider_y = widget.y + _widget_size(widget)[1] // 2
         if 0 <= slider_y < height:
             for i in range(inner_w):
                 x = x0 + i
@@ -2773,7 +2789,8 @@ def _preflight_widget_checks(
 
 
 def _check_size(idx: int, w: WidgetConfig, issues: List[str]) -> None:
-    if w.width < 1 or w.height < 1:
+    ww, hh = _widget_size(w)
+    if ww < 1 or hh < 1:
         issues.append(f"[{idx}] {w.type}: invalid size {w.width}x{w.height}")
 
 
@@ -2782,14 +2799,15 @@ def _check_offcanvas(
 ) -> None:
     off_left = max(0, -w.x)
     off_top = max(0, -w.y)
-    off_right = max(0, (w.x + w.width) - scene.width)
-    off_bottom = max(0, (w.y + w.height) - scene.height)
+    ww, hh = _widget_size(w)
+    off_right = max(0, (w.x + ww) - scene.width)
+    off_bottom = max(0, (w.y + hh) - scene.height)
     if not (off_left or off_top or off_right or off_bottom):
         return
-    off_area = (off_left + off_right) * max(0, min(w.height, scene.height)) + (
+    off_area = (off_left + off_right) * max(0, min(hh, scene.height)) + (
         off_top + off_bottom
-    ) * max(0, min(w.width, scene.width))
-    approx_area = max(1, w.width * w.height)
+    ) * max(0, min(ww, scene.width))
+    approx_area = max(1, ww * hh)
     sev = "major" if (off_area / approx_area) > 0.25 else "minor"
     issues.append(
         f"[{idx}] {w.type}: off-canvas ({sev}) pos=({w.x},{w.y}) size={w.width}x{w.height}"
@@ -2800,9 +2818,10 @@ def _check_offcanvas(
 
 def _check_min_size_and_text(idx: int, w: WidgetConfig, warnings: List[str]) -> None:
     w_type = (w.type or "").lower()
-    if w_type in ["progressbar", "slider"] and w.height < 2:
+    _, hh = _widget_size(w)
+    if w_type in ["progressbar", "slider"] and hh < 2:
         warnings.append(f"[{idx}] {w.type}: height < 2 may be hard to see")
-    if w_type in ["checkbox", "radiobutton"] and w.height < 2:
+    if w_type in ["checkbox", "radiobutton"] and hh < 2:
         warnings.append(f"[{idx}] {w.type}: very small height may clip symbol")
     if (
         w_type in {"button", "checkbox", "radiobutton"}
@@ -2917,18 +2936,16 @@ def _check_pixel_grid(
     grid = getattr(scene, "grid_size", 8)
     if w.x % grid or w.y % grid:
         hints.append(f"[{idx}] {w.type}: position not aligned to {grid}px grid")
-    if (w.width % 2) or (w.height % 2):
+    ww, hh = _widget_size(w)
+    if (ww % 2) or (hh % 2):
         warnings.append(f"[{idx}] {w.type}: odd size {w.width}x{w.height} may look fuzzy")
 
 
 def _preflight_overlap_checks(scene: SceneConfig, warnings: List[str]) -> List[str]:
     def overlap(a: WidgetConfig, b: WidgetConfig) -> bool:
-        return not (
-            a.x + a.width <= b.x
-            or b.x + b.width <= a.x
-            or a.y + a.height <= b.y
-            or b.y + b.height <= a.y
-        )
+        aw, ah = _widget_size(a)
+        bw, bh = _widget_size(b)
+        return not (a.x + aw <= b.x or b.x + bw <= a.x or a.y + ah <= b.y or b.y + bh <= a.y)
 
     n = len(scene.widgets)
     for i in range(n):

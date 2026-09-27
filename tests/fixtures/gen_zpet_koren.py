@@ -30,6 +30,7 @@ z `tokens.json`.
 
 Generator se pousti rukou po zmene tvaru bloku `navrh`; fixtury se commituji.
 """
+
 from __future__ import annotations
 
 import json
@@ -50,8 +51,19 @@ TMAVY = "#12150e"
 
 # tokens.json: colors (tataz paleta, jakou vozi most kitu do kazde sceny)
 PALETA = [
-    "#14170F", "#1C2016", "#A9C24A", "#9BA28D", "#E9A63C", "#FF7B5E",
-    "#E4DFCC", "#E27BE2", "#6F7764", "#E6E1CE", "#12150E", "#5A5F4C", "#6B6653",
+    "#14170F",
+    "#1C2016",
+    "#A9C24A",
+    "#9BA28D",
+    "#E9A63C",
+    "#FF7B5E",
+    "#E4DFCC",
+    "#E27BE2",
+    "#6F7764",
+    "#E6E1CE",
+    "#12150E",
+    "#5A5F4C",
+    "#6B6653",
 ]
 SKALA = {"rezy": [14, 16, 20, 24, 32], "vyjimky": {}}
 SOUSTAVA = {"pole_x": 20, "vsazka": 16}
@@ -62,53 +74,89 @@ JMENA_SDK = ["ITabOsApp", "IHwDiagnostics"]
 
 
 def _orez(w: int, h: int) -> dict:
-    return {"sirka_obsahu": w, "sirka_schranky": w,
-            "vyska_obsahu": h, "vyska_schranky": h}
+    return {"sirka_obsahu": w, "sirka_schranky": w, "vyska_obsahu": h, "vyska_schranky": h}
 
 
-def _w(wid: str, x: int, y: int, w: int, h: int, text: str, typ: str,
-       fg: str = INKOUST, bg: str = PODKLAD) -> dict:
+def _w(
+    wid: str,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    text: str,
+    typ: str,
+    fg: str = INKOUST,
+    bg: str = PODKLAD,
+) -> dict:
     return {
-        "type": typ, "x": x, "y": y, "width": w, "height": h, "text": text,
-        "color_fg": fg, "color_bg": bg, "border": False, "border_style": "none",
-        "align": "left", "valign": "middle", "_widget_id": wid,
+        "type": typ,
+        "x": x,
+        "y": y,
+        "width": w,
+        "height": h,
+        "text": text,
+        "color_fg": fg,
+        "color_bg": bg,
+        "border": False,
+        "border_style": "none",
+        "align": "left",
+        "valign": "middle",
+        "_widget_id": wid,
     }
 
 
-def _list(*, koren: bool | None, zpet: tuple[int, int, int, int] | None,
-          puvod: list[str]) -> dict:
+def _list(*, koren: bool | None, zpet: tuple[int, int, int, int] | None, puvod: list[str]) -> dict:
     """Jeden list: hlavicka s titulkem, pole obsahu, volitelne Zpet."""
     widgets = [
         _w("titulek.8", 36, 39, 79, 18, "Soubory", "label"),
         _w("obsah.20", 20, 97, 1240, 603, "", "panel", fg=TMAVY, bg=SMALT),
-        _w("veta.21", 36, 129, 420, 24, "Zaznam kanalu je pripraveny.", "label",
-           fg=TMAVY, bg=SMALT),
+        _w(
+            "veta.21", 36, 129, 420, 24, "Zaznam kanalu je pripraveny.", "label", fg=TMAVY, bg=SMALT
+        ),
         # KONTROLNI SKUPINA v KAZDEM listu: dotykovy ovladac, ktery Zpet
         # NENI. Pravidlo se pta na tlacitko Zpet, ne na "nejaky knoflik" -
         # bez teto dlazdice by list bez Zpet mohl projit uz tim, ze na nem
         # neco zmacknout jde. (Mimochodem umlci Rule 115 "navigation
         # dead-end", ktera by jinak zastinila mereni.)
-        _w("dlazdice.0", 48, 320, 386, 120, "Terminal", "button",
-           fg=TMAVY, bg=SMALT),
+        _w("dlazdice.0", 48, 320, 386, 120, "Terminal", "button", fg=TMAVY, bg=SMALT),
     ]
     prvky = {
-        "titulek.8": {"pas": "hlavicka", "orez": _orez(79, 18), "font_size": 20,
-                      "inkoust": INKOUST, "podklad": PODKLAD},
+        "titulek.8": {
+            "pas": "hlavicka",
+            "orez": _orez(79, 18),
+            "font_size": 20,
+            "inkoust": INKOUST,
+            "podklad": PODKLAD,
+        },
         "obsah.20": {"orez": _orez(1240, 603)},
-        "veta.21": {"rodic": [20, 97, 1240, 603], "rodic_id": "obsah.20",
-                    "orez": _orez(420, 24), "font_size": 20,
-                    "inkoust": TMAVY, "podklad": SMALT},
-        "dlazdice.0": {"rodic": [20, 97, 1240, 603], "rodic_id": "obsah.20",
-                       "orez": _orez(386, 120), "font_size": 24,
-                       "inkoust": TMAVY, "podklad": SMALT},
+        "veta.21": {
+            "rodic": [20, 97, 1240, 603],
+            "rodic_id": "obsah.20",
+            "orez": _orez(420, 24),
+            "font_size": 20,
+            "inkoust": TMAVY,
+            "podklad": SMALT,
+        },
+        "dlazdice.0": {
+            "rodic": [20, 97, 1240, 603],
+            "rodic_id": "obsah.20",
+            "orez": _orez(386, 120),
+            "font_size": 24,
+            "inkoust": TMAVY,
+            "podklad": SMALT,
+        },
     }
     pasy = {"hlavicka": PAS_HLAVICKA}
     if zpet is not None:
         x, y, w, h = zpet
         widgets.insert(1, _w("zpet.10", x, y, w, h, "Zpet", "button"))
-        prvky["zpet.10"] = {"pas": "navigace", "orez": _orez(w, h),
-                            "font_size": 16, "inkoust": INKOUST,
-                            "podklad": PODKLAD}
+        prvky["zpet.10"] = {
+            "pas": "navigace",
+            "orez": _orez(w, h),
+            "font_size": 16,
+            "inkoust": INKOUST,
+            "podklad": PODKLAD,
+        }
         # Pas navigace ZAKLADA sam prvek `.zpet` (nese `data-pas-vyska`),
         # takze se posouva s nim - presne jak to dela most nad artboardem.
         pasy["navigace"] = [x, y, w, h]
@@ -119,7 +167,9 @@ def _list(*, koren: bool | None, zpet: tuple[int, int, int, int] | None,
         "height": 720,
         "scenes": {
             "main": {
-                "name": "main", "width": 1280, "height": 720,
+                "name": "main",
+                "width": 1280,
+                "height": 720,
                 "bg_color": PODKLAD,
                 "navrh": {
                     # `koren=None` = klic v bloku VUBEC NENI (starsi most).
@@ -211,7 +261,8 @@ def main() -> None:
     for jmeno, data in LISTY.items():
         (ZDE / jmeno).write_text(
             json.dumps(data, ensure_ascii=False, indent=1) + "\n",
-            encoding="utf-8", newline="\n",
+            encoding="utf-8",
+            newline="\n",
         )
         print("+", jmeno)
 

@@ -23,6 +23,7 @@ kazdym behem prohlasil za pravdu (rohatka by se sama povolila).
     python tests/fixtures/gen_verzalky_kit.py           # prepise fixturu
     python tests/fixtures/gen_verzalky_kit.py --rozdil  # jen ukaze rozdil
 """
+
 from __future__ import annotations
 
 import argparse
@@ -72,9 +73,11 @@ class _Texty(HTMLParser):
 
 
 def _verzalky(text: str) -> list[str]:
-    return [m.group(0) for m in _V_VERZALKY.finditer(text)
-            if m.group(0) not in VETY_NENI_ROZHRANI
-            and m.group(0) not in VETY_NENI_JMENO_SDK]
+    return [
+        m.group(0)
+        for m in _V_VERZALKY.finditer(text)
+        if m.group(0) not in VETY_NENI_ROZHRANI and m.group(0) not in VETY_NENI_JMENO_SDK
+    ]
 
 
 def snimek() -> tuple[list[dict], list[dict]]:
@@ -95,8 +98,7 @@ def snimek() -> tuple[list[dict], list[dict]]:
                 kde[t].append(jmeno)
     vety, stitky = [], []
     for t in sorted(kde):
-        (vety if any(z.islower() for z in t) else stitky).append(
-            {"text": t, "listy": kde[t]})
+        (vety if any(z.islower() for z in t) else stitky).append({"text": t, "listy": kde[t]})
     return vety, stitky
 
 
@@ -113,22 +115,21 @@ def main() -> int:
         print("+ " + t)
     for t in sorted(stary - novy):
         print("- " + t)
-    print(f"vety {len(f['vety'])} -> {len(vety)}, "
-          f"stitky {len(f['stitky'])} -> {len(stitky)}")
+    print(f"vety {len(f['vety'])} -> {len(vety)}, stitky {len(f['stitky'])} -> {len(stitky)}")
 
     # Etalon je podmnozina VET. Kdyby prepis nektery etalonovy text z kitu
     # odstranil, fixtura by tvrdila nalez nad vetou, ktera uz nikde neni -
     # a to se musi rict nahlas, ne prepsat mlcky.
-    chybi = [e["text"] for e in f["etalon_nalezu"]
-             if e["text"] not in {v["text"] for v in vety}]
+    chybi = [e["text"] for e in f["etalon_nalezu"] if e["text"] not in {v["text"] for v in vety}]
     if chybi:
-        raise SystemExit(f"CHYBA: etalonovy text uz v kitu neni: {chybi}; "
-                         f"rozhodni o etalonu rucne, generator to neudela")
+        raise SystemExit(
+            f"CHYBA: etalonovy text uz v kitu neni: {chybi}; "
+            f"rozhodni o etalonu rucne, generator to neudela"
+        )
     if a.rozdil:
         return 0
     f["vety"], f["stitky"] = vety, stitky
-    FIXTURA.write_text(json.dumps(f, ensure_ascii=False, indent=1) + "\n",
-                       encoding="utf-8")
+    FIXTURA.write_text(json.dumps(f, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"{FIXTURA.name} prepsan")
     return 0
 

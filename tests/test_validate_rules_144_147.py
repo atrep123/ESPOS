@@ -256,9 +256,9 @@ def test_plocha_uvedena_dvakrat_nehlasi_dvakrat():
 
 def test_cary_nejsou_seznam_je_ERROR():
     d = _make([_w("a", 40, 100, 200, 20)], navrh={"cary": "537,244"})
-    assert (
-        f"{FL}: main: {ZNACKA_NAVRH_VADNY}: 'cary' ma byt seznam obdelniku, je str"
-    ) in _errors(d)
+    assert (f"{FL}: main: {ZNACKA_NAVRH_VADNY}: 'cary' ma byt seznam obdelniku, je str") in _errors(
+        d
+    )
 
 
 def test_cara_s_nulovou_vyskou_je_ERROR():
@@ -416,7 +416,9 @@ def test_r145_je_nezavisla_na_r144():
 
 def _smalt_scena(*, rodic_id=True, text_x=300, text_y=200, plochy=("stitek.1",), **kw):
     """Vyrobni stitek ze SvorkaDomu (36,113 413x154) + text na nem."""
-    prvky = {"k.2": {"rodic_id": "stitek.1"}} if rodic_id else {"k.2": {"rodic": [36, 113, 413, 154]}}
+    prvky = (
+        {"k.2": {"rodic_id": "stitek.1"}} if rodic_id else {"k.2": {"rodic": [36, 113, 413, 154]}}
+    )
     prvky.update(kw.pop("prvky", {}))
     return _make(
         [
@@ -605,41 +607,51 @@ def test_r147_mimo_profil_tab5_mlci():
 
 def test_fixtura_orez_ciste_hlasi_jen_Rule_137():
     """Cista fixtura NENI nema: nese doklad, ze 137 a 144 meri ruzne veci."""
-    chyby = [i.message for i in validate_file(OREZ_CISTA, warnings_as_errors=False)
-             if i.level == "ERROR"]
+    chyby = [
+        i.message for i in validate_file(OREZ_CISTA, warnings_as_errors=False) if i.level == "ERROR"
+    ]
     assert len(_obsahuji(chyby, ZNACKA_R137)) == 1
     assert _obsahuji(chyby, ZNACKA_R144) == []
     assert _obsahuji(chyby, ZNACKA_R145) == []
 
 
 def test_fixtura_orez_vady_hlasi_obe_pulky():
-    chyby = [i.message for i in validate_file(OREZ_VADY, warnings_as_errors=False)
-             if i.level == "ERROR"]
+    chyby = [
+        i.message for i in validate_file(OREZ_VADY, warnings_as_errors=False) if i.level == "ERROR"
+    ]
     assert len(_obsahuji(chyby, ZNACKA_R144)) == 1
     assert len(_obsahuji(chyby, ZNACKA_R145)) == 1
 
 
 def test_fixtura_polarita_ciste_mlci():
-    chyby = [i.message for i in validate_file(POLARITA_CISTA, warnings_as_errors=False)
-             if i.level == "ERROR"]
+    chyby = [
+        i.message
+        for i in validate_file(POLARITA_CISTA, warnings_as_errors=False)
+        if i.level == "ERROR"
+    ]
     assert chyby == []
 
 
 def test_fixtura_polarita_vady_hlasi_jednou():
-    chyby = [i.message for i in validate_file(POLARITA_VADY, warnings_as_errors=False)
-             if i.level == "ERROR"]
+    chyby = [
+        i.message
+        for i in validate_file(POLARITA_VADY, warnings_as_errors=False)
+        if i.level == "ERROR"
+    ]
     assert len(_obsahuji(chyby, ZNACKA_R146)) == 1
 
 
 def test_fixtura_cary_ciste_mlci():
-    chyby = [i.message for i in validate_file(CARY_CISTE, warnings_as_errors=False)
-             if i.level == "ERROR"]
+    chyby = [
+        i.message for i in validate_file(CARY_CISTE, warnings_as_errors=False) if i.level == "ERROR"
+    ]
     assert chyby == []
 
 
 def test_fixtura_cary_vady_hlasi_jednou():
-    chyby = [i.message for i in validate_file(CARY_VADY, warnings_as_errors=False)
-             if i.level == "ERROR"]
+    chyby = [
+        i.message for i in validate_file(CARY_VADY, warnings_as_errors=False) if i.level == "ERROR"
+    ]
     assert len(_obsahuji(chyby, ZNACKA_R147)) == 1
 
 

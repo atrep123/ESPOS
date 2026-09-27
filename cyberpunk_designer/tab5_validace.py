@@ -290,9 +290,7 @@ def tridy_merena() -> Tuple[Tuple[str, str], ...]:
                 "nema: " + ", ".join(prebyva) + " - trida by zustala tise prazdna"
             )
         poradi = sorted(_MAPA_ZNACEK, key=lambda j: -len(getattr(vd, j)))
-        _TRIDY_MERENA = tuple(
-            (_MAPA_ZNACEK[j], str(getattr(vd, j))) for j in poradi
-        )
+        _TRIDY_MERENA = tuple((_MAPA_ZNACEK[j], str(getattr(vd, j))) for j in poradi)
     return _TRIDY_MERENA
 
 
@@ -403,8 +401,9 @@ _KOD_TRIDY_MERENA = (
 )
 
 
-def tridy_behem_behu(cesta: pathlib.Path, *, timeout: float = 60.0,
-                     kod: str = _KOD_TRIDY) -> Tuple[Tuple[str, str], ...]:
+def tridy_behem_behu(
+    cesta: pathlib.Path, *, timeout: float = 60.0, kod: str = _KOD_TRIDY
+) -> Tuple[Tuple[str, str], ...]:
     """Precte BEHOVOU hodnotu `do_espos.TRIDY` podprocesem.
 
     Podproces, ne import do naseho procesu: `navrh-appky` je cizi strom

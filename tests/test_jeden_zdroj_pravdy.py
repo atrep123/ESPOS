@@ -52,7 +52,7 @@ from tools.validate_design import (
 )
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
-DILNA = ESPOS.parents[1]                      # .../kimi/workspace
+DILNA = ESPOS.parents[1]  # .../kimi/workspace
 JADRO = DILNA / "tabos-core"
 KIT = DILNA / "tabos-ui-kit"
 FONTY = JADRO / "core" / "src" / "fonts"
@@ -160,9 +160,9 @@ def test_znaky_fontu_zarizeni_cte_OBA_tvary_cmap():
     s profilem by pak byla zelena nad polovicnim mereni.
     """
     umi = znaky_fontu_zarizeni(_potreba_font())
-    assert "A" in umi and "~" in umi              # souvisly rozsah 0x20-0x7E
-    assert "ř" in umi and "−" in umi    # rozptyleny seznam
-    assert "" in umi                        # symboly LVGL
+    assert "A" in umi and "~" in umi  # souvisly rozsah 0x20-0x7E
+    assert "ř" in umi and "−" in umi  # rozptyleny seznam
+    assert "" in umi  # symboly LVGL
 
 
 def test_znaky_fontu_zarizeni_na_souboru_bez_cmap_je_CHYBA_ne_prazdno(tmp_path):
@@ -402,8 +402,7 @@ def test_slovnik_stavu_nema_v_sobe_dokumentaci():
 
 
 def _potreba_anti_fake() -> tuple[pathlib.Path, pathlib.Path]:
-    dvojice = (JADRO / "tools" / "anti_fake_check.py",
-               KIT / "tools" / "anti_fake_check.py")
+    dvojice = (JADRO / "tools" / "anti_fake_check.py", KIT / "tools" / "anti_fake_check.py")
     chybi = [c for c in dvojice if not c.is_file()]
     if chybi:
         pytest.skip(
@@ -464,7 +463,10 @@ def test_anti_fake_brana_umi_cestu_na_SOUBOR(tmp_path, ktera):
     spinavy.write_text("# TO" + "DO: dodelat\n", encoding="utf-8")
     hot = subprocess.run(
         [sys.executable, str(brana), str(spinavy)],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     assert hot.returncode == 1, (
         f"{brana}: cesta na SOUBOR se zakazanym vzorem prosla (kod "
@@ -476,7 +478,10 @@ def test_anti_fake_brana_umi_cestu_na_SOUBOR(tmp_path, ktera):
     cisty.write_text("x = 1\n", encoding="utf-8")
     hot = subprocess.run(
         [sys.executable, str(brana), str(cisty)],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     assert hot.returncode == 0, hot.stdout + hot.stderr
 
@@ -541,7 +546,8 @@ def test_v_moste_uz_rozliseni_natvrdo_NENI():
     if not MOST.is_file():
         pytest.skip(f"NEZMERENO: {MOST} neni na disku")
     kod = [
-        r for r in MOST.read_text(encoding="utf-8").splitlines()
+        r
+        for r in MOST.read_text(encoding="utf-8").splitlines()
         if "1280" in r and not r.lstrip().startswith("#")
     ]
     # Zbyt smi jen radky, ktere o tom cisle VYPRAVEJI (hlavicka modulu a

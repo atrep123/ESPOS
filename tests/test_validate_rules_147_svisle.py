@@ -1,40 +1,9 @@
-"""Rule 147 a SVISLA cara (fixtury `tab5_cary_svisle_*.json`).
+"""Rule 147 a svisla cara (fixtury `tab5_cary_svisle_*.json`).
 
-DIRA (rdf-overeni 7B/7F, mapa mezer A5): sit analyzatoru (7 svislych car
-x=271..1105) i sloupce razitka (x=330/640/950, pas 612..700) jsou SVISLE.
-Jediny zivy nalez Rule 147 je vodorovny (`tab5_cary_vady.json`), most kitu
-svisle cary do `navrh.cary` nevozi (`CARA_MIN_W = 200`) - a mapa mezer
-tvrdila, ze validator sam je k orientaci lhostejny. NENI, a je to tu
-ZMERENO, ne opsano:
-
-    _r147_nalezy, r. 2638:
-        if cy - y < R147_ODSTUP_PX or y2 - cy2 < R147_ODSTUP_PX:
-            continue
-
-Podminka zada, aby cara lezela SVISLE UVNITR inkoustu (aspon 1 px pod
-horni a nad dolni hranou). Svisla cara [640, 612, 1, 88] (pas razitka)
-protina inkoust 640..652 CELY - cy - y = -28 - a pravidlo ji preskoci
-jako "dotek shora". Kratka svisla cara [640, 641, 1, 10] UVNITR tehoz
-inkoustu nalez dostane. Tataz cara o 2 px delsi = ticho. To je vada
-validatoru, ne fixtury: preskrtnuti se nestane mene preskrtnutim tim, ze
-cara pokracuje nad a pod pismo.
-
-Podle pravidel kampane se vada v produkcnim kodu NEOPRAVUJE v testu:
-pozitivni trida je `xfail(strict=True)` s odkazem na testy/kolo1.md, a az
-ji nekdo opravi, strict xfail zcervena a tenhle text se smaze.
-
-Co tu je (obe tridy, hranice, kontrolni skupina):
-
-* fixtura VADY (svisla cara pres inkoust)      -> ma hlasit  [xfail strict]
-* fixtura CISTE (tataz cara 10 px vlevo)       -> mlci       [zeleny]
-* kratka svisla cara uvnitr inkoustu           -> hlasi      [zeleny; dukaz,
-  ze pravidlo svislou caru jako takovou NEODMITA - kontrolni skupina]
-* tataz cara prodlouzena nad i pod inkoust     -> ma hlasit  [xfail strict]
-* hranice na vodorovne ose (x = 599 vs 600)    -> mlci / hlasi [zeleny]
-* profil oled256 (bez delicich car)            -> mlci       [zeleny]
-* mutace (testy/test_mutace_pravidel.py, `R147_odstup_nekonecny`): kratka
-  svisla cara uvnitr inkoustu zmlkne -> `test_svisla_cara_uvnitr_inkoustu_hlasi`
-  cerveny.
+Cara protinajici inkoust hlasi nalez i pri prodlouzeni nad a pod text.
+Testy drzi vadnou/cistou fixturu, kratky usek, presah, pixelove hranice,
+profilove gatovani a determinismus. Regrese z 27. 9. 2026 nahrazuji dve
+strict xfail znacky, ktere dokladaly chybne odmitnuti presahujici cary.
 """
 
 from __future__ import annotations
@@ -62,13 +31,6 @@ SVISLE_VADY = FIXTURY / "tab5_cary_svisle_vady.json"
 INKOUST = (600, 640, 100, 12)
 SLOUPEC_PRES = [640, 612, 1, 88]  # y 612..700, inkoust 640..652 lezi uvnitr
 SLOUPEC_VEDLE = [590, 612, 1, 88]
-
-VADA_R147_SVISLE = (
-    "SKUTECNA VADA validatoru: `_r147_nalezy` preskoci caru, ktera zacina NAD "
-    "inkoustem (`cy - y < R147_ODSTUP_PX`), takze svisla cara protinajici text "
-    "cely je 'dotek shora' a mlci; kratka svisla cara uvnitr tehoz inkoustu "
-    "nalez dostane. Neopravovat v testu; viz testy/kolo1.md (A5)."
-)
 
 
 def _w(wid, x, y, ww, hh, *, text="kanal 7 spoust", t="label", **kw):
@@ -103,7 +65,11 @@ def _r147(data):
 
 
 def _r147_soubor(cesta):
-    return [i.message for i in validate_file(cesta, warnings_as_errors=False) if ZNACKA_R147 in i.message]
+    return [
+        i.message
+        for i in validate_file(cesta, warnings_as_errors=False)
+        if ZNACKA_R147 in i.message
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -113,7 +79,11 @@ def _r147_soubor(cesta):
 
 def test_fixtury_svisle_projdou_schematem_a_lisi_se_jen_x_cary():
     for cesta in (SVISLE_CISTE, SVISLE_VADY):
-        chyby = [i.message for i in validate_file(cesta, warnings_as_errors=False) if "schema" in i.message]
+        chyby = [
+            i.message
+            for i in validate_file(cesta, warnings_as_errors=False)
+            if "schema" in i.message
+        ]
         assert chyby == [], cesta.name
     ciste = json.loads(SVISLE_CISTE.read_text(encoding="utf-8"))
     vady = json.loads(SVISLE_VADY.read_text(encoding="utf-8"))
@@ -135,7 +105,6 @@ def test_fixtura_svisle_ciste_mlci():
     assert _r147_soubor(SVISLE_CISTE) == []
 
 
-@pytest.mark.xfail(strict=True, reason=VADA_R147_SVISLE)
 def test_fixtura_svisle_vady_ma_hlasit_sloupec_razitka_pres_text():
     """Pozitivni trida: sloupec razitka x=640 jde skrz inkoust 600..700."""
     nalezy = _r147_soubor(SVISLE_VADY)
@@ -159,27 +128,24 @@ def test_svisla_cara_uvnitr_inkoustu_hlasi():
     assert "cara 640,641 1x10 vede pres text 'kanal 7 spoust' (inkoust 600,640 100x12)" in nalezy[0]
 
 
-@pytest.mark.xfail(strict=True, reason=VADA_R147_SVISLE)
 def test_tataz_cara_prodlouzena_o_pixel_nad_i_pod_inkoust_ma_hlasit_taky():
     """Cara 639..653 preskrtava vic, ne min, nez cara 641..651."""
     d = _make([_w("hodnota.7", *INKOUST)], cary=[[640, 640 - 1, 1, 12 + 2]])
     assert len(_r147(d)) == 1
 
 
-def test_prodlouzeni_cary_je_dnes_presne_ta_mez_kde_pravidlo_zmlkne():
-    """Doklad vady jako MERENI (zeleny, dokud vada trva; po oprave ho smazat
-    spolu s obema xfaily): delka cary rozhoduje, poloha ne.
-
-    Kdyby tenhle test zcervenal a xfaily zustaly zelene, znamena to, ze
-    se pravidlo zmenilo jinak, nez xfaily cekaji - a ma se to precist."""
+def test_prodlouzeni_cary_neztrati_nalez():
+    """Prodlouzeni cary k horni hrane zachova prunik s inkoustem."""
     x, y, ww, hh = INKOUST
-    uvnitr = _make([_w("h", *INKOUST)], cary=[[640, y + R147_ODSTUP_PX, 1, hh - 2 * R147_ODSTUP_PX]])
+    uvnitr = _make(
+        [_w("h", *INKOUST)], cary=[[640, y + R147_ODSTUP_PX, 1, hh - 2 * R147_ODSTUP_PX]]
+    )
     o_pixel_vic = _make(
         [_w("h", *INKOUST)],
         cary=[[640, y + R147_ODSTUP_PX - 1, 1, hh - 2 * R147_ODSTUP_PX + 1]],
     )
     assert len(_r147(uvnitr)) == 1
-    assert _r147(o_pixel_vic) == [], "vada opravena? smaz tento test a oba xfaily"
+    assert len(_r147(o_pixel_vic)) == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -206,7 +172,13 @@ def test_hranice_svisle_cary_na_vodorovne_ose(cx, ceka_nalez):
 def test_svisla_cara_mimo_profil_tab5_mlci():
     assert PROFILE_TAB5.delici_cary is True
     assert PROFILE_OLED256.delici_cary is False
-    d = _make([_w("h", 40, 40, 100, 12)], cary=[[60, 41, 1, 10]], scene_w=256, scene_h=128, device="oled256")
+    d = _make(
+        [_w("h", 40, 40, 100, 12)],
+        cary=[[60, 41, 1, 10]],
+        scene_w=256,
+        scene_h=128,
+        device="oled256",
+    )
     assert _r147(d) == []
     d["device"] = "tab5"
     d["scenes"]["main"]["width"], d["scenes"]["main"]["height"] = 1280, 720

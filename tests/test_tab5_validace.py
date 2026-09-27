@@ -252,19 +252,28 @@ def test_kazda_znacka_novych_pravidel_ma_svou_tridu():
     from tools import validate_design as vd
 
     znacky = [
-        vd.ZNACKA_R136_RODIC, vd.ZNACKA_R136_PAS,
-        vd.ZNACKA_R137, vd.ZNACKA_R137_NEMERENO,
-        vd.ZNACKA_R138, vd.ZNACKA_R138_OZNACENI,
+        vd.ZNACKA_R136_RODIC,
+        vd.ZNACKA_R136_PAS,
+        vd.ZNACKA_R137,
+        vd.ZNACKA_R137_NEMERENO,
+        vd.ZNACKA_R138,
+        vd.ZNACKA_R138_OZNACENI,
         vd.ZNACKA_R139,
-        vd.ZNACKA_R140, vd.ZNACKA_R140_NEMERENO,
-        vd.ZNACKA_R141, vd.ZNACKA_R141_NEMERENO,
+        vd.ZNACKA_R140,
+        vd.ZNACKA_R140_NEMERENO,
+        vd.ZNACKA_R141,
+        vd.ZNACKA_R141_NEMERENO,
         vd.ZNACKA_R142,
-        vd.ZNACKA_R143, vd.ZNACKA_R143_NEMERENO,
-        vd.ZNACKA_R144, vd.ZNACKA_R145, vd.ZNACKA_R146, vd.ZNACKA_R147,
+        vd.ZNACKA_R143,
+        vd.ZNACKA_R143_NEMERENO,
+        vd.ZNACKA_R144,
+        vd.ZNACKA_R145,
+        vd.ZNACKA_R146,
+        vd.ZNACKA_R147,
         vd.ZNACKA_NAVRH_VADNY,
     ]
     for znacka in znacky:
-        assert tab5_validace.trida_zpravy(f"main: {znacka}: ...") !=             tab5_validace.NETRIDENO, znacka
+        assert tab5_validace.trida_zpravy(f"main: {znacka}: ...") != tab5_validace.NETRIDENO, znacka
 
 
 # ---- ctyri obchazky, ktere drive prosly zelene (revize A, nalez B1) -------- #

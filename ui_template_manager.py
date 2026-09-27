@@ -468,4 +468,4 @@ def _make_scene(scene_data: Dict[str, Any]) -> SceneLike:
         def __init__(self, data: Dict[str, Any]) -> None:
             self._raw_data = data
 
-    return _Scene(scene_data)  # type: ignore[return-value]
+    return _Scene(scene_data)

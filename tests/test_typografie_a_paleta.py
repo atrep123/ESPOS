@@ -57,7 +57,7 @@ from tools.validate_design import (
 )
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
-DILNA = ESPOS.parents[1]                      # .../kimi/workspace
+DILNA = ESPOS.parents[1]  # .../kimi/workspace
 JADRO = DILNA / "tabos-core"
 KIT = DILNA / "tabos-ui-kit"
 TOKENY = KIT / "tokens.json"
@@ -70,11 +70,20 @@ FONT_B64 = NAVRH_APPKY / "montserrat_b64.txt"
 # "kMut"), takze jmeno protejsek neprozradi - spojnici drzi tahle tabulka
 # a prave proto ji nekdo musi hlidat.
 BARVA_TOKEN = {
-    "base": "kBase", "panel": "kPanel", "raised": "kRaised",
-    "phosphor": "kPhosphor", "phosphor_mut": "kMut", "accent": "kAccent",
-    "warn": "kWarn", "text": "kText", "magenta_exception": "kVyjimka",
-    "obrys": "kObrys", "smalt": "kSmalt", "inkoust": "kInkoust",
-    "ink_utlum": "kInkUtlum", "ryska": "kRyska",
+    "base": "kBase",
+    "panel": "kPanel",
+    "raised": "kRaised",
+    "phosphor": "kPhosphor",
+    "phosphor_mut": "kMut",
+    "accent": "kAccent",
+    "warn": "kWarn",
+    "text": "kText",
+    "magenta_exception": "kVyjimka",
+    "obrys": "kObrys",
+    "smalt": "kSmalt",
+    "inkoust": "kInkoust",
+    "ink_utlum": "kInkUtlum",
+    "ryska": "kRyska",
 }
 # `ok` je v `tokens.json` navic a je to ZAMER: role "v poradku" ma dnes
 # tutez barvu jako zivy udaj, ale je to jina role a muze se rozejit.
@@ -86,15 +95,12 @@ TOKENY_BEZ_BARVY = {"kDlazdiceShora", "kDlazdiceZdola"}
 
 def _potreba(cesta: pathlib.Path, co: str) -> pathlib.Path:
     if not cesta.exists():
-        pytest.skip(
-            f"NEZMERENO: {cesta} neni na disku - {co} nemelo proti cemu merit"
-        )
+        pytest.skip(f"NEZMERENO: {cesta} neni na disku - {co} nemelo proti cemu merit")
     return cesta
 
 
 def _tokeny() -> dict:
-    return json.loads(_potreba(TOKENY, "paleta ani skala pisma")
-                      .read_text(encoding="utf-8"))
+    return json.loads(_potreba(TOKENY, "paleta ani skala pisma").read_text(encoding="utf-8"))
 
 
 def _tema_barvy() -> dict[str, str]:
@@ -128,8 +134,7 @@ def test_paleta_navrhu_sedi_s_paletou_firmwaru():
         elif token not in tema:
             rozdily.append(f"tema.h nema '{token}' (barva '{klic}')")
         elif barvy[klic].upper() != tema[token]:
-            rozdily.append(
-                f"{klic} = {barvy[klic].upper()}, ale {token} = {tema[token]}")
+            rozdily.append(f"{klic} = {barvy[klic].upper()}, ale {token} = {tema[token]}")
     assert not rozdily, "; ".join(rozdily)
 
 
@@ -187,14 +192,34 @@ def test_pravidlo_150_meri_paletu_z_tokens_json():
     barvy = list(_tokeny()["colors"].values())
     scena = {
         "device": "tab5",
-        "scenes": {"main": {"width": 1280, "height": 720, "widgets": [
-            {"type": "label", "x": 36, "y": 120, "width": 200, "height": 19,
-             "text": "FPS", "color_fg": barvy[0], "color_bg": "#151E26",
-             "align": "left", "valign": "middle", "_widget_id": "a.1"}],
-            "navrh": {"paleta": barvy}}},
+        "scenes": {
+            "main": {
+                "width": 1280,
+                "height": 720,
+                "widgets": [
+                    {
+                        "type": "label",
+                        "x": 36,
+                        "y": 120,
+                        "width": 200,
+                        "height": 19,
+                        "text": "FPS",
+                        "color_fg": barvy[0],
+                        "color_bg": "#151E26",
+                        "align": "left",
+                        "valign": "middle",
+                        "_widget_id": "a.1",
+                    }
+                ],
+                "navrh": {"paleta": barvy},
+            }
+        },
     }
-    n = [i for i in validate_data(scena, file_label="t", warnings_as_errors=False)
-         if "barva mimo paletu" in i.message]
+    n = [
+        i
+        for i in validate_data(scena, file_label="t", warnings_as_errors=False)
+        if "barva mimo paletu" in i.message
+    ]
     assert len(n) == 1
     assert "#151e26" in n[0].message
 
@@ -284,8 +309,13 @@ def test_skala_je_v_tokens_json_a_ne_v_generatoru():
     """Vyjimky rezu maji JEDINY strojovy zdroj - a ma jich pet listu."""
     vyj = _tokeny()["typografie_vyjimky"]
     listy = {k for k in vyj if not k.startswith("_")}
-    assert listy == {"SvorkaCislice", "SvorkaRfFtm", "SvorkaKlavesnice",
-                     "SvorkaTerminalKl", "DnesSystemMonitor"}
+    assert listy == {
+        "SvorkaCislice",
+        "SvorkaRfFtm",
+        "SvorkaKlavesnice",
+        "SvorkaTerminalKl",
+        "DnesSystemMonitor",
+    }
     for jmeno in listy:
         for rez, duvod in vyj[jmeno].items():
             assert int(rez) > 0, (jmeno, rez)
@@ -321,6 +351,7 @@ def _font():
         pytest.skip("NEZMERENO: fontTools neni nainstalovan")
     import base64
     import io
+
     syrove = base64.b64decode(FONT_B64.read_text(encoding="ascii").strip())
     f = TTFont(io.BytesIO(syrove))
     return f["head"].unitsPerEm, f.getBestCmap(), f["hmtx"].metrics
@@ -381,8 +412,7 @@ def test_PARITA_sirek_R137_a_fontu():
 def test_PARITA_by_padla_na_jinem_retezci():
     """POZITIVNI KONTROLA parity: kdyby se veta zmenila, test to pozna."""
     upem, cmap, hm = _font()
-    jiny = sirka_retezce(PARITA_TEXT + " a jeste kus", PARITA_REZ, 0.0,
-                         upem, cmap, hm)
+    jiny = sirka_retezce(PARITA_TEXT + " a jeste kus", PARITA_REZ, 0.0, upem, cmap, hm)
     assert abs(jiny - PARITA_RANGE_PX) > PARITA_ROZDIL_PX
 
 
@@ -391,7 +421,8 @@ def test_sirky_kitu_uz_sirku_NEPOCITAJI_samy():
     sirky = _kit_modul("sirky")
     upem, cmap, hm = _font()
     assert sirky.sirka(PARITA_TEXT, PARITA_REZ) == pytest.approx(
-        sirka_retezce(PARITA_TEXT, PARITA_REZ, 0.0, upem, cmap, hm))
+        sirka_retezce(PARITA_TEXT, PARITA_REZ, 0.0, upem, cmap, hm)
+    )
     assert sirky.KERNING == 6.0
 
 
@@ -418,17 +449,32 @@ def test_R152_se_nenapsalo_a_tady_je_ta_mezera():
     rozdil 4 px je pro Rule 134 uz daleko a pro Rule 151 uz uvnitr
     soustavy, takze o nem dnes NIKDO nemluvi.
     """
+
     def _w(wid, x, text):
-        return {"type": "label", "x": x, "y": 120 + 40 * int(wid[-1]),
-                "width": 200, "height": 19, "text": text,
-                "color_fg": "#E4DFCC", "color_bg": "#14170F",
-                "align": "left", "valign": "middle", "_widget_id": wid}
+        return {
+            "type": "label",
+            "x": x,
+            "y": 120 + 40 * int(wid[-1]),
+            "width": 200,
+            "height": 19,
+            "text": text,
+            "color_fg": "#E4DFCC",
+            "color_bg": "#14170F",
+            "align": "left",
+            "valign": "middle",
+            "_widget_id": wid,
+        }
 
     data = {
         "device": "tab5",
-        "scenes": {"main": {"width": 1280, "height": 720, "widgets": [
-            _w("popis.1", 40, "KANAL"), _w("txt.2", 36, "D0 dolu")],
-            "navrh": {"prvky": {}, "soustava": {"pole_x": 20, "vsazka": 16}}}},
+        "scenes": {
+            "main": {
+                "width": 1280,
+                "height": 720,
+                "widgets": [_w("popis.1", 40, "KANAL"), _w("txt.2", 36, "D0 dolu")],
+                "navrh": {"prvky": {}, "soustava": {"pole_x": 20, "vsazka": 16}},
+            }
+        },
     }
     nalezy = validate_data(data, file_label="t", warnings_as_errors=False)
     assert not [i for i in nalezy if "near-miss alignment" in i.message]
@@ -437,15 +483,31 @@ def test_R152_se_nenapsalo_a_tady_je_ta_mezera():
 
 def test_Rule_134_hlida_az_do_tri_pixelu():
     """Druha hrana teze mezery: 3 px Rule 134 JESTE chyti."""
+
     def _w(wid, x, y, text):
-        return {"type": "label", "x": x, "y": y, "width": 200, "height": 19,
-                "text": text, "color_fg": "#E4DFCC", "color_bg": "#14170F",
-                "align": "left", "valign": "middle", "_widget_id": wid}
+        return {
+            "type": "label",
+            "x": x,
+            "y": y,
+            "width": 200,
+            "height": 19,
+            "text": text,
+            "color_fg": "#E4DFCC",
+            "color_bg": "#14170F",
+            "align": "left",
+            "valign": "middle",
+            "_widget_id": wid,
+        }
 
     data = {
         "device": "tab5",
-        "scenes": {"main": {"width": 1280, "height": 720, "widgets": [
-            _w("popis.1", 39, 120, "KANAL"), _w("txt.2", 36, 160, "D0 dolu")]}},
+        "scenes": {
+            "main": {
+                "width": 1280,
+                "height": 720,
+                "widgets": [_w("popis.1", 39, 120, "KANAL"), _w("txt.2", 36, 160, "D0 dolu")],
+            }
+        },
     }
     nalezy = validate_data(data, file_label="t", warnings_as_errors=False)
     assert [i for i in nalezy if "near-miss alignment" in i.message]

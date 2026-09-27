@@ -703,7 +703,9 @@ def test_vadna_fixtura_projde_JSON_schematem():
 
 def test_vadna_fixtura_najde_vsechny_ctyri_zasazene_tridy():
     """Rozlisovaci schopnost: obe fixtury se nesmi merit stejne."""
-    chyby = [i.message for i in validate_file(VADNA, warnings_as_errors=False) if i.level == "ERROR"]
+    chyby = [
+        i.message for i in validate_file(VADNA, warnings_as_errors=False) if i.level == "ERROR"
+    ]
     assert len(_obsahuji(chyby, ZNACKA_R136_PAS)) == 1
     assert len(_obsahuji(chyby, ZNACKA_R136_PAS_VEN)) == 1
     assert len(_obsahuji(chyby, ZNACKA_R136_RODIC)) == 1
@@ -1445,8 +1447,7 @@ def test_r140_vadna_mrizka_nezastavi_ostatni():
 # preklep v atributu se nesmi tvarit jako mereni.
 
 DO_ESPOS_MOST = (
-    pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "navrh-appky"
-    / "do_espos.py"
+    pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "navrh-appky" / "do_espos.py"
 )
 
 
@@ -1510,8 +1511,10 @@ def test_most_bez_prepinace_polozek_JMENOVANY_zdroj_pocet_NEDOSTANE():
     dostala by dlazdicova mrizka pocet 12 od sve vlastni kapacity.
     """
     ven = _dopln(
-        [{"jmeno": "dlazdice", "kapacita": 12, "zdroj": "appky"},
-         {"jmeno": "drahy", "kapacita": 16, "zdroj": "16"}],
+        [
+            {"jmeno": "dlazdice", "kapacita": 12, "zdroj": "appky"},
+            {"jmeno": "drahy", "kapacita": 16, "zdroj": "16"},
+        ],
         None,
     )
     assert "polozek" not in ven[0]
@@ -1612,8 +1615,7 @@ def test_r141_tolerance_je_nulova(dpi, ceka_nalez):
 def test_r141_chybejici_radek_je_WARN_o_nemereni():
     """Ticho by vypadalo jako 'souhlasi'; kontrola se ale nepustila."""
     assert _dpi("/* nic tu neni */", "CONFIG_LV_USE_LOG=y") == [
-        "[WARN] DPI firmwaru nezmereno: v lv_conf.h neni radek LV_DPI_DEF - "
-        "kontrola NEPROBEHLA",
+        "[WARN] DPI firmwaru nezmereno: v lv_conf.h neni radek LV_DPI_DEF - kontrola NEPROBEHLA",
         "[WARN] DPI firmwaru nezmereno: v sdkconfig neni radek CONFIG_LV_DPI_DEF - "
         "kontrola NEPROBEHLA",
     ]
@@ -2014,8 +2016,7 @@ def test_r143_role_hodnota_se_NEMERI():
     sit), "2 zarizeni" (kolik jich je), "LA1010 + FT232R" (ktera to jsou).
     Tyz prvek s roli `stav` vystreli - viz `test_r143_jiny_slovnik_je_WARNING`.
     """
-    d = _stav("28,4 GB volno", {"role": "hodnota", "vec": "microSD"},
-              slovnik=SLOVNIK)
+    d = _stav("28,4 GB volno", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_msgs(d), ZNACKA_R143) == []
 
 
@@ -2024,8 +2025,7 @@ def test_r143_tentyz_text_v_roli_stav_UZ_vystreli():
 
     Bez ni by "role hodnota mlci" mohlo znamenat, ze mlci cele pravidlo.
     """
-    d = _stav("28,4 GB volno", {"role": "stav", "vec": "microSD"},
-              slovnik=SLOVNIK)
+    d = _stav("28,4 GB volno", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_warns(d), ZNACKA_R143) != []
 
 
@@ -2036,15 +2036,13 @@ def test_r143_list_o_veci_BEZ_role_stav_rekne_ze_NEMERIL():
     netvrdi STAV - pravidlo tedy nemelo co merit a rekne to JEDNOU za
     list, ne u kazdeho prvku.
     """
-    d = _stav("28,4 GB volno", {"role": "hodnota", "vec": "microSD"},
-              slovnik=SLOVNIK)
+    d = _stav("28,4 GB volno", {"role": "hodnota", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_warns(d), ZNACKA_R143_ROLE_NEMERENO) != []
 
 
 def test_r143_list_S_roli_stav_uz_NEMERENO_nehlasi():
     """Pozitivni kontrola teze cesty."""
-    d = _stav("vlozena, nepripojena", {"role": "stav", "vec": "microSD"},
-              slovnik=SLOVNIK)
+    d = _stav("vlozena, nepripojena", {"role": "stav", "vec": "microSD"}, slovnik=SLOVNIK)
     assert _obsahuji(_msgs(d), ZNACKA_R143_ROLE_NEMERENO) == []
 
 
@@ -2121,7 +2119,7 @@ def test_r143_vec_bez_jedineho_slovniku_taky_rekne_ze_nemerila():
 
 
 def test_r143_jmeno_veci_se_paruje_bez_ohledu_na_velikost_pismen():
-    """"microsd" a "microSD" je tataz karta; do hlasky patri jmeno ze slovniku."""
+    """ "microsd" a "microSD" je tataz karta; do hlasky patri jmeno ze slovniku."""
     d = _stav("nedostupne", {"role": "stav", "vec": "microsd"}, slovnik=SLOVNIK)
     nalezy = _obsahuji(_warns(d), ZNACKA_R143)
     assert len(nalezy) == 1
@@ -2348,13 +2346,13 @@ def test_starsi_fixtury_na_jazykova_pravidla_mlci():
 
 SDK_JMENA = frozenset(
     {
-        "IHwDiagnostics",   # rozhrani se DVEMA hrby - meri se i ve stitku verzalkami
-        "IClock",           # rozhrani s JEDNIM hrbem - vedomy okraj, ve stitku mlci
+        "IHwDiagnostics",  # rozhrani se DVEMA hrby - meri se i ve stitku verzalkami
+        "IClock",  # rozhrani s JEDNIM hrbem - vedomy okraj, ve stitku mlci
         "Unavailable",
-        "NotFound",         # CamelCase se dvema hrby
+        "NotFound",  # CamelCase se dvema hrby
         "Error",
         "Mock",
-        "Smalt",            # bezne slovo, ktere JE hodnotou enumu - kontrolni skupina
+        "Smalt",  # bezne slovo, ktere JE hodnotou enumu - kontrolni skupina
         "Znak",
     }
 )
@@ -2363,19 +2361,17 @@ SDK_JMENA = frozenset(
 def _veta_sdk(text, jmena=SDK_JMENA, **kw):
     """Popisek na tab5 se seznamem jmen SDK ve scene (tak, jak ho vozi most)."""
     navrh = {"jmena_sdk": sorted(jmena)} if jmena is not None else {}
-    return _make(
-        [_w("patka.zdroj", 48, 140, 560, 32, text=text, **kw)], navrh=navrh
-    )
+    return _make([_w("patka.zdroj", 48, 140, 560, 32, text=text, **kw)], navrh=navrh)
 
 
 def test_jmena_ze_sdk_cte_oba_tvary_z_hlavicky():
     """Rozhrani (`class IHwDiagnostics`) i hodnoty enumu z tela `{...}`."""
     jmena = jmena_ze_sdk(SDK_HLAVICKA)
-    assert "IHwDiagnostics" in jmena          # class
-    assert "IRadioInfo" in jmena              # struct
-    assert "Unavailable" in jmena             # hodnota enumu bez prirazeni
-    assert "None" in jmena                    # hodnota enumu s "= 0"
-    assert "Mock" in jmena                    # enum s typem za dvojteckou
+    assert "IHwDiagnostics" in jmena  # class
+    assert "IRadioInfo" in jmena  # struct
+    assert "Unavailable" in jmena  # hodnota enumu bez prirazeni
+    assert "None" in jmena  # hodnota enumu s "= 0"
+    assert "Mock" in jmena  # enum s typem za dvojteckou
 
 
 def test_jmena_ze_sdk_necte_co_nema():
@@ -2386,8 +2382,8 @@ def test_jmena_ze_sdk_necte_co_nema():
     jakekoli slovo z SDK.
     """
     jmena = jmena_ze_sdk(SDK_HLAVICKA)
-    assert "DesktopMock" not in jmena         # neni I + velke pismeno
-    assert "Ihned" not in jmena               # I + male pismeno je ceske slovo
+    assert "DesktopMock" not in jmena  # neni I + velke pismeno
+    assert "Ihned" not in jmena  # I + male pismeno je ceske slovo
     assert "I2cSbernice" not in jmena
     assert "unavailableSomewhere" not in jmena
 
@@ -2405,7 +2401,9 @@ def test_jmena_ze_sdk_na_neexistujici_ceste_je_PRAZDNO_ne_vyjimka():
 
 def test_r142_verzalkove_jmeno_ze_SDK_je_ERROR():
     """Ziva vada z Network Tools: "vraci UNAVAILABLE"."""
-    nalezy = _obsahuji(_errors(_veta_sdk("Sken nedostupny - sluzba vraci UNAVAILABLE")), ZNACKA_R142)
+    nalezy = _obsahuji(
+        _errors(_veta_sdk("Sken nedostupny - sluzba vraci UNAVAILABLE")), ZNACKA_R142
+    )
     assert len(nalezy) == 1
     assert "jmeno ze SDK: 'UNAVAILABLE'" in nalezy[0]
 
@@ -2520,8 +2518,17 @@ def test_r142_dvouhrba_rozhrani_se_bere_ze_SDK_ne_z_tvaru():
 
 def test_dvouhrba_rozhrani_filtruje_tvarem_a_ne_seznamem():
     """Jednotkove: co je rozhrani se dvema hrby a co uz ne."""
-    j = frozenset({"IHwDiagnostics", "ISystemMetrics", "IClock", "IAsync",
-                   "NotFound", "Smalt", "I802154Service"})
+    j = frozenset(
+        {
+            "IHwDiagnostics",
+            "ISystemMetrics",
+            "IClock",
+            "IAsync",
+            "NotFound",
+            "Smalt",
+            "I802154Service",
+        }
+    )
     assert _dvouhrba_rozhrani(j) == {"IHWDIAGNOSTICS", "ISYSTEMMETRICS"}
 
 
@@ -2846,9 +2853,7 @@ def test_r136_oznaceni_NEUMLCI_utek_clena_z_pasu():
         [_w("txt.85", 245, 560, 302, 19, text="normalni rezim")],
         navrh={
             "pasy": PAS_RAZITKO,
-            "prvky": {
-                "txt.85": {"rodic": OBSAH, "pas": "razitko", "presah": "je to zamer"}
-            },
+            "prvky": {"txt.85": {"rodic": OBSAH, "pas": "razitko", "presah": "je to zamer"}},
         },
     )
     assert _obsahuji(_errors(d), ZNACKA_R136_PAS_VEN) != []
@@ -2885,7 +2890,7 @@ def test_r136_neretezcove_oznaceni_presahu_je_ERROR():
 # Vypinac bez duvodu ale NENI rozhodnuti: preklep v bloku je ERROR.
 
 DPI_130 = "#define LV_DPI_DEF 130\n"
-SDK_130 = 'CONFIG_LV_DPI_DEF=130\n'
+SDK_130 = "CONFIG_LV_DPI_DEF=130\n"
 DOKUMENT = {"hodnota": 130, "duvod": "lv_dpx se nevola, scrollbar je 12 px (Z7)"}
 
 
@@ -2901,8 +2906,8 @@ def test_r141_dokumentovana_odchylka_je_WARN_s_duvodem():
     assert [i.level for i in n] == ["WARN", "WARN"]
     for i in n:
         assert ZNACKA_R141_ODCHYLKA in i.message
-        assert "294" in i.message                 # proti cemu se merilo
-        assert "lv_dpx se nevola" in i.message    # a proc se to nemeri
+        assert "294" in i.message  # proti cemu se merilo
+        assert "lv_dpx se nevola" in i.message  # a proc se to nemeri
 
 
 def test_r141_firmware_mimo_dokumentaci_je_ERROR():
@@ -2911,8 +2916,7 @@ def test_r141_firmware_mimo_dokumentaci_je_ERROR():
     Kdyby blok jen umlcel pravidlo, prosla by i hodnota, o ktere nikdo
     nerozhodl - a to je horsi nez trvale rude svetlo.
     """
-    n = zkontroluj_dpi("#define LV_DPI_DEF 160\n", SDK_130, PROFILE_TAB5,
-                       dokumentovano=DOKUMENT)
+    n = zkontroluj_dpi("#define LV_DPI_DEF 160\n", SDK_130, PROFILE_TAB5, dokumentovano=DOKUMENT)
     urovne = [i.level for i in n]
     assert "ERROR" in urovne
     assert any("dokumentace se rozesly" in i.message for i in n)
@@ -2920,9 +2924,12 @@ def test_r141_firmware_mimo_dokumentaci_je_ERROR():
 
 def test_r141_dokumentovana_shoda_s_profilem_MLCI():
     """Kdyz firmware nakonec sedne na panel, neni co hlasit ani jako WARN."""
-    n = zkontroluj_dpi("#define LV_DPI_DEF 294\n", "CONFIG_LV_DPI_DEF=294\n",
-                       PROFILE_TAB5,
-                       dokumentovano={"hodnota": 294, "duvod": "srovnano s panelem"})
+    n = zkontroluj_dpi(
+        "#define LV_DPI_DEF 294\n",
+        "CONFIG_LV_DPI_DEF=294\n",
+        PROFILE_TAB5,
+        dokumentovano={"hodnota": 294, "duvod": "srovnano s panelem"},
+    )
     assert [i.message for i in n if i.level != "WARN"] == []
     assert _obsahuji([i.message for i in n], ZNACKA_R141_ODCHYLKA) != []
 
@@ -2930,15 +2937,15 @@ def test_r141_dokumentovana_shoda_s_profilem_MLCI():
 @pytest.mark.parametrize(
     "blok",
     [
-        130,                                   # neni objekt
-        "130",                                 # taky neni objekt
-        {"duvod": "chybi hodnota"},            # bez hodnoty
-        {"hodnota": "130", "duvod": "text"},   # hodnota neni cislo
-        {"hodnota": 0, "duvod": "text"},       # nekladne cislo
+        130,  # neni objekt
+        "130",  # taky neni objekt
+        {"duvod": "chybi hodnota"},  # bez hodnoty
+        {"hodnota": "130", "duvod": "text"},  # hodnota neni cislo
+        {"hodnota": 0, "duvod": "text"},  # nekladne cislo
         {"hodnota": -130, "duvod": "text"},
-        {"hodnota": 130},                      # bez duvodu
-        {"hodnota": 130, "duvod": "   "},      # duvod bez vety
-        {"hodnota": 130, "duvod": 5},          # duvod neni veta
+        {"hodnota": 130},  # bez duvodu
+        {"hodnota": 130, "duvod": "   "},  # duvod bez vety
+        {"hodnota": 130, "duvod": 5},  # duvod neni veta
     ],
 )
 def test_r141_preklep_v_dokumentaci_je_ERROR_ne_ticho(blok):
@@ -2953,8 +2960,7 @@ def test_r141_preklep_se_NEVRACI_tise_k_profilu():
 
     Hlaska musi rikat, ze se NEMERILO, ne ze firmware nesouhlasi s panelem.
     """
-    n = zkontroluj_dpi(DPI_130, SDK_130, PROFILE_TAB5,
-                       dokumentovano={"hodnota": 130})
+    n = zkontroluj_dpi(DPI_130, SDK_130, PROFILE_TAB5, dokumentovano={"hodnota": 130})
     assert len(n) == 1
     assert ZNACKA_R141 not in n[0].message.split(":")[0]
     assert "vypinac brany" in n[0].message

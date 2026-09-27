@@ -198,8 +198,8 @@ class WidgetConfig:
     type: str  # label, box, button, gauge, progressbar, checkbox, etc.
     x: int
     y: int
-    width: Optional[int] = None  # type: ignore[reportRedeclaration]
-    height: Optional[int] = None  # type: ignore[reportRedeclaration]
+    width: Optional[int] = None
+    height: Optional[int] = None
     text: str = ""
     style: str = _DEFAULT_STYLE  # default, bold, inverse, highlight
     color_fg: str = _DEFAULT_COLOR_FG

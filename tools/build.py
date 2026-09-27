@@ -292,6 +292,12 @@ def regen_codegen(
     if not jp.exists():
         raise BuildError(f"design JSON not found: {jp}")
 
+    from tools.validate_design import validate_file
+
+    errors = [i for i in validate_file(jp, warnings_as_errors=False) if i.level == "ERROR"]
+    if errors:
+        raise BuildError("invalid design: " + "; ".join(i.message for i in errors))
+
     from tools.ui_codegen import (
         generate_ui_design_multi_pair,
         generate_ui_design_pair,
@@ -418,6 +424,7 @@ def _run_pio(
     *,
     sink: Optional[LineSink],
     timeout: int,
+    design_path: Optional[str] = None,
 ) -> Tuple[int, List[str]]:
     """Run the resolved PlatformIO command with *pio_args*, streaming output.
 
@@ -429,6 +436,8 @@ def _run_pio(
     emit(f"$ {' '.join(cmd)}")
 
     env = _pio_env()
+    if design_path is not None:
+        env["ESP32OS_UI_JSON"] = design_path
 
     lines: List[str] = []
     try:
@@ -496,8 +505,12 @@ def build_board(
         except Exception as exc:  # pragma: no cover - unexpected codegen fault
             raise BuildError(f"codegen failed before build: {exc}") from exc
 
+    # Pass the chosen design to the mandatory PlatformIO validation hook even
+    # for --no-regen and the separate upload build.
+    design = str((json_path or REPO_ROOT / "main_scene.json").resolve())
+
     emit(f"[build] PlatformIO env: {env}")
-    rc, lines = _run_pio(["run", "-e", env], sink=sink, timeout=timeout)
+    rc, lines = _run_pio(["run", "-e", env], sink=sink, timeout=timeout, design_path=design)
     ok = rc == 0
     ram, flash = _scrape_usage(lines)
     fw = firmware_path_for(env)
@@ -618,7 +631,12 @@ def flash_board(
     if use_port:
         args += ["--upload-port", use_port]
 
-    rc, lines = _run_pio(args, sink=sink, timeout=timeout)
+    rc, lines = _run_pio(
+        args,
+        sink=sink,
+        timeout=timeout,
+        design_path=str((json_path or REPO_ROOT / "main_scene.json").resolve()),
+    )
     ok = rc == 0
     no_device = (not ok) and _looks_like_no_device(lines)
     res = BuildResult(

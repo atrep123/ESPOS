@@ -11,7 +11,6 @@ Env overrides:
 
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import sys
@@ -32,6 +31,7 @@ from tools.ui_codegen import (
     load_scenes,
     write_if_changed,
 )
+from tools.validate_design import validate_file
 
 
 def _strip_optional_quotes(value: str) -> str:
@@ -45,10 +45,7 @@ def _strip_optional_quotes(value: str) -> str:
 
 def _main() -> None:
     export_flag = os.environ.get("ESP32OS_PIO_UI_EXPORT", "1").strip().lower()
-    if export_flag in {"0", "false", "off", "no"}:
-        print(f"[UI] Export disabled (ESP32OS_PIO_UI_EXPORT={export_flag})")
-        return
-    if export_flag not in {"1", "true", "on", "yes"}:
+    if export_flag not in {"0", "false", "off", "no", "1", "true", "on", "yes"}:
         raise RuntimeError(
             f"[UI] ESP32OS_PIO_UI_EXPORT must be 0/1/true/false/on/off/yes/no, got: {export_flag!r}"
         )
@@ -63,9 +60,10 @@ def _main() -> None:
     json_path_raw = (
         json_override if json_override is not None else str(project_dir / "main_scene.json")
     )
-    json_path = Path(json_path_raw).expanduser().resolve()
+    json_path = Path(json_path_raw).expanduser()
     if not json_path.is_absolute():
-        json_path = (project_dir / json_path).resolve()
+        json_path = project_dir / json_path
+    json_path = json_path.resolve()
     try:
         json_path.relative_to(project_dir.resolve())
     except ValueError as exc:
@@ -92,20 +90,15 @@ def _main() -> None:
     except (json.JSONDecodeError, ValueError) as exc:
         raise RuntimeError(f"[UI] Failed to parse {json_path.name}: {exc}") from exc
 
-    # Optional pre-flight validation (ESP32OS_UI_VALIDATE=1)
-    validate_flag = os.environ.get("ESP32OS_UI_VALIDATE", "0").strip().lower()
-    if validate_flag in {"1", "true", "on", "yes"}:
-        validate_module = importlib.import_module("tools.validate_design")
-        validate_file = validate_module.validate_file
-        issues = validate_file(json_path, warnings_as_errors=False)
-        errors = [i for i in issues if i.level == "ERROR"]
-        if errors:
-            for e in errors:
-                print(f"[UI][VALIDATE] {e.level}: {e.message}")
-            raise RuntimeError(f"[UI] Validation found {len(errors)} error(s) in {json_path.name}")
-        warnings = [i for i in issues if i.level == "WARNING"]
-        for w in warnings:
-            print(f"[UI][VALIDATE] {w.level}: {w.message}")
+    # Mandatory for every build, including reuse of already generated files.
+    issues = validate_file(json_path, warnings_as_errors=False)
+    errors = [i for i in issues if i.level == "ERROR"]
+    if errors:
+        for e in errors:
+            print(f"[UI][VALIDATE] {e.level}: {e.message}")
+        raise RuntimeError(f"[UI] Validation found {len(errors)} error(s) in {json_path.name}")
+    for w in (i for i in issues if i.level in {"WARNING", "WARN"}):
+        print(f"[UI][VALIDATE] {w.level}: {w.message}")
 
     if len(scenes) > 1:
         c_text, h_text = generate_ui_design_multi_pair(json_path, source_label=source_label)
@@ -115,6 +108,19 @@ def _main() -> None:
             json_path, scene_name=scene_name, source_label=source_label
         )
         mode = f"scene: {scene_name}"
+
+    if export_flag in {"0", "false", "off", "no"}:
+        if (
+            not out_c.is_file()
+            or not out_h.is_file()
+            or out_c.read_text(encoding="utf-8") != c_text
+            or out_h.read_text(encoding="utf-8") != h_text
+        ):
+            raise RuntimeError(
+                "[UI] Export disabled, but generated files do not match validated design"
+            )
+        print("[UI] Reusing validated, current generated files")
+        return
 
     changed = False
     changed |= write_if_changed(out_h, h_text)

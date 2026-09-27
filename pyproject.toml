@@ -117,13 +117,13 @@ timeout_method = "thread"
 source = [
     "cyberpunk_designer",
     "tools",
-    "ui_models.py",
-    "ui_designer.py",
-    "ui_template_manager.py",
-    "shared_undo_redo.py",
-    "event_manager.py",
-    "design_tokens.py",
-    "constants.py",
+    "ui_models",
+    "ui_designer",
+    "ui_template_manager",
+    "shared_undo_redo",
+    "event_manager",
+    "design_tokens",
+    "constants",
 ]
 branch = true
 parallel = true

@@ -66,7 +66,10 @@ def test_dva_listy_dva_stavy_je_WARN_s_vyctem_listu():
 
 
 def test_dva_listy_tentyz_stav_mlci():
-    tvrzeni = {"A": [("microSD", "vlozena, nepripojena")], "B": [("microSD", "vlozena, nepripojena")]}
+    tvrzeni = {
+        "A": [("microSD", "vlozena, nepripojena")],
+        "B": [("microSD", "vlozena, nepripojena")],
+    }
     assert slovnik_prurez(tvrzeni, _slovnik({"microSD": STAVY["microSD"]})) == []
 
 
@@ -81,7 +84,9 @@ def test_pet_listu_jeden_stav_mlci_HRANICE_je_druhy_stav():
 
 def test_jeden_list_dva_prvky_dva_stavy_je_taky_rozpor():
     tvrzeni = {"SvorkaDomu": [("microSD", "pripojena"), ("microSD", "neni vlozena")]}
-    nalezy = _jen(slovnik_prurez(tvrzeni, _slovnik({"microSD": STAVY["microSD"]})), ZNACKA_R143_PRUREZ)
+    nalezy = _jen(
+        slovnik_prurez(tvrzeni, _slovnik({"microSD": STAVY["microSD"]})), ZNACKA_R143_PRUREZ
+    )
     assert len(nalezy) == 1 and "na 1 listech" in nalezy[0]
 
 
@@ -93,7 +98,9 @@ def test_fotoprotokol_A4_pet_appek_pet_vet():
         "settings": [("microSD", "pripojena")],
         "domov": [("microSD", "neni vlozena")],
     }
-    nalezy = _jen(slovnik_prurez(tvrzeni, _slovnik({"microSD": STAVY["microSD"]})), ZNACKA_R143_PRUREZ)
+    nalezy = _jen(
+        slovnik_prurez(tvrzeni, _slovnik({"microSD": STAVY["microSD"]})), ZNACKA_R143_PRUREZ
+    )
     assert len(nalezy) == 1
     assert "4 ruzne stavy na 5 listech" in nalezy[0]
     assert "'neni vlozena' tvrdi domov, files" in nalezy[0]
@@ -159,7 +166,10 @@ def test_stav_ke_kritice_4_5_syntetika_dve_veci_ze_ctyr_bez_tvrzeni():
 
 
 def test_velikost_pismen_a_nasobne_mezery_nerozhoduji():
-    tvrzeni = {"A": [("microSD", "VLOZENA,   nepripojena")], "B": [("MicroSD", "vlozena, nepripojena")]}
+    tvrzeni = {
+        "A": [("microSD", "VLOZENA,   nepripojena")],
+        "B": [("MicroSD", "vlozena, nepripojena")],
+    }
     assert slovnik_prurez(tvrzeni, _slovnik({"microSD": STAVY["microSD"]})) == []
 
 
@@ -167,7 +177,10 @@ def test_nejdelsi_shoda_neobvini_vetu_ktera_obsahuje_kratsi_stav():
     """'pripojena' je podretezcem 'vlozena, nepripojena'. Bez nejdelsi
     shody by JEDNA veta tvrdila dva stavy a prurez by obvinil sam sebe."""
     sl = _slovnik({"microSD": STAVY["microSD"]})
-    stejne = {"A": [("microSD", "vlozena, nepripojena")], "B": [("microSD", "vlozena, nepripojena")]}
+    stejne = {
+        "A": [("microSD", "vlozena, nepripojena")],
+        "B": [("microSD", "vlozena, nepripojena")],
+    }
     assert slovnik_prurez(stejne, sl) == []
     ruzne = {"A": [("microSD", "vlozena, nepripojena")], "B": [("microSD", "pripojena")]}
     nalezy = _jen(slovnik_prurez(ruzne, sl), ZNACKA_R143_PRUREZ)
@@ -191,7 +204,9 @@ def test_prazdny_text_a_pomlcka_se_nepocitaji(text):
 def test_text_mimo_slovnik_neni_tvrzeni_ani_rozpor():
     """'karta shorela' hlasi Rule 143 na svem listu; tady se nepocita."""
     sl = _slovnik({"microSD": STAVY["microSD"]})
-    nalezy = slovnik_prurez({"A": [("microSD", "pripojena")], "B": [("microSD", "karta shorela")]}, sl)
+    nalezy = slovnik_prurez(
+        {"A": [("microSD", "pripojena")], "B": [("microSD", "karta shorela")]}, sl
+    )
     assert nalezy == []
 
 

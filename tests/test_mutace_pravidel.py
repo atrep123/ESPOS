@@ -81,7 +81,10 @@ A4 = {
 }
 A4_SHODA = {"a": [("microSD", "pripojena")], "b": [("microSD", "pripojena")]}
 NEJDELSI = {"a": [("microSD", "vlozena, nepripojena")], "b": [("microSD", "pripojena")]}
-NEJDELSI_SHODA = {"a": [("microSD", "vlozena, nepripojena")], "b": [("microSD", "vlozena, nepripojena")]}
+NEJDELSI_SHODA = {
+    "a": [("microSD", "vlozena, nepripojena")],
+    "b": [("microSD", "vlozena, nepripojena")],
+}
 BEZ_TVRZENI = {"a": [("kamera", "bezi")]}
 S_TVRZENIM = {"a": [("microSD", "pripojena")]}
 
@@ -89,12 +92,22 @@ S_TVRZENIM = {"a": [("microSD", "pripojena")]}
 def _r147_svisla_uvnitr(modul: ModuleType) -> int:
     """Kratka svisla cara uvnitr inkoustu (test_validate_rules_147_svisle)."""
     w = {
-        "type": "label", "x": 600, "y": 640, "width": 100, "height": 12, "text": "kanal 7 spoust",
-        "color_fg": "#e6e1ce", "color_bg": "#14170f", "align": "left", "valign": "middle",
+        "type": "label",
+        "x": 600,
+        "y": 640,
+        "width": 100,
+        "height": 12,
+        "text": "kanal 7 spoust",
+        "color_fg": "#e6e1ce",
+        "color_bg": "#14170f",
+        "align": "left",
+        "valign": "middle",
         "_widget_id": "hodnota.7",
     }
     scene = {"width": 1280, "height": 720, "widgets": [w], "navrh": {"cary": [[640, 641, 1, 10]]}}
-    nalezy = modul.validate_data({"device": "tab5", "scenes": {"main": scene}}, file_label="t", warnings_as_errors=False)
+    nalezy = modul.validate_data(
+        {"device": "tab5", "scenes": {"main": scene}}, file_label="t", warnings_as_errors=False
+    )
     return sum(1 for i in nalezy if vd.ZNACKA_R147 in i.message)
 
 
@@ -275,7 +288,9 @@ def test_jmena_mutaci_jsou_ASCII_a_ruzna():
 @pytest.mark.parametrize("m", MUTACE, ids=JMENA)
 def test_kotva_je_v_produkcnim_kodu_prave_jednou(m: Mutace):
     n = ZDROJ.read_text(encoding="utf-8").count(m.kotva)
-    assert n == 1, f"mutace {m.jmeno}: kotva {m.kotva!r} je ve zdroji {n}x, ma byt 1x - mutace by se nepripnula"
+    assert n == 1, (
+        f"mutace {m.jmeno}: kotva {m.kotva!r} je ve zdroji {n}x, ma byt 1x - mutace by se nepripnula"
+    )
     assert m.kotva != m.nahrada
 
 
@@ -336,7 +351,9 @@ def mutovane(koren_kopie) -> dict[str, ModuleType]:
         assert zdroj.count(m.kotva) == 1, m.jmeno
         mut = zdroj.replace(m.kotva, m.nahrada)
         assert mut != zdroj
-        ven[m.jmeno] = _nacti(_pripravit(koren_kopie, m.jmeno, mut), f"validate_design_mut_{m.jmeno}")
+        ven[m.jmeno] = _nacti(
+            _pripravit(koren_kopie, m.jmeno, mut), f"validate_design_mut_{m.jmeno}"
+        )
     return ven
 
 
@@ -351,7 +368,9 @@ def test_kopie_lezi_mimo_repo_a_je_izolovana(koren_kopie, pristina):
 def test_pristina_kopie_pozitivni_tridu_HLASI(m: Mutace, pristina):
     """Kontrolni skupina nacitani: bez tohohle by 'mutace umlcela' mohlo
     znamenat 'kopie nic nenacte'."""
-    assert m.pozitivni(pristina) >= 1, f"{m.jmeno}: pristina kopie nehlasi - mereni mutace by bylo o nicem"
+    assert m.pozitivni(pristina) >= 1, (
+        f"{m.jmeno}: pristina kopie nehlasi - mereni mutace by bylo o nicem"
+    )
     assert m.pozitivni(pristina) == m.pozitivni(vd)
     assert m.negativni(pristina) == 0
 
@@ -370,7 +389,9 @@ def test_mutace_umlci_pozitivni_tridu(m: Mutace, mutovane, koren_kopie):
 def test_mutace_je_lokalni_umlceni_ne_pad(m: Mutace, mutovane):
     modul = mutovane[m.jmeno]
     assert m.negativni(modul) == 0, f"{m.jmeno}: mutace hlasi na negativni tride - to neni umlceni"
-    assert m.cizi(modul) >= 1, f"{m.jmeno}: cizi pravidlo po mutaci mlci - mutace neni lokalni (pad?)"
+    assert m.cizi(modul) >= 1, (
+        f"{m.jmeno}: cizi pravidlo po mutaci mlci - mutace neni lokalni (pad?)"
+    )
     assert m.cizi(modul) == m.cizi(vd)
 
 

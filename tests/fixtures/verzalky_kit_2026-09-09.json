@@ -16,9 +16,10 @@
   "starnout' -- nemel cim byt splnen). Generator prepisuje JEN `vety`",
   "a `stitky`; `jmena_sdk` a `etalon_nalezu` jsou lidske rozhodnuti.",
   "Snimek 10. 9. 2026: kampan kit-dorovnani (System Monitor 4 -> 6 velicin,",
-  "Domov bez Zpet, veta hodin 'chybi API' -> 'pristroj cas necte')."
+  "Domov bez Zpet, veta hodin 'chybi API' -> 'pristroj cas necte').",
+  "Texty obnoveny 27. 9. 2026 z dfbdbbb + rozdelane faze 0; jmena SDK a etalon ponechany."
  ],
- "kit": "a660d7b+kit-dorovnani",
+ "kit": "dfbdbbb+dirty-faze0-2026-09-27",
  "jmena_sdk": {
   "odkud": "tabos.lock.json: sdk 0.7.0 @ e156dea",
   "jmena": [
@@ -627,6 +628,12 @@
    ]
   },
   {
+   "text": "V0.4-123-gabcdef0 · IDF v5.5.4",
+   "listy": [
+    "SvorkaDomu"
+   ]
+  },
+  {
    "text": "VZTAH K NÁM · výklad",
    "listy": [
     "SvorkaNetwork"
@@ -916,12 +923,6 @@
    "text": "0 ZDROJ",
    "listy": [
     "SvorkaPrekladOdmitnuti"
-   ]
-  },
-  {
-   "text": "0.9.3 · IDF 5.4.2",
-   "listy": [
-    "SvorkaDomu"
    ]
   },
   {

@@ -76,28 +76,52 @@ FL = "test"
 FIXTURY = pathlib.Path(__file__).parent / "fixtures"
 
 SKALA = {"rezy": [14, 16, 20, 24, 32], "vyjimky": {}}
-PALETA = ["#14170F", "#1C2016", "#A9C24A", "#9BA28D", "#E9A63C", "#FF7B5E",
-          "#E4DFCC", "#E27BE2", "#6F7764", "#E6E1CE", "#12150E", "#5A5F4C",
-          "#6B6653"]
+PALETA = [
+    "#14170F",
+    "#1C2016",
+    "#A9C24A",
+    "#9BA28D",
+    "#E9A63C",
+    "#FF7B5E",
+    "#E4DFCC",
+    "#E27BE2",
+    "#6F7764",
+    "#E6E1CE",
+    "#12150E",
+    "#5A5F4C",
+    "#6B6653",
+]
 SOUSTAVA = {"pole_x": 20, "vsazka": 16}
 # Uplny blok `orez`, tak jak ho na prvek posila most kitu. Znamena
 # "tenhle prvek most opravdu zmeril" a je to zavora NEMERENO u Rule 151.
-OREZ_ZMERENY = {"sirka_obsahu": 200, "sirka_schranky": 200,
-                "vyska_obsahu": 19, "vyska_schranky": 19}
+OREZ_ZMERENY = {
+    "sirka_obsahu": 200,
+    "sirka_schranky": 200,
+    "vyska_obsahu": 19,
+    "vyska_schranky": 19,
+}
 
 # Dvojice ZMERENE `zmer_kontrast.py` na vykreslenem DOM kitu (2026-09-09).
 # Nejsou vymyslene: prvni dve jsou zasedle ovladace, ktere stara Rule 17
 # nevidela vubec (most jí vozil NAPSANOU barvu #12150E, ne videnou).
-ZASEDLE_PRIPOJIT = ("#946D2A", "#E9A63C")     # 2,23:1, FilesStavy, 16 px
-ZASEDLE_SROVNAT = ("#727164", "#14170F")      # 3,68:1, Settings, 20 px
-OBRYS_NA_PODKLADU = ("#6F7764", "#14170F")    # 3,88:1 - mezi 3,0 a 4,5
+ZASEDLE_PRIPOJIT = ("#946D2A", "#E9A63C")  # 2,23:1, FilesStavy, 16 px
+ZASEDLE_SROVNAT = ("#727164", "#14170F")  # 3,68:1, Settings, 20 px
+OBRYS_NA_PODKLADU = ("#6F7764", "#14170F")  # 3,88:1 - mezi 3,0 a 4,5
 INKUTLUM_NA_PODKLADU = ("#5A5F4C", "#14170F")  # 2,74:1 - pod obema mezemi
 
 
 def _w(wid, x, y, ww, hh, *, text="AHOJ", t="label", fg="#E4DFCC", bg="#14170F"):
     return {
-        "type": t, "x": x, "y": y, "width": ww, "height": hh, "text": text,
-        "color_fg": fg, "color_bg": bg, "align": "left", "valign": "middle",
+        "type": t,
+        "x": x,
+        "y": y,
+        "width": ww,
+        "height": hh,
+        "text": text,
+        "color_fg": fg,
+        "color_bg": bg,
+        "align": "left",
+        "valign": "middle",
         "_widget_id": wid,
     }
 
@@ -165,8 +189,10 @@ def test_r148_hranice_na_pixel():
 
 def test_r148_jmenovita_vyjimka_je_odchylka_s_duvodem():
     """Vyjimka NEMLCI: rekne se, ze se odchyluje, a proc."""
-    skala = {"rezy": [14, 16, 20, 24, 32],
-             "vyjimky": {"40": "hlavni odecet vzdalenosti, jedine misto nad ISO"}}
+    skala = {
+        "rezy": [14, 16, 20, 24, 32],
+        "vyjimky": {"40": "hlavni odecet vzdalenosti, jedine misto nad ISO"},
+    }
     data = _make(
         [_w("velk.1", 36, 120, 300, 45, text="5,6 m")],
         navrh={"prvky": {"velk.1": {"font_size": 40}}, "skala": skala},
@@ -185,7 +211,7 @@ def test_r148_vyjimka_bez_duvodu_se_zahazuje_a_rekne_se_to():
         navrh={"prvky": {"velk.1": {"font_size": 40}}, "skala": skala},
     )
     assert _zpravy(data, ZNACKA_NAVRH_VADNY)
-    assert _zpravy(data, ZNACKA_R148)      # zahozena vyjimka pravidlo NEVYPNE
+    assert _zpravy(data, ZNACKA_R148)  # zahozena vyjimka pravidlo NEVYPNE
 
 
 def test_r148_vyjimka_plati_JEN_pro_svuj_list():
@@ -193,9 +219,13 @@ def test_r148_vyjimka_plati_JEN_pro_svuj_list():
     prvky = {"drobne.1": {"font_size": 13}}
     s_vyjimkou = _make(
         [_w("drobne.1", 36, 120, 200, 17, text="rozsah 55,8-60,0")],
-        navrh={"prvky": prvky,
-               "skala": {"rezy": [14, 16, 20, 24, 32],
-                         "vyjimky": {"13": "klavesnicovy blok ma vlastni soustavu"}}},
+        navrh={
+            "prvky": prvky,
+            "skala": {
+                "rezy": [14, 16, 20, 24, 32],
+                "vyjimky": {"13": "klavesnicovy blok ma vlastni soustavu"},
+            },
+        },
     )
     bez = _make(
         [_w("drobne.1", 36, 120, 200, 17, text="rozsah 55,8-60,0")],
@@ -208,8 +238,7 @@ def test_r148_vyjimka_plati_JEN_pro_svuj_list():
 
 def test_r148_hlasi_po_rezech_ne_po_prvcich():
     """Deset prvku v jednom rezu = jedna veta s poctem, ne deset vet."""
-    widgets = [_w(f"popis.{i}", 36, 100 + 30 * i, 200, 19, text=f"radek {i}")
-               for i in range(10)]
+    widgets = [_w(f"popis.{i}", 36, 100 + 30 * i, 200, 19, text=f"radek {i}") for i in range(10)]
     prvky = {f"popis.{i}": {"font_size": 18} for i in range(10)}
     n = _zpravy(_make(widgets, navrh={"prvky": prvky, "skala": SKALA}), ZNACKA_R148)
     assert len(n) == 1
@@ -227,8 +256,10 @@ def test_r148_bez_skaly_rekne_ze_nemerilo():
 
 def test_r148_bez_merenych_rezu_o_nicem_nemluvi():
     """NEMERENO se hlasi jen tam, kde bylo CO merit."""
-    data = _make([_w("popis.1", 36, 120, 200, 19, text="TEPLOTA CPU")],
-                 navrh={"prvky": {"popis.1": {"role": "popisek"}}})
+    data = _make(
+        [_w("popis.1", 36, 120, 200, 19, text="TEPLOTA CPU")],
+        navrh={"prvky": {"popis.1": {"role": "popisek"}}},
+    )
     assert not _zpravy(data, ZNACKA_R148_NEMERENO)
 
 
@@ -289,13 +320,15 @@ def test_r149_nejmensi_rez_kitu_mlci():
 def test_r149_hranice_meze_letmo():
     """Rez, jehoz verzalka da presne 5', jeste mlci; o desetinu min uz ne."""
     hranice = R149_MEZ_LETMO
-    rez = 10.83   # 0,700*10,83 px = 5,00' na 450 mm pri 294 PPI
+    rez = 10.83  # 0,700*10,83 px = 5,00' na 450 mm pri 294 PPI
     minut = PROFILE_TAB5.minuty(PROFILE_TAB5.verzalka_pomer * rez)
     assert minut >= hranice
-    tesne = _make([_w("a.1", 36, 120, 300, 12, text="x")],
-                  navrh={"prvky": {"a.1": {"font_size": rez}}})
-    pod = _make([_w("a.1", 36, 120, 300, 12, text="x")],
-                navrh={"prvky": {"a.1": {"font_size": rez - 0.2}}})
+    tesne = _make(
+        [_w("a.1", 36, 120, 300, 12, text="x")], navrh={"prvky": {"a.1": {"font_size": rez}}}
+    )
+    pod = _make(
+        [_w("a.1", 36, 120, 300, 12, text="x")], navrh={"prvky": {"a.1": {"font_size": rez - 0.2}}}
+    )
     assert not _zpravy(tesne, ZNACKA_R149)
     assert _zpravy(pod, ZNACKA_R149)
 
@@ -308,8 +341,8 @@ def test_r149_hlaska_nese_ISO_ale_nesoudi_podle_ni():
     )
     assert not _zpravy(data, ZNACKA_R149)
     minut = PROFILE_TAB5.minuty(PROFILE_TAB5.verzalka_pomer * 20)
-    assert minut < R149_MEZ_ISO        # bezna hodnota je na 58 % ISO
-    assert minut >= R149_MEZ_LETMO     # a presto se cte
+    assert minut < R149_MEZ_ISO  # bezna hodnota je na 58 % ISO
+    assert minut >= R149_MEZ_LETMO  # a presto se cte
 
 
 def test_r149_je_gatovana_profilem():
@@ -317,8 +350,7 @@ def test_r149_je_gatovana_profilem():
     widgets = [_w("nano.1", 36, 120, 200, 7, text="D0")]
     navrh = {"prvky": {"nano.1": {"font_size": 5}}}
     assert _zpravy(_make(widgets, navrh=navrh, device="tab5"), ZNACKA_R149)
-    assert not _zpravy(
-        _make(widgets, navrh=navrh, device="oled256"), ZNACKA_R149)
+    assert not _zpravy(_make(widgets, navrh=navrh, device="oled256"), ZNACKA_R149)
 
 
 def test_r149_meze_jsou_serazene_a_zvenci():
@@ -365,18 +397,23 @@ def test_r150_velikost_pismen_hexu_nerozhoduje():
 
 
 def test_r150_hlasi_po_barvach_ne_po_prvcich():
-    widgets = [_w(f"karta.{i}", 36, 100 + 30 * i, 200, 19, text=f"r{i}",
-                  fg="#8FA0A5", bg="#14170F") for i in range(12)]
+    widgets = [
+        _w(f"karta.{i}", 36, 100 + 30 * i, 200, 19, text=f"r{i}", fg="#8FA0A5", bg="#14170F")
+        for i in range(12)
+    ]
     n = _zpravy(_make(widgets, navrh={"paleta": PALETA}), ZNACKA_R150)
     assert len(n) == 1
     assert "na 12 prvcich" in n[0].message
 
 
 def test_r150_vlastni_paleta_je_jedna_veta_s_duvodem():
-    widgets = [_w(f"karta.{i}", 36, 100 + 30 * i, 200, 19, text=f"r{i}",
-                  fg="#8FA0A5", bg="#151E26") for i in range(12)]
-    data = _make(widgets, navrh={"paleta": PALETA,
-                                 "paleta_vlastni": "list v negativu ma vlastni paletu"})
+    widgets = [
+        _w(f"karta.{i}", 36, 100 + 30 * i, 200, 19, text=f"r{i}", fg="#8FA0A5", bg="#151E26")
+        for i in range(12)
+    ]
+    data = _make(
+        widgets, navrh={"paleta": PALETA, "paleta_vlastni": "list v negativu ma vlastni paletu"}
+    )
     assert not _zpravy(data, ZNACKA_R150)
     odch = _zpravy(data, ZNACKA_R150_ODCHYLKA)
     assert len(odch) == 1
@@ -422,7 +459,8 @@ def test_r150_bez_palety_NEOBVINUJE_ale_ANI_NEMLCI():
     )
     assert not _zpravy(data, ZNACKA_R150), "cizi navrh se z nasi palety soudil"
     assert _zpravy(data, ZNACKA_R150_NEMERENO), (
-        "paleta nedosla a pravidlo 150 o tom NERUKLO ani slovo")
+        "paleta nedosla a pravidlo 150 o tom NERUKLO ani slovo"
+    )
 
 
 def test_r150_NEMERENO_mlci_nad_scenou_BEZ_zmerenych_barev():
@@ -448,8 +486,7 @@ def test_r150_S_PALETOU_uz_NEMERENO_nehlasi():
     """
     data = _make(
         [_w("karta.1", 36, 120, 200, 19, text="FPS", fg=PALETA[0], bg=PALETA[1])],
-        navrh={"prvky": {"karta.1": {"inkoust": PALETA[0].lower()}},
-               "paleta": PALETA},
+        navrh={"prvky": {"karta.1": {"inkoust": PALETA[0].lower()}}, "paleta": PALETA},
     )
     assert not _zpravy(data, ZNACKA_R150_NEMERENO)
     assert not _zpravy(data, ZNACKA_R150)
@@ -484,8 +521,7 @@ def test_r151_SE_SOUSTAVOU_uz_NEMERENO_nehlasi():
     """Pozitivni kontrola teze cesty."""
     data = _make(
         [_w("fps.1", 36, 120, 200, 19, text="FPS")],
-        navrh={"prvky": {"fps.1": {"orez": OREZ_ZMERENY}},
-               "soustava": SOUSTAVA},
+        navrh={"prvky": {"fps.1": {"orez": OREZ_ZMERENY}}, "soustava": SOUSTAVA},
     )
     assert not _zpravy(data, ZNACKA_R151_NEMERENO)
 
@@ -498,8 +534,7 @@ def test_r150_neviditelny_prvek_se_nemeri():
 
 def test_r150_barva_pisma_prvku_bez_pisma_se_nemeri():
     """Prvek bez textu barvu pisma jen DEDI; nikdo ji nevidi."""
-    w = _w("panel.1", 36, 120, 200, 19, text="", t="panel",
-           fg="#8FA0A5", bg="#14170F")
+    w = _w("panel.1", 36, 120, 200, 19, text="", t="panel", fg="#8FA0A5", bg="#14170F")
     n = _zpravy(_make([w], navrh={"paleta": PALETA}), ZNACKA_R150)
     assert not n
 
@@ -578,15 +613,15 @@ def test_r151_prazdny_text_se_nemeri():
 
 
 def test_r151_bez_soustavy_mlci():
-    data = _make([_w("txt.1", 35, 120, 200, 19, text="FPS")],
-                 navrh={"prvky": {"txt.1": {}}})
+    data = _make([_w("txt.1", 35, 120, 200, 19, text="FPS")], navrh={"prvky": {"txt.1": {}}})
     assert not _zpravy(data, ZNACKA_R151)
 
 
 def test_r151_deklarovana_vsazka_bez_soustavy_rekne_ze_nemerila():
     """Pulka smlouvy je rozbita smlouva, ne mezera v mereni."""
-    data = _make([_w("klv.1", 28, 500, 116, 18, text="q")],
-                 navrh={"prvky": {"klv.1": {"vsazka": 8}}})
+    data = _make(
+        [_w("klv.1", 28, 500, 116, 18, text="q")], navrh={"prvky": {"klv.1": {"vsazka": 8}}}
+    )
     assert _zpravy(data, ZNACKA_R151_NEMERENO)
 
 
@@ -601,7 +636,7 @@ def test_r151_vadna_soustava_se_hlasi():
 
 def test_r151_fixtury_obou_trid():
     n = _fix_zpravy("tab5_odsazeni_vady.json", ZNACKA_R151)
-    assert len(n) == 2                     # karta_l a karta_r, obe na x=35
+    assert len(n) == 2  # karta_l a karta_r, obe na x=35
     assert all("x=35" in i.message for i in n)
     assert not _fix_zpravy("tab5_odsazeni_ciste.json", ZNACKA_R151)
 
@@ -609,8 +644,10 @@ def test_r151_fixtury_obou_trid():
 def test_r151_meri_neco_jineho_nez_Rule_134():
     """Doklad, ze se pravidla neprekryvaji: 15 px je pro R134 daleko."""
     data = _make(
-        [_w("pole.1", 20, 80, 400, 19, text="Systemovy monitor"),
-         _w("karta_l.2", 35, 120, 200, 19, text="FPS")],
+        [
+            _w("pole.1", 20, 80, 400, 19, text="Systemovy monitor"),
+            _w("karta_l.2", 35, 120, 200, 19, text="FPS"),
+        ],
         navrh={"prvky": {"karta_l.2": {}}, "soustava": SOUSTAVA},
     )
     assert _zpravy(data, ZNACKA_R151)
@@ -631,7 +668,8 @@ def _kontrast(rez, fg_bg, *, tucne=None, enabled=None, device="tab5"):
         prvek["enabled"] = enabled
     return _make(
         [_w("txt.1", 36, 120, 400, 29, text="TEPLOTA RADIA", fg=fg, bg=bg)],
-        navrh={"prvky": {"txt.1": prvek}}, device=device,
+        navrh={"prvky": {"txt.1": prvek}},
+        device=device,
     )
 
 
@@ -666,8 +704,18 @@ def test_r17_volnejsi_mez_neni_zadna_mez():
 def test_r17_bez_rezu_plati_PRISNEJSI_mez():
     """Nezmerene se nesmi vyplatit."""
     data = _make(
-        [_w("txt.1", 36, 120, 400, 29, text="TEPLOTA RADIA",
-            fg=OBRYS_NA_PODKLADU[0], bg=OBRYS_NA_PODKLADU[1])],
+        [
+            _w(
+                "txt.1",
+                36,
+                120,
+                400,
+                29,
+                text="TEPLOTA RADIA",
+                fg=OBRYS_NA_PODKLADU[0],
+                bg=OBRYS_NA_PODKLADU[1],
+            )
+        ],
         navrh={"prvky": {"txt.1": {}}},
     )
     assert _nizky(data)
@@ -707,16 +755,20 @@ def test_r17_meri_VIDENOU_dvojici_ne_napsanou():
     """Napsany inkoust #12150E na akcentu ma 14,07:1 a stara Rule 17 mlcela;
     videna dvojice ma 2,23:1."""
     napsana = _make(
-        [_w("btn.1", 300, 300, 240, 81, text="Pripojit", t="button",
-            fg="#12150E", bg="#E9A63C")],
+        [_w("btn.1", 300, 300, 240, 81, text="Pripojit", t="button", fg="#12150E", bg="#E9A63C")],
         navrh={"prvky": {"btn.1": {"font_size": 16}}},
     )
     videna = _make(
-        [_w("btn.1", 300, 300, 240, 81, text="Pripojit", t="button",
-            fg="#12150E", bg="#E9A63C")],
-        navrh={"prvky": {"btn.1": {"font_size": 16,
-                                   "inkoust": ZASEDLE_PRIPOJIT[0],
-                                   "podklad": ZASEDLE_PRIPOJIT[1]}}},
+        [_w("btn.1", 300, 300, 240, 81, text="Pripojit", t="button", fg="#12150E", bg="#E9A63C")],
+        navrh={
+            "prvky": {
+                "btn.1": {
+                    "font_size": 16,
+                    "inkoust": ZASEDLE_PRIPOJIT[0],
+                    "podklad": ZASEDLE_PRIPOJIT[1],
+                }
+            }
+        },
     )
     assert not _nizky(napsana)
     assert _nizky(videna)
@@ -753,23 +805,24 @@ def test_r17_fixtury_obou_trid():
 @pytest.mark.parametrize("hodnota", ["true", 1, "ano", None.__class__])
 def test_tucne_musi_byt_pravdivostni_hodnota(hodnota):
     """Retezec 'false' je v Pythonu pravdivy - tise by mez posunul o 5 px."""
-    data = _make([_w("txt.1", 36, 120, 200, 19)],
-                 navrh={"prvky": {"txt.1": {"tucne": str(hodnota)}}})
+    data = _make(
+        [_w("txt.1", 36, 120, 200, 19)], navrh={"prvky": {"txt.1": {"tucne": str(hodnota)}}}
+    )
     assert _zpravy(data, ZNACKA_NAVRH_VADNY)
 
 
 @pytest.mark.parametrize("hodnota", [-1, 0, "8", True])
 def test_vsazka_musi_byt_kladne_cislo(hodnota):
-    data = _make([_w("txt.1", 36, 120, 200, 19)],
-                 navrh={"prvky": {"txt.1": {"vsazka": hodnota}}})
+    data = _make([_w("txt.1", 36, 120, 200, 19)], navrh={"prvky": {"txt.1": {"vsazka": hodnota}}})
     assert _zpravy(data, ZNACKA_NAVRH_VADNY)
 
 
 def test_vsazka_smi_chybet():
     """Blok bez vlastni vsazky je bezny stav, ne vada."""
-    data = _make([_w("txt.1", 36, 120, 200, 19)],
-                 navrh={"prvky": {"txt.1": {"role": "popisek"}},
-                        "soustava": SOUSTAVA})
+    data = _make(
+        [_w("txt.1", 36, 120, 200, 19)],
+        navrh={"prvky": {"txt.1": {"role": "popisek"}}, "soustava": SOUSTAVA},
+    )
     assert not _zpravy(data, ZNACKA_NAVRH_VADNY)
 
 

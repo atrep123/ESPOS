@@ -100,10 +100,7 @@ def _cesta(jmeno: str, trida: str) -> pathlib.Path:
 
 
 def _zpravy(jmeno: str, trida: str) -> list[str]:
-    return [
-        i.message
-        for i in validate_file(_cesta(jmeno, trida), warnings_as_errors=False)
-    ]
+    return [i.message for i in validate_file(_cesta(jmeno, trida), warnings_as_errors=False)]
 
 
 def _chyby(jmeno: str, trida: str) -> list[str]:
@@ -124,8 +121,7 @@ def _scena(jmeno: str, trida: str) -> dict:
 
 def _zpravy_dat(data: dict, **kw) -> list[str]:
     return [
-        i.message
-        for i in validate_data(data, file_label="test", warnings_as_errors=False, **kw)
+        i.message for i in validate_data(data, file_label="test", warnings_as_errors=False, **kw)
     ]
 
 
@@ -390,8 +386,7 @@ def test_network_tools_Skenovat_166x66_je_pod_navrhovou_mezi():
     navrhovou mezi 81. Zavaznost je tu sdeleni, ne formalita."""
     iss = [
         i
-        for i in validate_file(_cesta("panel_network_tools", "vady"),
-                               warnings_as_errors=False)
+        for i in validate_file(_cesta("panel_network_tools", "vady"), warnings_as_errors=False)
         if KUS_R135 in i.message
     ]
     assert len(iss) == 1 and iss[0].level == "WARN", [i.message for i in iss]
@@ -526,13 +521,9 @@ def test_tri_vety_o_microSD_chyti_brana_JEN_JEDNU_a_tady_je_ta_mezera():
     oprava tohohle - proto se v KROKU 4 nepsalo a mezera je tady zapsana.
     """
     doc = _scena("panel_files", "vady")
-    prvek = next(
-        w for w in doc["scenes"]["main"]["widgets"] if w["_widget_id"] == "zive.16"
-    )
+    prvek = next(w for w in doc["scenes"]["main"]["widgets"] if w["_widget_id"] == "zive.16")
     vysledky = {}
-    for veta in ("vložena, nepřipojena",
-                 "karta není vložena nebo mount selhal",
-                 "nedostupné"):
+    for veta in ("vložena, nepřipojena", "karta není vložena nebo mount selhal", "nedostupné"):
         prvek["text"] = veta
         vysledky[veta] = bool(_obsahuji(_zpravy_dat(doc), ZNACKA_R143))
     assert vysledky == {
@@ -550,12 +541,21 @@ def test_pravitko_KDE_JE_VOLNO_nad_nicim_je_vada_BEZ_MERIDLA():
     obdelniky a role, ne to, ke ktere kresbe popisek patri.
     """
     doc = _scena("panel_network_tools", "ciste")
-    doc["scenes"]["main"]["widgets"].append({
-        "type": "label", "x": 36, "y": 300, "width": 400, "height": 15,
-        "text": "KDE JE VOLNO 1..13", "color_fg": "#E6E1CE",
-        "color_bg": "#14170F", "align": "left", "valign": "middle",
-        "_widget_id": "pravitko.99",
-    })
+    doc["scenes"]["main"]["widgets"].append(
+        {
+            "type": "label",
+            "x": 36,
+            "y": 300,
+            "width": 400,
+            "height": 15,
+            "text": "KDE JE VOLNO 1..13",
+            "color_fg": "#E6E1CE",
+            "color_bg": "#14170F",
+            "align": "left",
+            "valign": "middle",
+            "_widget_id": "pravitko.99",
+        }
+    )
     assert [m for m in _zpravy_dat(doc) if "pravitko.99" in m] == []
 
 
@@ -584,10 +584,10 @@ def test_settings_znak_mikro_projde_a_recke_mi_ne():
     doc = _scena("panel_settings", "ciste")
     prvek = doc["scenes"]["main"]["widgets"][0]
 
-    prvek["text"] = "perioda 0,5 µs"       # znak mikro
+    prvek["text"] = "perioda 0,5 µs"  # znak mikro
     assert _obsahuji(_zpravy_dat(doc), KUS_R26) == []
 
-    prvek["text"] = "perioda 0,5 μs"       # recke mi
+    prvek["text"] = "perioda 0,5 μs"  # recke mi
     assert _obsahuji(_zpravy_dat(doc), KUS_R26)
 
 
@@ -681,10 +681,9 @@ def test_patka_Terminalu_UART1_G53_G54_je_vada_BEZ_MERIDLA():
     """
     for trida in ("vady", "ciste"):
         doc = _scena("panel_terminal", trida)
-        txt = next(
-            w for w in doc["scenes"]["main"]["widgets"]
-            if w["_widget_id"] == "txt.41"
-        )["text"]
+        txt = next(w for w in doc["scenes"]["main"]["widgets"] if w["_widget_id"] == "txt.41")[
+            "text"
+        ]
         assert "UART1" in txt and "G53/G54" in txt, txt
         assert [m for m in _zpravy("panel_terminal", trida) if "txt.41" in m] == []
 
@@ -742,12 +741,12 @@ def test_usb_velke_prazdno_mezi_radky_je_vada_BEZ_MERIDLA():
 CEKANE_CHYBY_VAD = {
     "panel_domov": 5,
     "panel_system_monitor": 4,
-    "panel_hex": 1,               # + 1 WARN (slovnik stavu, role stav)
+    "panel_hex": 1,  # + 1 WARN (slovnik stavu, role stav)
     "panel_logic_analyzer": 2,
-    "panel_network_tools": 3,     # + 1 WARN
+    "panel_network_tools": 3,  # + 1 WARN
     "panel_diagnostics": 2,
     "panel_files": 1,
-    "panel_settings": 2,          # + 1 WARN (slovnik stavu, role stav)
+    "panel_settings": 2,  # + 1 WARN (slovnik stavu, role stav)
     "panel_terminal": 3,
     "panel_usb_inspector": 2,
 }
@@ -775,5 +774,6 @@ def test_souhrn_pokryti_fotoprotokolu():
         f"  zmereno {zmereno}\n"
         f"Kdyz pravidlo pribylo nebo ubylo, oprav CEKANE_CHYBY_VAD a napis "
         f"do komentare, ktere to bylo - cislo bez duvodu je rohatka, ne "
-        f"mereni.")
+        f"mereni."
+    )
     assert sum(zmereno.values()) == 25, sum(zmereno.values())

@@ -56,7 +56,7 @@ import pytest
 from tools.validate_design import validate_data
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
-DILNA = ESPOS.parents[1]                      # .../kimi/workspace
+DILNA = ESPOS.parents[1]  # .../kimi/workspace
 KIT = DILNA / "tabos-ui-kit"
 TOKENY = KIT / "tokens.json"
 NAVRH_APPKY = KIT / "navrh-appky"
@@ -89,17 +89,21 @@ def _tokeny_kitu() -> pathlib.Path:
         pytest.skip(f"NEZMERENO: {TOKENY} se neda precist ({e})")
     klic, hodnota = PODPIS
     if not isinstance(data, dict) or data.get(klic) != hodnota:
-        pytest.skip(f"NEZMERENO: {TOKENY} nema {klic} == {hodnota!r} - "
-                    f"neni to tokens.json kitu, jen soubor tehoz jmena")
+        pytest.skip(
+            f"NEZMERENO: {TOKENY} nema {klic} == {hodnota!r} - "
+            f"neni to tokens.json kitu, jen soubor tehoz jmena"
+        )
     chybi = [k for k in POVINNE_KLICE if k not in data]
     assert not chybi and isinstance(data.get("colors"), dict), (
         f"{TOKENY} JE tokens.json kitu (podpis sedi), ale chybi mu "
         f"{chybi or 'blok colors jako slovnik'} - most nema co vozit a "
-        f"pravidla 143/148/150/151 by nad zivymi listy mlcela")
+        f"pravidla 143/148/150/151 by nad zivymi listy mlcela"
+    )
     chybi_role = [r for r in POVINNE_ROLE if r not in data["colors"]]
     assert not chybi_role, (
         f"{TOKENY} JE tokens.json kitu, ale v palete chybi role "
-        f"{chybi_role} - paleta se rozesla s `tema.h` firmwaru")
+        f"{chybi_role} - paleta se rozesla s `tema.h` firmwaru"
+    )
     return TOKENY
 
 
@@ -135,7 +139,8 @@ def test_most_vozi_paletu_z_tokens_json():
     assert most.paleta() == ocekavane
     assert len(ocekavane) >= 10, (
         f"paleta ma jen {len(ocekavane)} barev - to uz neni paleta navrhu, "
-        f"a pravidlo 150 by nad ni obvinovalo skoro vsechno")
+        f"a pravidlo 150 by nad ni obvinovalo skoro vsechno"
+    )
 
 
 def test_MUTACE_barvy_v_tokens_json_je_videt_v_palete_mostu(tmp_path):
@@ -190,17 +195,38 @@ def test_paleta_mostu_JE_MEZ_pravidla_150():
     assert mimo not in [b.lower() for b in barvy]
 
     def _scena(fg: str) -> dict:
-        return {"device": "tab5", "scenes": {"main": {
-            "width": 1280, "height": 720, "navrh": {"paleta": barvy},
-            "widgets": [{"type": "label", "x": 36, "y": 120, "width": 200,
-                         "height": 19, "text": "FPS", "color_fg": fg,
-                         "color_bg": barvy[0], "align": "left",
-                         "valign": "middle", "_widget_id": "a.1"}]}}}
+        return {
+            "device": "tab5",
+            "scenes": {
+                "main": {
+                    "width": 1280,
+                    "height": 720,
+                    "navrh": {"paleta": barvy},
+                    "widgets": [
+                        {
+                            "type": "label",
+                            "x": 36,
+                            "y": 120,
+                            "width": 200,
+                            "height": 19,
+                            "text": "FPS",
+                            "color_fg": fg,
+                            "color_bg": barvy[0],
+                            "align": "left",
+                            "valign": "middle",
+                            "_widget_id": "a.1",
+                        }
+                    ],
+                }
+            },
+        }
 
     def _mimo_paletu(scena: dict) -> list[str]:
-        return [i.message for i in validate_data(
-            scena, file_label="t", warnings_as_errors=False)
-            if "barva mimo paletu" in i.message]
+        return [
+            i.message
+            for i in validate_data(scena, file_label="t", warnings_as_errors=False)
+            if "barva mimo paletu" in i.message
+        ]
 
     assert _mimo_paletu(_scena(barvy[1])) == [], "barva z palety vystrelila"
     obvineni = _mimo_paletu(_scena(mimo))
@@ -216,8 +242,7 @@ def test_paleta_mostu_JE_MEZ_pravidla_150():
 def test_most_vozi_soustavu_odsazeni_z_tokens_json():
     most = _most()
     lay = json.loads(_tokeny_kitu().read_text(encoding="utf-8"))["layout"]
-    assert most.soustava() == {"pole_x": lay["obsah"]["x"],
-                               "vsazka": lay["ram"]["vsazka"]}
+    assert most.soustava() == {"pole_x": lay["obsah"]["x"], "vsazka": lay["ram"]["vsazka"]}
 
 
 def test_MUTACE_soustavy_je_videt_v_moste(tmp_path):
@@ -244,17 +269,14 @@ def test_most_vozi_skalu_pisma_z_tokens_json():
     assert sk["rezy"], "skala pisma je prazdna - pravidlo 148 by nemelo mez"
     # Rezy se ctou ze JMEN LVGL fontu (`tabos_16`), ne z opsaneho seznamu.
     tok = json.loads(_tokeny_kitu().read_text(encoding="utf-8"))["typography"]
-    z_jmen = sorted({int(s) for h in tok.values()
-                     for s in [h.rsplit("_", 1)[-1]] if s.isdigit()})
+    z_jmen = sorted({int(s) for h in tok.values() for s in [h.rsplit("_", 1)[-1]] if s.isdigit()})
     assert sk["rezy"] == z_jmen
 
 
 def test_MUTACE_skaly_je_videt_v_moste(tmp_path):
     most = _most()
-    role = next(iter(json.loads(
-        _tokeny_kitu().read_text(encoding="utf-8"))["typography"]))
-    kopie = _kopie(tmp_path,
-                   lambda d: d["typography"].__setitem__(role, "tabos_33"))
+    role = next(iter(json.loads(_tokeny_kitu().read_text(encoding="utf-8"))["typography"]))
+    kopie = _kopie(tmp_path, lambda d: d["typography"].__setitem__(role, "tabos_33"))
     assert 33 in most.skala_pisma("SvorkaFiles", kopie)["rezy"]
     assert 33 not in most.skala_pisma("SvorkaFiles")["rezy"]
 
@@ -266,10 +288,11 @@ def test_vyjimky_skaly_jsou_PER_LIST(tmp_path):
     pravidlo na vsech 62 listech naraz.
     """
     most = _most()
-    kopie = _kopie(tmp_path, lambda d: d.__setitem__(
-        "typografie_vyjimky", {"ListA": {"13": "vedomy rez klavesnice"}}))
-    assert most.skala_pisma("ListA", kopie)["vyjimky"] == {
-        "13": "vedomy rez klavesnice"}
+    kopie = _kopie(
+        tmp_path,
+        lambda d: d.__setitem__("typografie_vyjimky", {"ListA": {"13": "vedomy rez klavesnice"}}),
+    )
+    assert most.skala_pisma("ListA", kopie)["vyjimky"] == {"13": "vedomy rez klavesnice"}
     assert most.skala_pisma("ListB", kopie)["vyjimky"] == {}
 
 
@@ -282,14 +305,14 @@ def test_most_vozi_slovnik_stavu_z_tokens_json():
     most = _most()
     stavy = json.loads(_tokeny_kitu().read_text(encoding="utf-8")).get("stavy")
     assert isinstance(stavy, dict) and stavy, (
-        "tokens.json nema blok `stavy` - pravidlo 143 by nemelo slovnik")
+        "tokens.json nema blok `stavy` - pravidlo 143 by nemelo slovnik"
+    )
     assert most.slovnik_stavu() == stavy
 
 
 def test_MUTACE_slovniku_stavu_je_videt_v_moste(tmp_path):
     most = _most()
-    kopie = _kopie(tmp_path, lambda d: d["stavy"].__setitem__(
-        "microSD", ["vymysleny stav"]))
+    kopie = _kopie(tmp_path, lambda d: d["stavy"].__setitem__("microSD", ["vymysleny stav"]))
     assert most.slovnik_stavu(kopie)["microSD"] == ["vymysleny stav"]
     assert most.slovnik_stavu()["microSD"] != ["vymysleny stav"]
 
@@ -318,14 +341,14 @@ def test_zive_sceny_kitu_NESOU_paletu_a_soustavu():
         pytest.skip(
             f"NEZMERENO: v {NAVRH_APPKY} nejsou mezikroky _scena_*.json "
             f"(brana nebezela s --zapis-scenu) - clanek most->scena se "
-            f"nemel na cem overit")
+            f"nemel na cem overit"
+        )
     paleta = [b.lower() for b in most.paleta()]
     soustava = most.soustava()
     bez_palety, bez_soustavy = [], []
     for s in sceny:
         try:
-            navrh = json.loads(s.read_text(encoding="utf-8")
-                               )["scenes"]["main"].get("navrh", {})
+            navrh = json.loads(s.read_text(encoding="utf-8"))["scenes"]["main"].get("navrh", {})
         except (OSError, ValueError, KeyError):
             continue
         if [b.lower() for b in navrh.get("paleta", [])] != paleta:
@@ -333,11 +356,11 @@ def test_zive_sceny_kitu_NESOU_paletu_a_soustavu():
         if navrh.get("soustava") != soustava:
             bez_soustavy.append(s.name)
     assert not bez_palety, (
-        f"{len(bez_palety)} z {len(sceny)} scen nenese paletu mostu: "
-        f"{bez_palety[:5]}")
+        f"{len(bez_palety)} z {len(sceny)} scen nenese paletu mostu: {bez_palety[:5]}"
+    )
     assert not bez_soustavy, (
-        f"{len(bez_soustavy)} z {len(sceny)} scen nenese soustavu mostu: "
-        f"{bez_soustavy[:5]}")
+        f"{len(bez_soustavy)} z {len(sceny)} scen nenese soustavu mostu: {bez_soustavy[:5]}"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -356,8 +379,9 @@ def test_brana_zna_VSECHNY_znacky_nemereni_behovou_hodnotou():
     from tools import validate_design as vd
 
     most = _most()
-    ocekavane = sorted(getattr(vd, j) for j in dir(vd)
-                       if j.startswith("ZNACKA_") and j.endswith("_NEMERENO"))
+    ocekavane = sorted(
+        getattr(vd, j) for j in dir(vd) if j.startswith("ZNACKA_") and j.endswith("_NEMERENO")
+    )
     assert ocekavane, "validate_design nema ani jednu znacku *_NEMERENO"
     assert sorted(most.znacky_nemereno(vd)) == ocekavane
 
@@ -372,7 +396,7 @@ def test_brana_bez_jedine_znacky_nemereni_je_CHYBA_ne_ticho():
     most = _most()
 
     class BezZnacek:
-        ZNACKA_R150 = "barva mimo paletu"     # jina znacka, ale zadna NEMERENO
+        ZNACKA_R150 = "barva mimo paletu"  # jina znacka, ale zadna NEMERENO
 
     with pytest.raises(SystemExit, match="NEMERENO"):
         most.znacky_nemereno(BezZnacek)
@@ -387,6 +411,10 @@ def test_znacky_nemereni_pokryvaji_vsechna_ctyri_datova_pravidla():
     """
     from tools import validate_design as vd
 
-    for jmeno in ("ZNACKA_R143_NEMERENO", "ZNACKA_R148_NEMERENO",
-                  "ZNACKA_R150_NEMERENO", "ZNACKA_R151_NEMERENO"):
+    for jmeno in (
+        "ZNACKA_R143_NEMERENO",
+        "ZNACKA_R148_NEMERENO",
+        "ZNACKA_R150_NEMERENO",
+        "ZNACKA_R151_NEMERENO",
+    ):
         assert hasattr(vd, jmeno), f"validate_design nema {jmeno}"

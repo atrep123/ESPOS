@@ -66,13 +66,13 @@ BEZ_MERIDLA = {"panel_la_spoust", "panel_la_smycka", "panel_rf_vyber"}
 # Rozpad chyb PO OBRAZOVKACH (tataz pojistka jako v test_regrese_panel.py:
 # soucet 12 by prezil vymenu "jedna ubyla, jina pribyla").
 CEKANE_CHYBY_VAD = {
-    "panel_hex_runtime": 3,    # R138 x3 (SOUBOR, OKNO, ZOBRAZENO)  + 1 WARN R143 (microSD: nedostupne)
-    "panel_rf_koex": 3,        # R138 x3 (POKRYTI, PROPUSTNOST A, ZTRATY A)
-    "panel_rf_ftm": 5,         # R138 x5 (VYMEN, smalt VZDALENOST, ROZPTYL, PLATNE, DUVERA)
-    "panel_network": 1,        # R138 x1 (SITI)
-    "panel_la_spoust": 0,      # pas bez clena - BEZ MERIDLA
-    "panel_la_smycka": 0,      # pas bez clena - BEZ MERIDLA
-    "panel_rf_vyber": 0,       # razitko bez clena - BEZ MERIDLA
+    "panel_hex_runtime": 3,  # R138 x3 (SOUBOR, OKNO, ZOBRAZENO)  + 1 WARN R143 (microSD: nedostupne)
+    "panel_rf_koex": 3,  # R138 x3 (POKRYTI, PROPUSTNOST A, ZTRATY A)
+    "panel_rf_ftm": 5,  # R138 x5 (VYMEN, smalt VZDALENOST, ROZPTYL, PLATNE, DUVERA)
+    "panel_network": 1,  # R138 x1 (SITI)
+    "panel_la_spoust": 0,  # pas bez clena - BEZ MERIDLA
+    "panel_la_smycka": 0,  # pas bez clena - BEZ MERIDLA
+    "panel_rf_vyber": 0,  # razitko bez clena - BEZ MERIDLA
 }
 
 
@@ -101,7 +101,11 @@ def _scena(jmeno: str, trida: str) -> dict:
 
 
 def _chyby_dat(doc: dict) -> list[str]:
-    return [i.message for i in validate_data(doc, file_label="t", warnings_as_errors=False) if i.level == "ERROR"]
+    return [
+        i.message
+        for i in validate_data(doc, file_label="t", warnings_as_errors=False)
+        if i.level == "ERROR"
+    ]
 
 
 def _widget(doc: dict, wid: str) -> dict:
@@ -170,8 +174,11 @@ def test_hex_tri_sloty_razitka_bez_textu_jsou_tri_nalezy_R138():
 def test_hex_prazdno_a_pomlcka_jsou_dve_ruzne_tridy():
     """Tyz slot, dve podoby: 2026-09-08 pomlcky (R139), 2026-09-09 prazdno
     (R138). Kdyby jedna pulka mlcela, druha by ji zakryla."""
-    stare = [i.message for i in validate_file(STARSI / "panel_hex_vady.json", warnings_as_errors=False)
-             if i.level == "ERROR"]
+    stare = [
+        i.message
+        for i in validate_file(STARSI / "panel_hex_vady.json", warnings_as_errors=False)
+        if i.level == "ERROR"
+    ]
     assert _obsahuji(stare, ZNACKA_R139) and not _obsahuji(stare, ZNACKA_R138)
     nove = _chyby("panel_hex_runtime", "vady")
     assert _obsahuji(nove, ZNACKA_R138) and not _obsahuji(nove, ZNACKA_R139)
@@ -237,7 +244,7 @@ def test_koex_KONTROLNI_SKUPINA_cizi_popisek_pod_prazdnym_obalem_prazdno_NEZAKRY
     POTOMEK - cizi text, ktery jen geometricky lezi uvnitr, nic nezakryje."""
     doc = _scena("panel_rf_koex", "vady")
     obal = _widget(doc, "prop.A")
-    obal["x"], obal["y"], obal["width"], obal["height"] = 800, 420, 180, 60   # obal pres popis.65
+    obal["x"], obal["y"], obal["width"], obal["height"] = 800, 420, 180, 60  # obal pres popis.65
     z = _obsahuji(_chyby_dat(doc), ZNACKA_R138)
     assert sorted(m.split(" (")[1].split(")")[0] for m in z) == ["prop.A", "txt.107", "ztr.A"], z
 
@@ -261,7 +268,13 @@ def test_koex_hranice_potomek_s_textem_uvnitr_obalu_prazdno_zakryje():
 
 def test_ftm_pet_prazdnych_mist_pet_nalezu():
     z = _obsahuji(_chyby("panel_rf_ftm", "vady"), ZNACKA_R138)
-    assert sorted(m.split(" (")[1].split(")")[0] for m in z) == ["txt.84", "v.16", "v.duvera", "v.platne", "v.rozptyl"], z
+    assert sorted(m.split(" (")[1].split(")")[0] for m in z) == [
+        "txt.84",
+        "v.16",
+        "v.duvera",
+        "v.platne",
+        "v.rozptyl",
+    ], z
 
 
 def test_ftm_KALIBRACE_ma_slovo_a_neni_nalez_v_zadne_tride():
@@ -309,6 +322,7 @@ def test_souhrn_pokryti_fotoprotokolu_2026_09_09():
     zmereno = {jm: len(_chyby(jm, "vady")) for jm in OBRAZOVKY}
     assert zmereno == CEKANE_CHYBY_VAD, (
         f"rozpad chyb po obrazovkach se zmenil:\n  ceka se {CEKANE_CHYBY_VAD}\n  zmereno {zmereno}\n"
-        f"Kdyz pravidlo pribylo nebo ubylo, oprav CEKANE_CHYBY_VAD a napis do komentare, ktere to bylo.")
+        f"Kdyz pravidlo pribylo nebo ubylo, oprav CEKANE_CHYBY_VAD a napis do komentare, ktere to bylo."
+    )
     assert sum(zmereno.values()) == 12, sum(zmereno.values())
     assert all(zmereno[j] == 0 for j in BEZ_MERIDLA)

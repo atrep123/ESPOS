@@ -100,12 +100,17 @@ def _obsahuji(zpravy, kus):
     return [z for z in zpravy if kus in z]
 
 
-def _dlazdice(n, *, sloupcu=3, skupina="dlazdice", w=386, h=120, x0=48, y0=140,
-              dx=410, dy=130):
+def _dlazdice(n, *, sloupcu=3, skupina="dlazdice", w=386, h=120, x0=48, y0=140, dx=410, dy=130):
     """n prvku teze tridy a velikosti, lamanych po `sloupcu` do radku."""
     return [
-        _w(f"{skupina}.{i}", x0 + dx * (i % sloupcu), y0 + dy * (i // sloupcu), w, h,
-           text=f"APPKA {i}")
+        _w(
+            f"{skupina}.{i}",
+            x0 + dx * (i % sloupcu),
+            y0 + dy * (i // sloupcu),
+            w,
+            h,
+            text=f"APPKA {i}",
+        )
         for i in range(n)
     ]
 
@@ -154,8 +159,12 @@ def test_r152_dve_skupiny_dva_nalezy_serazene():
 
 
 def test_r152_je_gatovane_daty_ne_profilem():
-    d = _scena(_dlazdice(6, w=20, h=10, x0=4, y0=4, dx=30, dy=20),
-               device="oled256", scene_w=256, scene_h=128)
+    d = _scena(
+        _dlazdice(6, w=20, h=10, x0=4, y0=4, dx=30, dy=20),
+        device="oled256",
+        scene_w=256,
+        scene_h=128,
+    )
     assert _obsahuji(_warns(d), ZNACKA_R152_NEMERENO)
 
 
@@ -265,8 +274,11 @@ def test_r152_hranice_velikosti_je_jeden_pixel():
 
 
 def test_fixtura_vady_projde_schematem_a_hlasi_prave_jednou():
-    nalezy = [i for i in validate_file(VADY, warnings_as_errors=False)
-              if ZNACKA_R152_NEMERENO in i.message]
+    nalezy = [
+        i
+        for i in validate_file(VADY, warnings_as_errors=False)
+        if ZNACKA_R152_NEMERENO in i.message
+    ]
     assert len(nalezy) == 1 and nalezy[0].level == "WARN"
     assert "'dlazdice' ma 12 stejnych prvku 386x120 ve 3 sloupcich a 4 radcich" in nalezy[0].message
 
@@ -313,8 +325,10 @@ def test_r152_dva_behy_tyz_vysledek():
 
 
 def _mrizka(kapacita, polozek):
-    return _scena([_w("obsah", 20, 97, 1240, 603, text="", t="panel")],
-                  mrizky=[{"jmeno": "dlazdice", "kapacita": kapacita, "polozek": polozek}])
+    return _scena(
+        [_w("obsah", 20, 97, 1240, 603, text="", t="panel")],
+        mrizky=[{"jmeno": "dlazdice", "kapacita": kapacita, "polozek": polozek}],
+    )
 
 
 @pytest.mark.parametrize(
@@ -330,7 +344,9 @@ def test_r140_hranice_na_dnesnim_domove(kapacita, polozek, ceka_nalez):
     chyby = _obsahuji(_errors(_mrizka(kapacita, polozek)), ZNACKA_R140)
     assert bool(chyby) is ceka_nalez
     if ceka_nalez:
-        assert f"ma kapacitu {kapacita}, polozek je {polozek} (o {polozek - kapacita} vic)" in chyby[0]
+        assert (
+            f"ma kapacitu {kapacita}, polozek je {polozek} (o {polozek - kapacita} vic)" in chyby[0]
+        )
 
 
 def test_r140_panelove_fixtury_domova_nesou_10_a_12_slotu_na_11_appek():

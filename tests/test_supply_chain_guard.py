@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from tools.check_supply_chain import (
@@ -13,6 +14,25 @@ from tools.check_supply_chain import (
 
 def test_current_repo_passes_supply_chain_guard():
     assert collect_issues(Path(".")) == []
+
+
+def test_ci_push_runs_on_exact_dodelavky_branch_without_broadening_pr_filter():
+    """Keep this publication branch explicit, without a codex/* wildcard."""
+    path = Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml"
+    text = path.read_text(encoding="utf-8")
+    events = re.search(r"(?ms)^on:\s*\n(.*?)(?=^\S|\Z)", text)
+    assert events is not None, "CI must declare its event block"
+    expected = {
+        "push": ["main", "master", "codex/dodelavky-20260927"],
+        "pull_request": ["main", "master"],
+    }
+    for event, names in expected.items():
+        block = re.search(rf"(?ms)^  {event}:\s*\n(.*?)(?=^  \S|\Z)", events[1])
+        assert block is not None, f"Missing {event} trigger"
+        branches = re.search(r"(?m)^    branches:\s*\[([^\]\n]+)\]\s*$", block[1])
+        assert branches is not None, f"Missing explicit {event} branch list"
+        actual = [name.strip().strip("\"'") for name in branches[1].split(",")]
+        assert actual == names
 
 
 def test_workflow_rejects_unpinned_action_reference():
