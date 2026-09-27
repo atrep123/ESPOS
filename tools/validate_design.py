@@ -1568,8 +1568,22 @@ def _navrh_ze_sceny(
                 "orez",
                 "font_size",
                 "enabled",
+                "text_fragmenty",
             )
         }
+        if "text_fragmenty" in prvek_raw:
+            fragmenty = _r147_fragmenty(prvek_raw["text_fragmenty"])
+            if fragmenty is None:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        f"{pfx}: {ZNACKA_NAVRH_VADNY}: 'prvky.{wid}.text_fragmenty' "
+                        "ma byt neprazdny seznam konecnych obdelniku [x, y, sirka, vyska] "
+                        "s kladnymi rozmery; R147 pouzije puvodni box (NEZMERENO)",
+                    )
+                )
+            else:
+                prvek["text_fragmenty"] = fragmenty
         rodic_raw = prvek_raw.get("rodic")
         if rodic_raw is not None:
             rodic = _obdelnik4(rodic_raw)
@@ -2611,11 +2625,34 @@ def _cary_ze_sceny(
     return cary, issues
 
 
+def _r147_fragmenty(raw: Any) -> list[tuple[float, float, float, float]] | None:
+    """Accept only a complete finite Range measurement; never a partial list."""
+    if not isinstance(raw, list) or not raw:
+        return None
+    result = []
+    for rect in raw:
+        if not isinstance(rect, (list, tuple)) or len(rect) != 4:
+            return None
+        if any(type(v) not in (int, float) for v in rect):
+            return None
+        try:
+            x, y, w, h = (float(v) for v in rect)
+        except (ValueError, OverflowError):
+            return None
+        if not all(math.isfinite(v) for v in (x, y, w, h, x + w, y + h)):
+            return None
+        if w <= 0 or h <= 0:
+            return None
+        result.append((x, y, w, h))
+    return result
+
+
 def _r147_nalezy(
     wl: str,
     rect: tuple[int, int, int, int],
     text: str,
     cary: list[tuple[int, int, int, int]],
+    fragmenty: Any = None,
 ) -> list[Issue]:
     """Rule 147: delici cara vede pres text.
 
@@ -2623,19 +2660,12 @@ def _r147_nalezy(
     oddelovac - a zadna kontrola preteceni to nevidi, protoze prvek nikam
     neceni.
 
-    MERI SE INKOUST, NE BOX, a je to rozdil se zmerenym dopadem. Meridlo
-    kitu (`zmer_prekryv.py`) porovnavalo caru s DOM boxem a s odstupem 4 px
-    od jeho hran; na listu `Main` z toho vysel jeho JEDINY nalez:
-
-        div.kostra box  537,140 686x229   "Zatim neni co ukazovat"
-        cary site       y192, y244, y296, y348
-        INKOUST tehoz textu ve scene: 537,248 686x12
-
-    Text je ve svem boxu svisle na stredu, takze cary jdou pres PRAZDNOU
-    cast boxu - nejblizsi (y244) konci 4 px nad prvnim pixelem pisma.
-    Nalez byl artefakt merene veliciny, ne vada na skle. Scena nese
-    u popisku rozsah inkoustu (`do_espos.inkoust`), takze tady se pravidlo
-    pta presne na to, co slibuje: jde cara pres glyfy?
+    Nove exporty nesou oddelene Range fragmenty VLASTNIHO textu. Ty se
+    porovnavaji jednotlive, nikoli jejich obal (mezery mezi radky nejsou
+    text). Range neni raster glyfu: mezera uvnitr fragmentu zustava
+    konzervativni. Layout/widget box zustava vsem ostatnim pravidlum.
+    Chybejici, prazdne ci vadne mereni vraci PUVODNI cely widget box;
+    stare JSON tedy zachovavaji presne puvodni prisne chovani i zpravy.
 
     Odstup `R147_ODSTUP_PX` je z teze uvahy: cara, ktera se inkoustu jen
     dotkne shora nebo zdola, je podtrzeni nebo nadpis nad carou, ne
@@ -2644,22 +2674,24 @@ def _r147_nalezy(
     Gatovano profilem (`delici_cary`) - viz `DeviceProfile`.
     """
     issues: list[Issue] = []
-    x, y, w, h = rect
-    x2, y2 = x + w, y + h
+    obdelniky = _r147_fragmenty(fragmenty) or [rect]
     for cx, cy, cw, ch in cary:
         cx2, cy2 = cx + cw, cy + ch
-        if min(x2, cx2) - max(x, cx) < 1:
-            continue
-        # Check the interior ink band, including separators extending past it.
-        if min(y2 - R147_ODSTUP_PX, cy2) <= max(y + R147_ODSTUP_PX, cy):
-            continue
-        issues.append(
-            Issue(
-                "ERROR",
-                f"{wl}: {ZNACKA_R147}: cara {cx},{cy} {cw}x{ch} vede pres text "
-                f"'{text}' (inkoust {x},{y} {w}x{h})",
+        for x, y, w, h in obdelniky:
+            x2, y2 = x + w, y + h
+            if min(x2, cx2) - max(x, cx) < 1:
+                continue
+            # Existing margin and extending-separator behavior are unchanged.
+            if min(y2 - R147_ODSTUP_PX, cy2) <= max(y + R147_ODSTUP_PX, cy):
+                continue
+            issues.append(
+                Issue(
+                    "ERROR",
+                    f"{wl}: {ZNACKA_R147}: cara {cx},{cy} {cw}x{ch} vede pres text "
+                    f"'{text}' (inkoust {x},{y} {w}x{h})",
+                )
             )
-        )
+            break  # One finding per separator/widget, even across fragments.
     return issues
 
 
@@ -5177,7 +5209,15 @@ def validate_data(
 
             # ── Rule 147: delici cara pres text ──
             if prof.delici_cary and navrh_cary and text.strip() and w.get("visible") is not False:
-                issues.extend(_r147_nalezy(wl, (x, y, ww, hh), text, navrh_cary))
+                issues.extend(
+                    _r147_nalezy(
+                        wl,
+                        (x, y, ww, hh),
+                        text,
+                        navrh_cary,
+                        navrh_prvek.get("text_fragmenty"),
+                    )
+                )
 
             # ── Rule 149: co z rezu udela oko na 450 mm ──
             #
