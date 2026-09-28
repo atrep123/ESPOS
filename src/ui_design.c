@@ -335,7 +335,7 @@ static const UiWidget menu_widgets[] = {
     },
     { /* [4] UIW_LABEL "1/3" */
         .type = UIW_LABEL,
-        .x = 192, .y = 19, .width = 58, .height = 10,
+        .x = 192, .y = 19, .width = 58, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_18,
@@ -799,7 +799,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [3] UIW_LABEL "Heap" */
         .type = UIW_LABEL,
-        .x = 4, .y = 16, .width = 60, .height = 10,
+        .x = 4, .y = 16, .width = 60, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_51,
@@ -818,7 +818,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [4] UIW_GAUGE "75%" */
         .type = UIW_GAUGE,
-        .x = 4, .y = 26, .width = 60, .height = 48,
+        .x = 4, .y = 28, .width = 60, .height = 48,
         .border = 1, .checked = 0,
         .value = 75, .min_value = 0, .max_value = 100,
         .id = str_53,
@@ -837,7 +837,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [5] UIW_LABEL "MinHeap" */
         .type = UIW_LABEL,
-        .x = 68, .y = 16, .width = 60, .height = 10,
+        .x = 68, .y = 16, .width = 60, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_55,
@@ -856,7 +856,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [6] UIW_GAUGE "50%" */
         .type = UIW_GAUGE,
-        .x = 68, .y = 26, .width = 60, .height = 48,
+        .x = 68, .y = 28, .width = 60, .height = 48,
         .border = 1, .checked = 0,
         .value = 50, .min_value = 0, .max_value = 100,
         .id = str_57,
@@ -875,7 +875,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [7] UIW_LABEL "Uptime" */
         .type = UIW_LABEL,
-        .x = 132, .y = 16, .width = 120, .height = 10,
+        .x = 132, .y = 16, .width = 120, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_59,
@@ -894,7 +894,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [8] UIW_PROGRESSBAR "metrics.uptime" */
         .type = UIW_PROGRESSBAR,
-        .x = 132, .y = 26, .width = 120, .height = 14,
+        .x = 132, .y = 28, .width = 120, .height = 14,
         .border = 1, .checked = 0,
         .value = 60, .min_value = 0, .max_value = 100,
         .id = str_61,
@@ -913,7 +913,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [9] UIW_LABEL "History" */
         .type = UIW_LABEL,
-        .x = 132, .y = 44, .width = 120, .height = 10,
+        .x = 132, .y = 44, .width = 120, .height = 12,
         .border = 0, .checked = 0,
         .value = 0, .min_value = 0, .max_value = 100,
         .id = str_62,
@@ -932,7 +932,7 @@ static const UiWidget metrics_widgets[] = {
     },
     { /* [10] UIW_CHART "metrics.chart" */
         .type = UIW_CHART,
-        .x = 132, .y = 54, .width = 120, .height = 36,
+        .x = 132, .y = 56, .width = 120, .height = 34,
         .border = 1, .checked = 0,
         .value = 60, .min_value = 0, .max_value = 100,
         .id = str_64,
