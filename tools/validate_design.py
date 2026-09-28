@@ -1398,12 +1398,13 @@ def _overlap_is_benign(
     b: dict[str, Any],
     rect_a: tuple[int, int, int, int],
     rect_b: tuple[int, int, int, int],
+    measured: dict[str, dict[str, Any]] | None = None,
 ) -> bool:
     """Decide whether an overlapping widget pair is *intentional* layering
     rather than a collision defect.
 
     This UI model has no real z plane — widgets composite in array / draw
-    order. Two principled, narrowly-scoped exemptions cover every legitimate
+    order. Three principled, narrowly-scoped exemptions cover legitimate
     overlap pattern without disabling collision detection in general:
 
     1. **Hidden overlay.** If either widget is ``visible: false`` it cannot
@@ -1416,9 +1417,11 @@ def _overlap_is_benign(
        containment requirement is what keeps this principled: a panel that only
        *partially* clips an unrelated widget is still flagged.
 
-    Anything else — two visible, mutually non-containing widgets (e.g. two
-    labels stomping each other) — is a genuine layout defect and is NOT
-    exempted.
+    3. **Measured own text.** Two labels may have overlapping bounding boxes
+       while their own-text Range fragments are disjoint (inline children or
+       wrapped text). Both measurements must be valid; absent/invalid data
+       retain strict legacy box detection. Interactive hitboxes are never
+       exempted by text measurements.
     """
     if a.get("visible") is False or b.get("visible") is False:
         return True
@@ -1426,7 +1429,36 @@ def _overlap_is_benign(
     b_type = b.get("type")
     if a_type in CONTAINER_WIDGET_TYPES and _rect_contains(rect_a, rect_b):
         return True
-    return b_type in CONTAINER_WIDGET_TYPES and _rect_contains(rect_b, rect_a)
+    if b_type in CONTAINER_WIDGET_TYPES and _rect_contains(rect_b, rect_a):
+        return True
+    # An inline label's ink bounding box encloses the gaps occupied by its
+    # child labels. Only complete measurements of BOTH own-text runs can
+    # distinguish that layout from a real collision. Never exempt buttons:
+    # their hitboxes must remain disjoint even when their text is separated.
+    if measured is None or a_type != "label" or b_type != "label":
+        return False
+    if not a.get("text") or not b.get("text"):
+        return False
+    runs = []
+    for widget, rect in ((a, rect_a), (b, rect_b)):
+        wid = widget.get("_widget_id")
+        if not isinstance(wid, str):
+            return False
+        fragments = _r147_fragmenty(measured.get(wid, {}).get("text_fragmenty"))
+        if fragments is None:
+            return False
+        # Mereni mimo vlastni widget by mohlo byt stare, v jine souradnicove
+        # soustave nebo podvrzene: dve prekryvajici se nalepky by pak slo
+        # prohlasit za bezkolizni pres fragment o tisice pixelu vedle.
+        left, top, right, bottom = rect
+        if any(x < left or y < top or x + w > right or y + h > bottom for x, y, w, h in fragments):
+            return False
+        runs.append(fragments)
+    return not any(
+        x < bx + bw and x + w > bx and y < by + bh and y + h > by
+        for x, y, w, h in runs[0]
+        for bx, by, bw, bh in runs[1]
+    )
 
 
 # ── Cteni bloku "navrh" a pravidla, ktera z nej ziji ───────────────────────
@@ -1442,10 +1474,14 @@ def _obdelnik4(v: object) -> tuple[int, int, int, int] | None:
 
 
 def _nezaporne_cislo(v: object) -> float | None:
-    """Nezaporne cislo v px (int i float), jinak ``None``. Bool cislo NENI."""
+    """Konecne nezaporne cislo v px; bool a preteceni nejsou mereni."""
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return None
-    return float(v) if v >= 0 else None
+    try:
+        hod = float(v)
+    except (ValueError, OverflowError):
+        return None
+    return hod if math.isfinite(hod) and hod >= 0 else None
 
 
 def _zhustit_mezery(text: str) -> str:
@@ -1558,6 +1594,7 @@ def _navrh_ze_sceny(
             if k
             not in (
                 "rodic",
+                "rodic_id",
                 "pas",
                 "sirka_textu",
                 "sirka_bunky",
@@ -1568,6 +1605,10 @@ def _navrh_ze_sceny(
                 "orez",
                 "font_size",
                 "enabled",
+                "tucne",
+                "inkoust",
+                "podklad",
+                "vsazka",
                 "text_fragmenty",
             )
         }
@@ -2799,13 +2840,14 @@ def _rez_z_klice(v: object) -> float | None:
     if isinstance(v, bool):
         return None
     if isinstance(v, (int, float)):
-        return float(v) if v > 0 else None
+        hod = _nezaporne_cislo(v)
+        return hod if hod is not None and hod > 0 else None
     if isinstance(v, str):
         try:
             hod = float(v.strip())
-        except ValueError:
+        except (ValueError, OverflowError):
             return None
-        return hod if hod > 0 else None
+        return hod if math.isfinite(hod) and hod > 0 else None
     return None
 
 
@@ -6392,7 +6434,9 @@ def validate_data(
                         if _is_int(az) and _is_int(bz) and az == bz:
                             ref_a = _wref(scene_name, a, i)
                             ref_b = _wref(scene_name, b, j)
-                            if _overlap_is_benign(a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)):
+                            if _overlap_is_benign(
+                                a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2), navrh_prvky
+                            ):
                                 # Same-z_index is the norm here (draw-order
                                 # compositing, all widgets z=0); a hidden
                                 # overlay or container-behind-content pair is
@@ -6523,7 +6567,9 @@ def validate_data(
                     if ax < bx2 and ax2 > bx and ay < by2 and ay2 > by:
                         ref_a = _wref(scene_name, a, i)
                         ref_b = _wref(scene_name, b, j)
-                        if _overlap_is_benign(a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2)):
+                        if _overlap_is_benign(
+                            a, b, (ax, ay, ax2, ay2), (bx, by, bx2, by2), navrh_prvky
+                        ):
                             # Intentional layering (hidden overlay or container
                             # backdrop fully behind its content). Surfaced as a
                             # plain WARN for visibility; deliberately NOT a
