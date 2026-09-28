@@ -24,8 +24,7 @@ def test_small_labels_fit_without_covering_instruments() -> None:
     menu = widgets("menu")
     metrics = widgets("metrics")
     assert menu["menu.scroll"]["height"] >= 12
-    assert (menu["menu.scroll"]["y"] + menu["menu.scroll"]["height"]
-            <= menu["menu.item0"]["y"])
+    assert menu["menu.scroll"]["y"] + menu["menu.scroll"]["height"] <= menu["menu.item0"]["y"]
 
     for label, instrument in (
         ("metrics.heap.label", "metrics.heap"),
@@ -35,16 +34,24 @@ def test_small_labels_fit_without_covering_instruments() -> None:
     ):
         assert metrics[label]["height"] >= 12
         assert metrics[label]["y"] + metrics[label]["height"] <= metrics[instrument]["y"]
-    assert (metrics["metrics.chart"]["y"] + metrics["metrics.chart"]["height"]
-            <= metrics["metrics.min_text"]["y"])
+    assert (
+        metrics["metrics.chart"]["y"] + metrics["metrics.chart"]["height"]
+        <= metrics["metrics.min_text"]["y"]
+    )
 
 
 def test_validator_no_longer_reports_clipped_reference_labels() -> None:
     ids = (
-        "menu.scroll", "metrics.heap.label", "metrics.minheap.label",
-        "metrics.uptime.label", "metrics.chart.label",
+        "menu.scroll",
+        "metrics.heap.label",
+        "metrics.minheap.label",
+        "metrics.uptime.label",
+        "metrics.chart.label",
     )
     issues = validate_file(SCENE, warnings_as_errors=False)
-    assert not [i.message for i in issues
-                if any(wid in i.message for wid in ids)
-                and ("text cannot fit" in i.message or "< min" in i.message)]
+    assert not [
+        i.message
+        for i in issues
+        if any(wid in i.message for wid in ids)
+        and ("text cannot fit" in i.message or "< min" in i.message)
+    ]
