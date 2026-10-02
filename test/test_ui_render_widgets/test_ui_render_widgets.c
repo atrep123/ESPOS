@@ -158,6 +158,16 @@ static int cap_has_fill(int x, int y, int w, int h)
     return 0;
 }
 
+static int cap_has_hline(int x, int y, int w)
+{
+    for (int i = 0; i < s_cap_count; ++i) {
+        if (s_cap[i].kind == CAP_HLINE && s_cap[i].x == x &&
+            s_cap[i].y == y && s_cap[i].w == w)
+            return 1;
+    }
+    return 0;
+}
+
 /* Check if any captured draw_rect starts at (x,y) with (w,h). */
 static int cap_has_rect(int x, int y, int w, int h)
 {
@@ -701,6 +711,57 @@ void test_chart_draws_axes(void)
     /* Axes drawn with hline + vline */
     TEST_ASSERT_TRUE(cap_count_kind(CAP_HLINE) > 0);
     TEST_ASSERT_TRUE(cap_count_kind(CAP_VLINE) > 0);
+}
+
+void test_chart_without_series_draws_no_synthetic_bars(void)
+{
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_CHART, 0, 0, 80, 40);
+    w.min_value = 0;
+    w.max_value = 100;
+    w.value = 50;
+    ui_render_chart(&w, &ops);
+
+    /* This interior pixel belongs to the first sample bar, not the grid. */
+    TEST_ASSERT_FALSE(cap_has_hline(5, 30, 1));
+    TEST_ASSERT_TRUE(cap_count_kind(CAP_HLINE) > 0);
+    TEST_ASSERT_TRUE(cap_count_kind(CAP_VLINE) > 0);
+}
+
+void test_chart_with_series_draws_samples(void)
+{
+    static const int16_t samples[] = {20, 60, 40};
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_CHART, 0, 0, 80, 40);
+    w.min_value = 0;
+    w.max_value = 100;
+    w.data_points = samples;
+    w.data_count = (uint16_t)(sizeof(samples) / sizeof(samples[0]));
+    ui_render_chart(&w, &ops);
+
+    TEST_ASSERT_TRUE(cap_has_hline(5, 30, 1));
+}
+
+void test_narrow_chart_shows_newest_samples(void)
+{
+    static const int16_t samples[] = {
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 90,
+    };
+    UiDrawOps ops = make_ops();
+    UiWidget w = make_widget(UIW_CHART, 0, 0, 20, 30);
+    w.min_value = 0;
+    w.max_value = 100;
+    w.data_points = samples;
+    w.data_count = (uint16_t)(sizeof(samples) / sizeof(samples[0]));
+    ui_render_chart(&w, &ops);
+
+    /* Five one-pixel bars fit. The final sample's cap is at x=17, y=5;
+     * rendering the old prefix instead would leave it near the baseline. */
+    TEST_ASSERT_TRUE(cap_has_hline(17, 5, 1));
 }
 
 void test_chart_too_small(void)

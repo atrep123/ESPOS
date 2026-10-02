@@ -445,7 +445,7 @@ class TestChartRendering:
         assert _count_px(surf, inner) > 0, "line chart should render lines and dots"
 
     def test_chart_default_data_if_empty(self, tmp_path, monkeypatch):
-        """With no data_points, chart uses default [0,10,5,12,8,14]."""
+        """With no data_points, chart shows its axes but invents no samples."""
         app = _make_app(tmp_path, monkeypatch)
         surf, rect = _render(
             app,
@@ -460,7 +460,7 @@ class TestChartRendering:
         )
         padding = 2
         inner = rect.inflate(-padding * 2, -padding * 2)
-        assert _count_px(surf, inner) > 0, "empty data should use defaults"
+        assert _count_px(surf, inner) == 0, "empty data must not fabricate sample bars"
 
     def test_chart_single_point_line_no_crash(self, tmp_path, monkeypatch):
         """Line chart with 1 point should render dot without crash."""

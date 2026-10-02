@@ -34,10 +34,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import subprocess
 import sys
-import tempfile
 from collections.abc import Iterable
 from html.parser import HTMLParser
 
@@ -51,11 +51,14 @@ from tools.validate_design import (  # noqa: E402
     VETY_NENI_JMENO_SDK,
     VETY_NENI_ROZHRANI,
     _veta_strojove_jmeno,
-    jmena_ze_sdk,
+    jmena_ze_sdk_z_textu,
 )
 
 FIXTURA = ZDE / "verzalky_kit_2026-09-09.json"
-KIT = ESPOS.parents[1] / "tabos-ui-kit" / "navrh-appky"
+KIT_ROOT = pathlib.Path(
+    os.environ.get("TABOS_UI_KIT_ROOT", str(ESPOS.parents[1] / "tabos-ui-kit"))
+).resolve()
+KIT = KIT_ROOT / "navrh-appky"
 
 
 class _Texty(HTMLParser):
@@ -151,13 +154,7 @@ def novy_snimek(
     kit_commit, boards = _committed_files(kit_root, kit_ref, "navrh-appky", ".dc.html")
     sdk_commit, headers = _committed_files(sdk_root, sdk_ref, "include", ".h")
     vety, stitky = _snimek_textu((pathlib.Path(p).name, b.decode("utf-8")) for p, b in boards)
-    with tempfile.TemporaryDirectory(prefix="r142-sdk-") as directory:
-        root = pathlib.Path(directory)
-        for p, data in headers:
-            destination = root / p
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(data)
-        names = jmena_ze_sdk(root / "include")
+    names = jmena_ze_sdk_z_textu(data.decode("utf-8", errors="replace") for _, data in headers)
     if not names:
         raise ValueError("NEZMERENO: committed SDK supplied no names")
     leaks = {}
@@ -170,7 +167,7 @@ def novy_snimek(
     return {
         "_o_souboru": [
             "Independent current R142 snapshot from committed HTML, parsed offline.",
-            "Kit 6724fc5 deliberately replaced ERROR cteni: NotFound and the SDK-shaped hardware/RF wording.",
+            f"Kit {kit_commit[:7]} snapshot; review all R142 findings before accepting this oracle.",
             "Expected current SDK leaks are explicitly ZERO; findings never become the oracle.",
             "Historical verzalky_kit_2026-09-09.json and its positive oracle remain unchanged.",
             "Regenerate via gen_verzalky_kit.py --nova-fixtura with explicit kit/SDK refs.",

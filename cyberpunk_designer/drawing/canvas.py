@@ -544,7 +544,8 @@ def draw_widget_preview(
     elif kind == "gauge":
         _render_gauge(app, surface, rect, w, fg, bg, label, padding, border_on, use_device_font)
     elif kind == "chart":
-        _render_chart(app, surface, rect, w, fg, bg, label, style, padding, use_device_font)
+        if getattr(w, "data_points", None):
+            _render_chart(app, surface, rect, w, fg, bg, label, style, padding, use_device_font)
     elif kind == "list":
         _render_list(app, surface, rect, w, fg, bg, label, padding, use_device_font)
     elif kind == "icon":

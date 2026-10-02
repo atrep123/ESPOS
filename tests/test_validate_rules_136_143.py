@@ -52,6 +52,7 @@ import pathlib
 
 import pytest
 
+from tests.dilna import repo_path
 from tools.validate_design import (
     DRUHY_LISTU,
     POMLCKY,
@@ -1447,7 +1448,8 @@ def test_r140_vadna_mrizka_nezastavi_ostatni():
 # preklep v atributu se nesmi tvarit jako mereni.
 
 DO_ESPOS_MOST = (
-    pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "navrh-appky" / "do_espos.py"
+    repo_path("TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit")
+    / "navrh-appky" / "do_espos.py"
 )
 
 
@@ -1893,6 +1895,7 @@ def test_r142_vzory_jsou_verejne_a_pojmenovane_jako_v_brane_vet():
     assert "xEventGroup" in VETY_PREDPONY_SDK
     assert [duvod for _, duvod in VETY_VYJIMKY] == [
         "cesta na uloziste je udaj pro cloveka",
+        "doslovny nazev ulohy LVGL",
         "neni veta",
     ]
 
@@ -1905,6 +1908,13 @@ def test_r142_predpony_sdk_odlisuji_jmeno_funkce_od_jmena_soucasti():
     """
     assert _obsahuji(_msgs(_veta("esp_hosted nenahrany")), ZNACKA_R142) == []
     assert _obsahuji(_errors(_veta("chybi esp_phy_*")), ZNACKA_R142) != []
+
+
+def test_r142_presny_stitek_ulohy_lvgl_je_vyjimka_ale_ve_vete_se_meri():
+    """Jmeno komponentove ulohy je povolene jen jako samostatny stitek."""
+    assert _errors(_veta("esp_lvgl_port")) == []
+    assert _errors(_veta("esp_lvgl_port\n")) != []
+    assert _errors(_veta("uloha esp_lvgl_port není dostupná")) != []
 
 
 # --------------------------------------------------------------------------- #
@@ -2457,6 +2467,15 @@ def test_r142_MOCK_je_pojmenovana_vyjimka():
     assert _obsahuji(_msgs(_veta_sdk("MOCK DATA - desktop, ne deska")), ZNACKA_R142) == []
     # Pozitivni kontrola teze vety: jiny SDK tvar v ni vystreli.
     assert _obsahuji(_errors(_veta_sdk("MOCK DATA - vraci UNAVAILABLE")), ZNACKA_R142) != []
+
+
+def test_r142_IDF_je_platformni_zkratka_ne_falesny_nalez_enum_hodnoty():
+    sdk = frozenset({"Idf", "NotFound"})
+    assert "IDF" in VETY_NENI_JMENO_SDK
+    assert _veta_strojove_jmeno("ESP-IDF 5.5.4", sdk) is None
+    assert _veta_strojove_jmeno("NotFound chyba", sdk) == (
+        "jmeno ze SDK", "NotFound"
+    )
 
 
 # --------------------------------------------------------------------------- #

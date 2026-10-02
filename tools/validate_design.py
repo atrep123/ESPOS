@@ -78,6 +78,7 @@ import json
 import math
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeGuard
@@ -622,6 +623,9 @@ VETY_NENI_JMENO_SDK = frozenset(
         # Zmereno: bez teto vyjimky pribylo v jadre a v appkach sedm nalezu
         # a vsech sedm bylo na retezcich typu "MOCK DATA - desktop".
         "MOCK",
+        # `Idf` je enum zdroje ve sluzbe radia, ale `IDF` v navrhu znamena
+        # bezny nazev platformy ESP-IDF, ne hodnotu enumu.
+        "IDF",
     }
 )
 
@@ -637,6 +641,8 @@ _SDK_HODNOTA = re.compile(r"\b([A-Za-z_]\w*)\s*(?:=[^,]*)?(?:,|$)")
 VETY_VYJIMKY = (
     # Cesta na karte je pro cloveka MISTO, ne jmeno v kodu.
     (re.compile(r"^/(?:sd|dev|sys)/"), "cesta na uloziste je udaj pro cloveka"),
+    # Presne jmeno ulohy LVGL se v monitoru zobrazuje jako stitek, ne veta.
+    (re.compile(r"\Aesp_lvgl_port\Z"), "doslovny nazev ulohy LVGL"),
     # Prazdny retezec a jednoznaky oddelovac nejsou veta.
     (re.compile(r"^.{0,1}$"), "neni veta"),
 )
@@ -4147,13 +4153,24 @@ def jmena_ze_sdk(koren: Any) -> frozenset[str]:
     "cisto".
     """
     koren = Path(koren)
-    jmena: set[str] = set()
     soubory = [koren] if koren.is_file() else sorted(koren.rglob("*.h"))
+    texty = []
     for cesta in soubory:
         try:
-            text = cesta.read_text(encoding="utf-8", errors="replace")
+            texty.append(cesta.read_text(encoding="utf-8", errors="replace"))
         except OSError:
             continue
+    return jmena_ze_sdk_z_textu(texty)
+
+
+def jmena_ze_sdk_z_textu(texty: Iterable[str]) -> frozenset[str]:
+    """Stejné jmenné extrahování jako `jmena_ze_sdk`, ale z obsahu v paměti.
+
+    Používá se pro immutable Git blob snímky a jejich kontroly: test nemusí
+    materiálizovat hlavičky do dočasného adresáře, aby prošel stejným parserem.
+    """
+    jmena: set[str] = set()
+    for text in texty:
         jmena.update(m.group(1) for m in _SDK_ROZHRANI.finditer(text))
         for m in _SDK_ENUM.finditer(text):
             for radek in m.group(1).split(","):
@@ -4669,6 +4686,185 @@ def slovnik_prurez(
             )
         )
     return issues
+
+
+# Rule 103 may accept a dynamic chart only when the firmware has a concrete
+# producer for that exact scene/widget identity. Keep this deliberately narrow
+# and fail closed if the producer implementation stops matching the evidence.
+def _metrics_chart_producer_source() -> str:
+    source_path = REPO_ROOT / "src" / "services" / "ui" / "ui.c"
+    try:
+        return source_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _metrics_chart_startup_source() -> str:
+    source_path = REPO_ROOT / "src" / "main.c"
+    try:
+        return source_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _c_without_comments(source: str) -> str:
+    """Blank C comments while preserving strings, escapes, and line numbers."""
+    chars = list(source)
+    i = 0
+    state = "code"
+    quote = ""
+    while i < len(source):
+        ch = source[i]
+        nxt = source[i + 1] if i + 1 < len(source) else ""
+        if state == "code":
+            if ch == "/" and nxt == "/":
+                chars[i] = chars[i + 1] = " "
+                i += 2
+                state = "line_comment"
+                continue
+            if ch == "/" and nxt == "*":
+                chars[i] = chars[i + 1] = " "
+                i += 2
+                state = "block_comment"
+                continue
+            if ch in ("\"", "'"):
+                quote = ch
+                state = "quoted"
+        elif state == "line_comment":
+            if ch == "\n":
+                state = "code"
+            else:
+                chars[i] = " "
+        elif state == "block_comment":
+            if ch == "*" and nxt == "/":
+                chars[i] = chars[i + 1] = " "
+                i += 2
+                state = "code"
+                continue
+            if ch not in "\r\n":
+                chars[i] = " "
+        else:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote:
+                state = "code"
+        i += 1
+    return "".join(chars)
+
+
+def _c_mask_literals(source: str) -> str:
+    """Blank string/character literals so they cannot masquerade as C code."""
+    chars = list(source)
+    i = 0
+    quote = ""
+    while i < len(source):
+        ch = source[i]
+        if not quote:
+            if ch in ("\"", "'"):
+                quote = ch
+                chars[i] = " "
+        else:
+            if ch not in "\r\n":
+                chars[i] = " "
+            if ch == "\\":
+                if i + 1 < len(source) and source[i + 1] not in "\r\n":
+                    chars[i + 1] = " "
+                i += 2
+                continue
+            if ch == quote:
+                quote = ""
+        i += 1
+    return "".join(chars)
+
+
+def _c_matching_delimiter(source: str, start: int, opening: str, closing: str) -> int:
+    depth = 0
+    for i in range(start, len(source)):
+        if source[i] == opening:
+            depth += 1
+        elif source[i] == closing:
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
+def _c_function_body(source: str, name: str) -> tuple[str, str] | None:
+    uncommented = _c_without_comments(source)
+    code = _c_mask_literals(uncommented)
+    for match in re.finditer(rf"\b{re.escape(name)}\s*\(", code):
+        open_paren = code.find("(", match.start(), match.end())
+        close_paren = _c_matching_delimiter(code, open_paren, "(", ")")
+        if close_paren < 0:
+            continue
+        body_start = close_paren + 1
+        while body_start < len(code) and code[body_start].isspace():
+            body_start += 1
+        if body_start >= len(code) or code[body_start] != "{":
+            continue
+        body_end = _c_matching_delimiter(code, body_start, "{", "}")
+        if body_end >= 0:
+            return uncommented[body_start + 1 : body_end], code[body_start + 1 : body_end]
+    return None
+
+
+def _c_call_uses_literal(body: str, code: str, function: str, first_arg: str, literal: str) -> bool:
+    pattern = re.compile(
+        rf"\b{re.escape(function)}\s*\(\s*{first_arg}\s*,\s*\)", re.DOTALL
+    )
+    match = pattern.search(code)
+    if match is None:
+        return False
+    comma = code.find(",", match.start(), match.end())
+    close = code.rfind(")", match.start(), match.end())
+    return re.fullmatch(rf'\s*"{re.escape(literal)}"\s*', body[comma + 1 : close]) is not None
+
+
+def _has_source_backed_metrics_chart(scene_name: str, widget: dict[str, Any]) -> bool:
+    if scene_name != "metrics" or widget.get("_widget_id") != "metrics.chart":
+        return False
+
+    producer = _c_function_body(_metrics_chart_producer_source(), "ui_update_metrics_chart")
+    task = _c_function_body(_metrics_chart_producer_source(), "ui_task")
+    starter = _c_function_body(_metrics_chart_producer_source(), "ui_start")
+    app_main = _c_function_body(_metrics_chart_startup_source(), "app_main")
+    if producer is None or task is None or starter is None or app_main is None:
+        return False
+
+    producer_body, producer_code = producer
+    task_body, task_code = task
+    _, starter_code = starter
+    _, app_main_code = app_main
+
+    has_data_updates = (
+        _c_call_uses_literal(producer_body, producer_code, "strcmp", r"scene\s*->\s*name", "metrics")
+        and _c_call_uses_literal(
+            producer_body, producer_code, "ui_scene_find_by_id", r"scene", "metrics.chart"
+        )
+        and re.search(r"chart\s*->\s*data_points\s*=\s*s_metrics_chart_samples\s*;", producer_code)
+        is not None
+        and re.search(r"chart\s*->\s*data_count\s*=\s*s_metrics_chart_count\s*;", producer_code)
+        is not None
+    )
+
+    metrics_branch = re.search(
+        r"if\s*\(\s*got\s*&&\s*m\.topic\s*==\s*TOP_METRICS_RET\s*\)\s*\{",
+        task_code,
+    )
+    task_dispatches_chart = False
+    if metrics_branch is not None:
+        block_start = task_code.find("{", metrics_branch.start(), metrics_branch.end())
+        block_end = _c_matching_delimiter(task_code, block_start, "{", "}")
+        task_dispatches_chart = block_end >= 0 and re.search(
+            r"ui_update_metrics_chart\s*\(\s*scene\s*,\s*"
+            r"m\.u\.metrics\.free_heap\s*,\s*&dirty\s*\)\s*;",
+            task_code[block_start + 1 : block_end],
+        ) is not None
+
+    starts_task = re.search(r"xTaskCreatePinnedToCore\s*\(\s*ui_task\s*,", starter_code)
+    starts_ui = re.search(r"ui_start\s*\(\s*\)\s*;", app_main_code)
+    return has_data_updates and task_dispatches_chart and starts_task is not None and starts_ui is not None
 
 
 # ── Main validator ─────────────────────────────────────────────────────────
@@ -6117,7 +6313,12 @@ def validate_data(
                 dp103 = w.get("data_points")
                 _rv103 = w.get("runtime", "")
                 rt103 = str(_rv103) if isinstance(_rv103, str) else ""
-                if (dp103 is None or (isinstance(dp103, list) and len(dp103) == 0)) and not rt103:
+                source_backed_metrics_chart = _has_source_backed_metrics_chart(
+                    scene_name, w
+                )
+                if (
+                    dp103 is None or (isinstance(dp103, list) and len(dp103) == 0)
+                ) and not rt103 and not source_backed_metrics_chart:
                     issues.append(
                         Issue("WARN", f"{wl}: chart has no data_points and no runtime binding")
                     )

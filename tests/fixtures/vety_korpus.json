@@ -316,6 +316,12 @@
       "trida": "SDK_CAMEL",
       "duvod": "dve velka pismena ve DVOU slovech nejsou CamelCase; vzor chce slovo bez mezery",
       "kde": "kontrolni tvar"
+    },
+    {
+      "text": "esp_lvgl_port",
+      "verdikt": "mlci",
+      "duvod": "presny stitek ulohy FreeRTOS komponenty LVGL je pojmenovana vyjimka; veta s timto jmenem se stale meri",
+      "kde": "Monitor uloh, kMockUlohy[]"
     }
   ]
 }

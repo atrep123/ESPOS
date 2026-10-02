@@ -69,6 +69,9 @@ extern void test_icon_too_short_for_text(void);
 
 /* Chart */
 extern void test_chart_draws_axes(void);
+extern void test_chart_without_series_draws_no_synthetic_bars(void);
+extern void test_chart_with_series_draws_samples(void);
+extern void test_narrow_chart_shows_newest_samples(void);
 extern void test_chart_too_small(void);
 extern void test_chart_with_text(void);
 extern void test_chart_with_border(void);
@@ -182,6 +185,9 @@ int main(void)
 
     /* Chart */
     RUN_TEST(test_chart_draws_axes);
+    RUN_TEST(test_chart_without_series_draws_no_synthetic_bars);
+    RUN_TEST(test_chart_with_series_draws_samples);
+    RUN_TEST(test_narrow_chart_shows_newest_samples);
     RUN_TEST(test_chart_too_small);
     RUN_TEST(test_chart_with_text);
     RUN_TEST(test_chart_with_border);

@@ -53,14 +53,15 @@ import sys
 
 import pytest
 
+from tests.dilna import repo_path
 from tools.validate_design import validate_data
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
 DILNA = ESPOS.parents[1]  # .../kimi/workspace
-KIT = DILNA / "tabos-ui-kit"
+KIT = repo_path("TABOS_UI_KIT_ROOT", DILNA / "tabos-ui-kit")
 TOKENY = KIT / "tokens.json"
 NAVRH_APPKY = KIT / "navrh-appky"
-JADRO = DILNA / "tabos-core"
+JADRO = repo_path("TABOS_CORE_ROOT", DILNA / "tabos-core")
 
 # Podpis kitoveho `tokens.json`. Bez nej staci stejne pojmenovany soubor
 # kdekoli dve patra nad ESPOSem a testy pak padaji na `KeyError` misto

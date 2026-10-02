@@ -17,7 +17,7 @@ soubor z toho dela mereni s rohatkou:
   maji tady svuj dolozeny pruchod nad ZIVYMI jmeny SDK.
 * MUTACE DAT: pridat do jmen SDK bezne kitove slovo (BLE, USB, ...) musi
   vyrobit fantom -> dokazuje, ze test meri kitove texty, ne prazdno.
-* ZIVY KIT: dnesni texty se porovnavaji se SAMOSTATNYM snimkem 6724fc5.
+* ZIVY KIT: dnesni texty se porovnavaji se SAMOSTATNYM snimkem 744643f.
   Tenhle commit zamerne odstranil produkcni SDK vetu; dnesni etalon je
   explicitne prazdny. Historicky snimek i jeho must-red kontroly zustavaji.
 
@@ -35,6 +35,7 @@ from html.parser import HTMLParser
 
 import pytest
 
+from tests.dilna import repo_path
 from tools.validate_design import (
     _V_ROZHRANI,
     _V_VERZALKY,
@@ -46,13 +47,14 @@ from tools.validate_design import (
 )
 
 FIXTURA = pathlib.Path(__file__).parent / "fixtures" / "verzalky_kit_2026-09-09.json"
-SOUCASNA_FIXTURA = FIXTURA.with_name("verzalky_kit_6724fc5.json")
-KIT_COMMIT = "6724fc5f9b9f5a70242248aa0e8bf23e9c75ffb0"
-SDK_COMMIT = "caf18db566c53f488f80a52fb53e53ce14a7fbdf"
+SOUCASNA_FIXTURA = FIXTURA.with_name("verzalky_kit_e532e3b.json")
+KIT_COMMIT = "e532e3b7c8ebd7c402f255447ba092e4565babd7"
+SDK_COMMIT = "cb778d8da0d8994674aff217ef14438ed680ccef"
 # ESPOS lezi ve workspace/research/ESPOS, kit ve workspace/tabos-ui-kit:
 # tests/ -> ESPOS -> research -> workspace = parents[3] (tataz cesta jako
 # `DILNA` v `dilna.py`: ESPOS.parents[1]). S parents[2] test tise skipoval.
-KIT = pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit" / "navrh-appky"
+KIT_ROOT = repo_path("TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit")
+KIT = KIT_ROOT / "navrh-appky"
 TVARY_SDK = ("jmeno ze SDK", "jmeno rozhrani ze SDK")
 
 
@@ -94,7 +96,9 @@ def test_fixtura_je_nabita_a_ma_puvod():
     # jen texty a puvod nechal stat.
     assert f["kit"] == "dfbdbbb+dirty-faze0-2026-09-27"
     assert len(f["vety"]) >= 100 and len(f["stitky"]) >= 100 and len(_jmena(f)) >= 50
-    assert all(_verzalky(v["text"]) for v in f["vety"] + f["stitky"])
+    # Historical corpus predates named exclusions added to the live gate;
+    # assert it still contains measured uppercase tokens, not today's allowlist.
+    assert all(_V_VERZALKY.search(v["text"]) for v in f["vety"] + f["stitky"])
     assert all(any(z.islower() for z in v["text"]) for v in f["vety"])
     assert not any(any(z.islower() for z in s["text"]) for s in f["stitky"])
     assert {e["text"] for e in f["etalon_nalezu"]} <= {v["text"] for v in f["vety"]}
@@ -278,7 +282,7 @@ def test_soucasny_snimek_ma_presny_puvod_a_explicitni_nulovy_etalon():
     assert f["kit"] == KIT_COMMIT and f["jmena_sdk"]["commit"] == SDK_COMMIT
     assert len(f["listy_sha256"]) == 42
     assert len(f["jmena_sdk"]["hlavicky_sha256"]) == 37
-    assert len(_jmena(f)) == 72
+    assert len(_jmena(f)) == 78
     assert len(f["vety"]) >= 100 and len(f["stitky"]) >= 100
     for entries in (f["listy_sha256"], f["jmena_sdk"]["hlavicky_sha256"]):
         assert all(len(v) == 64 and set(v) <= set("0123456789abcdef") for v in entries.values())
@@ -334,7 +338,7 @@ def test_soucasny_snimek_s_vlozenym_sdk_unikem_musi_zcervenat(text):
 
 
 def test_soucasny_snimek_je_reprodukovatelny_z_commit_blobu():
-    sdk = KIT.parent.parent / "tabos-core" / "apps" / "_src" / "tabos-sdk"
+    sdk = repo_path("TABOS_CORE_ROOT", KIT_ROOT.parent / "tabos-core") / "apps" / "_src" / "tabos-sdk"
     if not KIT.is_dir() or not sdk.is_dir():
         pytest.skip("NEZMERENO: local kit/SDK repositories absent; recorded snapshot still tested")
     generator = runpy.run_path(str(FIXTURA.with_name("gen_verzalky_kit.py")))

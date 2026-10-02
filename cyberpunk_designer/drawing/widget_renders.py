@@ -336,13 +336,11 @@ def _render_chart(app, surface, rect, w, fg, bg, label, style, padding, use_devi
     inner = rect.inflate(-padding * 2, -padding * 2)
     pygame.draw.rect(surface, app._shade(bg, -8), inner)
     points = list(getattr(w, "data_points", []) or [])
-    if not points:
-        points = [0, 10, 5, 12, 8, 14]
     chart_mode = (
         style if style in {"bar", "line"} else ("bar" if "bar" in label.lower() else "line")
     )
-    p_min = min(points)
-    p_max = max(points)
+    p_min = min(points) if points else 0
+    p_max = max(points) if points else 1
     denom = max(1, p_max - p_min)
     n = max(1, len(points))
     title_h = (font6x8.CHAR_H + 2) if label else 0
@@ -404,7 +402,10 @@ def _render_chart(app, surface, rect, w, fg, bg, label, style, padding, use_devi
             1,
         )
 
-        if chart_mode == "bar":
+        if not points:
+            return
+
+        if points and chart_mode == "bar":
             bar_w = max(2, (chart_area.width // n) - 1)
             peak_i = points.index(p_max)
             for i, v in enumerate(points):
@@ -445,7 +446,7 @@ def _render_chart(app, surface, rect, w, fg, bg, label, style, padding, use_devi
                         surface.set_at((px - 1, py_peak), (160, 160, 160))
                     if px < chart_area.right - 1:
                         surface.set_at((px + 1, py_peak), (160, 160, 160))
-        else:
+        elif points:
             coords: List[Tuple[int, int]] = []
             for i, v in enumerate(points):
                 x = chart_area.left + 2 + int(i * (chart_area.width - 4) / max(1, n - 1))

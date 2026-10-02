@@ -28,10 +28,10 @@ import pathlib
 
 import pytest
 
-from tests.dilna import PODPIS, POVINNE_KLICE, potreba_tokeny, tokeny_kitu
+from tests.dilna import PODPIS, POVINNE_KLICE, potreba_tokeny, repo_path, tokeny_kitu
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
-ZIVY = ESPOS.parents[1] / "tabos-ui-kit" / "tokens.json"
+ZIVY = repo_path("TABOS_UI_KIT_ROOT", ESPOS.parents[1] / "tabos-ui-kit") / "tokens.json"
 
 
 def _kit(**navic) -> dict:

@@ -731,70 +731,68 @@ void ui_render_chart(const UiWidget *w, const UiDrawOps *ops)
         ops->draw_vline(ops->ctx, chart_x + chart_w, chart_y, chart_h + 1, ui_gray4_add(bg, 1));
     }
 
-    /* Data source: real authored series (data_points) when present,
-     * otherwise a synthetic sweep derived from value/min/max. */
+    /* An absent series means there is no measurement to plot. Never invent
+     * telemetry from the widget's scalar value. */
     const int16_t *series = w->data_points;
     int series_n = (series != NULL) ? (int)w->data_count : 0;
 
-    /* Data bars with Bayer-dithered gradient + bright cap */
-    int bars = (series_n > 0) ? series_n : 6;
-    int gap = 2;
-    int bar_w = (chart_w - (gap * (bars - 1))) / bars;
-    if (bar_w < 1) bar_w = 1;
-    while (bars > 1 && (bars * bar_w + (bars - 1) * gap) > chart_w) {
-        bars--;
-    }
-    int range = (w->max_value - w->min_value);
-    if (range <= 0) range = 1;
-    int base = w->value - w->min_value;
-    if (base < 0) base = 0;
-
-    int max_bh = 0;
-    int max_bi = 0;
-    for (int i = 0; i < bars; ++i) {
-        int v;
-        if (series_n > 0) {
-            /* Map the i-th sample (clamped to [min,max]) to bar height. */
-            int sv = (int)series[i] - w->min_value;
+    if (series_n > 0) {
+        /* Data bars with Bayer-dithered gradient + bright cap */
+        int bars = series_n;
+        int gap = 2;
+        int bar_w = (chart_w - (gap * (bars - 1))) / bars;
+        if (bar_w < 1) bar_w = 1;
+        while (bars > 1 && (bars * bar_w + (bars - 1) * gap) > chart_w) {
+            bars--;
+        }
+        /* When the series is wider than the plot, keep the newest samples.
+         * These charts are fed by rolling telemetry; drawing the prefix makes
+         * a narrow widget look frozen on old measurements. */
+        int first_sample = series_n - bars;
+        int range = (w->max_value - w->min_value);
+        if (range <= 0) range = 1;
+        int max_bh = 0;
+        int max_bi = 0;
+        for (int i = 0; i < bars; ++i) {
+            /* Map the visible sample (clamped to [min,max]) to bar height. */
+            int sample_index = first_sample + i;
+            int sv = (int)series[sample_index] - w->min_value;
             if (sv < 0) sv = 0;
             if (sv > range) sv = range;
-            v = sv;
-        } else {
-            v = (base + i * 11) % (range + 1);
-        }
-        int bh = (int)(((int64_t)v * (chart_h - 2)) / range);
-        int bx = chart_x + 1 + i * (bar_w + gap);
-        int by = chart_y + chart_h - 1 - bh;
-        if (bh <= 0) continue;
+            int bh = (int)(((int64_t)sv * (chart_h - 2)) / range);
+            int bx = chart_x + 1 + i * (bar_w + gap);
+            int by = chart_y + chart_h - 1 - bh;
+            if (bh <= 0) continue;
 
-        if (bh > max_bh) {
-            max_bh = bh;
-            max_bi = i;
+            if (bh > max_bh) {
+                max_bh = bh;
+                max_bi = i;
+            }
+
+            uint8_t hi_bar = fill;
+            uint8_t lo_bar = ui_gray4_add(fill, -4);
+            ui_dither_fill_v(ops, bx, by, bar_w, bh, hi_bar, lo_bar);
+            for (int col = 0; col < bar_w; ++col) {
+                ui_draw_pixel(ops, bx + col, by, fg);
+            }
+            for (int row = 0; row < bh; ++row) {
+                ui_draw_pixel(ops, bx, by + row, ui_gray4_add(fill, 1));
+            }
+        }
+        /* Peak indicator dot */
+        if (max_bh > 0) {
+            int pbx = chart_x + 1 + max_bi * (bar_w + gap) + bar_w / 2;
+            int pby = chart_y + chart_h - 1 - max_bh - 2;
+            if (pby >= chart_y) {
+                ui_draw_pixel(ops, pbx, pby, fg);
+            }
         }
 
-        uint8_t hi_bar = fill;
-        uint8_t lo_bar = ui_gray4_add(fill, -4);
-        ui_dither_fill_v(ops, bx, by, bar_w, bh, hi_bar, lo_bar);
-        for (int col = 0; col < bar_w; ++col) {
-            ui_draw_pixel(ops, bx + col, by, fg);
+        /* X-axis tick marks */
+        for (int i = 0; i < bars; ++i) {
+            int tx = chart_x + 1 + i * (bar_w + gap) + bar_w / 2;
+            ui_draw_pixel(ops, tx, chart_y + chart_h + 1, muted);
         }
-        for (int row = 0; row < bh; ++row) {
-            ui_draw_pixel(ops, bx, by + row, ui_gray4_add(fill, 1));
-        }
-    }
-    /* Peak indicator dot */
-    if (max_bh > 0) {
-        int pbx = chart_x + 1 + max_bi * (bar_w + gap) + bar_w / 2;
-        int pby = chart_y + chart_h - 1 - max_bh - 2;
-        if (pby >= chart_y) {
-            ui_draw_pixel(ops, pbx, pby, fg);
-        }
-    }
-
-    /* X-axis tick marks */
-    for (int i = 0; i < bars; ++i) {
-        int tx = chart_x + 1 + i * (bar_w + gap) + bar_w / 2;
-        ui_draw_pixel(ops, tx, chart_y + chart_h + 1, muted);
     }
 
     if (w->text && ops->draw_text && w->height >= UI_FONT_CHAR_H) {

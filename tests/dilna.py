@@ -29,6 +29,7 @@ pytest (skip / fail / data).
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 from typing import Any
 
@@ -38,6 +39,11 @@ PODPIS = ("theme", "smaltovy-cifernik")
 # Klice, bez kterych most nema co vozit: paleta (150), skala (148),
 # soustava (151), dotyk a PPI (135, 141), slovnik stavu (143).
 POVINNE_KLICE = ("colors", "typography", "layout", "spacing", "stavy", "panel", "touch")
+
+
+def repo_path(variable: str, fallback: pathlib.Path) -> pathlib.Path:
+    """Resolve an optional neighboring checkout without changing CI defaults."""
+    return pathlib.Path(os.environ.get(variable, str(fallback))).resolve()
 
 
 def tokeny_kitu(cesta: pathlib.Path | str) -> tuple[str, Any]:

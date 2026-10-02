@@ -47,6 +47,7 @@ import sys
 
 import pytest
 
+from tests.dilna import repo_path
 from tools.validate_design import (
     PROFILE_TAB5,
     radkovy_box,
@@ -58,8 +59,8 @@ from tools.validate_design import (
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
 DILNA = ESPOS.parents[1]  # .../kimi/workspace
-JADRO = DILNA / "tabos-core"
-KIT = DILNA / "tabos-ui-kit"
+JADRO = repo_path("TABOS_CORE_ROOT", DILNA / "tabos-core")
+KIT = repo_path("TABOS_UI_KIT_ROOT", DILNA / "tabos-ui-kit")
 TOKENY = KIT / "tokens.json"
 TEMA = JADRO / "core" / "include" / "tabos_core" / "tema.h"
 NAVRH_APPKY = KIT / "navrh-appky"

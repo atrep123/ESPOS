@@ -1,6 +1,6 @@
 """Tests for validation rules 99-106 in tools/validate_design.py."""
 
-from tools.validate_design import validate_data
+from tools.validate_design import REPO_ROOT, _has_source_backed_metrics_chart, validate_data
 
 FL = "test"
 
@@ -264,6 +264,119 @@ def test_r103_chart_with_runtime_ok():
     )
     ws = [w for w in _warns(d) if "chart has no data_points" in w.message]
     assert len(ws) == 0
+
+
+def test_r103_accepts_only_chart_with_source_backed_firmware_producer():
+    import json
+
+    design = json.loads((REPO_ROOT / "main_scene.json").read_text(encoding="utf-8"))
+    metrics_chart = next(
+        widget
+        for widget in design["scenes"]["metrics"]["widgets"]
+        if widget.get("_widget_id") == "metrics.chart"
+    )
+    assert _has_source_backed_metrics_chart("metrics", metrics_chart)
+    warnings = [
+        issue
+        for issue in _warns(design)
+        if "metrics.chart" in issue.message and "chart has no data_points" in issue.message
+    ]
+    assert warnings == []
+
+
+def test_r103_source_backed_chart_identity_is_narrow():
+    metrics_chart = {
+        "type": "chart",
+        "x": 0,
+        "y": 0,
+        "width": 60,
+        "height": 30,
+        "_widget_id": "metrics.chart",
+    }
+    assert not _has_source_backed_metrics_chart("other", metrics_chart)
+    assert not _has_source_backed_metrics_chart(
+        "metrics", {**metrics_chart, "_widget_id": "other.chart"}
+    )
+    data = _make([metrics_chart], scene_name="other")
+    assert any("chart has no data_points" in issue.message for issue in _warns(data))
+
+
+def test_r103_warns_if_firmware_producer_evidence_is_missing(monkeypatch):
+    import tools.validate_design as validator
+
+    monkeypatch.setattr(validator, "_metrics_chart_producer_source", lambda: "")
+
+    chart = {
+        "type": "chart",
+        "x": 0,
+        "y": 0,
+        "width": 60,
+        "height": 30,
+        "_widget_id": "metrics.chart",
+    }
+    data = _make([chart], scene_name="metrics")
+    assert any("chart has no data_points" in issue.message for issue in _warns(data))
+
+
+def test_r103_does_not_accept_comment_only_firmware_evidence(monkeypatch):
+    import tools.validate_design as validator
+
+    fake_source = '''
+    /*
+    static void ui_update_metrics_chart(UiScene *scene, uint32_t free_heap, UiDirty *dirty) {
+        if (strcmp(scene->name, "metrics") != 0) return;
+        ui_scene_find_by_id(scene, "metrics.chart");
+        chart->data_points = s_metrics_chart_samples;
+        chart->data_count = s_metrics_chart_count;
+    }
+    static void ui_task(void *arg) {
+        if (got && m.topic == TOP_METRICS_RET) {
+            ui_update_metrics_chart(scene, m.u.metrics.free_heap, &dirty);
+        }
+    }
+    static void ui_start(void) { xTaskCreatePinnedToCore(ui_task, "ui", 1, 0, 1, 0, 0); }
+    */
+    '''
+    monkeypatch.setattr(validator, "_metrics_chart_producer_source", lambda: fake_source)
+
+    chart = {
+        "type": "chart",
+        "x": 0,
+        "y": 0,
+        "width": 60,
+        "height": 30,
+        "_widget_id": "metrics.chart",
+    }
+    assert not validator._has_source_backed_metrics_chart("metrics", chart)
+
+
+def test_r103_requires_live_task_dispatch_not_an_unused_producer(monkeypatch):
+    import tools.validate_design as validator
+
+    fake_source = '''
+    static void ui_update_metrics_chart(UiScene *scene, uint32_t free_heap, UiDirty *dirty) {
+        if (strcmp(scene->name, "metrics") != 0) return;
+        ui_scene_find_by_id(scene, "metrics.chart");
+        chart->data_points = s_metrics_chart_samples;
+        chart->data_count = s_metrics_chart_count;
+    }
+    static void unused_helper(void) {
+        ui_update_metrics_chart(scene, m.u.metrics.free_heap, &dirty);
+    }
+    static void ui_task(void *arg) { (void)arg; }
+    static void ui_start(void) { xTaskCreatePinnedToCore(ui_task, "ui", 1, 0, 1, 0, 0); }
+    '''
+    monkeypatch.setattr(validator, "_metrics_chart_producer_source", lambda: fake_source)
+
+    chart = {
+        "type": "chart",
+        "x": 0,
+        "y": 0,
+        "width": 60,
+        "height": 30,
+        "_widget_id": "metrics.chart",
+    }
+    assert not validator._has_source_backed_metrics_chart("metrics", chart)
 
 
 def test_r103_non_chart_no_data_no_warn():

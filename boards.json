@@ -8,6 +8,7 @@
       "platformio_board": "esp32-s3-devkitm-1",
       "platform": "espressif32@6.12.0",
       "mcu": "esp32s3",
+      "sdkconfig_path": "sdkconfig.esp32-s3-devkitm-1",
       "vendor": "Espressif",
       "has_display": true,
       "display_profile": "esp32os_256x128_gray4",

@@ -44,6 +44,7 @@ import sys
 
 import pytest
 
+from tests.dilna import repo_path
 from tools.validate_design import (
     _TAB5_FONT_SYMBOLY,
     _TAB5_FONT_TEXT,
@@ -53,8 +54,8 @@ from tools.validate_design import (
 
 ESPOS = pathlib.Path(__file__).resolve().parents[1]
 DILNA = ESPOS.parents[1]  # .../kimi/workspace
-JADRO = DILNA / "tabos-core"
-KIT = DILNA / "tabos-ui-kit"
+JADRO = repo_path("TABOS_CORE_ROOT", DILNA / "tabos-core")
+KIT = repo_path("TABOS_UI_KIT_ROOT", DILNA / "tabos-ui-kit")
 FONTY = JADRO / "core" / "src" / "fonts"
 TOKENY = KIT / "tokens.json"
 VELIKOSTI = (14, 16, 20, 24)

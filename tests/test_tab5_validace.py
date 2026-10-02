@@ -38,6 +38,7 @@ import pytest
 from cyberpunk_designer import io_ops, mouse_handlers, tab5_most, tab5_validace
 from cyberpunk_designer.drawing.canvas import draw_canvas
 from cyberpunk_designer.drawing.overlays import draw_nalezy
+from tests.dilna import repo_path
 from ui_designer import WidgetConfig
 
 FIXTURY = pathlib.Path(__file__).parent / "fixtures"
@@ -48,7 +49,7 @@ KOREN = pathlib.Path(__file__).resolve().parents[1]
 # `do_espos.py` lezi v jinem pracovnim strome (tabos-ui-kit). Kdyz tam neni,
 # testy shody tridy se preskoci - ale nikdy se nepreskoci to, co lze zmerit
 # uvnitr ESPOSu.
-DO_ESPOS = KOREN.parents[1] / "tabos-ui-kit" / "navrh-appky" / "do_espos.py"
+DO_ESPOS = repo_path("TABOS_UI_KIT_ROOT", KOREN.parents[1] / "tabos-ui-kit") / "navrh-appky" / "do_espos.py"
 
 
 def _data(cesta: pathlib.Path) -> dict:

@@ -60,6 +60,11 @@ enum { UI_MAX_WIDGETS = 128 };
 static UiWidget s_widgets[UI_MAX_WIDGETS];
 static UiScene s_scene;
 
+/* Bounded live free-heap history; this storage outlives the active scene. */
+enum { UI_METRICS_CHART_SAMPLES = 32 };
+static int16_t s_metrics_chart_samples[UI_METRICS_CHART_SAMPLES];
+static uint16_t s_metrics_chart_count;
+
 static UiListModels s_listmodels;
 
 #ifdef UI_SCENE_COUNT
@@ -528,6 +533,54 @@ static void ui_update_status_bar(UiScene *scene, uint32_t free_heap, uint32_t mi
         ui_widget_rect(scene, right, &x, &y, &w, &h);
         ui_dirty_add_local(dirty, x, y, w, h);
     }
+}
+
+static void ui_update_metrics_chart(UiScene *scene, uint32_t free_heap, UiDirty *dirty)
+{
+    if (scene == NULL || dirty == NULL || scene->name == NULL ||
+        strcmp(scene->name, "metrics") != 0) {
+        return;
+    }
+
+    int idx = ui_scene_find_by_id(scene, "metrics.chart");
+    UiWidget *chart = ui_scene_widget_mut(scene, idx);
+    if (chart == NULL || chart->type != UIW_CHART) {
+        return;
+    }
+
+    /* Use KiB so free-heap samples fit in the signed chart sample type. */
+    int32_t sample_kib = (int32_t)(free_heap / 1024U);
+    if (sample_kib > INT16_MAX) {
+        sample_kib = INT16_MAX;
+    }
+    if (s_metrics_chart_count < UI_METRICS_CHART_SAMPLES) {
+        s_metrics_chart_samples[s_metrics_chart_count++] = (int16_t)sample_kib;
+    } else {
+        memmove(&s_metrics_chart_samples[0], &s_metrics_chart_samples[1],
+                (UI_METRICS_CHART_SAMPLES - 1U) * sizeof(s_metrics_chart_samples[0]));
+        s_metrics_chart_samples[UI_METRICS_CHART_SAMPLES - 1U] = (int16_t)sample_kib;
+    }
+
+    int32_t max_sample_kib = 1;
+    for (uint16_t i = 0; i < s_metrics_chart_count; ++i) {
+        if (s_metrics_chart_samples[i] > max_sample_kib) {
+            max_sample_kib = s_metrics_chart_samples[i];
+        }
+    }
+    /* Leave ~12.5% headroom and round to 64 KiB so normal heap changes
+     * remain visible without making the scale jump on every small change. */
+    int32_t scale_kib = max_sample_kib + (max_sample_kib / 8) + 1;
+    scale_kib = ((scale_kib + 63) / 64) * 64;
+    if (scale_kib > INT16_MAX) {
+        scale_kib = INT16_MAX;
+    }
+    chart->data_points = s_metrics_chart_samples;
+    chart->data_count = s_metrics_chart_count;
+    chart->min_value = 0;
+    chart->max_value = (int16_t)scale_kib;
+    int x, y, w, h;
+    ui_widget_rect(scene, idx, &x, &y, &w, &h);
+    ui_dirty_add_local(dirty, x, y, w, h);
 }
 
 static void ui_edit_exit(UiScene *scene, UiEdit *edit, UiDirty *dirty)
@@ -1304,6 +1357,7 @@ static void ui_task(void *arg)
 
         if (got && m.topic == TOP_METRICS_RET) {
             ui_update_status_bar(scene, m.u.metrics.free_heap, m.u.metrics.min_free_heap, &dirty);
+            ui_update_metrics_chart(scene, m.u.metrics.free_heap, &dirty);
         }
 
         if (got && m.topic == TOP_RPC_CALL) {

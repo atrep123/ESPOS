@@ -109,6 +109,7 @@ class Board:
     platformio_board: str
     platform: str
     mcu: str
+    sdkconfig_path: Optional[str]
     has_display: bool
     display_profile: Optional[str]
     display: Optional[DisplaySpec]
@@ -128,7 +129,7 @@ def _require(cond: bool, msg: str) -> None:
         raise RegistryError(msg)
 
 
-def _coerce_board(raw: Any, idx: int) -> Board:
+def _coerce_board(raw: Any, idx: int = 0) -> Board:
     """Validate + normalize one raw dict into a :class:`Board`."""
     where = f"boards[{idx}]"
     _require(isinstance(raw, dict), f"{where} must be an object")
@@ -174,6 +175,18 @@ def _coerce_board(raw: Any, idx: int) -> Board:
 
     notes = raw.get("notes", "")
     _require(isinstance(notes, str), f"{where}.notes must be a string")
+
+    sdkconfig_path = raw.get("sdkconfig_path")
+    _require(
+        sdkconfig_path is None
+        or (
+            isinstance(sdkconfig_path, str)
+            and sdkconfig_path.strip() != ""
+            and not Path(sdkconfig_path).is_absolute()
+            and ".." not in Path(sdkconfig_path).parts
+        ),
+        f"{where}.sdkconfig_path must be a safe project-relative path",
+    )
 
     display_profile = raw.get("display_profile")
     raw_display = raw.get("display")
@@ -246,6 +259,7 @@ def _coerce_board(raw: Any, idx: int) -> Board:
         platformio_board=raw["platformio_board"],
         platform=raw["platform"],
         mcu=raw["mcu"],
+        sdkconfig_path=sdkconfig_path,
         vendor=str(raw.get("vendor", "")),
         has_display=has_display,
         display_profile=display_profile,
@@ -320,6 +334,10 @@ class BoardRegistry:
             if b.platform and b.platform != BASE_PLATFORM:
                 lines.append(f"platform = {b.platform}")
             lines.append(f"board = {b.platformio_board}")
+            if b.sdkconfig_path:
+                lines.append(
+                    f"board_build.esp-idf.sdkconfig_path = {b.sdkconfig_path}"
+                )
             flags = list(b.build_flags)
             if not b.has_display:
                 # Defensive: guarantee headless modules never try to bring up a
