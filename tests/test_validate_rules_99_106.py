@@ -321,7 +321,7 @@ def test_r103_warns_if_firmware_producer_evidence_is_missing(monkeypatch):
 def test_r103_does_not_accept_comment_only_firmware_evidence(monkeypatch):
     import tools.validate_design as validator
 
-    fake_source = '''
+    fake_source = """
     /*
     static void ui_update_metrics_chart(UiScene *scene, uint32_t free_heap, UiDirty *dirty) {
         if (strcmp(scene->name, "metrics") != 0) return;
@@ -336,7 +336,7 @@ def test_r103_does_not_accept_comment_only_firmware_evidence(monkeypatch):
     }
     static void ui_start(void) { xTaskCreatePinnedToCore(ui_task, "ui", 1, 0, 1, 0, 0); }
     */
-    '''
+    """
     monkeypatch.setattr(validator, "_metrics_chart_producer_source", lambda: fake_source)
 
     chart = {
@@ -353,7 +353,7 @@ def test_r103_does_not_accept_comment_only_firmware_evidence(monkeypatch):
 def test_r103_requires_live_task_dispatch_not_an_unused_producer(monkeypatch):
     import tools.validate_design as validator
 
-    fake_source = '''
+    fake_source = """
     static void ui_update_metrics_chart(UiScene *scene, uint32_t free_heap, UiDirty *dirty) {
         if (strcmp(scene->name, "metrics") != 0) return;
         ui_scene_find_by_id(scene, "metrics.chart");
@@ -365,7 +365,7 @@ def test_r103_requires_live_task_dispatch_not_an_unused_producer(monkeypatch):
     }
     static void ui_task(void *arg) { (void)arg; }
     static void ui_start(void) { xTaskCreatePinnedToCore(ui_task, "ui", 1, 0, 1, 0, 0); }
-    '''
+    """
     monkeypatch.setattr(validator, "_metrics_chart_producer_source", lambda: fake_source)
 
     chart = {

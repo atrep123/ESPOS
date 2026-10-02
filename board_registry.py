@@ -335,9 +335,7 @@ class BoardRegistry:
                 lines.append(f"platform = {b.platform}")
             lines.append(f"board = {b.platformio_board}")
             if b.sdkconfig_path:
-                lines.append(
-                    f"board_build.esp-idf.sdkconfig_path = {b.sdkconfig_path}"
-                )
+                lines.append(f"board_build.esp-idf.sdkconfig_path = {b.sdkconfig_path}")
             flags = list(b.build_flags)
             if not b.has_display:
                 # Defensive: guarantee headless modules never try to bring up a

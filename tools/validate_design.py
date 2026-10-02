@@ -4727,7 +4727,7 @@ def _c_without_comments(source: str) -> str:
                 i += 2
                 state = "block_comment"
                 continue
-            if ch in ("\"", "'"):
+            if ch in ('"', "'"):
                 quote = ch
                 state = "quoted"
         elif state == "line_comment":
@@ -4761,7 +4761,7 @@ def _c_mask_literals(source: str) -> str:
     while i < len(source):
         ch = source[i]
         if not quote:
-            if ch in ("\"", "'"):
+            if ch in ('"', "'"):
                 quote = ch
                 chars[i] = " "
         else:
@@ -4810,9 +4810,7 @@ def _c_function_body(source: str, name: str) -> tuple[str, str] | None:
 
 
 def _c_call_uses_literal(body: str, code: str, function: str, first_arg: str, literal: str) -> bool:
-    pattern = re.compile(
-        rf"\b{re.escape(function)}\s*\(\s*{first_arg}\s*,\s*\)", re.DOTALL
-    )
+    pattern = re.compile(rf"\b{re.escape(function)}\s*\(\s*{first_arg}\s*,\s*\)", re.DOTALL)
     match = pattern.search(code)
     if match is None:
         return False
@@ -4838,7 +4836,9 @@ def _has_source_backed_metrics_chart(scene_name: str, widget: dict[str, Any]) ->
     _, app_main_code = app_main
 
     has_data_updates = (
-        _c_call_uses_literal(producer_body, producer_code, "strcmp", r"scene\s*->\s*name", "metrics")
+        _c_call_uses_literal(
+            producer_body, producer_code, "strcmp", r"scene\s*->\s*name", "metrics"
+        )
         and _c_call_uses_literal(
             producer_body, producer_code, "ui_scene_find_by_id", r"scene", "metrics.chart"
         )
@@ -4856,15 +4856,24 @@ def _has_source_backed_metrics_chart(scene_name: str, widget: dict[str, Any]) ->
     if metrics_branch is not None:
         block_start = task_code.find("{", metrics_branch.start(), metrics_branch.end())
         block_end = _c_matching_delimiter(task_code, block_start, "{", "}")
-        task_dispatches_chart = block_end >= 0 and re.search(
-            r"ui_update_metrics_chart\s*\(\s*scene\s*,\s*"
-            r"m\.u\.metrics\.free_heap\s*,\s*&dirty\s*\)\s*;",
-            task_code[block_start + 1 : block_end],
-        ) is not None
+        task_dispatches_chart = (
+            block_end >= 0
+            and re.search(
+                r"ui_update_metrics_chart\s*\(\s*scene\s*,\s*"
+                r"m\.u\.metrics\.free_heap\s*,\s*&dirty\s*\)\s*;",
+                task_code[block_start + 1 : block_end],
+            )
+            is not None
+        )
 
     starts_task = re.search(r"xTaskCreatePinnedToCore\s*\(\s*ui_task\s*,", starter_code)
     starts_ui = re.search(r"ui_start\s*\(\s*\)\s*;", app_main_code)
-    return has_data_updates and task_dispatches_chart and starts_task is not None and starts_ui is not None
+    return (
+        has_data_updates
+        and task_dispatches_chart
+        and starts_task is not None
+        and starts_ui is not None
+    )
 
 
 # ── Main validator ─────────────────────────────────────────────────────────
@@ -6313,12 +6322,12 @@ def validate_data(
                 dp103 = w.get("data_points")
                 _rv103 = w.get("runtime", "")
                 rt103 = str(_rv103) if isinstance(_rv103, str) else ""
-                source_backed_metrics_chart = _has_source_backed_metrics_chart(
-                    scene_name, w
-                )
+                source_backed_metrics_chart = _has_source_backed_metrics_chart(scene_name, w)
                 if (
-                    dp103 is None or (isinstance(dp103, list) and len(dp103) == 0)
-                ) and not rt103 and not source_backed_metrics_chart:
+                    (dp103 is None or (isinstance(dp103, list) and len(dp103) == 0))
+                    and not rt103
+                    and not source_backed_metrics_chart
+                ):
                     issues.append(
                         Issue("WARN", f"{wl}: chart has no data_points and no runtime binding")
                     )

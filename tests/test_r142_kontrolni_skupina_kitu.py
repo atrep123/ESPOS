@@ -53,7 +53,9 @@ SDK_COMMIT = "cb778d8da0d8994674aff217ef14438ed680ccef"
 # ESPOS lezi ve workspace/research/ESPOS, kit ve workspace/tabos-ui-kit:
 # tests/ -> ESPOS -> research -> workspace = parents[3] (tataz cesta jako
 # `DILNA` v `dilna.py`: ESPOS.parents[1]). S parents[2] test tise skipoval.
-KIT_ROOT = repo_path("TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit")
+KIT_ROOT = repo_path(
+    "TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit"
+)
 KIT = KIT_ROOT / "navrh-appky"
 TVARY_SDK = ("jmeno ze SDK", "jmeno rozhrani ze SDK")
 
@@ -338,7 +340,9 @@ def test_soucasny_snimek_s_vlozenym_sdk_unikem_musi_zcervenat(text):
 
 
 def test_soucasny_snimek_je_reprodukovatelny_z_commit_blobu():
-    sdk = repo_path("TABOS_CORE_ROOT", KIT_ROOT.parent / "tabos-core") / "apps" / "_src" / "tabos-sdk"
+    sdk = (
+        repo_path("TABOS_CORE_ROOT", KIT_ROOT.parent / "tabos-core") / "apps" / "_src" / "tabos-sdk"
+    )
     if not KIT.is_dir() or not sdk.is_dir():
         pytest.skip("NEZMERENO: local kit/SDK repositories absent; recorded snapshot still tested")
     generator = runpy.run_path(str(FIXTURA.with_name("gen_verzalky_kit.py")))

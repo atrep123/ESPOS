@@ -1449,7 +1449,8 @@ def test_r140_vadna_mrizka_nezastavi_ostatni():
 
 DO_ESPOS_MOST = (
     repo_path("TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit")
-    / "navrh-appky" / "do_espos.py"
+    / "navrh-appky"
+    / "do_espos.py"
 )
 
 
@@ -2473,9 +2474,7 @@ def test_r142_IDF_je_platformni_zkratka_ne_falesny_nalez_enum_hodnoty():
     sdk = frozenset({"Idf", "NotFound"})
     assert "IDF" in VETY_NENI_JMENO_SDK
     assert _veta_strojove_jmeno("ESP-IDF 5.5.4", sdk) is None
-    assert _veta_strojove_jmeno("NotFound chyba", sdk) == (
-        "jmeno ze SDK", "NotFound"
-    )
+    assert _veta_strojove_jmeno("NotFound chyba", sdk) == ("jmeno ze SDK", "NotFound")
 
 
 # --------------------------------------------------------------------------- #

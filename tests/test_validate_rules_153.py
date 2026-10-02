@@ -563,7 +563,10 @@ def test_r153_dva_behy_tyz_vysledek():
 # Cisla proti primarnimu udaji (kdyz je kit po ruce)
 # --------------------------------------------------------------------------- #
 
-KIT_TOKENY = repo_path("TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit") / "tokens.json"
+KIT_TOKENY = (
+    repo_path("TABOS_UI_KIT_ROOT", pathlib.Path(__file__).resolve().parents[3] / "tabos-ui-kit")
+    / "tokens.json"
+)
 
 
 @pytest.mark.skipif(not KIT_TOKENY.is_file(), reason="kit neni vedle ESPOSu")
