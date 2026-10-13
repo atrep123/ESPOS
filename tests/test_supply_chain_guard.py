@@ -552,6 +552,25 @@ coverage[toml]>=7.3.0,<8
     assert issues == []
 
 
+def test_requirements_accepts_exact_numeric_release_with_optional_sha256_hash():
+    requirements = (
+        "tree-sitter==0.26.0\n" + "tree-sitter-cpp==0.23.4 --hash=sha256:" + "a" * 64 + "\n"
+    )
+    assert validate_requirement_bounds(Path("requirements-codegraph.txt"), requirements) == []
+
+
+def test_requirements_does_not_treat_wildcards_or_arbitrary_strings_as_exact_pins():
+    for specifier in (
+        "==1.2.*",
+        "===anything",
+        "==1.2.3 --index-url https://example.invalid",
+        "==1.2.3 --hash=sha256:short",
+        "==1.2.3 --hash=md5:" + "a" * 32,
+        "==1.2.3,!=1.2.3",
+    ):
+        assert validate_requirement_bounds(Path("requirements-test.txt"), "dependency" + specifier)
+
+
 def test_dependabot_requires_github_actions_group():
     dependabot = """
 version: 2

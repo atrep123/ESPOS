@@ -1,0 +1,4 @@
+# Optional C++ graph parser runtime for the first Windows x64 / CPython 3.12 build.
+# Exact official PyPI wheels; keep parsing separate from compiling/executing code.
+tree-sitter==0.26.0 --hash=sha256:ca89e361a276dbc934b28a43dd881199e25d34ff5493ee0ce45f3c52a6124a37
+tree-sitter-cpp==0.23.4 --hash=sha256:68606a45bea92669d155399e1239f771a7767d8683cd8f8e30e7d813107030ca

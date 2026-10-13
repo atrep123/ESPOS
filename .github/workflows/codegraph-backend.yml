@@ -1,0 +1,133 @@
+name: CodeGraph backend (Windows)
+
+on:
+  push:
+    branches: [main, master, codex/dodelavky-20260927]
+    paths:
+      - 'tools/tabos_code_graph.py'
+      - 'tools/tabos_sdk_node_catalog.py'
+      - 'tools/desktop_backend_entry.py'
+      - 'tools/desktop_backend_freeze.spec'
+      - 'tools/verify_frozen_desktop_backend.py'
+      - 'tools/__init__.py'
+      - 'tests/test_tabos_code_graph*.py'
+      - 'tests/test_tabos_sdk_node_catalog.py'
+      - 'tests/test_desktop_backend_entry.py'
+      - 'tests/test_frozen_desktop_backend.py'
+      - 'requirements-codegraph-win-py312.txt'
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'pyproject.toml'
+      - '.github/workflows/codegraph-backend.yml'
+  pull_request:
+    branches: [main, master, codex/dodelavky-20260927]
+    paths:
+      - 'tools/tabos_code_graph.py'
+      - 'tools/tabos_sdk_node_catalog.py'
+      - 'tools/desktop_backend_entry.py'
+      - 'tools/desktop_backend_freeze.spec'
+      - 'tools/verify_frozen_desktop_backend.py'
+      - 'tools/__init__.py'
+      - 'tests/test_tabos_code_graph*.py'
+      - 'tests/test_tabos_sdk_node_catalog.py'
+      - 'tests/test_desktop_backend_entry.py'
+      - 'tests/test_frozen_desktop_backend.py'
+      - 'requirements-codegraph-win-py312.txt'
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'pyproject.toml'
+      - '.github/workflows/codegraph-backend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  codegraph-backend:
+    name: Real parser and frozen role-only backend (Python 3.12 x64)
+    runs-on: windows-2022
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONIOENCODING: 'utf-8'
+      PYGAME_HIDE_SUPPORT_PROMPT: '1'
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Setup Windows Python 3.12 x64
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+          architecture: x64
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-codegraph-win-py312.txt
+      - name: Install declared test and freezer tooling
+        timeout-minutes: 10
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Install exact hashed official parser wheels
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r requirements-codegraph-win-py312.txt
+      - name: Check scoped Python lint and formatting
+        run: |
+          $files = @(
+            'tools/tabos_code_graph.py', 'tools/tabos_sdk_node_catalog.py',
+            'tools/desktop_backend_entry.py', 'tools/verify_frozen_desktop_backend.py',
+            'tests/test_tabos_code_graph.py', 'tests/test_tabos_code_graph_construction_guards.py',
+            'tests/test_tabos_code_graph_sdk_construction.py', 'tests/test_tabos_sdk_node_catalog.py',
+            'tests/test_desktop_backend_entry.py', 'tests/test_frozen_desktop_backend.py'
+          )
+          python -m ruff check @files
+          if ($LASTEXITCODE -ne 0) { throw 'Scoped lint failed' }
+          python -m ruff format --check @files
+          if ($LASTEXITCODE -ne 0) { throw 'Scoped format check failed' }
+      - name: Test actual canonical parser, catalog and entry
+        timeout-minutes: 8
+        # No external SDK checkout/token is needed. Explicit SDK/prebuilt-LVGL
+        # component tests skip with reasons when those inputs are unavailable.
+        # Source-child fixtures are not frozen-executable or GUI evidence.
+        run: |
+          $env:CODEGRAPH_PYTHON = (python -c 'import sys; print(sys.executable)').Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Test interpreter unavailable' }
+          python -m pytest -q -ra --tb=short `
+            tests/test_tabos_code_graph.py `
+            tests/test_tabos_code_graph_construction_guards.py `
+            tests/test_tabos_code_graph_sdk_construction.py `
+            tests/test_tabos_sdk_node_catalog.py `
+            tests/test_desktop_backend_entry.py `
+            tests/test_frozen_desktop_backend.py
+          if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed' }
+      - name: Freeze actual role-only backend and native extensions
+        timeout-minutes: 5
+        run: python -B -m PyInstaller --noconfirm --distpath artifacts/desktop-backend/dist --workpath artifacts/desktop-backend/work tools/desktop_backend_freeze.spec
+      - name: Verify owned frozen console backend
+        timeout-minutes: 3
+        # This runs seven bounded exchanges against the built PE, never a
+        # Python fallback. It does not verify Tauri GUI, SDK execution,
+        # hardware, offline installer completeness or a release ZIP.
+        run: |
+          $backendExe = Join-Path $env:GITHUB_WORKSPACE 'artifacts/desktop-backend/dist/espos_codegraph_backend/espos_codegraph_backend.exe'
+          $receipt = python -B tools/verify_frozen_desktop_backend.py --exe $backendExe
+          if ($LASTEXITCODE -ne 0) { throw 'Frozen backend verification failed' }
+          $result = $receipt | ConvertFrom-Json
+          if ($result.ok -ne $true -or $result.frozenVerified -ne $true -or $result.ownedChildren -ne 7) {
+            throw 'Frozen backend receipt incomplete'
+          }
+          $receipt
+          $receipt | Set-Content -LiteralPath 'artifacts/desktop-backend/frozen-verification.json' -Encoding utf8
+      - name: Retain verified component artifact and receipt (not a release)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codegraph-backend-windows-py312-${{ github.sha }}
+          path: |
+            artifacts/desktop-backend/dist/espos_codegraph_backend/
+            artifacts/desktop-backend/frozen-verification.json
+          if-no-files-found: error
+          retention-days: 7

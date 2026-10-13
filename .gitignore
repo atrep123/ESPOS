@@ -134,3 +134,6 @@ push*_results*.txt
 
 # Leaked pytest tmp dirs (Windows path mangling)
 UsersatrepAppData*
+
+# Reviewed source recipe, not a generated PyInstaller scratch specification.
+!tools/desktop_backend_freeze.spec

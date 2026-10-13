@@ -313,9 +313,20 @@ def validate_requirement_bounds(path: Path, text: str) -> list[str]:
         name_match = REQUIREMENT_NAME_RE.match(line)
         package = name_match.group("name") if name_match else line
         requirement_part = line.split(";", 1)[0]
+        # An exact numeric release is a single-point bound. In particular,
+        # pip --require-hashes manifests must use exact versions, not ranges.
+        # Do not confuse ==1.2.*, arbitrary === strings or trailing options
+        # with an immutable version pin.
+        pinned_release = bool(
+            name_match
+            and re.fullmatch(
+                r"\s*==\s*[0-9]+(?:\.[0-9]+)+\s*(?:--hash=sha256:[0-9a-f]{64}\s*)*",
+                requirement_part[name_match.end() :],
+            )
+        )
         has_lower_bound = ">=" in requirement_part
         has_upper_bound = bool(re.search(r"(?:^|,)\s*<", requirement_part))
-        if not has_lower_bound or not has_upper_bound:
+        if not pinned_release and (not has_lower_bound or not has_upper_bound):
             issues.append(
                 f"{path}:{line_no}: dependency {package!r} must use a bounded version range"
             )

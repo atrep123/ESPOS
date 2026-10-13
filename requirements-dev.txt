@@ -21,6 +21,12 @@ mypy>=1.7.0,<2
 ruff>=0.15.16,<0.16
 pyinstaller>=6.0.0,<7
 
+# Canonical desktop CodeGraph tests run on both CI Python versions. The first
+# Windows x64 frozen artifact additionally uses the exact hashed wheel manifest
+# requirements-codegraph-win-py312.txt; these are the same parser versions.
+tree-sitter==0.26.0
+tree-sitter-cpp==0.23.4
+
 mutmut>=2.5.0,<3
 
 # Security audit tooling used by CI; keep it in the manifest so Dependabot and
