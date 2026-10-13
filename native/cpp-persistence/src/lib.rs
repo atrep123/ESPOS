@@ -4,6 +4,7 @@
 compile_error!("Native C++ persistence requires Windows; no simulated fallback");
 mod create_target;
 pub mod host;
+pub mod recovery_view;
 pub mod save_as;
 pub mod types;
 mod windows_read;

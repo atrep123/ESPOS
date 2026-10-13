@@ -1148,4 +1148,69 @@ fn native_host_restart_inspects_history_without_minting_old_document_authority()
         "written-receipt"
     );
     assert_eq!(fs::read(&path).unwrap(), b"changed later");
+    let before = files.artifacts();
+    let list = serde_json::to_value(reply(
+        &reopened,
+        &fresh,
+        &raw(20, json!({"kind":"listRecovery","offset":0,"limit":1})),
+    ))
+    .unwrap();
+    assert_eq!(list["kind"], "recoveryList");
+    assert_eq!(list["total"], 1);
+    assert_eq!(list["items"][0]["operationId"], id.as_str());
+    assert!(list["items"][0].get("documentId").is_none());
+    assert!(list["items"][0].get("path").is_none());
+    let view = serde_json::to_value(reply(
+        &reopened,
+        &fresh,
+        &raw(21, json!({"kind":"compareRecovery","operationId":id})),
+    ))
+    .unwrap();
+    assert_eq!(view["kind"], "recoveryComparison");
+    assert_eq!(view["comparison"]["current"]["status"], "changed");
+    assert_eq!(
+        view["comparison"]["payload"]["sourceBase64"],
+        STANDARD.encode(b"captured source")
+    );
+    assert_eq!(
+        view["comparison"]["backup"]["sourceBase64"],
+        STANDARD.encode(b"original external")
+    );
+    assert_eq!(files.artifacts(), before);
+    assert_eq!(fs::read(&path).unwrap(), b"changed later");
+    denied(
+        &reopened,
+        &fresh,
+        &raw(22, json!({"kind":"listRecovery","offset":0,"limit":0})),
+        Code::InvalidInput,
+    );
+    denied(
+        &reopened,
+        &fresh,
+        &raw(23, json!({"kind":"listRecovery","offset":0,"limit":33})),
+        Code::InvalidInput,
+    );
+    denied(
+        &reopened,
+        &fresh,
+        &raw(
+            24,
+            json!({"kind":"compareRecovery","operationId":id,"path":"forged.cpp"}),
+        ),
+        Code::InvalidInput,
+    );
+    let quarantined = reopened.prepare_native_view().unwrap();
+    denied(
+        &reopened,
+        &quarantined,
+        &raw(25, json!({"kind":"listRecovery","offset":0,"limit":1})),
+        Code::Unavailable,
+    );
+    reopened.revoke_native_view(&fresh).unwrap();
+    denied(
+        &reopened,
+        &fresh,
+        &raw(26, json!({"kind":"compareRecovery","operationId":id})),
+        Code::Revoked,
+    );
 }

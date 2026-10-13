@@ -38,6 +38,11 @@ impl TryFrom<String> for CallId {
         Ok(Self(value))
     }
 }
+impl CallId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HostRequest {
@@ -109,6 +114,14 @@ pub enum HostCommand {
         #[serde(rename = "requestId")]
         request_id: RequestId,
     },
+    ListRecovery {
+        offset: u32,
+        limit: u32,
+    },
+    CompareRecovery {
+        #[serde(rename = "operationId")]
+        operation_id: RequestId,
+    },
 }
 pub fn decode_host_request(raw: &[u8]) -> Result<HostRequest, Code> {
     if raw.len() > MAX_HOST_REQUEST_BYTES {
@@ -119,6 +132,9 @@ pub fn decode_host_request(raw: &[u8]) -> Result<HostRequest, Code> {
         HostCommand::BindDraft { revision, .. } | HostCommand::ReserveSaveAs { revision, .. }
             if *revision > 9_007_199_254_740_991 =>
         {
+            return Err(Code::InvalidInput)
+        }
+        HostCommand::ListRecovery { limit, .. } if !(1..=32).contains(limit) => {
             return Err(Code::InvalidInput)
         }
         _ => {}
@@ -184,6 +200,25 @@ pub enum HostReply {
         binding: DraftBinding,
     },
     Released {},
+    RecoveryList {
+        offset: u32,
+        total: usize,
+        items: Vec<RecoveryListItem>,
+    },
+    RecoveryComparison {
+        comparison: crate::recovery_view::RecoveryComparison,
+    },
+}
+/// Historical metadata only. Neither a file path nor an old live document grant.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryListItem {
+    operation_id: RequestId,
+    display_name: String,
+    historical_phase: String,
+    backup_available: bool,
+    source_hash: String,
+    source_bytes: usize,
 }
 /// Work remains owned until real completion or an explicit undispatched drain.
 pub enum HostDispatch {
@@ -500,6 +535,36 @@ impl NativeHost {
                     state: Status::Save {
                         write: r.recover_save(caller, &request_id, &mut env)?,
                     },
+                }
+            }
+            HostCommand::ListRecovery { offset, limit } => {
+                let env = self.environment.lock().map_err(|_| Code::Unavailable)?;
+                let records = env.recovery_records();
+                let items = records
+                    .iter()
+                    .skip(offset as usize)
+                    .take(limit as usize)
+                    .map(|record| RecoveryListItem {
+                        operation_id: record.operation_id.clone(),
+                        display_name: record.display_name.clone(),
+                        historical_phase: record.phase.into(),
+                        backup_available: record.backup_available,
+                        source_hash: record.source_hash.clone(),
+                        source_bytes: record.source_bytes,
+                    })
+                    .collect();
+                HostReply::RecoveryList {
+                    offset,
+                    total: records.len(),
+                    items,
+                }
+            }
+            HostCommand::CompareRecovery { operation_id } => {
+                let env = self.environment.lock().map_err(|_| Code::Unavailable)?;
+                HostReply::RecoveryComparison {
+                    comparison: crate::recovery_view::comparison_view(
+                        env.inspect_recovery(&operation_id)?,
+                    )?,
                 }
             }
         };
