@@ -19,3 +19,11 @@ from ui_models import WidgetConfig, widget_fits_in_bounds
 def test_complete_box_bounds(x, y, w, h, expected):
     widget = WidgetConfig(type="label", x=x, y=y, width=w, height=h)
     assert widget_fits_in_bounds(widget, 100, 100) is expected
+
+
+def test_none_dimensions_use_sanitized_box():
+    widget = WidgetConfig(type="label", x=0, y=0, width=None, height=None)
+    assert widget.width is not None and widget.height is not None
+    assert widget_fits_in_bounds(widget, widget.width, widget.height) is True
+    assert widget_fits_in_bounds(widget, widget.width - 1, widget.height) is False
+    assert widget_fits_in_bounds(widget, widget.width, widget.height - 1) is False

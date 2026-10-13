@@ -503,11 +503,14 @@ class WidgetConfig:
 
 def widget_fits_in_bounds(widget: WidgetConfig, screen_width: int, screen_height: int) -> bool:
     """Shared complete-box predicate for designer and headless navigation lint."""
+    width, height = widget.width, widget.height
     return (
-        widget.x >= 0
+        width is not None
+        and height is not None
+        and widget.x >= 0
         and widget.y >= 0
-        and widget.x + widget.width <= screen_width
-        and widget.y + widget.height <= screen_height
+        and widget.x + width <= screen_width
+        and widget.y + height <= screen_height
     )
 
 
