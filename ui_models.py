@@ -501,6 +501,16 @@ class WidgetConfig:
         self._height = self._sanitize_dimension(value, default=DEFAULT_WIDGET_SIZE)
 
 
+def widget_fits_in_bounds(widget: WidgetConfig, screen_width: int, screen_height: int) -> bool:
+    """Shared complete-box predicate for designer and headless navigation lint."""
+    return (
+        widget.x >= 0
+        and widget.y >= 0
+        and widget.x + widget.width <= screen_width
+        and widget.y + widget.height <= screen_height
+    )
+
+
 @dataclass
 class SceneConfig:
     """Scene configuration."""
