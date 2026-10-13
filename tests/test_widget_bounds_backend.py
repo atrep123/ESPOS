@@ -6,7 +6,7 @@ from ui_models import WidgetConfig, widget_fits_in_bounds
 
 
 @pytest.mark.parametrize(
-    "x,y,w,h,expected",
+    ("x", "y", "w", "h", "expected"),
     [
         (10, 10, 50, 30, True),
         (80, 70, 20, 30, True),
