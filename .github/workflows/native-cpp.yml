@@ -1,0 +1,40 @@
+name: Native C++ persistence (Windows)
+
+on:
+  push:
+    branches: [main, master, codex/dodelavky-20260927]
+    paths:
+      - 'native/cpp-persistence/**'
+      - '.github/workflows/native-cpp.yml'
+  pull_request:
+    branches: [main, master, codex/dodelavky-20260927]
+    paths:
+      - 'native/cpp-persistence/**'
+      - '.github/workflows/native-cpp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-cpp:
+    name: Native C++ persistence (Rust 1.95.0)
+    runs-on: windows-2022
+    timeout-minutes: 20
+    env:
+      RUSTUP_TOOLCHAIN: '1.95.0'
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: native/cpp-persistence
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Install Rust 1.95.0
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt
+      - name: Check Rust formatting
+        run: cargo fmt --check --manifest-path Cargo.toml
+      - name: Test native persistence
+        # Keep native runner stdout in the CI log, including successful tests.
+        run: cargo test --locked --jobs 2 -- --test-threads=1 --nocapture
