@@ -207,6 +207,14 @@ def test_r85_max_lines_zero_on_gauge_no_warn():
     assert ws == []
 
 
+def test_r85_max_lines_schema_default_on_gauge_no_warn():
+    d = _make(
+        [{"type": "gauge", "x": 0, "y": 0, "width": 40, "height": 20, "value": 50, "max_lines": 1}]
+    )
+    ws = [w for w in _warns(d) if "non-text" in w.message and "max_lines" in w.message]
+    assert ws == []
+
+
 # ── Rule 86: max_lines firmware uint8 overflow ────────────────────────
 
 

@@ -443,11 +443,19 @@ def test_r82_checkbox_value_nonzero():
     assert len(ws) == 1
 
 
-def test_r82_radiobutton_max_value():
+def test_r82_radiobutton_default_max_value_ok():
     d = _make(
         [{"type": "radiobutton", "x": 0, "y": 0, "width": 14, "height": 14, "max_value": 100}]
     )
     ws = [w for w in _warns(d) if "not a value widget" in w.message]
+    assert ws == []
+
+
+def test_r82_radiobutton_nondefault_max_value_warns():
+    d = _make(
+        [{"type": "radiobutton", "x": 0, "y": 0, "width": 14, "height": 14, "max_value": 50}]
+    )
+    ws = [w for w in _warns(d) if "max_value=50" in w.message and "not a value widget" in w.message]
     assert len(ws) == 1
 
 

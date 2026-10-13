@@ -113,7 +113,7 @@ def escape_c_comment(text: object) -> str:
 def as_int(v: object, default: int = 0) -> int:
     try:
         return int(v)  # type: ignore[call-overload]
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return int(default)
 
 
@@ -229,7 +229,8 @@ def chart_data_points(widget: dict[str, Any]) -> list[int]:
     """Return the chart series clamped to int16 and capped at _DATA_POINTS_MAX.
 
     Only meaningful for chart widgets; callers gate on widget type. Non-numeric
-    or boolean entries are skipped so generated C always compiles.
+    or boolean entries, and nonfinite samples, are skipped so generated C
+    always compiles without inventing replacement measurements.
     """
     raw = widget.get("data_points")
     if not isinstance(raw, list) or not raw:
@@ -240,7 +241,11 @@ def chart_data_points(widget: dict[str, Any]) -> list[int]:
             continue
         if not isinstance(v, (int, float)):
             continue
-        out.append(_clamp(int(v), -32768, 32767))
+        try:
+            sample = int(v)
+        except (ValueError, OverflowError):
+            continue
+        out.append(_clamp(sample, -32768, 32767))
         if len(out) >= _DATA_POINTS_MAX:
             break
     return out

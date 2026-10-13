@@ -2477,6 +2477,13 @@ def test_r142_IDF_je_platformni_zkratka_ne_falesny_nalez_enum_hodnoty():
     assert _veta_strojove_jmeno("NotFound chyba", sdk) == ("jmeno ze SDK", "NotFound")
 
 
+def test_r142_MAC_je_sitova_zkratka_ne_falesny_nalez_sdk():
+    sdk = {"Mac"}
+    assert "MAC" in VETY_NENI_JMENO_SDK
+    assert _veta_strojove_jmeno("zmena MAC adresy", sdk) is None
+    assert _veta_strojove_jmeno("stav je MAC", sdk) is None
+
+
 # --------------------------------------------------------------------------- #
 # Rule 142, devaty tvar: jmeno ROZHRANI i ve stitku verzalkami
 # --------------------------------------------------------------------------- #

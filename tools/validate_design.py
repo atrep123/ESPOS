@@ -626,6 +626,10 @@ VETY_NENI_JMENO_SDK = frozenset(
         # `Idf` je enum zdroje ve sluzbe radia, ale `IDF` v navrhu znamena
         # bezny nazev platformy ESP-IDF, ne hodnotu enumu.
         "IDF",
+        # `Mac` se v SDK objevuje jako identifikator, ale `MAC` v RF
+        # diagnostice znamena adresu sitove karty (Media Access Control).
+        # V tomto technickem kontextu nejde o unik nazvu SDK.
+        "MAC",
     }
 )
 
@@ -6126,6 +6130,13 @@ def validate_data(
             if wt in {"checkbox", "radiobutton"}:
                 for vf in ("value", "min_value", "max_value"):
                     vv = w.get(vf)
+                    # These generic schema defaults are present on widgets
+                    # that do not use numeric ranges. Only flag meaningful
+                    # deviations from the defaults.
+                    if vf in {"value", "min_value"} and vv == 0:
+                        continue
+                    if vf == "max_value" and vv == 100 and w.get("min_value", 0) == 0:
+                        continue
                     if _is_int(vv) and vv != 0:
                         issues.append(
                             Issue("WARN", f"{wl}: {vf}={vv} on {wt} (not a value widget)")
@@ -6143,12 +6154,11 @@ def validate_data(
                 issues.append(Issue("WARN", f"{wl}: icon_char set on non-icon widget '{wt}'"))
 
             # ── Rule 85: max_lines on non-text widget ──
-            if wt not in TEXT_TYPES and w.get("max_lines") is not None:
-                ml85 = w.get("max_lines")
-                if _is_int(ml85) and ml85 > 0:
-                    issues.append(
-                        Issue("WARN", f"{wl}: max_lines={ml85} on non-text widget '{wt}'")
-                    )
+            ml85 = w.get("max_lines")
+            if wt not in TEXT_TYPES and _is_int(ml85) and ml85 > 1:
+                # max_lines=1 is the generic schema default and has no effect
+                # on widgets that do not render text.
+                issues.append(Issue("WARN", f"{wl}: max_lines={ml85} on non-text widget '{wt}'"))
 
             # ── Rule 86: max_lines firmware uint8 overflow ──
             ml86 = w.get("max_lines")
@@ -6969,27 +6979,46 @@ def validate_data(
     return issues
 
 
-def validate_file(
+@dataclass(frozen=True)
+class FileValidationResult:
+    """Observed file validation, not schema-file presence or a UI permission.
+
+    schema_validated is true only after the mandatory engine completed its
+    iteration. It does NOT mean the input passed: schema errors remain issues.
+    """
+
+    issues: list[Issue]
+    schema_validated: bool
+
+
+def validate_file_with_status(
     path: Path, *, warnings_as_errors: bool, strict_critical: bool = False
-) -> list[Issue]:
+) -> FileValidationResult:
     try:
         raw = path.read_text(encoding="utf-8")
     except OSError as exc:
-        return [Issue("ERROR", f"{path}: failed to read file ({exc})")]
+        return FileValidationResult([Issue("ERROR", f"{path}: failed to read file ({exc})")], False)
     if len(raw) > MAX_JSON_FILE_SIZE:
-        return [
-            Issue(
-                "ERROR", f"{path}: file exceeds {MAX_JSON_FILE_SIZE // (1024 * 1024)}MB size limit"
-            )
-        ]
+        return FileValidationResult(
+            [
+                Issue(
+                    "ERROR",
+                    f"{path}: file exceeds {MAX_JSON_FILE_SIZE // (1024 * 1024)}MB size limit",
+                )
+            ],
+            False,
+        )
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, ValueError) as exc:
-        return [Issue("ERROR", f"{path}: failed to parse JSON ({exc})")]
+        return FileValidationResult(
+            [Issue("ERROR", f"{path}: failed to parse JSON ({exc})")], False
+        )
     if not isinstance(data, dict):
-        return [Issue("ERROR", f"{path}: root must be a JSON object")]
+        return FileValidationResult([Issue("ERROR", f"{path}: root must be a JSON object")], False)
 
     issues: list[Issue] = []
+    schema_validated = False
 
     # ── JSON Schema structural validation (MANDATORY) ──
     # This validator gates codegen / demo generation / visual verification /
@@ -7022,8 +7051,12 @@ def validate_file(
         else:
             try:
                 schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+                jsonschema.Draft202012Validator.check_schema(schema)
                 validator = jsonschema.Draft202012Validator(schema)
-            except (OSError, ValueError) as exc:
+                # Consume before declaring success; constructor/file existence
+                # alone cannot prove that actual validation was performed.
+                schema_errors = list(validator.iter_errors(data))
+            except Exception as exc:
                 issues.append(
                     Issue(
                         "ERROR",
@@ -7032,7 +7065,8 @@ def validate_file(
                     )
                 )
             else:
-                for error in validator.iter_errors(data):
+                schema_validated = True
+                for error in schema_errors:
                     loc = ".".join(str(p) for p in error.absolute_path) or "(root)"
                     issues.append(Issue("ERROR", f"{path}: schema: {loc}: {error.message}"))
 
@@ -7044,7 +7078,16 @@ def validate_file(
             strict_critical=strict_critical,
         )
     )
-    return issues
+    return FileValidationResult(issues, schema_validated)
+
+
+def validate_file(
+    path: Path, *, warnings_as_errors: bool, strict_critical: bool = False
+) -> list[Issue]:
+    """Compatibility API; the status-aware consumer uses the same validation."""
+    return validate_file_with_status(
+        path, warnings_as_errors=warnings_as_errors, strict_critical=strict_critical
+    ).issues
 
 
 def main() -> int:
