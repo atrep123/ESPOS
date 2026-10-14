@@ -1,14 +1,19 @@
 """``python -m espos_mcp`` entrypoint.
 
-Default behavior: run the espos MCP server over **stdio** (the transport an
-MCP client spawns and talks to). ``--list-tools`` prints the registered tool
+Default behavior: run the read-only espos MCP profile over strict **stdio**.
+Use --profile codegraph for detached C++ transformations without file writes,
+or --profile full explicitly for the genuine full toolkit factory.
+``--list-tools`` prints the registered tool
 inventory and exits (useful for verification / discovery without starting the
 blocking stdio loop); ``--help`` is standard argparse.
 
 Run::
 
-    python -m espos_mcp                 # serve over stdio (for an MCP client)
-    python -m espos_mcp --list-tools    # print tool inventory and exit
+    python -m espos_mcp                          # strict stdio, read-only profile
+    python -m espos_mcp --profile codegraph      # detached caller-byte transforms
+    python -m espos_mcp --profile full           # explicit full toolkit profile
+    python -m espos_mcp --list-tools             # selected read-only inventory
+    python -m espos_mcp --profile full --list-tools
 """
 
 from __future__ import annotations
@@ -16,7 +21,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
-from typing import List, Optional
+
+from .profiles import PROFILES, build_profiled_server
 
 
 def _make_parser() -> argparse.ArgumentParser:
@@ -26,7 +32,9 @@ def _make_parser() -> argparse.ArgumentParser:
             "espos MCP server — exposes the real ESP32OS UI Toolkit "
             "(scenes, widgets, logic rules, board registry, validator, "
             "C/SVG export, PlatformIO build/flash) to any MCP client over "
-            "stdio. Each tool wraps a genuine espos library function."
+            "strict stdio. Default: read-only tools; --profile full explicitly "
+            "enables the full registry. --profile codegraph selects detached C++ "
+            "transformations without file writes. Each tool wraps a genuine espos function."
         ),
     )
     p.add_argument(
@@ -40,16 +48,28 @@ def _make_parser() -> argparse.ArgumentParser:
         default="stdio",
         help="MCP transport (only stdio is supported; it is the default)",
     )
+    p.add_argument(
+        "--profile",
+        choices=PROFILES,
+        default="read-only",
+        help="server-enforced profile (default: read-only; codegraph transforms caller bytes only; full is explicit)",
+    )
     return p
 
 
-def _list_tools() -> int:
-    """Print the tool inventory using the real registered server."""
-    from .server import build_server
+def _run_startup(coroutine):
+    """CLI-owned async startup seam; production always uses the real loop."""
+    return asyncio.run(coroutine)
 
-    server = build_server()
+
+def _list_tools(profile: str = "read-only") -> int:
+    """Print the inventory of the actual selected, server-enforced profile."""
+    server = _run_startup(build_profiled_server(profile))
     # FastMCP exposes its registered tools via the async list_tools() API.
-    tools = asyncio.run(server.list_tools())
+    from .sdk_diagnostics import cli_sdk_diagnostics
+
+    with cli_sdk_diagnostics():
+        tools = _run_startup(server.list_tools())
     print(f"espos MCP server — {len(tools)} tools:\n")
     for t in sorted(tools, key=lambda x: x.name):
         summary = (t.description or "").strip().splitlines()
@@ -58,18 +78,26 @@ def _list_tools() -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = _make_parser().parse_args(argv)
 
     if args.list_tools:
-        return _list_tools()
+        return _list_tools(args.profile)
 
-    # Default: run the blocking stdio server an MCP client connects to.
-    from .server import build_server
+    # Default: strict application-owned files, official SDK stdio/session.
+    from .sdk_diagnostics import SdkDiagnosticError, cli_sdk_diagnostics
+    from .strict_stdio import StdioBoundaryError, run_stdio
 
-    server = build_server()
+    server = _run_startup(build_profiled_server(args.profile))
     try:
-        server.run(transport="stdio")
+        with cli_sdk_diagnostics():
+            run_stdio(server)
+    except StdioBoundaryError:
+        print("espos MCP stdio session failed; do not automatically retry.", file=sys.stderr)
+        return 1
+    except SdkDiagnosticError:
+        print("espos MCP SDK diagnostic output failed.", file=sys.stderr)
+        return 1
     except KeyboardInterrupt:  # pragma: no cover - operator Ctrl-C
         print("espos MCP server stopped.", file=sys.stderr)
     return 0

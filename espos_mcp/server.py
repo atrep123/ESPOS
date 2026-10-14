@@ -27,7 +27,7 @@ import sys
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # --- Make the espos repo root importable (mirrors tools/build.py) ---------- #
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +35,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 try:
-    from mcp.server.fastmcp import FastMCP
+    from espos_mcp.error_boundary import RedactedToolErrorsFastMCP as FastMCP
 except ModuleNotFoundError as exc:  # pragma: no cover - exercised via __main__
     raise ModuleNotFoundError(
         "The 'mcp' Python SDK is required to run the espos MCP server but is "
@@ -49,6 +49,8 @@ except ModuleNotFoundError as exc:  # pragma: no cover - exercised via __main__
 
 # Real espos library surfaces (imported once; thin wrappers below).
 from board_registry import load_registry
+from espos_mcp.codegraph_tools import register_codegraph_tools
+from espos_mcp.discovery_tools import register_discovery_tools
 from tools.build import (
     BuildError,
     BuildResult,
@@ -74,7 +76,7 @@ class ToolError(RuntimeError):
     """Actionable, user-facing failure surfaced to the MCP client."""
 
 
-def _resolve_design_path(design_path: Optional[str], *, must_exist: bool) -> Path:
+def _resolve_design_path(design_path: str | None, *, must_exist: bool) -> Path:
     """Resolve a design JSON path argument safely.
 
     Relative paths are taken relative to the espos repo root. The resolved
@@ -116,7 +118,7 @@ def _atomic_save(designer: UIDesigner, path: Path) -> None:
     ``os.replace`` — the exact atomic pattern ``io_ops.save_json`` uses.
     """
     dir_name = str(path.parent)
-    tmp_path: Optional[str] = None
+    tmp_path: str | None = None
     # The designer's save_to_json triggers an auto preflight/export by
     # default; the dedicated `build`/`export_*` tools own that explicitly, so
     # keep a pure data write here and restore the env afterward.
@@ -142,7 +144,7 @@ def _atomic_save(designer: UIDesigner, path: Path) -> None:
                 pass
 
 
-def _design_dict(path: Path) -> Dict[str, Any]:
+def _design_dict(path: Path) -> dict[str, Any]:
     """Raw design JSON (for logic/event edits that round-trip as-is)."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -153,11 +155,11 @@ def _design_dict(path: Path) -> Dict[str, Any]:
     return data
 
 
-def _schema_check(data: Dict[str, Any], path: Path) -> None:
+def _schema_check(data: dict[str, Any], path: Path) -> None:
     """Reject a mutation that would break the schema, using the *real*
     validator. Run BEFORE writing so a bad edit never lands on disk.
     """
-    tmp_path: Optional[str] = None
+    tmp_path: str | None = None
     try:
         fd, tmp_path = tempfile.mkstemp(suffix=".json", dir=str(path.parent))
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -176,10 +178,10 @@ def _schema_check(data: Dict[str, Any], path: Path) -> None:
         )
 
 
-def _write_dict(data: Dict[str, Any], path: Path) -> None:
+def _write_dict(data: dict[str, Any], path: Path) -> None:
     """Atomic write of a raw design dict (temp file + os.replace)."""
     dir_name = str(path.parent)
-    tmp_path: Optional[str] = None
+    tmp_path: str | None = None
     try:
         fd, tmp_path = tempfile.mkstemp(suffix=".tmp", dir=dir_name)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -196,14 +198,14 @@ def _write_dict(data: Dict[str, Any], path: Path) -> None:
                 pass
 
 
-def _scenes_of(data: Dict[str, Any]) -> Dict[str, Any]:
+def _scenes_of(data: dict[str, Any]) -> dict[str, Any]:
     sc = data.get("scenes")
     if not isinstance(sc, dict) or not sc:
         raise ToolError("design has no 'scenes' object.")
     return sc
 
 
-def _scene_or_first(data: Dict[str, Any], scene: Optional[str]) -> str:
+def _scene_or_first(data: dict[str, Any], scene: str | None) -> str:
     scenes = _scenes_of(data)
     if scene:
         if scene not in scenes:
@@ -213,9 +215,9 @@ def _scene_or_first(data: Dict[str, Any], scene: Optional[str]) -> str:
 
 
 def _widget_index(
-    widgets: List[Dict[str, Any]],
-    index: Optional[int],
-    widget_id: Optional[str],
+    widgets: list[dict[str, Any]],
+    index: int | None,
+    widget_id: str | None,
 ) -> int:
     """Resolve a widget reference (index or id) to a list index."""
     if widget_id:
@@ -230,14 +232,14 @@ def _widget_index(
     return index
 
 
-def _result(**kw: Any) -> Dict[str, Any]:
+def _result(**kw: Any) -> dict[str, Any]:
     """Uniform success envelope."""
-    out: Dict[str, Any] = {"ok": True}
+    out: dict[str, Any] = {"ok": True}
     out.update(kw)
     return out
 
 
-def _build_result_dict(r: BuildResult) -> Dict[str, Any]:
+def _build_result_dict(r: BuildResult) -> dict[str, Any]:
     return {
         "env": r.env,
         "action": r.action,
@@ -279,7 +281,7 @@ def build_server() -> FastMCP:
     # ---- scenes -------------------------------------------------------- #
 
     @mcp.tool()
-    def list_scenes(design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
+    def list_scenes(design_path: str = DEFAULT_DESIGN) -> dict[str, Any]:
         """List the scenes in a design (name, size, widget/rule counts).
 
         Wraps ``ui_designer.UIDesigner.load_from_json``.
@@ -307,7 +309,7 @@ def build_server() -> FastMCP:
         )
 
     @mcp.tool()
-    def get_scene(scene: Optional[str] = None, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
+    def get_scene(scene: str | None = None, design_path: str = DEFAULT_DESIGN) -> dict[str, Any]:
         """Return one scene fully: every widget (with its index + fields) and
         the scene's logic rules.
 
@@ -348,7 +350,7 @@ def build_server() -> FastMCP:
         )
 
     @mcp.tool()
-    def add_scene(name: str, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
+    def add_scene(name: str, design_path: str = DEFAULT_DESIGN) -> dict[str, Any]:
         """Create a new (empty) scene and save the design.
 
         Wraps ``ui_designer.UIDesigner.create_scene`` + atomic save.
@@ -365,7 +367,7 @@ def build_server() -> FastMCP:
         return _result(design=str(path), scene=name, scene_count=len(d.scenes))
 
     @mcp.tool()
-    def delete_scene(name: str, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
+    def delete_scene(name: str, design_path: str = DEFAULT_DESIGN) -> dict[str, Any]:
         """Delete a scene and save the design (the design must keep >=1 scene).
 
         Operates on the real ``UIDesigner`` model + atomic save.
@@ -395,12 +397,12 @@ def build_server() -> FastMCP:
         y: int,
         width: int,
         height: int,
-        scene: Optional[str] = None,
+        scene: str | None = None,
         text: str = "",
-        widget_id: Optional[str] = None,
+        widget_id: str | None = None,
         z_index: int = 0,
         design_path: str = DEFAULT_DESIGN,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add a widget to a scene and save.
 
         Wraps ``ui_designer.UIDesigner.add_widget`` (which applies the real
@@ -416,7 +418,7 @@ def build_server() -> FastMCP:
         name = scene or d.current_scene or next(iter(d.scenes))
         if name not in d.scenes:
             raise ToolError(f"scene {name!r} not found. Available: {', '.join(sorted(d.scenes))}")
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "x": int(x),
             "y": int(y),
             "width": int(width),
@@ -449,12 +451,12 @@ def build_server() -> FastMCP:
 
     @mcp.tool()
     def set_widget(
-        properties: Dict[str, Any],
-        index: Optional[int] = None,
-        widget_id: Optional[str] = None,
-        scene: Optional[str] = None,
+        properties: dict[str, Any],
+        index: int | None = None,
+        widget_id: str | None = None,
+        scene: str | None = None,
         design_path: str = DEFAULT_DESIGN,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update fields of an existing widget and save.
 
         Addressed by 0-based ``index`` or by ``widget_id``. ``properties`` is
@@ -484,11 +486,11 @@ def build_server() -> FastMCP:
 
     @mcp.tool()
     def delete_widget(
-        index: Optional[int] = None,
-        widget_id: Optional[str] = None,
-        scene: Optional[str] = None,
+        index: int | None = None,
+        widget_id: str | None = None,
+        scene: str | None = None,
         design_path: str = DEFAULT_DESIGN,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delete a widget (by ``index`` or ``widget_id``) and save.
 
         Wraps ``ui_designer.UIDesigner.delete_widget`` (which also re-indexes
@@ -518,12 +520,12 @@ def build_server() -> FastMCP:
     @mcp.tool()
     def set_widget_event(
         handler: str,
-        actions: List[Dict[str, Any]],
-        index: Optional[int] = None,
-        widget_id: Optional[str] = None,
-        scene: Optional[str] = None,
+        actions: list[dict[str, Any]],
+        index: int | None = None,
+        widget_id: str | None = None,
+        scene: str | None = None,
         design_path: str = DEFAULT_DESIGN,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Set a widget's event handler (the #36 visual-backend logic model).
 
         ``handler`` is one of ``on_press`` / ``on_change`` / ``on_focus``.
@@ -569,13 +571,13 @@ def build_server() -> FastMCP:
 
     @mcp.tool()
     def add_rule(
-        trigger: Dict[str, Any],
-        actions: List[Dict[str, Any]],
-        conditions: Optional[List[Dict[str, Any]]] = None,
-        name: Optional[str] = None,
-        scene: Optional[str] = None,
+        trigger: dict[str, Any],
+        actions: list[dict[str, Any]],
+        conditions: list[dict[str, Any]] | None = None,
+        name: str | None = None,
+        scene: str | None = None,
         design_path: str = DEFAULT_DESIGN,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Append a scene rule (trigger -> optional conditions -> actions).
 
         The #36 logic model. Example::
@@ -597,7 +599,7 @@ def build_server() -> FastMCP:
         rules = scene_obj.get("rules")
         if not isinstance(rules, list):
             rules = []
-        rule: Dict[str, Any] = {"trigger": trigger, "actions": actions}
+        rule: dict[str, Any] = {"trigger": trigger, "actions": actions}
         if conditions:
             if not isinstance(conditions, list):
                 raise ToolError("'conditions' must be a list when provided.")
@@ -618,7 +620,7 @@ def build_server() -> FastMCP:
     # ---- boards -------------------------------------------------------- #
 
     @mcp.tool()
-    def list_boards() -> Dict[str, Any]:
+    def list_boards() -> dict[str, Any]:
         """List every board/module in the registry with its pio env.
 
         Wraps ``board_registry.load_registry`` (the language-agnostic
@@ -656,7 +658,7 @@ def build_server() -> FastMCP:
         return _result(board_count=len(boards), boards=boards)
 
     @mcp.tool()
-    def set_board(board: str, design_path: str = DEFAULT_DESIGN) -> Dict[str, Any]:
+    def set_board(board: str, design_path: str = DEFAULT_DESIGN) -> dict[str, Any]:
         """Record the target board on the design's root ``runtime`` metadata
         and resize display-bearing scenes to the board's panel.
 
@@ -680,7 +682,7 @@ def build_server() -> FastMCP:
         # Persist the board selection in a way that round-trips and that the
         # validator's board-peripheral gating (Rule 130) reads.
         data["board"] = b.id
-        resized: List[str] = []
+        resized: list[str] = []
         if b.has_display and b.display is not None:
             from ui_designer import HARDWARE_PROFILES
 
@@ -710,7 +712,7 @@ def build_server() -> FastMCP:
         design_path: str = DEFAULT_DESIGN,
         warnings_as_errors: bool = False,
         strict_critical: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run the real espos validator on a design.
 
         Wraps ``tools.validate_design.validate_file`` — the same mandatory
@@ -739,7 +741,7 @@ def build_server() -> FastMCP:
     def export_c(
         design_path: str = DEFAULT_DESIGN,
         output_path: str = "output/ui.h",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Export the design to an embedded C header (ui_scene.h schema).
 
         Wraps ``tools.ui_export_c_header.export_header`` (the real
@@ -762,9 +764,9 @@ def build_server() -> FastMCP:
     @mcp.tool()
     def export_svg_scene(
         design_path: str = DEFAULT_DESIGN,
-        scene: Optional[str] = None,
-        output_path: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        scene: str | None = None,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
         """Export a scene to a pixel-faithful, gray4-quantized SVG.
 
         Wraps ``tools.ui_export_svg.export_svg`` (renders through the real
@@ -791,7 +793,7 @@ def build_server() -> FastMCP:
     # ---- build / flash (real PlatformIO) ------------------------------- #
 
     @mcp.tool()
-    def toolchain_status() -> Dict[str, Any]:
+    def toolchain_status() -> dict[str, Any]:
         """Report whether the bundled PlatformIO toolchain is available.
 
         Wraps ``tools.build.platformio_version``. Use this before ``build`` /
@@ -805,11 +807,11 @@ def build_server() -> FastMCP:
 
     @mcp.tool()
     def build(
-        board: Optional[str] = None,
+        board: str | None = None,
         design_path: str = DEFAULT_DESIGN,
         regen: bool = True,
         timeout: int = 1800,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compile real firmware with the bundled PlatformIO toolchain.
 
         Wraps ``tools.build.build_board`` -> a genuine ``pio run`` (no fake
@@ -823,7 +825,7 @@ def build_server() -> FastMCP:
             env = resolve_env(board)
         except BuildError as exc:
             raise ToolError(str(exc)) from exc
-        lines: List[str] = []
+        lines: list[str] = []
         try:
             res = build_board(
                 board,
@@ -840,12 +842,12 @@ def build_server() -> FastMCP:
 
     @mcp.tool()
     def flash(
-        board: Optional[str] = None,
-        port: Optional[str] = None,
+        board: str | None = None,
+        port: str | None = None,
         design_path: str = DEFAULT_DESIGN,
         regen: bool = True,
         timeout: int = 1800,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build then upload firmware to a connected board.
 
         Wraps ``tools.build.flash_board`` -> a real ``pio run -t upload``.
@@ -859,7 +861,7 @@ def build_server() -> FastMCP:
             env = resolve_env(board)
         except BuildError as exc:
             raise ToolError(str(exc)) from exc
-        lines: List[str] = []
+        lines: list[str] = []
         try:
             res = flash_board(
                 board,
@@ -875,4 +877,6 @@ def build_server() -> FastMCP:
         out["resolved_build_env"] = env
         return _result(**out)
 
+    register_discovery_tools(mcp)
+    register_codegraph_tools(mcp)
     return mcp

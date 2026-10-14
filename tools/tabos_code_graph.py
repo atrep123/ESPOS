@@ -14,9 +14,9 @@ import hashlib
 import re
 import uuid
 from collections import deque
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
-from typing import Mapping, Sequence
 
 SCHEMA_VERSION = 1
 CATALOG_VERSION = "cpp-cst-subset-1"
@@ -124,6 +124,13 @@ def _tokens(node, source):
         for n in _walk(node)
         if not n.children and n.type != "comment"
     ).decode("utf-8")
+
+
+def _literal_identifier(text):
+    # Exact CST spelling only. Escapes and combining sequences need C++ name
+    # equivalence/validity rules that this syntax subset cannot prove. Do not
+    # decode, normalize or transliterate them into a different symbol.
+    return text.isidentifier() and all(c == "_" or c.isalnum() for c in text)
 
 
 def _plain_value_type(cpp_type):
@@ -258,7 +265,11 @@ class _Projection:
         text = _tokens(syntax, self.source)
         if kind == "identifier" and text in env:
             typ, producer, immutable = env[text]
-            return _Expression(typ, [(text, typ, producer)], [])
+            return _Expression(
+                typ,
+                [(text, typ, producer)],
+                [self.slot(syntax, "dataReference", cppType=typ, symbol=text)],
+            )
         if self.sdk_profile:
             if kind == "string_literal" and _sdk_string(text):
                 return _Expression(
@@ -573,6 +584,21 @@ class _Projection:
                 continue
             bodies.append((body.start_byte + 1, body.end_byte - 1))
             entry = self.node("entry", body, function=name)
+            if any(not _literal_identifier(macro) for macro in self.macros) or any(
+                n.type
+                in {"identifier", "field_identifier", "namespace_identifier", "type_identifier"}
+                and not _literal_identifier(_tokens(n, self.source))
+                for n in _walk(function)
+            ):
+                # Include macros/parameters/nested scopes: an unsupported spelling
+                # may alias a visible local. Preserve this body without edit/port
+                # inference, while other selected functions remain discoverable.
+                self.opaque(
+                    start=body.start_byte + 1,
+                    end=body.end_byte - 1,
+                    reason="Unsupported identifier spelling; exact symbol proof unavailable",
+                )
+                continue
             # Conservative over-approximation across nested scopes. Unknown local
             # types/callables do not turn into similarly named bound free functions.
             self.local_names = set()
@@ -786,7 +812,7 @@ class CodeGraph:
             if any(
                 n["kind"] == "opaque"
                 and n.get("scope") == "selected"
-                and start <= n["sourceSpan"]["startByte"] < n["sourceSpan"]["endByte"] <= end
+                and start <= n["sourceSpan"]["startByte"] <= n["sourceSpan"]["endByte"] <= end
                 for n in nodes
             ):
                 continue
@@ -849,6 +875,77 @@ class CodeGraph:
     def construction_regions(self) -> list[dict]:
         """Snapshot-scoped general-C++ construction regions; no inferred SDK nodes."""
         return self._regions()
+
+    def data_wire_inputs(self) -> list[dict]:
+        """First editable wire slice: scalar leaf inputs in one proven scalar run.
+
+        Sources are earlier, uniquely named declarations whose value has not
+        been reassigned. No parameter, branch, external call, or scope inference.
+        Capabilities are recomputed from private CST/source authority, not JSON.
+        """
+        nodes = {n["id"]: n for n in self._document["nodes"]}
+        result = []
+        for region in self._regions():
+            entry = nodes[region["entryNodeId"]]
+            span = entry["sourceSpan"]
+            body = next(
+                n
+                for n in _walk(self._tree.root_node)
+                if n.type == "compound_statement"
+                and (n.start_byte, n.end_byte) == (span["startByte"], span["endByte"])
+            )
+            # Reserve unsupported parameters and nested locals too. Tree-sitter
+            # is not a name resolver; duplicate/shadowed names cannot prove a wire.
+            names = []
+            for declaration in _walk(body.parent):
+                if declaration.type not in {"parameter_declaration", "declaration"}:
+                    continue
+                for local in declaration.children_by_field_name("declarator"):
+                    while local is not None and local.type != "identifier":
+                        local = _field(local, "declarator")
+                    if local is not None:
+                        names.append(_tokens(local, self._source))
+            if len(names) != len(set(names)):
+                continue
+            available = {}
+            for node_id in region["nodeIds"]:
+                node = nodes[node_id]
+                references = {
+                    s["symbol"] for s in node["editSlots"] if s["kind"] == "dataReference"
+                }
+                incoming = {
+                    p["id"][len("use:") :]
+                    for p in node["ports"]
+                    if p["kind"] == "data" and p["direction"] == "in"
+                }
+                # Every existing dependency must have a parser-owned leaf slot;
+                # e.g. SDK field accesses do not authorize scalar rewiring.
+                slots = node["editSlots"] if references == incoming else []
+                for slot in slots:
+                    if slot["kind"] not in {"literal", "dataReference"}:
+                        continue
+                    source_ids = [
+                        source["id"]
+                        for source in available.values()
+                        if source["cppType"] == slot.get("cppType")
+                    ]
+                    if source_ids:
+                        result.append(
+                            {
+                                "kind": "rewireDataInput",
+                                "regionId": region["id"],
+                                "nodeId": node_id,
+                                "slotId": slot["id"],
+                                "cppType": slot["cppType"],
+                                "sourceNodeIds": source_ids,
+                            }
+                        )
+                name = node["variable"]
+                if node["kind"] == "declaration":
+                    available[name] = node
+                else:
+                    available.pop(name, None)
+        return result
 
     def sdk_construction_regions(self) -> list[dict]:
         """Opt-in insertion only; never expose unknown bodies or callback adapters.
@@ -1208,7 +1305,10 @@ class CodeGraph:
     ) -> CodeGraph:
         """Atomic token edits. Caller supplies fresh bytes; no filesystem writes.
 
-        Each edit: {nodeId, slotId, replacement}. Returns a NEW snapshot with
+        Token edit: {nodeId, slotId, replacement}.
+        Wire edit: {kind: rewireDataInput, regionId, nodeId, slotId, sourceNodeId}.
+        Only advertised scalar leaf inputs can receive proven declaration values.
+        Returns a NEW snapshot with
         stable node/edge IDs. Rejected/stale requests leave both snapshots alone.
         """
         if (
@@ -1219,12 +1319,21 @@ class CodeGraph:
             raise GraphError("Stale source hash/bytes conflict; no overwrite")
         if any(d["severity"] == "error" for d in self._document["diagnostics"]):
             raise GraphError("Cannot edit a graph with syntax/selection errors")
-        patches = []
+        if not isinstance(edits, (list, tuple)):
+            raise GraphError("edits must be a sequence of objects")
+        patches, wire_edits = [], {}
+        capabilities = None
         for edit in edits:
-            if set(edit) != {"nodeId", "slotId", "replacement"} or not isinstance(
-                edit["replacement"], str
-            ):
-                raise GraphError("Edit requires nodeId, slotId, replacement text only")
+            if not isinstance(edit, Mapping):
+                raise GraphError("Edit must be an object")
+            wire = edit.get("kind") == "rewireDataInput"
+            fields = (
+                {"kind", "regionId", "nodeId", "slotId", "sourceNodeId"}
+                if wire
+                else {"nodeId", "slotId", "replacement"}
+            )
+            if set(edit) != fields or not all(isinstance(edit[k], str) for k in fields):
+                raise GraphError("Unsupported edit kind/fields; identifiers/text must be strings")
             node = next((n for n in self._document["nodes"] if n["id"] == edit["nodeId"]), None)
             slot = (
                 next((s for s in node["editSlots"] if s["id"] == edit["slotId"]), None)
@@ -1233,11 +1342,32 @@ class CodeGraph:
             )
             if slot is None:
                 raise GraphError("Unknown/opaque edit slot")
-            replacement = edit["replacement"]
+            if wire:
+                if capabilities is None:
+                    capabilities = {
+                        (c["regionId"], c["nodeId"], c["slotId"]): c
+                        for c in self.data_wire_inputs()
+                    }
+                capability = capabilities.get((edit["regionId"], edit["nodeId"], edit["slotId"]))
+                if capability is None or edit["sourceNodeId"] not in capability["sourceNodeIds"]:
+                    raise GraphError(
+                        "Unknown/stale scalar input or source: type/scope/order/dependency not proven"
+                    )
+                source = next(n for n in self._document["nodes"] if n["id"] == edit["sourceNodeId"])
+                replacement = source["variable"]
+                wire_edits.setdefault(node["id"], {})[slot["id"]] = source
+            else:
+                replacement = edit["replacement"]
+                if slot["kind"] == "dataReference":
+                    raise GraphError("Data references require the rewireDataInput operation")
             if slot["kind"] == "call" and not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", replacement):
                 raise GraphError("Call edit must be a single identifier")
-            if slot["kind"] == "literal" and not re.fullmatch(
-                r"(?:true|false|[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?[fF]?)", replacement
+            if (
+                not wire
+                and slot["kind"] == "literal"
+                and not re.fullmatch(
+                    r"(?:true|false|[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?[fF]?)", replacement
+                )
             ):
                 raise GraphError("Literal edit must be one supported numeric/bool token")
             if slot["kind"] == "string" and (not self._sdk_profile or not _sdk_string(replacement)):
@@ -1288,13 +1418,44 @@ class CodeGraph:
             )
 
         old_map = {key(n, True): n for n in self._document["nodes"]}
+        # Derive the exact authorized incoming data contract from parser-owned
+        # leaf slots. Repeated references collapse to one existing graph port.
+        wire_ports, wire_edges = {}, {}
+        for node_id, replacements in wire_edits.items():
+            old = next(n for n in self._document["nodes"] if n["id"] == node_id)
+            references = {}
+            for slot in old["editSlots"]:
+                if slot["id"] in replacements:
+                    source = replacements[slot["id"]]
+                    name = source["variable"]
+                    references.setdefault(name, (slot["cppType"], source["id"], "value"))
+                elif slot["kind"] == "dataReference":
+                    name = slot["symbol"]
+                    incoming = next(
+                        e
+                        for e in self._document["edges"]
+                        if e["kind"] == "data"
+                        and e["to"] == {"nodeId": node_id, "portId": f"use:{name}"}
+                    )
+                    references.setdefault(
+                        name,
+                        (slot["cppType"], incoming["from"]["nodeId"], incoming["from"]["portId"]),
+                    )
+            wire_ports[node_id] = [
+                {"id": f"use:{name}", "kind": "data", "direction": "in", "cppType": typ}
+                for name, (typ, _, _) in references.items()
+            ] + [p for p in old["ports"] if not (p["kind"] == "data" and p["direction"] == "in")]
+            wire_edges[node_id] = {
+                ("data", source_id, port_id, node_id, f"use:{name}")
+                for name, (_, source_id, port_id) in references.items()
+            }
         new_nodes = result._document["nodes"]
         if len(old_map) != len(new_nodes) or set(old_map) != {key(n) for n in new_nodes}:
             raise GraphError("Edit changes supported structure; explicit reimport required")
         remap = {}
         for node in new_nodes:
             old = old_map[key(node)]
-            if old["ports"] != node["ports"]:
+            if wire_ports.get(old["id"], old["ports"]) != node["ports"]:
                 raise GraphError("Edit changes port/type contract")
             if node["kind"] == "opaque":
                 old_span, new_span = old["sourceSpan"], node["sourceSpan"]
@@ -1320,10 +1481,13 @@ class CodeGraph:
         for edge in new_edges:
             for side in ("from", "to"):
                 edge[side]["nodeId"] = remap[edge[side]["nodeId"]]
-        if set(old_edges) != {edge_key(e) for e in new_edges}:
+        expected_edges = {k for k in old_edges if not (k[0] == "data" and k[3] in wire_edits)}
+        for incoming in wire_edges.values():
+            expected_edges.update(incoming)
+        if expected_edges != {edge_key(e) for e in new_edges}:
             raise GraphError("Edit changes data/execution dependencies")
         for edge in new_edges:
-            edge["id"] = old_edges[edge_key(edge)]
+            edge["id"] = old_edges.get(edge_key(edge), edge["id"])
         validate_graph(result._document)
         return result
 
@@ -1425,7 +1589,7 @@ def process_request(request: Mapping) -> dict:
 
     parse: operation, sourceBase64, entries, optional bindings/eventBindings.
     edit: same fields plus graph, edits, expectedSourceHash. Fresh sourceBase64
-    must match the saved graph. No arbitrary graph rewiring is implemented.
+    must match the saved graph. Supports advertised rewireDataInput scalar slots.
     validate: operation, graph (topology check only; no source transformation).
     regions: parse fields plus graph/expectedSourceHash; verified eligible runs.
     construct: regions fields plus one mutation; never arbitrary edge rewrites.
@@ -1494,6 +1658,8 @@ def process_request(request: Mapping) -> dict:
             "ok": not any(d["severity"] == "error" for d in document["diagnostics"]),
             "graph": document,
             "sourceBase64": base64.b64encode(graph.export_source()).decode("ascii"),
+            "dataWireVersion": 1,
+            "dataWireInputs": graph.data_wire_inputs(),
         }
         if operation in {"regions", "construct"}:
             response.update(constructionVersion=1, regions=graph.construction_regions())
