@@ -1013,9 +1013,10 @@ static void ui_handle_ui_cmd(
             ui_widget_rect(scene, idx, &x, &y, &ww, &hh);
             ui_dirty_add_local(dirty, x, y, ww, hh);
 
-            if (focus != NULL && idx == *focus) {
+            if (focus != NULL && (idx == *focus || *focus < 0)) {
                 uint8_t now_focusable = ui_nav_is_focusable(w) ? 1 : 0;
-                if (was_focusable && !now_focusable) {
+                if ((was_focusable && !now_focusable) ||
+                    (*focus < 0 && !was_focusable && now_focusable)) {
                     if (edit != NULL) {
                         ui_edit_exit(scene, edit, dirty);
                     }
@@ -1032,7 +1033,9 @@ static void ui_handle_ui_cmd(
             if (changed) {
                 if (focus != NULL) {
                     UiWidget *fw = ui_scene_widget_mut(scene, *focus);
-                    if (fw != NULL && !ui_nav_is_focusable(fw)) {
+                    // Hiding the previous screen can leave focus at -1. When
+                    // showing its replacement, restore a usable input target.
+                    if (fw == NULL || !ui_nav_is_focusable(fw)) {
                         if (edit != NULL) {
                             ui_edit_exit(scene, edit, dirty);
                         }
@@ -1062,7 +1065,7 @@ static void ui_handle_ui_cmd(
 
                 if (focus != NULL) {
                     UiWidget *fw = ui_scene_widget_mut(scene, *focus);
-                    if (fw != NULL && !ui_nav_is_focusable(fw)) {
+                    if (fw == NULL || !ui_nav_is_focusable(fw)) {
                         if (edit != NULL) {
                             ui_edit_exit(scene, edit, dirty);
                         }

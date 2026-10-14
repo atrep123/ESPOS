@@ -14,10 +14,17 @@ from .windowing import pan_drag_end, pan_drag_move, scene_origin
 logger = logging.getLogger(__name__)
 
 
+def _inside_runtime_preview(app, pos) -> bool:
+    """The optional logical preview rectangle is a read-only input surface."""
+    rect = getattr(app, "_runtime_preview_hitbox", None)
+    return rect is not None and rect.collidepoint(pos)
+
+
 def on_mouse_down(app, pos: Tuple[int, int]) -> None:
     """Handle mouse down (toolbar/palette/inspector/canvas)."""
     lx, ly = pos
     mods = pygame.key.get_mods()
+    app._view_only_pointer_down = False
 
     # Icon Palette is modal: it eats the click (pick an icon or dismiss).
     from . import icon_palette
@@ -49,6 +56,22 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
         if pinned:
             return
 
+    if _inside_runtime_preview(app, pos):
+        app._view_only_pointer_down = True
+        return
+
+    # Refit before hit testing (resize/action-list changes can stale the page).
+    # Navigation is view-only, including while an inspector edit is pending.
+    if app.layout.toolbar_rect.collidepoint(lx, ly):
+        app._draw_toolbar()
+        for rect, offset in getattr(app, "toolbar_scroll_hitboxes", []):
+            if rect.collidepoint(lx, ly):
+                app._view_only_pointer_down = True
+                app._toolbar_offset = offset
+                app._force_full_redraw = True
+                app._draw_toolbar()
+                return
+
     if app.state.inspector_selected_field and not app.layout.inspector_rect.collidepoint(lx, ly):
         if not app._inspector_commit_edit():
             return
@@ -59,6 +82,8 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
             app._draw_toolbar()
         for rect, key in getattr(app, "toolbar_hitboxes", []):
             if rect.collidepoint(lx, ly):
+                if key in {"undo", "redo"} and not getattr(app.designer, f"{key}_stack", None):
+                    return
                 if key == "refresh_ports":
                     try:
                         app._refresh_available_ports()
@@ -360,6 +385,11 @@ def on_mouse_down(app, pos: Tuple[int, int]) -> None:
 
 
 def on_mouse_up(app, _pos: Tuple[int, int]) -> None:
+    view_only = bool(getattr(app, "_view_only_pointer_down", False))
+    app._view_only_pointer_down = False
+    had_drag = bool(
+        app.state.dragging or app.state.resizing or app.state.box_select_start is not None
+    )
     # Finish box select
     if app.state.box_select_start is not None and app.state.box_select_rect is not None:
         _finish_box_select(app)
@@ -385,6 +415,11 @@ def on_mouse_up(app, _pos: Tuple[int, int]) -> None:
     app.state.drag_start_sizes.clear()
     app.state.drag_start_rect = None
     app.state.resize_start_rect = None
+
+    # Still release existing gesture ownership above. A preview/navigation click
+    # must not validate an underlying widget, even when released outside it.
+    if not had_drag and (view_only or _inside_runtime_preview(app, _pos)):
+        return
 
     # Validace profilem tab5 pri pusteni prvku. Mimo scenu artboardu (a bez
     # profilu tab5) nedela NIC - viz `tab5_validace.je_tab5`. Vyjimka tady
@@ -431,6 +466,9 @@ def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> 
             pan_drag_move(app, pos)
         else:
             pan_drag_end(app)
+        return
+
+    if bool(getattr(app, "_view_only_pointer_down", False)) or _inside_runtime_preview(app, pos):
         return
 
     if not app.pointer_down:
@@ -610,6 +648,7 @@ def on_mouse_move(app, pos: Tuple[int, int], _buttons: Tuple[int, int, int]) -> 
 
 def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     """Scroll palette/inspector panels, or zoom canvas."""
+    app._view_only_wheel = False
     if dy == 0:
         return
     # Icon Palette is modal: wheel scrolls its grid.
@@ -634,6 +673,9 @@ def on_mouse_wheel(app, _dx: int, dy: int) -> None:
     from . import build_flash
 
     if build_flash.handle_wheel(app, dy):
+        return
+    if _inside_runtime_preview(app, app.pointer_pos):
+        app._view_only_wheel = True
         return
     if bool(getattr(app, "show_help_overlay", False)):
         pinned = bool(getattr(app, "_help_pinned", False))

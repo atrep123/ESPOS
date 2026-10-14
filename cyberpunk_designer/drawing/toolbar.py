@@ -4,35 +4,114 @@ from __future__ import annotations
 
 import pygame
 
-from ..constants import GRID, PALETTE, snap
+from ..constants import GRID, PALETTE
 from .primitives import render_pixel_text
-from .widgets import button
+
+
+def _toolbar_pages(widths, available: int, gap: int):
+    """Greedy, whole-button pages; an oversized label owns one bounded button."""
+    pages = []
+    start = 0
+    used = 0
+    for index, width in enumerate(widths):
+        width = min(width, available)
+        needed = width + (gap if index > start else 0)
+        if used + needed > available and index > start:
+            pages.append((start, index))
+            start, used = index, 0
+            needed = width
+        used += needed
+    if widths:
+        pages.append((start, len(widths)))
+    return pages
+
+
+def _toolbar_button(app, label: str, rect, *, disabled: bool = False) -> None:
+    """Industrial button drawn entirely inside its already fitted hitbox."""
+    hover = not disabled and app._is_pointer_over(rect)
+    pressed = hover and app.pointer_down
+    shade = -2 if disabled else (-4 if pressed else (12 if hover else 4))
+    pygame.draw.rect(app.logical_surface, app._shade(PALETTE["panel"], shade), rect)
+    border = app._shade(PALETTE["panel_border"], -16) if disabled else PALETTE["panel_border"]
+    pygame.draw.rect(app.logical_surface, border, rect, 1)
+    text = render_pixel_text(app, label, PALETTE["muted"] if disabled else PALETTE["text"])
+    old_clip = app.logical_surface.get_clip()
+    app.logical_surface.set_clip(old_clip.clip(rect))
+    try:
+        app.logical_surface.blit(
+            text,
+            (
+                rect.x + max(0, (rect.width - text.get_width()) // 2),
+                rect.y + max(0, (rect.height - text.get_height()) // 2) + int(pressed),
+            ),
+        )
+    finally:
+        app.logical_surface.set_clip(old_clip)
 
 
 def draw_toolbar(app) -> None:
-    """Render the top toolbar row with file, view, and action buttons."""
+    """Render bounded pages of actions, keeping navigation separate from actions."""
     r = app.layout.toolbar_rect
+    app.toolbar_hitboxes = []
+    app.toolbar_scroll_hitboxes = []
+    if r.width <= 0 or r.height <= 0:
+        app._toolbar_offset = 0
+        return
     pygame.draw.rect(app.logical_surface, PALETTE["panel"], r)
     pygame.draw.line(
         app.logical_surface,
         PALETTE["panel_border"],
         (r.left, r.bottom - 1),
-        (r.right, r.bottom - 1),
+        (r.right - 1, r.bottom - 1),
     )
-    app.toolbar_hitboxes = []
-    x = snap(r.x + GRID)
-    y = snap(r.y + GRID)
+    items = [(label, label.lower()) for label, _action in app.toolbar_actions]
+    items.append(("Refresh Ports", "refresh_ports"))
+    padding = max(4, app.pixel_padding // 2)
+    widths = [
+        max(48, render_pixel_text(app, label, PALETTE["text"]).get_width() + 2 * padding)
+        for label, _key in items
+    ]
+    # Reserve navigation only on overflow. Even tiny rectangles never get
+    # overlapping or partially visible hitboxes (three pixels is the minimum
+    # for two arrows plus content; below that there is no interactive row).
+    inset = min(4, max(0, (r.width - 3) // 2))
+    inner_width = r.width - 2 * inset
+    gap = min(GRID, 4)
+    overflow = sum(widths) + gap * (len(widths) - 1) > inner_width
+    arrow_width = min(20, max(1, inner_width // 10)) if overflow else 0
+    if overflow and inner_width < 3:
+        app._toolbar_offset = 0
+        return
+    if overflow:
+        gap = min(gap, (inner_width - 2 * arrow_width - 1) // 2)
+    available = inner_width - 2 * (arrow_width + gap) if overflow else inner_width
+    pages = _toolbar_pages(widths, available, gap)
+    offset = max(0, min(len(items) - 1, int(getattr(app, "_toolbar_offset", 0) or 0)))
+    page_index = max(index for index, (start, _end) in enumerate(pages) if start <= offset)
+    start, end = pages[page_index]
+    app._toolbar_offset = start
+    vertical_inset = min(2, max(0, (r.height - 1) // 2))
+    y, height = r.y + vertical_inset, r.height - 2 * vertical_inset
+    x = r.x + inset
+    if overflow:
+        for label, arrow_x, target in (
+            ("<", x, max(0, page_index - 1)),
+            (">", r.right - inset - arrow_width, min(len(pages) - 1, page_index + 1)),
+        ):
+            rect = pygame.Rect(arrow_x, y, arrow_width, height)
+            _toolbar_button(app, label, rect, disabled=target == page_index)
+            app.toolbar_scroll_hitboxes.append((rect, pages[target][0]))
+        x += arrow_width + gap
     # Compute disabled state for undo/redo buttons
     _undo_disabled = not bool(getattr(getattr(app, "designer", None), "undo_stack", None))
     _redo_disabled = not bool(getattr(getattr(app, "designer", None), "redo_stack", None))
     _btn_disabled = {"undo": _undo_disabled, "redo": _redo_disabled}
-    for lab, _action in app.toolbar_actions:
-        dis = _btn_disabled.get(lab.lower(), False)
-        rect = button(app, lab, (x, y), disabled=dis)
-        app.toolbar_hitboxes.append((rect, lab.lower()))
-        x += rect.width + GRID
-    ref_rect = button(app, "Refresh Ports", (x, y))
-    app.toolbar_hitboxes.append((ref_rect, "refresh_ports"))
+    for index in range(start, end):
+        lab, key = items[index]
+        rect = pygame.Rect(x, y, min(widths[index], available), height)
+        _toolbar_button(app, lab, rect, disabled=_btn_disabled.get(key, False))
+        app.toolbar_hitboxes.append((rect, key))
+        x += rect.width + gap
 
 
 def draw_scene_tabs(app) -> None:

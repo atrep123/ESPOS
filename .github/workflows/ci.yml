@@ -108,7 +108,7 @@ jobs:
           # docs/coverage_policy.md for why the vanity number was removed).
           # Make config and branch mode explicit for subprocesses tested from
           # foreign fixture directories; autodetection there has no pyproject.
-          python -B -m pytest -q --tb=short --ignore=output -n 2 --maxprocesses 2 --cov --cov-config=pyproject.toml --cov-branch --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=80
+          python -B -m pytest -q --tb=short --ignore=output -n 2 --maxprocesses 2 --cov --cov-config=pyproject.toml --cov-branch --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-fail-under=80 -m 'not native_windows'
       - name: Performance benchmarks
         if: matrix.python-version == '3.12'
         run: |

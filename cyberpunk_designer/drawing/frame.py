@@ -60,6 +60,12 @@ def optimized_draw_frame(app: CyberpunkEditorApp) -> None:
             draw_inspector(app)
             draw_status(app)
 
+    # Optional hook keeps legacy/fake app collaborators compatible. Composite
+    # the snapshot in logical canvas space before every modal/help/tooltip.
+    draw_runtime_preview = getattr(app, "_draw_runtime_preview", None)
+    if callable(draw_runtime_preview):
+        draw_runtime_preview()
+
     if app.show_help_overlay:
         draw_help_overlay(app)
 

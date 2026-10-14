@@ -245,6 +245,10 @@ class UIDesigner:
         self.selected_widget: Optional[int] = None
         self._last_loaded_json: Optional[str] = None
         self._json_watch_mtime: Optional[float] = None
+        # Root/scene extensions are opaque JSON, never evaluated by the editor.
+        self._document_metadata: Dict[str, Any] = {}
+        self._scene_metadata: Dict[str, Dict[str, Any]] = {}
+        self._scenes_as_list = False
 
         # Undo/redo stacks
         self.undo_stack: List[str] = []  # JSON snapshots
@@ -505,6 +509,10 @@ class UIDesigner:
             widgets=widgets,
             bg_color=prev_state.get("bg_color", "black"),
             rules=list(prev_state.get("rules") or []),
+            theme=prev_state.get("theme", "default"),
+            hardware_profile=prev_state.get("hardware_profile"),
+            max_fb_kb=prev_state.get("max_fb_kb"),
+            max_flash_kb=prev_state.get("max_flash_kb"),
         )
         return True
 
@@ -532,6 +540,10 @@ class UIDesigner:
             widgets=widgets,
             bg_color=next_state.get("bg_color", "black"),
             rules=list(next_state.get("rules") or []),
+            theme=next_state.get("theme", "default"),
+            hardware_profile=next_state.get("hardware_profile"),
+            max_fb_kb=next_state.get("max_fb_kb"),
+            max_flash_kb=next_state.get("max_flash_kb"),
         )
         return True
 
@@ -802,6 +814,7 @@ class UIDesigner:
                 scene.grid_size = self.grid_size  # type: ignore[attr-defined]
                 break
         self.scenes[name] = scene
+        self._scene_metadata.pop(name, None)
         self.current_scene = name
         return scene
 
@@ -1570,12 +1583,11 @@ class UIDesigner:
 
     def save_to_json(self, filename: str):
         """Save design to JSON file."""
-        data = {
-            "width": self.width,
-            "height": self.height,
-            "groups": self._groups_payload_for_save(),
-            "scenes": {
-                name: {
+        scenes_data = {}
+        for name, scene in self.scenes.items():
+            payload = copy.deepcopy(self._scene_metadata.get(name, {}))
+            payload.update(
+                {
                     "name": scene.name,
                     "width": scene.width,
                     "height": scene.height,
@@ -1583,9 +1595,21 @@ class UIDesigner:
                     "widgets": [asdict(w) for w in scene.widgets],
                     "rules": [dict(r) for r in getattr(scene, "rules", []) if isinstance(r, dict)],
                 }
-                for name, scene in self.scenes.items()
-            },
-        }
+            )
+            for key in ("theme", "hardware_profile", "max_fb_kb", "max_flash_kb"):
+                value = getattr(scene, key)
+                if key in payload or (value is not None and (key != "theme" or value != "default")):
+                    payload[key] = value
+            scenes_data[name] = payload
+        data = copy.deepcopy(self._document_metadata)
+        data.update(
+            {
+                "width": self.width,
+                "height": self.height,
+                "groups": self._groups_payload_for_save(),
+                "scenes": list(scenes_data.values()) if self._scenes_as_list else scenes_data,
+            }
+        )
 
         try:
             with open(filename, "w", encoding="utf-8") as f:
@@ -1613,9 +1637,22 @@ class UIDesigner:
         """
         try:
             data = self._read_json_file(filename)
+            # Build first: unsupported widget structures must not partially replace
+            # the currently loaded document before an explicit refusal.
+            scenes = self._build_scenes_from_data(data)
+            raw_scenes = self._raw_scenes_from_data(data)
             self.width = data.get("width", 128)
             self.height = data.get("height", 64)
-            self.scenes = self._build_scenes_from_data(data)
+            self.scenes = scenes
+            self._document_metadata = copy.deepcopy(
+                {
+                    key: value
+                    for key, value in data.items()
+                    if key not in {"width", "height", "groups", "scenes"}
+                }
+            )
+            self._scene_metadata = copy.deepcopy(raw_scenes)
+            self._scenes_as_list = isinstance(data.get("scenes"), list)
             if self.scenes:
                 self.current_scene = next(iter(self.scenes.keys()))
             raw_groups = data.get("groups")
@@ -1632,6 +1669,9 @@ class UIDesigner:
             self._record_json_watch(filename)
         except SceneLoadError as exc:
             logger.error("Load failed for %s: %s; falling back to default scene", filename, exc)
+            self._document_metadata.clear()
+            self._scene_metadata.clear()
+            self._scenes_as_list = False
             self.scenes.clear()
             self.create_scene("main")
             self.current_scene = "main"
@@ -1651,13 +1691,38 @@ class UIDesigner:
 
     def _build_scenes_from_data(self, data: Dict[str, Any]) -> Dict[str, SceneConfig]:
         scenes: Dict[str, SceneConfig] = {}
+        raw_scenes = self._raw_scenes_from_data(data)
         scenes_data = data.get("scenes", {})
 
         scenes_dict = self._scenes_dict_from_data(scenes_data, data)
         for name, scene_data in scenes_dict.items():
             widgets = self._widgets_for_scene(data, name)
             scenes[name] = self._build_scene_config(name, scene_data, widgets, data)
+            scenes[name].bg_color = raw_scenes[name].get("bg_color", data.get("bg_color", "black"))
         return scenes
+
+    def _raw_scenes_from_data(self, data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """Read supported scene containers without flattening or interpreting extras."""
+        if not isinstance(data, dict):
+            raise WidgetValidationError("document must be a dict")
+        if "scenes" not in data and "widgets" in data:
+            raise WidgetValidationError(
+                "root widgets are unsupported; expected legacy scenes container"
+            )
+        raw = data.get("scenes", {})
+        if isinstance(raw, dict):
+            return raw
+        if not isinstance(raw, list):
+            raise WidgetValidationError("scenes must be a dict or list")
+        result = {}
+        for i, scene in enumerate(raw):
+            if not isinstance(scene, dict):
+                raise WidgetValidationError("scene data must be a dict")
+            name = str(scene.get("id", f"scene_{i}"))
+            if name in result:
+                raise WidgetValidationError(f"duplicate scene id {name!r} would lose scene data")
+            result[name] = scene
+        return result
 
     def _scenes_dict_from_data(
         self, scenes_data: Union[Dict[str, Any], List[Any]], root_data: Dict[str, Any]
@@ -1675,14 +1740,22 @@ class UIDesigner:
         }
 
     def _widgets_for_scene(self, data: Dict[str, Any], name: str) -> List[WidgetConfig]:
-        raw_widgets = (
-            data.get("scenes", {}).get(name, {}).get("widgets")
-            if isinstance(data.get("scenes", {}), dict)
-            else None
-        )
+        raw_widgets = self._raw_scenes_from_data(data).get(name, {}).get("widgets")
+        if raw_widgets is not None and not isinstance(raw_widgets, list):
+            raise WidgetValidationError(
+                f"scene {name}: widgets must be a list; refusing to truncate data"
+            )
         raw_widgets = raw_widgets if isinstance(raw_widgets, list) else []
         widgets: List[WidgetConfig] = []
         for w in raw_widgets:
+            if not isinstance(w, dict):
+                raise WidgetValidationError(f"scene {name}: widget must be a dict")
+            unsupported = set(w) - set(WidgetConfig.__dataclass_fields__) - {"id"}
+            if unsupported:
+                raise WidgetValidationError(
+                    f"scene {name}: unsupported widget fields {', '.join(sorted(unsupported))}; "
+                    "refusing to truncate widget data"
+                )
             widget_dict = dict(w)
             if "id" in widget_dict:
                 widget_dict["_widget_id"] = widget_dict.pop("id")

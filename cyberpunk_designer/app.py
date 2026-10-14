@@ -41,6 +41,7 @@ from . import (
     live_preview,
     logic_editor,
     reporting,
+    runtime_preview,
     scene_ops,
     selection_ops,
     template_manager,
@@ -382,6 +383,12 @@ class CyberpunkEditorApp:
         self._init_window()
         self._init_fonts_and_metrics()
         self._init_state_and_perf()
+        self._runtime_preview_surface = None
+        self._runtime_preview_state = None
+        self._runtime_preview_hitbox = None
+        self._runtime_preview = runtime_preview.RuntimePreview(
+            on_frame=self._accept_runtime_frame, on_status=self._runtime_preview_status
+        )
         self._build_palette()
         self._build_toolbar()
         if self._restored_from_autosave:
@@ -722,6 +729,8 @@ class CyberpunkEditorApp:
             ("Tpl", self._open_template_menu),
             ("Icons", self._open_icon_palette),
             ("Live", self._open_live_dialog),
+            ("Simulator", self._start_runtime_preview),
+            ("Stop simulator", self._stop_runtime_preview),
             ("Arrange", self._auto_arrange_grid),
             ("Fit Text", self._fit_selection_to_text),
             ("Fit Widget", self._fit_selection_to_widget),
@@ -822,6 +831,92 @@ class CyberpunkEditorApp:
     def _build_firmware(self) -> None:
         """Build the active board's firmware now (regenerates codegen first)."""
         build_flash.start_build(self)
+
+    def _runtime_document_key(self):
+        name = self.designer.current_scene
+        return (
+            id(self.designer),
+            str(self.json_path),
+            name,
+            id(self.designer.scenes.get(name)),
+            id(self.state),
+        )
+
+    def _runtime_preview_status(self, message):
+        # Preview repaint/status is not an authored scene edit or autosave request.
+        self.dialog_message = message
+        self._status_until_ts = (
+            float("inf") if message.startswith("cleanup-uncertain") else time.time() + 60.0
+        )
+        self._dirty = self._force_full_redraw = True
+
+    def _accept_runtime_frame(self, frame, state):
+        self._runtime_preview_state = state
+        self._runtime_preview_surface = None
+        self._runtime_preview_hitbox = None
+        if frame is not None:
+            rgb = bytes(channel for gray in frame.pixels for channel in (gray, gray, gray))
+            self._runtime_preview_surface = pygame.image.frombuffer(
+                rgb, (frame.width, frame.height), "RGB"
+            ).copy()
+        self._dirty = self._force_full_redraw = True
+
+    def _draw_runtime_preview(self):
+        """Draw a labelled, read-only snapshot inside the visible logical canvas."""
+        self._runtime_preview_hitbox = None
+        surface = self._runtime_preview_surface
+        if surface is None:
+            return
+        target = self.logical_surface
+        old_clip = target.get_clip()
+        bounds = self.layout.canvas_rect.clip(target.get_rect()).clip(old_clip)
+        # The final scaler uses at least 1:1, even when the window is smaller
+        # than the logical layout. Keep the panel wholly visible in that case.
+        bounds = bounds.clip(pygame.Rect((0, 0), self.window.get_size()))
+        palette = _constants.PALETTE
+        caption = self.font_small.render("SIM SNAPSHOT | MOCK", False, palette["text"])
+        if caption.get_width() + 4 > bounds.width:
+            caption = self.font_small.render("MOCK", False, palette["text"])
+        # Native 256x128 remains 2:1 down to 2x1. Reserve the unscaled caption
+        # and border first; omit rather than hide provenance on tiny canvases.
+        height = min(128, (bounds.width - 4) // 2, bounds.height - caption.get_height() - 6)
+        if caption.get_width() + 4 > bounds.width or height < 1:
+            return
+        size = (height * 2, height)
+        width = max(size[0], caption.get_width()) + 4
+        panel = pygame.Rect(
+            bounds.right - width, bounds.top, width, height + caption.get_height() + 6
+        )
+        image = surface if size == surface.get_size() else pygame.transform.scale(surface, size)
+        target.set_clip(bounds)
+        try:
+            pygame.draw.rect(target, palette["panel"], panel)
+            target.blit(caption, (panel.x + 2, panel.y + 2))
+            target.blit(image, (panel.x + 2, panel.y + caption.get_height() + 4))
+            pygame.draw.rect(target, palette["panel_border"], panel, 1)
+        finally:
+            target.set_clip(old_clip)
+        self._runtime_preview_hitbox = panel
+
+    def _start_runtime_preview(self):
+        if self._runtime_preview.owns_work:
+            return
+        try:
+            document = runtime_preview.detached_document(self.designer)
+            self._runtime_preview.start(document, self._runtime_document_key())
+        except (ValueError, TypeError, KeyError):
+            self._runtime_preview_status("Simulator requires a valid detached 256x128 scene")
+
+    def _stop_runtime_preview(self):
+        self._runtime_preview.stop()
+
+    def load_json(self):
+        self._stop_runtime_preview()
+        return io_ops.load_json(self)
+
+    def _new_scene(self):
+        self._stop_runtime_preview()
+        return scene_ops.new_scene(self)
 
     def _flash_firmware(self) -> None:
         """Build + upload to hardware (real ``pio ... -t upload``).
@@ -1072,7 +1167,27 @@ class CyberpunkEditorApp:
 
     def run(self):
         """Main loop."""
-        while self.running:
+        try:
+            self._run_editor_loop()
+        except (Exception, KeyboardInterrupt, SystemExit):
+            self._runtime_preview.stop()
+            # Even a broken editor loop must not drop a still-owned runtime.
+            # Keep pumping/polling; uncertain cleanup remains visibly blocked.
+            while self._runtime_preview.owns_work:
+                self.clock.tick(30)
+                try:
+                    pygame.event.pump()
+                except pygame.error:
+                    pass
+                self._runtime_preview.poll(self._runtime_preview._document_key)
+                self._runtime_preview_status(self._runtime_preview.status)
+            raise
+
+        pygame.quit()
+        sys.exit(0)
+
+    def _run_editor_loop(self):
+        while self.running or self._runtime_preview.owns_work:
             # Dynamic FPS adjustment
             if self.vsync_enabled or self.auto_scale_adjust:
                 tick_fps = int(self.target_fps)
@@ -1087,6 +1202,9 @@ class CyberpunkEditorApp:
 
             # Event handling
             self._handle_events()
+            if not self.running:
+                self._runtime_preview.stop()
+            self._runtime_preview.poll(self._runtime_document_key())
 
             # Update mouse cursor based on pointer region
             self._update_cursor()
@@ -1098,11 +1216,9 @@ class CyberpunkEditorApp:
             self._optimized_draw_frame()
 
             # Auto-save and maintenance
-            self._maybe_hide_help_overlay()
-            self._maybe_autosave()
-
-        pygame.quit()
-        sys.exit(0)
+            if self.running:
+                self._maybe_hide_help_overlay()
+                self._maybe_autosave()
 
     # ------------------------------------------------------------------ #
     # Drawing
@@ -1418,13 +1534,21 @@ class CyberpunkEditorApp:
         if et == pygame.MOUSEBUTTONUP and event.button == 1:
             self.pointer_down = False
             self.pointer_pos = self._screen_to_logical(event.pos)
+            view_only = self._runtime_pointer_is_view_only(self.pointer_pos)
             self._on_mouse_up(self.pointer_pos)
-            self._mark_dirty()
+            if view_only:
+                self._dirty = self._force_full_redraw = True
+            else:
+                self._mark_dirty()
             return
         if et == pygame.MOUSEMOTION:
             self.pointer_pos = self._screen_to_logical(event.pos)
+            view_only = self._runtime_pointer_is_view_only(self.pointer_pos)
             self._on_mouse_move(self.pointer_pos, event.buttons)
-            self._mark_dirty()
+            if view_only:
+                self._dirty = self._force_full_redraw = True
+            else:
+                self._mark_dirty()
             return
         if et == pygame.MOUSEWHEEL:
             try:
@@ -1433,7 +1557,10 @@ class CyberpunkEditorApp:
             except (ValueError, TypeError):
                 dx, dy = 0, 0
             self._on_mouse_wheel(dx, dy)
-            self._mark_dirty()
+            if bool(getattr(self, "_view_only_wheel", False)):
+                self._dirty = self._force_full_redraw = True
+            else:
+                self._mark_dirty()
             return
         if et == pygame.TEXTINPUT:
             try:
@@ -1443,6 +1570,23 @@ class CyberpunkEditorApp:
             self._on_text_input(text)
             self._mark_dirty()
             return
+
+    def _runtime_pointer_is_view_only(self, pos) -> bool:
+        if bool(getattr(self, "_view_only_pointer_down", False)):
+            return True
+        state = getattr(self, "state", None)
+        # An author drag begun outside the snapshot still owns its release.
+        if (
+            bool(getattr(state, "dragging", False))
+            or bool(getattr(state, "resizing", False))
+            or getattr(state, "box_select_start", None) is not None
+            or getattr(self, "_tab_drag_idx", None) is not None
+            or getattr(self, "_layer_drag_idx", None) is not None
+            or getattr(self, "_pan_drag_from", None) is not None
+        ):
+            return False
+        rect = getattr(self, "_runtime_preview_hitbox", None)
+        return rect is not None and rect.collidepoint(pos)
 
     def _handle_quit(self) -> None:
         """Handle QUIT event with dirty-check confirmation."""
@@ -1460,6 +1604,9 @@ class CyberpunkEditorApp:
         """Route MOUSEBUTTONDOWN by button number."""
         if event.button == 3:
             self.pointer_pos = self._screen_to_logical(event.pos)
+            if self._runtime_pointer_is_view_only(self.pointer_pos):
+                self._dirty = self._force_full_redraw = True
+                return
             lx, ly = self.pointer_pos
             if self.layout.scene_tabs_rect.collidepoint(lx, ly):
                 self._open_tab_context_menu(self.pointer_pos)
@@ -1469,6 +1616,9 @@ class CyberpunkEditorApp:
             return
         if event.button == 2:
             self.pointer_pos = self._screen_to_logical(event.pos)
+            if self._runtime_pointer_is_view_only(self.pointer_pos):
+                self._dirty = self._force_full_redraw = True
+                return
             lx, ly = self.pointer_pos
             if self.layout.scene_tabs_rect.collidepoint(lx, ly):
                 for rect, tab_idx, _tab_name in getattr(self, "tab_hitboxes", []):
@@ -1496,6 +1646,21 @@ class CyberpunkEditorApp:
             return
         self.pointer_down = True
         self.pointer_pos = self._screen_to_logical(event.pos)
+        preview_hitbox = getattr(self, "_runtime_preview_hitbox", None)
+        navigation_hit = any(
+            rect.collidepoint(self.pointer_pos)
+            for rect, _offset in getattr(self, "toolbar_scroll_hitboxes", [])
+        )
+        if navigation_hit or (
+            preview_hitbox is not None and preview_hitbox.collidepoint(self.pointer_pos)
+        ):
+            # Modal dispatch and the read-only preview guard live in the normal
+            # handler. Never run the widget double-click shortcut underneath.
+            self._last_click_time = 0.0
+            self._last_click_pos = (-9999, -9999)
+            self._on_mouse_down(self.pointer_pos)
+            self._dirty = self._force_full_redraw = True
+            return
         now = time.time()
         last_click_time = getattr(self, "_last_click_time", 0.0)
         last_click_pos = getattr(self, "_last_click_pos", (-9999, -9999))
@@ -1511,7 +1676,10 @@ class CyberpunkEditorApp:
             self._mark_dirty()
             return
         self._on_mouse_down(self.pointer_pos)
-        self._mark_dirty()
+        if bool(getattr(self, "_view_only_pointer_down", False)):
+            self._dirty = self._force_full_redraw = True
+        else:
+            self._mark_dirty()
 
     def _open_tab_context_menu(self, pos: Tuple[int, int]) -> None:
         context_menu.open_tab_context_menu(self, pos)
@@ -1555,6 +1723,7 @@ class CyberpunkEditorApp:
         scene_ops.z_order_step(self, delta)
 
     def _switch_scene(self, direction: int) -> None:
+        self._stop_runtime_preview()
         scene_ops.switch_scene(self, direction)
 
     def _handle_double_click(self, pos: Tuple[int, int]) -> None:
@@ -1661,6 +1830,7 @@ class CyberpunkEditorApp:
     # Scene navigation and management (delegates to scene_ops)
     # ------------------------------------------------------------------ #
     def _jump_to_scene(self, index: int) -> None:
+        self._stop_runtime_preview()
         scene_ops.jump_to_scene(self, index)
 
     # ------------------------------------------------------------------ #

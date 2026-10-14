@@ -89,6 +89,7 @@ exclude = "(build|dist|generated|integrations/m5-prop-lora|\\.pio|\\.platformio-
 
 [tool.pytest.ini_options]
 markers = [
+    "native_windows: opt-in public Windows headless native runtime (required native-runtime CI; deselect in general CI)",
     "timeout(seconds): mark tests with a timeout value (used by ESP32 hardware bridge tests)",
     "visual: marks tests as requiring graphical display (deselect with '-m \"not visual\"')",
     "smoke: lightweight end-to-end smoke checks (headless safe)",

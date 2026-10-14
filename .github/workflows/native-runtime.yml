@@ -1,0 +1,209 @@
+name: Public native runtime
+
+# Always report the required component check: no path-filtered pending checks.
+on:
+  push:
+    branches: [main, master, codex/dodelavky-20260927]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  native-windows:
+    name: Required Windows native runtime
+    runs-on: windows-2022
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      NATIVE_CI_OUTPUT: ${{ runner.temp }}/TEST_ONLY-native-runtime-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+      - name: Require and record existing ordinary GCC (no toolchain download)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = $env:NATIVE_CI_OUTPUT
+          if (Test-Path -LiteralPath $output) { throw 'Native output must be fresh' }
+          New-Item -ItemType Directory -Path $output | Out-Null
+          $found = Get-Command gcc -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+          $compiler = if ($found) { $found.Source } else { $null }
+          if (-not $compiler) {
+            foreach ($candidate in @('C:/msys64/ucrt64/bin/gcc.exe', 'C:/msys64/mingw64/bin/gcc.exe')) {
+              if (Test-Path -LiteralPath $candidate -PathType Leaf) { $compiler = $candidate; break }
+            }
+          }
+          if (-not $compiler) { throw 'Required preinstalled GCC absent; no skip or installation' }
+          if ($compiler -notmatch '^[A-Za-z]:[\\/]') { throw 'GCC must be an ordinary local path' }
+          $item = Get-Item -LiteralPath $compiler
+          if ($item.PSIsContainer) { throw 'GCC must be an ordinary file' }
+          if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'GCC reparse file forbidden' }
+          for ($ancestor = $item.Directory; $null -ne $ancestor; $ancestor = $ancestor.Parent) {
+            if ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'GCC reparse path forbidden' }
+          }
+          $version = @(& $item.FullName --version)
+          if ($LASTEXITCODE -ne 0) { throw 'GCC version probe failed' }
+          $target = @(& $item.FullName -dumpmachine)
+          if ($LASTEXITCODE -ne 0 -or $target.Count -ne 1 -or $target[0] -notmatch '^x86_64-.*mingw32$') {
+            throw 'Required Windows x86_64 GCC target unavailable'
+          }
+          @{ compiler = $item.FullName; version = $version; target = $target[0] } |
+            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'compiler.json') -Encoding utf8
+          $item.Directory.FullName | Out-File -LiteralPath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Output ('Existing compiler: ' + $item.FullName)
+          Write-Output $version
+          Write-Output $target
+      - name: Install only pinned public test tools from owned manifest
+        run: |
+          $manifest = Join-Path $env:NATIVE_CI_OUTPUT 'test-tools.txt'
+          @('pytest==9.0.2', 'pytest-timeout==2.4.0') | Set-Content -LiteralPath $manifest -Encoding utf8
+          python -I -B -m pip install -r $manifest
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned public test tools unavailable' }
+      - name: Required actual native groups and positive JUnit gate
+        run: |
+          $script = @'
+          import ast
+          import hashlib
+          import json
+          import os
+          import shutil
+          import sys
+          import tempfile
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          # These are separate evidence groups, NOT five interchangeable proofs.
+          GROUPS = (
+              ('simulator', 'test_runtime_simulator.py', 12, (
+                  'test_production_edit_clamp_exit_navigation_and_checkbox',
+                  'test_actual_app_subscriber_and_visual_logic_roundtrip',
+                  'test_app_roundtrip_via_input_ids_only',
+              )),
+              ('hot-native', 'test_runtime_simulator_hot_native.py', 6, (
+                  'test_actual_hot_failure_retains_pixels_then_reconnect_repaints',
+                  'test_actual_release_tick_order_does_not_synthesize_press',
+              )),
+              ('preview-native', 'test_runtime_preview_native.py', 1, (
+                  'test_real_native_result_reaches_preview_after_owned_cleanup',
+              )),
+              ('process-bridge', 'test_runtime_preview_process_bridge.py', 5, (
+                  'test_actual_owned_bridge_natural_completion_delivers_only_fake_frame',
+                  'test_actual_owned_compile_or_runtime_cancel_has_no_frame_and_cleans_snapshot',
+                  'test_actual_owned_document_switch_cancels_runtime_without_stale_delivery',
+              )),
+              ('simulator-process', 'test_simulator_process.py', 52, (
+                  'test_natural_exit_captures_bytes_and_returns_frozen_result',
+                  'test_windows_job_kills_its_created_inert_descendant',
+                  'test_cancellation_stops_owned_descendant_even_after_root_exit',
+                  'test_cancel_before_windows_admission_never_executes_payload',
+              )),
+          )
+
+          def verify_junit(path, filename, minimum, required):
+              report = ET.parse(path).getroot()
+              assert report.tag == 'testsuites', 'Required JUnit suites absent'
+              suites = report.findall('testsuite')
+              assert suites, 'Required JUnit suite absent'
+              cases = []
+              for suite in suites:
+                  assert all(int(suite.get(key, '-1')) == 0 for key in ('failures', 'errors', 'skipped')), 'No skips/errors/failures allowed'
+                  selected = suite.findall('testcase')
+                  assert int(suite.get('tests', '-1')) == len(selected), 'JUnit count mismatch'
+                  cases.extend(selected)
+              assert len(cases) >= minimum > 0, 'Actual positive count below required floor'
+              expected_class = 'tests.' + Path(filename).stem
+              assert all(case.get('classname') == expected_class for case in cases), 'Unexpected evidence source'
+              assert len({(case.get('classname'), case.get('name')) for case in cases}) == len(cases), 'Duplicate positive cases forbidden'
+              assert all(not any(case.find(tag) is not None for tag in ('skipped', 'error', 'failure')) for case in cases), 'Nonpassing case hidden by JUnit totals'
+              names = {case.get('name', '').split('[', 1)[0] for case in cases}
+              assert set(required) <= names, 'Required actual positive controls missing'
+              return len(cases)
+
+          def source_hashes(root):
+              # Public source bytes hashed opaquely; no C/header semantic reads.
+              paths = list((root / 'tools/native_simulator').glob('*.c'))
+              paths += list((root / 'src/services/ui').glob('*.c'))
+              paths += list((root / 'src').glob('ui_*.c'))
+              paths += [root / name for name in (
+                  'src/kernel/msgbus.c', 'src/services/ui_app/ui_app_logic.c',
+                  'src/icons.c', 'src/icons_24.c', 'src/icons_registry.c',
+                  'test/stubs/store_stub.c', 'test/stubs/esp_err_stub.c',
+                  'tools/espos_runtime_simulator.py', 'tools/simulator_process.py',
+                  'tools/simulator_contract.py', 'tools/simulator_environment.py',
+                  'tools/ui_codegen.py', 'cyberpunk_designer/runtime_preview.py',
+              )]
+              paths += [root / 'tests' / group[1] for group in GROUPS]
+              for directory in ('src', 'src/kernel', 'src/services/ui', 'src/services/ui_app'):
+                  paths += list((root / directory).glob('*.h'))
+              for directory in ('tools/native_simulator', 'test/stubs'):
+                  paths += list((root / directory).rglob('*.h'))
+              return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(paths))}
+
+          def main(root, output):
+              assert os.name == 'nt' and sys.version_info[:2] == (3, 12), 'Windows Python 3.12 required'
+              assert sys.dont_write_bytecode and sys.flags.isolated, 'Isolated readonly Python required'
+              compiler = shutil.which('gcc')
+              assert compiler, 'Required existing GCC absent; cannot skip'
+              assert output.is_dir() and output.name.startswith('TEST_ONLY-native-runtime-ci-'), 'Owned output required'
+              metadata = json.loads((output / 'compiler.json').read_text(encoding='utf-8-sig'))
+              assert Path(compiler).samefile(Path(metadata['compiler'])), 'Compiler differs from exact probed tool'
+              sys.path.insert(0, str(root))
+              import pytest
+              before = source_hashes(root)
+              problems, counts = [], {}
+              try:
+                  for group, filename, minimum, positive in GROUPS:
+                      directory = output / ('TEST_ONLY-' + group + '-ci-' + output.name)
+                      assert not directory.exists(), 'Group output must be fresh'
+                      directory.mkdir()
+                      private = directory / 'private-temp'
+                      private.mkdir()
+                      tempfile.tempdir = str(private)
+                      # Require every authored test function as well as fixed positives.
+                      tree = ast.parse((root / 'tests' / filename).read_text(encoding='utf-8'))
+                      required = set(positive) | {node.name for node in tree.body if isinstance(node, ast.FunctionDef) and node.name.startswith('test_')}
+                      result = pytest.main([
+                          '-c', str(root / 'pyproject.toml'), '--noconftest',
+                          '--strict-markers', '-p', 'no:cacheprovider', '--tb=no', '-q',
+                          '--timeout=300', '--timeout-method=thread',
+                          '-o', 'junit_logging=no', '-o', 'junit_log_passing_tests=false',
+                          '--basetemp', str(directory / 'fixtures'),
+                          '--junitxml', str(directory / 'results.xml'),
+                          str(root / 'tests' / filename),
+                      ])
+                      if result != 0:
+                          problems.append(group + ':pytest-exit-' + str(int(result)))
+                      try:
+                          counts[group] = verify_junit(directory / 'results.xml', filename, minimum, required)
+                      except (AssertionError, ET.ParseError, OSError, ValueError):
+                          problems.append(group + ':required-positive-junit-rejected')
+              finally:
+                  after = source_hashes(root)
+                  (output / 'source-provenance.json').write_text(json.dumps({'before': before, 'after': after, 'unchanged': before == after}, indent=2), encoding='utf-8')
+                  (output / 'positive-counts.json').write_text(json.dumps({'counts': counts, 'problems': problems}, indent=2), encoding='utf-8')
+              assert before == after, 'Public runtime source changed during verification'
+              if problems:
+                  raise SystemExit('Required native runtime failed: ' + ', '.join(problems))
+              print('PASS: actual native C/preview; inert-process ownership; mock transport only', counts)
+
+          if __name__ == '__main__':
+              main(Path(sys.argv[1]), Path(sys.argv[2]))
+          '@
+          python -I -X utf8 -B -c $script "$env:GITHUB_WORKSPACE" "$env:NATIVE_CI_OUTPUT"
+          if ($LASTEXITCODE -ne 0) { throw 'Required native runtime evidence failed' }
+      - name: Preserve owned public results, provenance and failed fixtures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: public-native-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.NATIVE_CI_OUTPUT }}/
+          if-no-files-found: error
+          retention-days: 14
