@@ -19,7 +19,7 @@ def test_current_repo_passes_supply_chain_guard():
 def test_ci_subprocess_coverage_keeps_explicit_config_branch_mode_and_threshold():
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
     commands = [
-        line for line in workflow.splitlines() if "python -m pytest" in line and "--cov " in line
+        line for line in workflow.splitlines() if "python -B -m pytest" in line and "--cov " in line
     ]
     assert len(commands) == 1
     assert "--cov-config=pyproject.toml" in commands[0]
