@@ -6,7 +6,11 @@ on_mouse_move, and on_mouse_wheel.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import pygame
+import pytest
 
 from cyberpunk_designer.input_handlers import (
     _finish_box_select,
@@ -209,9 +213,27 @@ class TestMouseDownPalette:
         assert "actions" in app.palette_collapsed
 
 
+@pytest.fixture(params=[None, pygame.Rect(100, 100, 80, 40)], ids=["no-preview", "outside-preview"])
+def toolbar_app(request):
+    """Dispatch-only fixture: redraw keeps explicitly supplied action hitboxes.
+
+    Real toolbar fitting/pagination is covered by test_toolbar_scrollability.
+    Optional preview/navigation fields mirror an inactive editor, not mocks.
+    """
+    return SimpleNamespace(
+        layout=SimpleNamespace(toolbar_rect=pygame.Rect(0, 0, 576, 24)),
+        state=SimpleNamespace(inspector_selected_field=None),
+        show_help_overlay=False,
+        _runtime_preview_hitbox=request.param,
+        _view_only_pointer_down=False,
+        toolbar_scroll_hitboxes=[],
+        _draw_toolbar=Mock(),
+    )
+
+
 class TestMouseDownToolbar:
-    def test_click_toolbar_action(self, make_app, monkeypatch):
-        app = make_app()
+    def test_click_toolbar_action(self, toolbar_app, monkeypatch):
+        app = toolbar_app
         tr = app.layout.toolbar_rect
         hit_rect = pygame.Rect(tr.x + 2, tr.y + 2, 20, 10)
         called = []
@@ -220,9 +242,11 @@ class TestMouseDownToolbar:
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         on_mouse_down(app, (hit_rect.x + 1, hit_rect.y + 1))
         assert "save" in called
+        app._draw_toolbar.assert_called_once_with()
+        assert not app._view_only_pointer_down
 
-    def test_click_toolbar_refresh_ports(self, make_app, monkeypatch):
-        app = make_app()
+    def test_click_toolbar_refresh_ports(self, toolbar_app, monkeypatch):
+        app = toolbar_app
         tr = app.layout.toolbar_rect
         hit_rect = pygame.Rect(tr.x + 2, tr.y + 2, 20, 10)
         called = []
@@ -231,6 +255,20 @@ class TestMouseDownToolbar:
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         on_mouse_down(app, (hit_rect.x + 1, hit_rect.y + 1))
         assert "refresh" in called
+        app._draw_toolbar.assert_called_once_with()
+        assert not app._view_only_pointer_down
+
+    def test_preview_click_preserves_pending_inspector_edit(self, toolbar_app, monkeypatch):
+        app = toolbar_app
+        app._runtime_preview_hitbox = pygame.Rect(100, 100, 80, 40)
+        app.state.inspector_selected_field = "text"
+        app._inspector_commit_edit = Mock()
+        monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
+        on_mouse_down(app, (101, 101))
+        assert app._view_only_pointer_down
+        assert app.state.inspector_selected_field == "text"
+        app._inspector_commit_edit.assert_not_called()
+        app._draw_toolbar.assert_not_called()
 
 
 class TestMouseDownSceneTabs:

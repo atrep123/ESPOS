@@ -52,6 +52,17 @@ def validate_source(text):
     assert "timeout-minutes: 20" in text
     assert "python-version: '3.12'" in text
     assert "PYTHONDONTWRITEBYTECODE: '1'" in text
+    job_env = re.search(r"(?ms)^    env:\n(.*?)(?=^    \S)", text)
+    assert job_env is not None
+    # runner is unavailable in jobs.<job_id>.env. Resolve the named private
+    # directory on the runner and export it for later steps, not at job parse.
+    assert "runner." not in job_env[1] and "env." not in job_env[1]
+    assert "NATIVE_CI_OUTPUT_NAME: TEST_ONLY-native-runtime-ci-" in job_env[1]
+    assert "$output = Join-Path $env:RUNNER_TEMP $env:NATIVE_CI_OUTPUT_NAME" in text
+    assert (
+        "('NATIVE_CI_OUTPUT=' + $output) | Out-File -LiteralPath $env:GITHUB_ENV "
+        "-Encoding utf8 -Append"
+    ) in text
     assert "permissions:\n  contents: read\n\njobs:" in text
     assert "persist-credentials: false" in text
     assert tuple(re.findall(r"(?m)^\s+-?\s*uses:\s*(\S+)", text)) == ACTIONS
@@ -80,7 +91,7 @@ def validate_source(text):
         "privateSDK",
     ):
         assert forbidden not in text
-    assert "@('pytest==9.0.2', 'pytest-timeout==2.4.0')" in text
+    assert "@('pytest==9.0.3', 'pytest-timeout==2.4.0')" in text
     assert text.count("pip install") == 1
     assert "python -I -B -m pip install -r $manifest" in text
     assert "'test-tools.txt'" in text
@@ -98,7 +109,7 @@ def validate_source(text):
         "$env:GITHUB_PATH",
         "python -I -X utf8 -B -c $script",
         '"$env:GITHUB_WORKSPACE" "$env:NATIVE_CI_OUTPUT"',
-        "path: ${{ env.NATIVE_CI_OUTPUT }}/",
+        "path: ${{ runner.temp }}/${{ env.NATIVE_CI_OUTPUT_NAME }}/",
         "if-no-files-found: error",
         "TEST_ONLY-native-runtime-ci-${{ github.run_id }}-${{ github.run_attempt }}",
     ):
@@ -166,13 +177,29 @@ def test_required_public_native_workflow_source_contract():
         ("branches: [main, master]\n", "branches: [main, master]\n    paths: ['output/**']\n"),
         ("    runs-on:", "    continue-on-error: true\n    runs-on:"),
         ("        if: always()", "        if: success()"),
-        ("pytest==9.0.2", "pytest>=9"),
+        ("pytest==9.0.3", "pytest>=9"),
         ("pytest-timeout==2.4.0", "pytest-timeout"),
         ("python -I -B -m pip install -r $manifest", "python -m pip install gcc"),
-        ("path: ${{ env.NATIVE_CI_OUTPUT }}/", "path: ${{ github.workspace }}/"),
-        ("path: ${{ env.NATIVE_CI_OUTPUT }}/", "path: ${{ runner.temp }}/"),
+        (
+            "path: ${{ runner.temp }}/${{ env.NATIVE_CI_OUTPUT_NAME }}/",
+            "path: ${{ github.workspace }}/",
+        ),
+        (
+            "path: ${{ runner.temp }}/${{ env.NATIVE_CI_OUTPUT_NAME }}/",
+            "path: ${{ runner.temp }}/",
+        ),
+        (
+            "path: ${{ runner.temp }}/${{ env.NATIVE_CI_OUTPUT_NAME }}/",
+            "path: ${{ env.NATIVE_CI_OUTPUT }}/",
+        ),
         ("if-no-files-found: error", "if-no-files-found: ignore"),
         ("PYTHONDONTWRITEBYTECODE: '1'", "PYTHONDONTWRITEBYTECODE: '0'"),
+        (
+            "NATIVE_CI_OUTPUT_NAME: TEST_ONLY-native-runtime-ci-",
+            "NATIVE_CI_OUTPUT: ${{ runner.temp }}/TEST_ONLY-native-runtime-ci-",
+        ),
+        ("$env:GITHUB_ENV -Encoding utf8 -Append", "$env:GITHUB_PATH -Encoding utf8 -Append"),
+        ("$env:RUNNER_TEMP $env:NATIVE_CI_OUTPUT_NAME", "$env:RUNNER_TEMP 'shared-output'"),
         ("'test_runtime_preview_native.py'", "'test_runtime_preview_controller.py'"),
         ("'test_runtime_simulator.py'", "'test_runtime_preview_controller.py'"),
         ("'test_runtime_preview_process_bridge.py'", "'test_runtime_preview_controller.py'"),

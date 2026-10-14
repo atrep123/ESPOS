@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 20
     env:
       PYTHONDONTWRITEBYTECODE: '1'
-      NATIVE_CI_OUTPUT: ${{ runner.temp }}/TEST_ONLY-native-runtime-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      NATIVE_CI_OUTPUT_NAME: TEST_ONLY-native-runtime-ci-${{ github.run_id }}-${{ github.run_attempt }}
     defaults:
       run:
         shell: pwsh
@@ -31,9 +31,10 @@ jobs:
       - name: Require and record existing ordinary GCC (no toolchain download)
         run: |
           $ErrorActionPreference = 'Stop'
-          $output = $env:NATIVE_CI_OUTPUT
+          $output = Join-Path $env:RUNNER_TEMP $env:NATIVE_CI_OUTPUT_NAME
           if (Test-Path -LiteralPath $output) { throw 'Native output must be fresh' }
           New-Item -ItemType Directory -Path $output | Out-Null
+          ('NATIVE_CI_OUTPUT=' + $output) | Out-File -LiteralPath $env:GITHUB_ENV -Encoding utf8 -Append
           $found = Get-Command gcc -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
           $compiler = if ($found) { $found.Source } else { $null }
           if (-not $compiler) {
@@ -64,7 +65,7 @@ jobs:
       - name: Install only pinned public test tools from owned manifest
         run: |
           $manifest = Join-Path $env:NATIVE_CI_OUTPUT 'test-tools.txt'
-          @('pytest==9.0.2', 'pytest-timeout==2.4.0') | Set-Content -LiteralPath $manifest -Encoding utf8
+          @('pytest==9.0.3', 'pytest-timeout==2.4.0') | Set-Content -LiteralPath $manifest -Encoding utf8
           python -I -B -m pip install -r $manifest
           if ($LASTEXITCODE -ne 0) { throw 'Pinned public test tools unavailable' }
       - name: Required actual native groups and positive JUnit gate
@@ -204,6 +205,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: public-native-runtime-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.NATIVE_CI_OUTPUT }}/
+          path: ${{ runner.temp }}/${{ env.NATIVE_CI_OUTPUT_NAME }}/
           if-no-files-found: error
           retention-days: 14
