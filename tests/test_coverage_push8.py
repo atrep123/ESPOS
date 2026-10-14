@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import pygame
 
 from ui_models import WidgetConfig
@@ -34,20 +37,33 @@ def _sel(app, *indices):
 class TestToolbarClick:
     """Cover toolbar hitbox click handlers."""
 
-    def test_toolbar_action_click(self, make_app, monkeypatch):
-        """Click toolbar button that matches an action (L695-696)."""
+    def test_toolbar_action_click(self, monkeypatch):
+        """Dispatch an enabled action through prescribed, refit-stable hitboxes.
+
+        The redraw stub isolates dispatch; real fitting/pagination is covered
+        by test_toolbar_scrollability. Undo requires an available history item.
+        """
         from cyberpunk_designer.input_handlers import on_mouse_down
 
-        app = make_app()
+        app = SimpleNamespace(
+            layout=SimpleNamespace(toolbar_rect=pygame.Rect(0, 0, 576, 24)),
+            state=SimpleNamespace(inspector_selected_field=None),
+            designer=SimpleNamespace(undo_stack=[object()], redo_stack=[]),
+            show_help_overlay=False,
+            _runtime_preview_hitbox=None,
+            toolbar_scroll_hitboxes=[],
+            _draw_toolbar=Mock(),
+        )
         monkeypatch.setattr(pygame.key, "get_mods", lambda: 0)
         tr = app.layout.toolbar_rect
         hit_rect = pygame.Rect(tr.x + 5, tr.y + 2, 40, 20)
         app.toolbar_hitboxes = [(hit_rect, "undo")]
         called = []
         app.toolbar_actions = [("Undo", lambda: called.append(True))]
-        pos = (tr.x + 10, tr.y + 5)
-        on_mouse_down(app, pos)
-        assert called
+        on_mouse_down(app, hit_rect.center)
+        assert called == [True]
+        app._draw_toolbar.assert_called_once_with()
+        assert not app._view_only_pointer_down
 
     def test_toolbar_commit_edit_before(self, make_app, monkeypatch):
         """Inspector field commit before toolbar click (L683-684)."""

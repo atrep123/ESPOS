@@ -21,6 +21,12 @@ def section(source, start, end):
     return source.split(start, 1)[1].split(end, 1)[0]
 
 
+def test_production_task_declares_integer_limits_without_transitive_platform_headers():
+    task = (PRODUCT_ROOT / "src/services/ui/ui.c").read_text(encoding="utf-8")
+    assert "#include <limits.h>" in task
+    assert "INT_MIN" in task and "INT_MAX" in task
+
+
 def test_c_and_python_bounds_agree_and_all_steps_validate_before_tasks_or_frames(source):
     for name, value in [
         ("SIM_MAX_EVENTS", MAX_EVENTS),

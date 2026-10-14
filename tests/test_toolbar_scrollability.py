@@ -358,6 +358,39 @@ def test_click_refits_stale_resize_hitboxes_and_preserves_clip(seams):
     assert_bounded(app)
 
 
+@pytest.mark.parametrize("width", [128, 160, 256, 320, 576, 4096])
+@pytest.mark.parametrize("origin", [(0, 0), (7, 3)])
+def test_normal_rows_keep_every_page_on_grid(seams, width, origin):
+    app = make_app(seams, width, origin=origin)
+    app._draw_toolbar()
+    for _ in range(len(app.toolbar_actions) + 2):
+        boxes = app.toolbar_hitboxes + app.toolbar_scroll_hitboxes
+        for rect, _key in boxes:
+            assert rect.x % 8 == rect.y % 8 == rect.width % 8 == rect.height % 8 == 0
+        for label, (x, y), clip in app.logical_surface.labels:
+            # Labels that fit must stay fully readable inside their hitbox.
+            if len(label) * 6 <= clip.width:
+                assert clip.left <= x and x + len(label) * 6 <= clip.right
+            assert clip.top <= y and y + 8 <= clip.bottom
+        assert_bounded(app)
+        if not app.toolbar_scroll_hitboxes or not advance(seams, app):
+            break
+    else:
+        pytest.fail("Toolbar navigation did not terminate")
+
+
+def test_grid_alignment_does_not_shrink_tall_labels(seams):
+    def tall_text(app, label, color):
+        return SimpleNamespace(label=label, get_width=lambda: len(label) * 6, get_height=lambda: 18)
+
+    seams.draw_toolbar.__globals__["render_pixel_text"] = tall_text
+    app = make_app(seams, origin=(7, 3))
+    app._draw_toolbar()
+    for _label, (_x, y), clip in app.logical_surface.labels:
+        assert clip.top <= y and y + 18 <= clip.bottom
+    assert_bounded(app)
+
+
 def test_navigation_preserves_already_dirty_scene_and_history(seams):
     app = make_app(seams)
     app._dirty = True

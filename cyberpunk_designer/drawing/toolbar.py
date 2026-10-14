@@ -67,18 +67,26 @@ def draw_toolbar(app) -> None:
     items = [(label, label.lower()) for label, _action in app.toolbar_actions]
     items.append(("Refresh Ports", "refresh_ports"))
     padding = max(4, app.pixel_padding // 2)
-    widths = [
-        max(48, render_pixel_text(app, label, PALETTE["text"]).get_width() + 2 * padding)
-        for label, _key in items
-    ]
+    texts = [render_pixel_text(app, label, PALETTE["text"]) for label, _key in items]
+    widths = [max(48, text.get_width() + 2 * padding) for text in texts]
     # Reserve navigation only on overflow. Even tiny rectangles never get
     # overlapping or partially visible hitboxes (three pixels is the minimum
     # for two arrows plus content; below that there is no interactive row).
     inset = min(4, max(0, (r.width - 3) // 2))
-    inner_width = r.width - 2 * inset
+    inner_left, inner_right = r.left + inset, r.right - inset
     gap = min(GRID, 4)
+    # Use the industrial grid when two arrows, gaps and a minimum-size action
+    # fit. Tiny rows retain the pixel-level fallback rather than lose bounds.
+    grid_left = ((inner_left + GRID - 1) // GRID) * GRID
+    grid_right = (inner_right // GRID) * GRID
+    grid_row = grid_right - grid_left >= 2 * (3 * GRID + GRID) + 48
+    if grid_row:
+        inner_left, inner_right = grid_left, grid_right
+        gap = GRID
+        widths = [((width + GRID - 1) // GRID) * GRID for width in widths]
+    inner_width = inner_right - inner_left
     overflow = sum(widths) + gap * (len(widths) - 1) > inner_width
-    arrow_width = min(20, max(1, inner_width // 10)) if overflow else 0
+    arrow_width = (3 * GRID if grid_row else min(20, max(1, inner_width // 10))) if overflow else 0
     if overflow and inner_width < 3:
         app._toolbar_offset = 0
         return
@@ -92,11 +100,15 @@ def draw_toolbar(app) -> None:
     app._toolbar_offset = start
     vertical_inset = min(2, max(0, (r.height - 1) // 2))
     y, height = r.y + vertical_inset, r.height - 2 * vertical_inset
-    x = r.x + inset
+    grid_y = ((r.top + GRID - 1) // GRID) * GRID
+    grid_height = ((r.bottom - grid_y) // GRID) * GRID
+    if grid_row and grid_height >= max(text.get_height() for text in texts) + 2:
+        y, height = grid_y, grid_height
+    x = inner_left
     if overflow:
         for label, arrow_x, target in (
             ("<", x, max(0, page_index - 1)),
-            (">", r.right - inset - arrow_width, min(len(pages) - 1, page_index + 1)),
+            (">", inner_right - arrow_width, min(len(pages) - 1, page_index + 1)),
         ):
             rect = pygame.Rect(arrow_x, y, arrow_width, height)
             _toolbar_button(app, label, rect, disabled=target == page_index)

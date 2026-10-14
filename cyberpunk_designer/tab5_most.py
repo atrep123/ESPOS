@@ -5,7 +5,7 @@ editoru vede pres `navrh-appky/do_espos.py`, ktery artboard promeri headless
 Chromem a vyda scenu `_scena_X.json` (a s prepinacem `--snimek` i podklad
 `_snimek_X.png`).
 
-Tenhle modul tu scenu nacte a pripoji k editoru. Plati u toho tri veci:
+Tenhle modul tu scenu nacte a pripoji k editoru. Plati u toho ctyri veci:
 
 1. **Editor navrh NEPREPISUJE.** Zdrojem pravdy zustavaji generatory
    `gen_*.py`. Editor vyda az v etape 4 "rudy zapis" - patch v souradnicich
@@ -13,11 +13,11 @@ Tenhle modul tu scenu nacte a pripoji k editoru. Plati u toho tri veci:
    rozdil. Bez otisku by se nedalo poznat, co Filip posunul.
 2. **Prevod je ZTRATOVY** (ze 133 prvku artboardu SvorkaLA projde 41).
    Editor tedy ukazuje mensi cast navrhu, nez v nem je - proto podklad.
-3. **`UIDesigner.save_to_json` zahazuje korenovy klic `device`.** Kdyz se
-   scena ulozi a znovu nacte, `device: tab5` je pryc a validator by spadl
-   zpet na profil OLED 256x128 - jine dotykove meze, jina znakova sada, jiny
-   model kontrastu. A NIC by to nenahlasilo. Otisk si proto `device` pamatuje
-   zvlast a `dokument()` ho do slovniku pro validator vzdy doplni.
+3. **Identita panelu musi prezit ulozeni i validaci.** `UIDesigner` nyni
+   zachovava korenova metadata vcetne `device`. Otisk si identitu pamatuje
+   take nezavisle na ulozenem dokumentu: legacy vstupy mohou klic postradat
+   a validator nesmi potichu prejit na meze OLED 256x128. `dokument()` proto
+   vzdy pouziva identitu panelu z otisku.
 4. **Vedle sceny lezi `_meta_X.json`** - dodatecna pole, ktera do sceny
    patrit nesmi (schema ma `additionalProperties: false`, kazdy klic navic je
    pro branu tvrdy ERROR). Nese skutecny ramecek prvku, inline styl
@@ -491,9 +491,9 @@ def overi_zdroj(otisk: Any, cesta_sceny: Any) -> Optional[str]:
 def dokument(most: Most) -> Dict[str, Any]:
     """Slovnik sceny pro `tools.validate_design.validate_data`, VZDY s `device`.
 
-    `UIDesigner.save_to_json` stavi slovnik napevno ze ctyr klicu a `device`
-    zahodi. Kdyby se dokument bral odtamtud, validator by spadl na profil
-    OLED 256x128 a merit uplne jine meze - bez jedineho hlaseni.
+    Ukladani korenovou identitu zachovava. Pro validaci tohoto importu ale
+    rozhoduje otisk puvodniho zdroje, vcetne legacy vstupu bez `device`;
+    nesmi se potichu pouzit profil OLED 256x128 s jinymi mezemi.
     """
     des = most.designer
     jmeno = des.current_scene

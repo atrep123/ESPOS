@@ -13,6 +13,10 @@ def test_toolbar_hover_and_pressed_use_pixel_fill(make_app):
     first_rect, _ = app.toolbar_hitboxes[0]
     assert first_rect.x % GRID == 0
     assert first_rect.y % GRID == 0
+    hitboxes = app.toolbar_hitboxes + app.toolbar_scroll_hitboxes
+    for rect, _key in hitboxes:
+        assert app.layout.toolbar_rect.contains(rect)
+        assert rect.x % GRID == rect.y % GRID == rect.width % GRID == 0
 
     inner = (first_rect.x + 2, first_rect.y + 2)
     app.pointer_pos = first_rect.center
@@ -20,12 +24,14 @@ def test_toolbar_hover_and_pressed_use_pixel_fill(make_app):
     app.pointer_down = False
     app.logical_surface.fill(PALETTE["bg"])
     app._draw_toolbar()
+    assert app.toolbar_hitboxes + app.toolbar_scroll_hitboxes == hitboxes
     hover_color = app.logical_surface.get_at(inner)[:3]
     assert hover_color == app._shade(PALETTE["panel"], 12)
 
     app.pointer_down = True
     app.logical_surface.fill(PALETTE["bg"])
     app._draw_toolbar()
+    assert app.toolbar_hitboxes + app.toolbar_scroll_hitboxes == hitboxes
     pressed_color = app.logical_surface.get_at(inner)[:3]
     assert pressed_color == app._shade(PALETTE["panel"], -4)
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -21,6 +23,9 @@ def mock_provenance(initial, final=None):
 
 @pytest.fixture
 def pipeline(tmp_path, monkeypatch):
+    # TEST_ONLY routing admits mocked app children on every real host. Replace
+    # only the wrapper's binding; shared os/pathlib keep their native behavior.
+    monkeypatch.setattr(simulator, "os", SimpleNamespace(name="nt"))
     compiler = tmp_path / "TEST_ONLY-gcc.bin"
     compiler.write_bytes(b"TEST_ONLY inert compiler placeholder")
     created, calls = [], []
@@ -62,6 +67,51 @@ def pipeline(tmp_path, monkeypatch):
 
     monkeypatch.setattr(simulator, "run_child", child)
     return compiler, created, calls
+
+
+@pytest.mark.parametrize(("platform_name", "app"), [("nt", False), ("posix", False), ("nt", True)])
+def test_mock_pipeline_routes_supported_platform_modes(
+    tmp_path, pipeline, monkeypatch, platform_name, app
+):
+    _compiler, created, calls = pipeline
+    monkeypatch.setattr(simulator, "os", SimpleNamespace(name=platform_name))
+    events = ["button:0:release", "tick:1", "display:disconnected"]
+    state = simulator.run(
+        tmp_path / "TEST_ONLY-scene.json",
+        tmp_path / "TEST_ONLY-frame.pgm",
+        events,
+        app=app,
+    )
+    assert len(calls) == 2 and len(created) == 1
+    assert ("-DSIM_APP=1" in calls[0][0]) is app
+    assert calls[1][0][3:] == events
+    assert state["simulation"] == mock_provenance("connected", "disconnected")
+    assert not created[0].exists()
+
+
+def test_posix_app_preflight_fails_before_setup_or_child_calls(tmp_path, monkeypatch):
+    monkeypatch.setattr(simulator, "os", SimpleNamespace(name="posix"))
+    forbidden = Mock(side_effect=AssertionError("unsupported app must fail before setup/children"))
+    monkeypatch.setattr(simulator, "shutil", SimpleNamespace(which=forbidden))
+    monkeypatch.setattr(simulator, "tempfile", SimpleNamespace(mkdtemp=forbidden))
+    for name in (
+        "_ordinary_path",
+        "build_environment",
+        "generate_ui_design_multi_pair",
+        "run_child",
+    ):
+        monkeypatch.setattr(simulator, name, forbidden)
+    with pytest.raises(SimulatorProcessError, match=r"^simulator-preflight-failed$") as caught:
+        simulator.run(
+            tmp_path / "TEST_ONLY-unused.json",
+            tmp_path / "TEST_ONLY-unused.pgm",
+            ["tick:1", "display:error"],
+            app=True,
+        )
+    forbidden.assert_not_called()
+    assert caught.value.cleanup_confirmed is True
+    assert not hasattr(caught.value, "retained_build")
+    assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize("invalid", [True, False, -1, 256, "action:x:0", None])

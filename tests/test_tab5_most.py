@@ -166,17 +166,77 @@ def test_device_prezije_v_otisku(scena_na_disku):
     assert most.otisk.scena == "SvorkaTest.dc"
 
 
-def test_save_to_json_device_ZAHODI(scena_na_disku, tmp_path):
-    """Pozitivni kontrola k predchozimu: past je skutecna, ne domnela.
+def test_save_to_json_a_reload_zachova_device(scena_na_disku, tmp_path, monkeypatch):
+    """Ulozeni a dalsi nacteni zachova identitu panelu i editaci.
 
-    Kdyby `save_to_json` klic `device` zachoval, byl by otisk zbytecny.
-    Az tenhle test dela z komentare v modulu dolozene tvrzeni.
+    Korenova metadata se nyni uchovavaji. Otisk nadale meri puvodni
+    souradnice a identitu zdroje; ztrata `device` uz neni jeho predpoklad.
     """
+    monkeypatch.setenv("ESP32OS_AUTO_EXPORT", "0")
     designer = UIDesigner(1280, 720)
     designer.load_from_json(str(scena_na_disku))
+    designer.scenes["main"].widgets[1].text = "EDITED"
     ven = tmp_path / "ulozeno.json"
     designer.save_to_json(str(ven))
-    assert "device" not in json.loads(ven.read_text(encoding="utf-8"))
+    ulozeno = json.loads(ven.read_text(encoding="utf-8"))
+    assert ulozeno["device"] == "tab5"
+
+    znovu = UIDesigner()
+    znovu.load_from_json(str(ven))
+    assert (znovu.width, znovu.height) == (1280, 720)
+    sc = znovu.scenes["main"]
+    assert (sc.width, sc.height) == (1280, 720)
+    assert len(sc.widgets) == 3
+    assert sc.widgets[1].text == "EDITED"
+    dalsi = tmp_path / "znovu_ulozeno.json"
+    znovu.save_to_json(str(dalsi))
+    assert json.loads(dalsi.read_text(encoding="utf-8")) == ulozeno
+
+
+def test_save_to_json_a_reload_zachova_vnorena_metadata_a_profil(tmp_path, monkeypatch):
+    """Identita i vnoreny profil jsou metadata, editovane widgety zustanou aktualni."""
+    monkeypatch.setenv("ESP32OS_AUTO_EXPORT", "0")
+    data = copy.deepcopy(SCENA)
+    data.update(
+        {
+            "board": "tab5",
+            "active_board": "tab5",
+            "hardware_profile": tab5_most.PROFIL_TAB5,
+            "profile": {"id": tab5_most.PROFIL_TAB5, "custom": [1, None, False]},
+            "vendor_extension": {
+                "device": "opaque-device",
+                "nested": [{"text": "český text", "values": [None, True, 0]}],
+            },
+        }
+    )
+    data["scenes"]["main"]["hardware_profile"] = tab5_most.PROFIL_TAB5
+    zdroj = tmp_path / "metadata.json"
+    zdroj.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    designer = UIDesigner()
+    designer.load_from_json(str(zdroj))
+    designer.scenes["main"].widgets[1].x += 12
+
+    # Kazde dalsi nacteni musi zachovat metadata i editaci, ne vratit puvodni widget.
+    for jmeno in ("ulozeno.json", "znovu_ulozeno.json"):
+        ven = tmp_path / jmeno
+        designer.save_to_json(str(ven))
+        ulozeno = json.loads(ven.read_text(encoding="utf-8"))
+        for klic in (
+            "device",
+            "board",
+            "active_board",
+            "hardware_profile",
+            "profile",
+            "vendor_extension",
+        ):
+            assert ulozeno[klic] == data[klic], klic
+        assert ulozeno["scenes"]["main"]["hardware_profile"] == tab5_most.PROFIL_TAB5
+        assert ulozeno["scenes"]["main"]["widgets"][1]["x"] == 76
+        designer = UIDesigner()
+        designer.load_from_json(str(ven))
+        assert designer.scenes["main"].hardware_profile == tab5_most.PROFIL_TAB5
+        assert len(designer.scenes["main"].widgets) == 3
+        assert designer.scenes["main"].widgets[1].x == 76
 
 
 def test_otisk_si_pamatuje_puvodni_souradnice(scena_na_disku):

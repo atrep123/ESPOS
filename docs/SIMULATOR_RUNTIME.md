@@ -92,7 +92,15 @@ nonzero exit, output overflow or incomplete owned-process cleanup is a failure.
 Only that run's Job is terminated, never a global name/PID search. Reader threads
 must join before success. POSIX preserves the existing gray4 runner with an owned
 process group; this does not prove ownership of descendants that create a new
-session. POSIX runtime behavior has not been reverified in this Windows turn.
+session. The default POSIX path was subsequently reverified in the existing
+Ubuntu 24.04 WSL environment with GCC 13.3.0, without installing dependencies.
+Four actual C controls passed: initial/edited pixels and disconnected/error
+mock transport, with eight successful empty-owned-process-group receipts.
+Evidence: `C:/Sumilek-git/worker-patches/TEST_ONLY-posix-native-20261015-v2/`.
+The retained v1 failure and diagnostic found `INT_MIN`/`INT_MAX` relied on a
+transitive platform include. Production `ui.c` now explicitly includes standard
+`<limits.h>`; no firmware API or runtime bounds were changed. This verifies
+neither the Windows-fiber app mode on Linux nor a Linux editor/release/device.
 
 Private builds are removed only after rechecking their exact parent, basename
 and filesystem identity. An uncertain cleanup leaves the build for review;

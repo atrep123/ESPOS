@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <limits.h>
 
 #include "esp_err.h"
 #include "esp_log.h"
