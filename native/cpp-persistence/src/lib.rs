@@ -3,6 +3,8 @@
 #[cfg(not(windows))]
 compile_error!("Native C++ persistence requires Windows; no simulated fallback");
 mod create_target;
+mod fresh_project;
+mod fresh_project_recovery;
 pub mod host;
 pub mod recovery_view;
 pub mod save_as;

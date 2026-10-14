@@ -56,6 +56,55 @@ primitive contracts: [Rust File::sync_all](https://doc.rust-lang.org/std/fs/stru
 
 ## Verification
 
+### Fresh four-file project component (2026-10-14)
+
+`fresh_project.rs` implements a native-internal CREATE_NEW group for
+`app/src/main.cpp`, `tabos-app.json`, `CMakeLists.txt` and
+`docs/UI_BACKEND_TRACEABILITY.md`. It requires a native-selected parent and a
+same-owner source scope supplied by the host; neither is minted by this module.
+It preserves exact bounded UTF-8 bytes, rejects existing targets, pins namespace
+ancestors, retains intent/payload/may-write evidence after partial failures, and
+checks all four final files before issuing its internal result. Read handles and
+namespace pins remain held until adoption. It is not an atomic four-file commit.
+
+The nine new real Windows filesystem tests cover successful creation, conflicts,
+pre-work cancellation, failure after each member, unknown extra members, input
+bounds and lock lifetime. The complete native suite passed **114 tests**, with
+natural zero root exit, confirmed empty owned scope, no forced cleanup, bounded
+logs and unchanged sources in `native-46e8fc77ae7340f9adbd26c9cb9eb467`.
+
+That was the earlier component checkpoint. Native-only `NativeHost` methods now
+prepare owned group work from its existing Registry's exact captured draft,
+block same-owner source replacement until work drains, recheck binding/capture
+after the picker and before adoption, and adopt into the SAME document. Status
+and cancellation retain the actual effect; a partial create never marks source
+saved. A 128-operation journal cap stops before target mutation without cleanup.
+Startup cataloguing and read-only inspection use fixed native-storage members;
+intent paths never become grants and historical verification never proves current
+target contents. Ten Host tests and 15 recovery tests cover these added paths.
+The complete owned-Job native suite now passed **140 tests** at
+`native-9df8f9ab14884804b2b087f38ed5c467`, natural zero/empty scope, unchanged
+sources and no forced cleanup.
+
+Closed HostRequest commands now route creation, same-operation status/cancel,
+and fixed startup history inspection. Creation captures its replay identity
+before any I/O; repeating the exact call returns the original status, never
+another work object. Caller-selected paths, source overrides, grants, duplicate
+fields and unsafe revisions are rejected. The Registry lock is released for
+native picker and filesystem work, then the actual binding is reauthenticated.
+The complete suite passed **147 tests**, zero failed/ignored, in
+`native-621f233e98ee4f6187aac907145f04bf`, with confirmed natural Job zero and
+unchanged source snapshots. The preceding limited-permission report is retained:
+two NTFS hardlink fixtures lacked permission and one new test had incorrectly
+expected picker cancellation for a revoked work intent (the native status remains
+conservative Incomplete/Revoked with mayHaveWritten=false).
+
+These JSON commands are **not yet connected to the desktop folder picker or UI**.
+Its separate actual-parent folder-picker source is prepared in espos-tauri but
+not activated here. Group files are opaque bounded user content;
+these tests are not semantic SDK/CMake validation. No SDK/firmware build,
+installed GUI, power-loss or hardware proof follows from these results.
+
 `run_tests.py` runs the locked offline Rust test suite using the existing
 workspace Job Object helper. Assignment precedes command release, all descendants
 must end naturally, and forced cleanup never counts as success. Reports are fresh

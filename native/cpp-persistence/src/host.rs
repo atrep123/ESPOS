@@ -13,6 +13,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+#[path = "host_fresh_project.rs"]
+mod fresh_project_host;
+pub use fresh_project_host::{
+    ProjectFileProof, ProjectParentPicker, ProjectRecoveryView, ProjectStatus, ProjectWork,
+};
+
 pub const MAX_HOST_REQUEST_BYTES: usize = MAX_SOURCE_BYTES.div_ceil(3) * 4 + 4096;
 #[cfg(test)]
 #[path = "host_tests.rs"]
@@ -122,6 +128,32 @@ pub enum HostCommand {
         #[serde(rename = "operationId")]
         operation_id: RequestId,
     },
+    CreateProject {
+        #[serde(rename = "documentId")]
+        document_id: DocumentId,
+        revision: u64,
+        #[serde(rename = "directoryName")]
+        directory_name: String,
+        #[serde(rename = "manifestBase64")]
+        manifest_base64: String,
+        #[serde(rename = "cmakeBase64")]
+        cmake_base64: String,
+        #[serde(rename = "traceabilityBase64")]
+        traceability_base64: String,
+    },
+    ProjectStatus {
+        #[serde(rename = "requestId")]
+        request_id: RequestId,
+    },
+    CancelProject {
+        #[serde(rename = "requestId")]
+        request_id: RequestId,
+    },
+    ListProjectRecovery {},
+    InspectProjectRecovery {
+        #[serde(rename = "operationId")]
+        operation_id: RequestId,
+    },
 }
 pub fn decode_host_request(raw: &[u8]) -> Result<HostRequest, Code> {
     if raw.len() > MAX_HOST_REQUEST_BYTES {
@@ -129,7 +161,9 @@ pub fn decode_host_request(raw: &[u8]) -> Result<HostRequest, Code> {
     }
     let request: HostRequest = serde_json::from_slice(raw).map_err(|_| Code::InvalidInput)?;
     match &request.command {
-        HostCommand::BindDraft { revision, .. } | HostCommand::ReserveSaveAs { revision, .. }
+        HostCommand::BindDraft { revision, .. }
+        | HostCommand::ReserveSaveAs { revision, .. }
+        | HostCommand::CreateProject { revision, .. }
             if *revision > 9_007_199_254_740_991 =>
         {
             return Err(Code::InvalidInput)
@@ -170,6 +204,7 @@ struct RecordedCall {
 }
 enum RecordedResult {
     Request(RequestId),
+    Project(RequestId),
     Draft(DraftBinding),
     Released,
     Failed(Code),
@@ -177,12 +212,15 @@ enum RecordedResult {
 struct State {
     registry: Registry,
     registrations: Vec<Registration>,
+    projects: HashMap<RequestId, fresh_project_host::Record>,
 }
 #[derive(Clone)]
 pub struct NativeHost {
     identity: Arc<()>,
     state: Arc<Mutex<State>>,
     environment: Arc<Mutex<WriterEnvironment>>,
+    project_storage: Arc<std::path::PathBuf>,
+    project_catalogue: Arc<HashMap<RequestId, std::path::PathBuf>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -208,6 +246,17 @@ pub enum HostReply {
     RecoveryComparison {
         comparison: crate::recovery_view::RecoveryComparison,
     },
+    ProjectState {
+        #[serde(rename = "requestId")]
+        request_id: RequestId,
+        state: ProjectStatus,
+    },
+    ProjectRecoveryIds {
+        items: Vec<RequestId>,
+    },
+    ProjectRecoveryView {
+        inspection: ProjectRecoveryView,
+    },
 }
 /// Historical metadata only. Neither a file path nor an old live document grant.
 #[derive(Clone, Serialize)]
@@ -225,6 +274,7 @@ pub enum HostDispatch {
     Reply(HostReply),
     Read(ReadWork),
     Write(WriteWork),
+    Project(ProjectWork),
 }
 pub struct ReadWork {
     host: NativeHost,
@@ -238,13 +288,18 @@ pub struct WriteWork {
 }
 impl NativeHost {
     pub fn open_local(storage: &Path) -> Result<Self, Code> {
+        let project_storage = storage.join("cpp-fresh-project-v1");
+        let project_catalogue = fresh_project_host::catalogue(&project_storage)?;
         Ok(Self {
             identity: Arc::new(()),
             state: Arc::new(Mutex::new(State {
                 registry: Registry::new()?,
                 registrations: vec![],
+                projects: HashMap::new(),
             })),
             environment: Arc::new(Mutex::new(WriterEnvironment::open_local(storage)?)),
+            project_storage: Arc::new(project_storage),
+            project_catalogue: Arc::new(project_catalogue),
         })
     }
     /// Native startup/inspection seam only, not an IPC command or fresh grant.
@@ -316,6 +371,15 @@ impl NativeHost {
             return Ok(());
         }
         let caller = state.registrations[index].caller.clone();
+        for record in state
+            .projects
+            .values_mut()
+            .filter(|record| record.owner == caller)
+        {
+            record
+                .cancel
+                .store(true, std::sync::atomic::Ordering::Release);
+        }
         state.registrations[index].admission = Admission::Revoked;
         state.registry.revoke_caller(&caller)
     }
@@ -353,6 +417,7 @@ impl NativeHost {
                 | HostCommand::ReserveSave { .. }
                 | HostCommand::ReserveSaveAs { .. }
                 | HostCommand::Release { .. }
+                | HostCommand::CreateProject { .. }
         );
         if let Some(recorded) = state.registrations[index].calls.get(&request.call_id) {
             if recorded.hash != hash {
@@ -362,6 +427,10 @@ impl NativeHost {
                 RecordedResult::Request(id) => Ok(HostDispatch::Reply(HostReply::Reservation {
                     request_id: id.clone(),
                     state: state.registry.status(&caller, id)?,
+                })),
+                RecordedResult::Project(id) => Ok(HostDispatch::Reply(HostReply::ProjectState {
+                    request_id: id.clone(),
+                    state: Self::project_status_locked(&state, &caller, id, false)?,
                 })),
                 RecordedResult::Draft(draft) => {
                     // Render original native request to check grant revocation;
@@ -392,10 +461,76 @@ impl NativeHost {
                 RecordedResult::Failed(code) => Err(*code),
             };
         }
+        if state
+            .projects
+            .values()
+            .any(|record| record.owner == caller && record.pending())
+            && !matches!(
+                &request.command,
+                HostCommand::Status { .. }
+                    | HostCommand::Cancel { .. }
+                    | HostCommand::ListRecovery { .. }
+                    | HostCommand::CompareRecovery { .. }
+                    | HostCommand::ProjectStatus { .. }
+                    | HostCommand::CancelProject { .. }
+                    | HostCommand::ListProjectRecovery { .. }
+                    | HostCommand::InspectProjectRecovery { .. }
+            )
+        {
+            return Err(Code::Busy);
+        }
         if mutating && state.registrations[index].calls.len() >= MAX_CALLS {
             return Err(Code::Busy);
         }
-        let result = self.execute_locked(&mut state, &caller, request.command);
+        let result = match request.command {
+            HostCommand::CreateProject {
+                document_id,
+                revision,
+                directory_name,
+                manifest_base64,
+                cmake_base64,
+                traceability_base64,
+            } => (|| {
+                let companions = [
+                    decode_project_companion(&manifest_base64)?,
+                    decode_project_companion(&cmake_base64)?,
+                    decode_project_companion(&traceability_base64)?,
+                ];
+                self.prepare_fresh_project_locked(
+                    &mut state,
+                    binding,
+                    &document_id,
+                    revision,
+                    directory_name,
+                    companions,
+                )
+                .map(HostDispatch::Project)
+            })(),
+            HostCommand::ProjectStatus { request_id } => {
+                Self::project_status_locked(&state, &caller, &request_id, false)
+                    .map(|state| HostDispatch::Reply(HostReply::ProjectState { request_id, state }))
+            }
+            HostCommand::CancelProject { request_id } => {
+                Self::project_status_locked(&state, &caller, &request_id, true)
+                    .map(|state| HostDispatch::Reply(HostReply::ProjectState { request_id, state }))
+            }
+            HostCommand::ListProjectRecovery {} => {
+                Ok(HostDispatch::Reply(HostReply::ProjectRecoveryIds {
+                    items: self.project_ids_locked(),
+                }))
+            }
+            HostCommand::InspectProjectRecovery { operation_id } => {
+                // No State mutex across filesystem inspection; the inspection
+                // reauthenticates the actual native binding before returning.
+                drop(state);
+                return self
+                    .inspect_project_recovery(binding, &operation_id)
+                    .map(|inspection| {
+                        HostDispatch::Reply(HostReply::ProjectRecoveryView { inspection })
+                    });
+            }
+            command => self.execute_locked(&mut state, &caller, command),
+        };
         if mutating {
             let saved = match &result {
                 Ok(HostDispatch::Reply(HostReply::Reservation { request_id, .. })) => {
@@ -405,6 +540,9 @@ impl NativeHost {
                     RecordedResult::Draft(binding.clone())
                 }
                 Ok(HostDispatch::Reply(HostReply::Released {})) => RecordedResult::Released,
+                Ok(HostDispatch::Project(work)) => {
+                    RecordedResult::Project(work.request_id().clone())
+                }
                 Err(code) => RecordedResult::Failed(*code),
                 _ => return Err(Code::Unavailable),
             };
@@ -567,6 +705,11 @@ impl NativeHost {
                     )?,
                 }
             }
+            HostCommand::CreateProject { .. }
+            | HostCommand::ProjectStatus { .. }
+            | HostCommand::CancelProject { .. }
+            | HostCommand::ListProjectRecovery { .. }
+            | HostCommand::InspectProjectRecovery { .. } => return Err(Code::Unavailable),
         };
         Ok(HostDispatch::Reply(reply))
     }
@@ -609,6 +752,22 @@ impl NativeHost {
             .registry
             .status(&state.registrations[index].caller, id)
     }
+}
+
+fn decode_project_companion(encoded: &str) -> Result<Vec<u8>, Code> {
+    const CAP: usize = 65_536;
+    if encoded.len() > CAP.div_ceil(3) * 4 {
+        return Err(Code::TooLarge);
+    }
+    let bytes = decode_source(encoded)?;
+    if bytes.len() > CAP {
+        return Err(Code::TooLarge);
+    }
+    // Files::new performs the final nonempty/UTF-8/NUL checks as well.
+    if bytes.is_empty() || bytes.contains(&0) {
+        return Err(Code::InvalidInput);
+    }
+    Ok(bytes)
 }
 impl ReadWork {
     pub fn request_id(&self) -> &RequestId {

@@ -121,6 +121,7 @@ fn reply(host: &NativeHost, binding: &Binding, bytes: &[u8]) -> HostReply {
         HostDispatch::Reply(reply) => reply,
         HostDispatch::Read(_) => panic!("expected reply, got new ReadWork"),
         HostDispatch::Write(_) => panic!("expected reply, got new WriteWork"),
+        HostDispatch::Project(_) => panic!("expected reply, got new ProjectWork"),
     }
 }
 fn reservation(reply: HostReply) -> (RequestId, Status) {

@@ -318,6 +318,12 @@ pub(crate) fn digest(bytes: &[u8]) -> String {
         .collect()
 }
 
+// Fixed-role fresh-project files are not C++ Save targets. Inspect their already
+// held handles without extending admit_source_path or accepting a new path DTO.
+pub(crate) fn fresh_project_snapshot(file: &mut File, cap: usize) -> Result<Vec<u8>, Code> {
+    Journal::observe(file, cap).map(|(_, bytes)| bytes)
+}
+
 #[repr(C)]
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -485,13 +491,13 @@ struct Parent {
 }
 // Keep the native ancestor handles alive even when only the captured facts are
 // read. Their lifetime pins the namespace; it is not metadata actor exclusion.
-struct Pins {
+pub(crate) struct Pins {
     paths: Vec<PathBuf>,
     _handles: Vec<File>,
     facts: Vec<Parent>,
 }
 impl Pins {
-    fn open(parent: &Path) -> Result<Self, Code> {
+    pub(crate) fn open(parent: &Path) -> Result<Self, Code> {
         // Reuse conservative lexical validator with a non-secret sentinel name.
         windows_read::validate_path(&parent.join("namespace-check.cpp"))?;
         let mut paths: Vec<_> = parent.ancestors().map(Path::to_path_buf).collect();
@@ -525,7 +531,7 @@ impl Pins {
             facts,
         })
     }
-    fn check(&self) -> Result<(), Code> {
+    pub(crate) fn check(&self) -> Result<(), Code> {
         let fresh = Self::open(self.paths.last().ok_or(Code::UnsupportedPath)?)?;
         if fresh.facts != self.facts {
             return Err(Code::Conflict);
