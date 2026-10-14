@@ -166,5 +166,5 @@ exclude_lines = [
 [tool.mutmut]
 paths_to_mutate = "cyberpunk_designer/"
 tests_dir = "tests/"
-runner = "python -m pytest -x -q --ignore=output --tb=no"
+runner = "python -B -m pytest -x -q --ignore=output --tb=no -m 'not native_windows'"
 dict_synonyms = "Struct,NamedStruct"
