@@ -596,6 +596,27 @@ pub(crate) fn capture_read_grant(path: &Path, file: &File) -> Result<Revision, C
     Ok(revision)
 }
 impl HeldTarget {
+    // Fixed-role saved-app reader only. Read-only OPEN_EXISTING/SHARE_READ;
+    // this creates no Save target or destination write authority.
+    pub(crate) fn read_project_member(root: &Path, role: usize) -> Result<Self, Code> {
+        let name = crate::fresh_project::ROLES
+            .get(role)
+            .ok_or(Code::InvalidInput)?;
+        let path = crate::fresh_project::member(root, name);
+        windows_read::validate_path(&path)?;
+        let pins = Pins::open(path.parent().ok_or(Code::UnsupportedPath)?)?;
+        let mut file = io(OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .custom_flags(REPARSE)
+            .open(&path))?;
+        ntfs(&file)?;
+        // Existing fresh-project reader rejects streams/hardlinks/bad metadata
+        // BEFORE reading. Do not widen the source writer's path admission.
+        let cap = if role == 0 { MAX_SOURCE_BYTES } else { 65_536 };
+        fresh_project_snapshot(&mut file, cap)?;
+        Ok(Self { path, file, pins })
+    }
     pub(crate) fn open(path: &Path) -> Result<Self, Code> {
         admit_source_path(path)?;
         let pins = Pins::open(path.parent().ok_or(Code::UnsupportedPath)?)?;
@@ -614,6 +635,12 @@ impl HeldTarget {
         })
     }
     pub(crate) fn snapshot(&mut self) -> Result<Revision, Code> {
+        self.project_snapshot_bounded(MAX_SOURCE_BYTES)
+    }
+    pub(crate) fn project_snapshot_bounded(&mut self, cap: usize) -> Result<Revision, Code> {
+        if cap > MAX_SOURCE_BYTES {
+            return Err(Code::TooLarge);
+        }
         if unsafe { GetFileType(self.file.as_raw_handle()) } != 1 {
             return Err(Code::UnsupportedPath);
         }
@@ -621,12 +648,15 @@ impl HeldTarget {
         let id = identity(&self.file)?;
         let basic: Basic = query(&self.file, 0)?;
         let standard: Standard = query(&self.file, 1)?;
-        if standard.eof < 0 || standard.eof > MAX_SOURCE_BYTES as i64 || standard.directory != 0 {
+        if standard.eof < 0 || standard.directory != 0 {
             return Err(Code::UnsupportedPath);
+        }
+        if standard.eof > cap as i64 {
+            return Err(Code::TooLarge);
         }
         let security = security(&self.file)?;
         let streams_ok = streams(&self.file)?;
-        let bytes = read_bytes(&mut self.file, MAX_SOURCE_BYTES)?;
+        let bytes = read_bytes(&mut self.file, cap)?;
         let after: Basic = query(&self.file, 0)?;
         let after_std: Standard = query(&self.file, 1)?;
         if id != identity(&self.file)?

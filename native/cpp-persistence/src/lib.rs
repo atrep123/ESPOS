@@ -6,6 +6,7 @@ mod create_target;
 mod fresh_project;
 mod fresh_project_recovery;
 pub mod host;
+mod project_snapshot;
 pub mod recovery_view;
 pub mod save_as;
 pub mod types;
@@ -75,6 +76,8 @@ struct Document {
     selection: Option<Selection>,
     version: Option<Version>,
     draft_capture: Option<save_as::CapturedDraft>,
+    project: Option<project_snapshot::Provenance>,
+    project_lease: Option<Arc<AtomicBool>>,
 }
 struct Target {
     owner: Caller,
@@ -323,8 +326,9 @@ impl Registry {
                 _ => None,
             })
             .collect();
-        self.documents
-            .retain(|id, d| d.owner != *owner || retained.contains(id));
+        self.documents.retain(|id, d| {
+            d.owner != *owner || retained.contains(id) || d.project_lease.is_some()
+        });
     }
     pub fn new_document(&mut self, caller: &Caller, input: Request) -> Result<Start, Code> {
         self.start(caller, input.request_id, Operation::New)
@@ -346,6 +350,9 @@ impl Registry {
         operation: Operation,
     ) -> Result<Start, Code> {
         let entry = self.entry(caller, &id)?;
+        if self.has_saved_app_work(caller) {
+            return Err(Code::Busy);
+        }
         if matches!(operation, Operation::Save(_)) {
             return Err(Code::InvalidInput);
         }
@@ -379,6 +386,8 @@ impl Registry {
                     selection: None,
                     version: None,
                     draft_capture: None,
+                    project: None,
+                    project_lease: None,
                 },
             );
             self.settle(&id, Settled::Created(document));
@@ -475,6 +484,8 @@ impl Registry {
                         selection: Some(selection),
                         version: Some(version),
                         draft_capture: None,
+                        project: None,
+                        project_lease: None,
                     },
                 );
                 Ok(Settled::Opened(id))
@@ -608,6 +619,9 @@ impl Registry {
     }
     pub fn release(&mut self, caller: &Caller, input: Release) -> Result<(), Code> {
         self.authorize(caller)?;
+        if self.has_saved_app_work(caller) {
+            return Err(Code::Busy);
+        }
         // A captured writer keeps its grant until native effect is resolved.
         if self.operations.values().any(|e| {
             e.owner == *caller && matches!(&e.phase,Phase::Writer(r) if r.blocks_replacement())
@@ -648,6 +662,11 @@ impl Registry {
     }
     pub fn revoke_caller(&mut self, caller: &Caller) -> Result<(), Code> {
         self.authorize(caller)?;
+        for d in self.documents.values().filter(|d| d.owner == *caller) {
+            if let Some(cancel) = &d.project_lease {
+                cancel.store(true, Ordering::Release);
+            }
+        }
         let ids: Vec<_> = self
             .operations
             .iter()
@@ -667,8 +686,9 @@ impl Registry {
                 _ => None,
             })
             .collect();
-        self.documents
-            .retain(|id, d| d.owner != *caller || retained.contains(id));
+        self.documents.retain(|id, d| {
+            d.owner != *caller || retained.contains(id) || d.project_lease.is_some()
+        });
         self.targets.retain(|_, t| t.owner != *caller);
         let state = self.callers.get_mut(caller).ok_or(Code::Denied)?;
         state.active = false;

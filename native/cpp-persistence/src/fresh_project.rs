@@ -18,7 +18,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-const ROLES: [&str; 4] = [
+pub(crate) const ROLES: [&str; 4] = [
     "app/src/main.cpp",
     "tabos-app.json",
     "CMakeLists.txt",
@@ -72,6 +72,7 @@ pub(crate) struct Plan {
 pub(crate) struct Created {
     pub(crate) source: windows_read::Selection,
     pub(crate) files: Vec<FileProof>,
+    pub(crate) project: crate::project_snapshot::Provenance,
     _directories: Vec<Pins>,
     _read_handles: Vec<File>,
 }
@@ -106,7 +107,7 @@ fn cancelled(cancel: &AtomicBool) -> Result<(), Code> {
         Ok(())
     }
 }
-fn member(root: &Path, role: &str) -> PathBuf {
+pub(crate) fn member(root: &Path, role: &str) -> PathBuf {
     role.split('/')
         .fold(root.to_path_buf(), |path, part| path.join(part))
 }
@@ -118,7 +119,7 @@ fn absent(path: &Path) -> Result<(), Code> {
     }
 }
 
-fn exact_layout(root: &Path) -> Result<(), Code> {
+pub(crate) fn exact_layout(root: &Path) -> Result<(), Code> {
     for (relative, expected) in [
         ("", &["app", "tabos-app.json", "CMakeLists.txt", "docs"][..]),
         ("app", &["src"][..]),
@@ -338,9 +339,14 @@ impl Plan {
             &self.journal.join("verified.json"),
             &serde_json::to_vec(&proofs).map_err(|_| Code::InvalidInput)?,
         )?;
+        // Original creation pins/read locks still held: this is native root
+        // provenance, not a later inference from the source filename.
+        let held = crate::project_snapshot::HeldApp::open(&self.root)?;
+        let project = held.provenance()?;
         Ok(Created {
             source,
             files: proofs,
+            project,
             _directories: directories,
             _read_handles: read_handles,
         })

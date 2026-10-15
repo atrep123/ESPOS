@@ -167,6 +167,9 @@ impl Registry {
         bytes: Vec<u8>,
     ) -> Result<RequestId, Code> {
         self.authorize(caller)?;
+        if self.has_saved_app_work(caller) {
+            return Err(Code::Busy);
+        }
         if bytes.len() > crate::MAX_SOURCE_BYTES {
             return Err(Code::TooLarge);
         }
@@ -381,6 +384,9 @@ impl Registry {
         bytes: Vec<u8>,
     ) -> Result<RequestId, Code> {
         self.authorize(caller)?;
+        if self.has_saved_app_work(caller) {
+            return Err(Code::Busy);
+        }
         if self.operations.values().any(|e| {
             e.owner == *caller && matches!(&e.phase,Phase::Writer(r) if r.blocks_replacement())
         }) {
@@ -530,9 +536,21 @@ impl Registry {
         let document = r.document.clone();
         let version = r.new_version.clone();
         let grant = self.documents.get_mut(&document).ok_or(Code::Denied)?;
+        grant.project = grant
+            .project
+            .as_ref()
+            .and_then(|p| p.saved_source(&selection));
+        let saved_capture = if grant.project.is_some() {
+            grant
+                .draft_capture
+                .take()
+                .filter(|c| c.bytes == selection.bytes)
+        } else {
+            None
+        };
         grant.selection = Some(selection);
         grant.version = Some(version.clone());
-        grant.draft_capture = None;
+        grant.draft_capture = saved_capture;
         let Phase::Writer(r) = &mut self
             .operations
             .get_mut(id)

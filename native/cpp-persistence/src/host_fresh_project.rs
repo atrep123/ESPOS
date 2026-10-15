@@ -319,10 +319,16 @@ impl NativeHost {
         let state = self.state.lock().map_err(|_| Code::Unavailable)?;
         let index = self.index(&state, binding)?;
         let caller = &state.registrations[index].caller;
-        Ok(state
-            .projects
-            .values()
-            .any(|r| &r.owner == caller && r.pending()))
+        Ok(state.registry.has_saved_app_work(caller)
+            || state
+                .registry
+                .callers
+                .get(caller)
+                .is_some_and(|c| c.dialog.is_some())
+            || state
+                .projects
+                .values()
+                .any(|r| &r.owner == caller && r.pending()))
     }
 }
 
@@ -470,7 +476,7 @@ impl ProjectWork {
             .ok_or(Code::Revoked)?;
         document.selection = Some(created.source.clone());
         document.version = Some(version.clone());
-        document.draft_capture = None;
+        document.project = Some(created.project.clone());
         let candidate = Candidate {
             document_id: self.scope.document.clone(),
             source_base64: STANDARD.encode(&created.source.bytes),

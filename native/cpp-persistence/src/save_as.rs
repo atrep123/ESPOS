@@ -119,6 +119,11 @@ impl Registry {
         if bytes.len() > crate::MAX_SOURCE_BYTES {
             return Err(Code::TooLarge);
         }
+        // Check before reserving: new_document also rejects live saved-app
+        // work, but its error must not strand a hidden Reserved request here.
+        if self.has_saved_app_work(caller) {
+            return Err(Code::Busy);
+        }
         let request = self.reserve_request(caller, ReserveRequest::New {})?;
         let result = self.new_document(
             caller,
