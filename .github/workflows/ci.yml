@@ -117,10 +117,68 @@ jobs:
         if: matrix.python-version == '3.12'
         continue-on-error: true
         timeout-minutes: 20
+        shell: bash
+        env:
+          PYTHONUNBUFFERED: '1'
+          MUTATION_LOG_DIR: ${{ runner.temp }}/public-mutation-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          python -m mutmut run --no-progress 2>&1 | tail -30
-          python -m mutmut results 2>&1 | tail -40
-          python -m mutmut html 2>/dev/null || true
+          mkdir "$MUTATION_LOG_DIR"
+          printf 'Mutation run starting; report commands are best-effort diagnostics.\n' | tee "$MUTATION_LOG_DIR/status.log"
+          # Stream the first 5 MiB per command, then keep draining to avoid SIGPIPE.
+          # os.read forwards partial lines immediately; -u also covers mutmut children.
+          bounded_output='
+          import os
+          import sys
+          marker = b"\n[mutation log capped at 5 MiB; remaining output drained]\n"
+          remaining = 5 * 1024 * 1024 - len(marker)
+          truncated = False
+          while True:
+              chunk = os.read(0, 65536)
+              if not chunk:
+                  break
+              kept = chunk[:remaining]
+              sys.stdout.buffer.write(kept)
+              remaining -= len(kept)
+              if len(kept) < len(chunk) and not truncated:
+                  sys.stdout.buffer.write(marker)
+                  truncated = True
+          '
+          capture_log() {
+            local log_name="$1"
+            shift
+            local -a statuses
+            # Calls use || to suspend bash -e until every PIPESTATUS is captured.
+            "$@" 2>&1 | python -u -c "$bounded_output" | tee "$MUTATION_LOG_DIR/$log_name"
+            statuses=("${PIPESTATUS[@]}")
+            # The runner's actual failure takes precedence over logging failures.
+            local status
+            for status in "${statuses[@]}"; do
+              if (( status != 0 )); then return "$status"; fi
+            done
+            return 0
+          }
+          logging_status=0
+          run_status=0
+          capture_log run.log python -u -m mutmut run --no-progress || run_status=$?
+          printf 'mutmut run pipeline exit: %s\n' "$run_status" | tee -a "$MUTATION_LOG_DIR/status.log" || logging_status=$?
+          results_status=0
+          capture_log results.log timeout --signal=TERM --kill-after=5s 60s python -u -m mutmut results || results_status=$?
+          printf 'mutmut results pipeline exit: %s\n' "$results_status" | tee -a "$MUTATION_LOG_DIR/status.log" || logging_status=$?
+          html_status=0
+          capture_log html.log timeout --signal=TERM --kill-after=5s 60s python -u -m mutmut html || html_status=$?
+          printf 'mutmut html pipeline exit: %s\n' "$html_status" | tee -a "$MUTATION_LOG_DIR/status.log" || logging_status=$?
+          if (( run_status != 0 )); then exit "$run_status"; fi
+          if (( results_status != 0 )); then exit "$results_status"; fi
+          if (( html_status != 0 )); then exit "$html_status"; fi
+          exit "$logging_status"
+      - name: Upload mutation logs
+        if: matrix.python-version == '3.12' && always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: public-mutation-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/public-mutation-${{ github.run_id }}-${{ github.run_attempt }}/*.log
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
