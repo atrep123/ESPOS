@@ -10,6 +10,10 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+#[path = "host_project_stage.rs"]
+mod project_stage;
+pub use project_stage::StagedAppInputs;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SavedAppRole {
     Source,
@@ -60,6 +64,19 @@ pub struct ProjectReopenWork {
 }
 
 impl NativeHost {
+    /// Consume a same-host/same-binding saved lease into actual staged inputs.
+    /// No root argument, IPC grant, source writer expansion or build receipt.
+    /// Retained/partial stages consume a 32-slot budget. Drop does not reclaim
+    /// space; explicit retention/cleanup UX remains required before user builds.
+    pub fn stage_saved_app_inputs(
+        &self,
+        binding: &Binding,
+        mut lease: SavedAppLease,
+    ) -> Result<StagedAppInputs, Code> {
+        self.validate_saved_app_lease(binding, &mut lease)?;
+        project_stage::stage(lease)
+    }
+
     /// Capture the current editor draft on the SAME saved native document.
     /// Correlation revision/bytes never create project authority. Capture edits
     /// cancel an existing lease but keep its owner busy until real Drop.

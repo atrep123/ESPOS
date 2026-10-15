@@ -22,7 +22,7 @@ pub use fresh_project_host::{
 mod project_snapshot_host;
 pub use project_snapshot_host::{
     ProjectReopenWork, ProjectRevision, ProjectRootPicker, SavedAppLease, SavedAppRole,
-    SavedAppWork,
+    SavedAppWork, StagedAppInputs,
 };
 
 pub const MAX_HOST_REQUEST_BYTES: usize = MAX_SOURCE_BYTES.div_ceil(3) * 4 + 4096;
