@@ -159,13 +159,29 @@ jobs:
           }
           logging_status=0
           run_status=0
-          capture_log run.log python -u -m mutmut run --no-progress || run_status=$?
+          # The dedicated Linux owner adopts/reaps detached test descendants.
+          # No report may start until it returns after ECHILD and stdout EOF.
+          capture_log run.log python -u tools/mutation_process_owner.py run --deadline-seconds 900 --receipt-file "$MUTATION_LOG_DIR/run.scope.json" || run_status=$?
           printf 'mutmut run pipeline exit: %s\n' "$run_status" | tee -a "$MUTATION_LOG_DIR/status.log" || logging_status=$?
           results_status=0
-          capture_log results.log timeout --signal=TERM --kill-after=5s 60s python -u -m mutmut results || results_status=$?
+          if ! python -u tools/mutation_process_owner.py verify --receipt-file "$MUTATION_LOG_DIR/run.scope.json"; then
+            printf 'Reports skipped: process owner unavailable or failed.\n' | tee "$MUTATION_LOG_DIR/results.log"
+            results_status=70
+          else
+            capture_log results.log python -u tools/mutation_process_owner.py results --deadline-seconds 60 --receipt-file "$MUTATION_LOG_DIR/results.scope.json" || results_status=$?
+          fi
           printf 'mutmut results pipeline exit: %s\n' "$results_status" | tee -a "$MUTATION_LOG_DIR/status.log" || logging_status=$?
           html_status=0
-          capture_log html.log timeout --signal=TERM --kill-after=5s 60s python -u -m mutmut html || html_status=$?
+          # Interrupted mutmut can leave a target mutated. Cache counts are
+          # partial diagnostics, but HTML must not reconstruct a false diff.
+          pristine_status=0
+          git diff --quiet --no-ext-diff --no-textconv HEAD -- cyberpunk_designer/ || pristine_status=$?
+          untracked_targets=$(git ls-files --others --exclude-standard -- cyberpunk_designer/) || pristine_status=$?
+          if (( run_status == 0 && results_status == 0 && pristine_status == 0 )) && [[ -z "$untracked_targets" ]]; then
+            capture_log html.log python -u tools/mutation_process_owner.py html --deadline-seconds 60 --receipt-file "$MUTATION_LOG_DIR/html.scope.json" || html_status=$?
+          else
+            printf 'HTML skipped: interrupted/failed run or target bytes are not pristine.\n' | tee "$MUTATION_LOG_DIR/html.log"
+          fi
           printf 'mutmut html pipeline exit: %s\n' "$html_status" | tee -a "$MUTATION_LOG_DIR/status.log" || logging_status=$?
           if (( run_status != 0 )); then exit "$run_status"; fi
           if (( results_status != 0 )); then exit "$results_status"; fi
@@ -176,7 +192,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: public-mutation-logs-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/public-mutation-${{ github.run_id }}-${{ github.run_attempt }}/*.log
+          path: |
+            ${{ runner.temp }}/public-mutation-${{ github.run_id }}-${{ github.run_attempt }}/*.log
+            ${{ runner.temp }}/public-mutation-${{ github.run_id }}-${{ github.run_attempt }}/*.scope.json
           if-no-files-found: warn
           retention-days: 14
       - name: Upload coverage report

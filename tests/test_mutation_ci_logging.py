@@ -55,9 +55,21 @@ def validate_source(text):
     assert "5 * 1024 * 1024 - len(marker)" in script
     assert 'statuses=("${PIPESTATUS[@]}")' in script
     assert '2>&1 | python -u -c "$bounded_output" | tee ' in script
-    assert "python -u -m mutmut run --no-progress || run_status=$?" in script
+    assert (
+        'python -u tools/mutation_process_owner.py run --deadline-seconds 900 --receipt-file "$MUTATION_LOG_DIR/run.scope.json" || run_status=$?'
+        in script
+    )
     for command in ("results", "html"):
-        assert f"timeout --signal=TERM --kill-after=5s 60s python -u -m mutmut {command}" in script
+        assert (
+            f'python -u tools/mutation_process_owner.py {command} --deadline-seconds 60 --receipt-file "$MUTATION_LOG_DIR/{command}.scope.json" || {command}_status=$?'
+            in script
+        )
+    assert (
+        'if ! python -u tools/mutation_process_owner.py verify --receipt-file "$MUTATION_LOG_DIR/run.scope.json"'
+        in script
+    )
+    assert "run_status == 0 && results_status == 0 && pristine_status == 0" in script
+    assert "git diff --quiet --no-ext-diff --no-textconv HEAD -- cyberpunk_designer/" in script
     assert 'if (( run_status != 0 )); then exit "$run_status"; fi' in script
     for command in ("run", "results", "html"):
         assert f"mutmut {command} pipeline exit: %s" in script
@@ -65,7 +77,8 @@ def validate_source(text):
     assert "tail -" not in script and "|| true" not in script
     assert "matrix.python-version == '3.12' && always()" in upload
     assert UPLOAD in upload
-    assert f"          path: {LOG_PATH}/*.log\n" in upload
+    assert f"            {LOG_PATH}/*.log\n" in upload
+    assert f"            {LOG_PATH}/*.scope.json\n" in upload
     assert "          retention-days: 14\n" in upload
     assert "          if-no-files-found: warn\n" in upload
 
@@ -81,9 +94,11 @@ class SourceOnlyGuards(unittest.TestCase):
             ("continue-on-error: true\n        timeout-minutes: 20", "timeout-minutes: 20"),
             ("PYTHONUNBUFFERED: '1'", "PYTHONUNBUFFERED: '0'"),
             ('statuses=("${PIPESTATUS[@]}")', "statuses=(0)"),
-            ("--kill-after=5s 60s", "--kill-after=5s 600s"),
+            ("--deadline-seconds 60", "--deadline-seconds 600"),
+            ("--deadline-seconds 900", "--deadline-seconds 1200"),
+            ("run_status == 0 && results_status == 0 && pristine_status == 0", "run_status == 0"),
             ("&& always()", "&& success()"),
-            (f"path: {LOG_PATH}/*.log", "path: ${{ github.workspace }}/"),
+            (f"{LOG_PATH}/*.log", "${{ github.workspace }}/"),
             (UPLOAD, "actions/upload-artifact@v7"),
         ):
             with self.subTest(regression=before):
@@ -95,6 +110,7 @@ class SourceOnlyGuards(unittest.TestCase):
 # This generated executable cannot invoke a real campaign: only these exact
 # TEST_ONLY commands are accepted. -c delegates solely the production limiter.
 CONSOLE = r"""
+import json
 import os
 import sys
 import time
@@ -104,11 +120,14 @@ assert os.environ.get("TEST_ONLY_MUTATION_CONSOLE") == "inert"
 assert "PUBLIC_CI_PARENT_CONTEXT" not in os.environ
 name = Path(sys.argv[0]).name
 args = sys.argv[1:]
-if name == "timeout":
-    assert args[:3] == ["--signal=TERM", "--kill-after=5s", "60s"]
-    assert args[3:6] == ["python", "-u", "-m"] and args[6] == "mutmut"
-    os.execv(os.environ["TEST_ONLY_REAL_TIMEOUT"],
-             ["timeout", "--signal=TERM", "--kill-after=0.2s", "0.5s", *args[3:]])
+if name == "git":
+    assert args in (["diff", "--quiet", "--no-ext-diff", "--no-textconv", "HEAD", "--", "cyberpunk_designer/"],
+                    ["ls-files", "--others", "--exclude-standard", "--", "cyberpunk_designer/"])
+    if args[0] == "diff":
+        raise SystemExit(int(os.environ.get("TEST_ONLY_DIRTY_TARGET", "0")))
+    if os.environ.get("TEST_ONLY_UNTRACKED_TARGET") == "1":
+        print("cyberpunk_designer/TEST_ONLY-new.py")
+    raise SystemExit(0)
 if name == "tee":
     if args[-1].endswith("run.log"):
         sys.stdout.buffer.write(sys.stdin.buffer.read())
@@ -116,6 +135,24 @@ if name == "tee":
     os.execv(os.environ["TEST_ONLY_REAL_TEE"], ["tee", *args])
 assert name == "python" and args[0] == "-u"
 assert os.environ["PYTHONUNBUFFERED"] == "1"
+if args[1] == "tools/mutation_process_owner.py":
+    # This is an explicitly inert owner-CLI shim. Actual process containment is
+    # tested separately against the production helper, not by this replacement.
+    if args[2] == "verify":
+        assert len(args) == 5 and args[3] == "--receipt-file"
+        try:
+            receipt = json.loads(Path(args[4]).read_text())
+            valid = receipt['outcome']['tree_empty'] is True and receipt['outcome']['stdout_eof'] is True
+        except (OSError, ValueError, KeyError):
+            valid = False
+        raise SystemExit(0 if valid else 70)
+    assert len(args) == 7 and args[2] in {"run", "results", "html"}
+    assert args[3:5] == ["--deadline-seconds", "900" if args[2] == "run" else "60"]
+    assert args[5] == "--receipt-file"
+    os.environ["TEST_ONLY_OWNER_ROLE"] = args[2]
+    os.environ["TEST_ONLY_RECEIPT_PATH"] = args[6]
+    os.execv(sys.executable, [sys.executable, "-u", "-B", sys.argv[0], "-u", "-m", "mutmut", args[2],
+                           *( ["--no-progress"] if args[2] == "run" else [] )])
 if args[1] == "-c":
     assert len(args) == 3
     if os.environ.get("TEST_ONLY_LIMITER_FAIL") == "1":
@@ -135,11 +172,18 @@ if command == "run" and os.environ.get("TEST_ONLY_FLOOD") == "1":
         sys.stdout.buffer.write(b"X" * 65536)
     sys.stdout.buffer.flush()
     os.write(2, b"TEST_ONLY flood fully drained\n")
+status = int(os.environ.get("TEST_ONLY_EXIT_" + command.upper(), "0"))
 if os.environ.get("TEST_ONLY_BLOCK") == command:
-    deadline = time.monotonic() + 10
+    deadline = time.monotonic() + (10 if os.environ.get("TEST_ONLY_EXTERNAL_INTERRUPT") == "1" else 0.5)
     while not Path("TEST_ONLY-release").exists() and time.monotonic() < deadline:
         time.sleep(0.01)
-raise SystemExit(int(os.environ.get("TEST_ONLY_EXIT_" + command.upper(), "0")))
+    if os.environ.get("TEST_ONLY_EXTERNAL_INTERRUPT") != "1":
+        status = 124  # Inert CLI status, not proof of real owner cleanup.
+if status not in (70, 74) and os.environ.get("TEST_ONLY_DROP_RECEIPT") != "1":
+    Path(os.environ['TEST_ONLY_RECEIPT_PATH']).write_text(json.dumps({
+        'operation': command, 'outcome': {'root_returncode':status, 'reason':'natural',
+        'reaped':1, 'tree_empty':True, 'stdout_eof':True}}))
+raise SystemExit(status)
 """
 
 
@@ -162,7 +206,7 @@ class ActualBashControls(unittest.TestCase):
         self.bin.mkdir()
         self.logs = self.root / "public-mutation-control"
         self.console("python")
-        self.console("timeout")
+        self.console("git")
         previous_context = os.environ.get("PUBLIC_CI_PARENT_CONTEXT")
         os.environ["PUBLIC_CI_PARENT_CONTEXT"] = "synthetic-parent-only"
 
@@ -235,8 +279,18 @@ class ActualBashControls(unittest.TestCase):
     def test_runner_failure_survives_successful_diagnostics(self):
         status, _ = self.run_control(TEST_ONLY_EXIT_RUN="7")
         self.assertEqual(status, 7)
-        self.assertEqual(self.calls(), ["run", "results", "html"])
+        self.assertEqual(self.calls(), ["run", "results"])
         self.assertIn(b"mutmut run pipeline exit: 7", self.log("status.log"))
+
+    def test_runner_deadline_retains_partial_log_and_still_collects_reports(self):
+        status, _ = self.run_control(TEST_ONLY_BLOCK="run", TEST_ONLY_RUN_TIMEOUT="0.5s")
+        self.assertEqual(status, 124)
+        self.assertEqual(self.calls(), ["run", "results"])
+        self.assertIn(b"TEST_ONLY run stdout ", self.log("run.log"))
+        self.assertIn(b"TEST_ONLY run stderr\n", self.log("run.log"))
+        self.assertIn(b"mutmut run pipeline exit: 124", self.log("status.log"))
+        self.assertIn(b"mutmut results pipeline exit: 0", self.log("status.log"))
+        self.assertIn(b"HTML skipped", self.log("html.log"))
 
     def test_runner_failure_survives_failed_and_timed_out_diagnostics(self):
         status, _ = self.run_control(
@@ -244,19 +298,46 @@ class ActualBashControls(unittest.TestCase):
         )
         self.assertEqual(status, 7)
         self.assertIn(b"mutmut results pipeline exit: 124", self.log("status.log"))
-        self.assertIn(b"mutmut html pipeline exit: 2", self.log("status.log"))
-        self.assertEqual(self.calls(), ["run", "results", "html"])
+        self.assertIn(b"HTML skipped", self.log("html.log"))
+        self.assertEqual(self.calls(), ["run", "results"])
+
+    def test_unavailable_owner_never_starts_diagnostics(self):
+        for code in (70, 74):
+            with self.subTest(code=code):
+                status, _ = self.run_control(TEST_ONLY_EXIT_RUN=str(code))
+                self.assertEqual(status, code)
+                self.assertEqual(self.calls(), ["run"])
+                self.assertIn(b"Reports skipped", self.log("results.log"))
+                self.assertIn(b"HTML skipped", self.log("html.log"))
+                self.temporary.cleanup()
+                self.setUp()
+
+    def test_abrupt_supervisor_exit_without_receipt_never_starts_diagnostics(self):
+        status, _ = self.run_control(TEST_ONLY_EXIT_RUN="137", TEST_ONLY_DROP_RECEIPT="1")
+        self.assertEqual(status, 137)
+        self.assertEqual(self.calls(), ["run"])
+        self.assertIn(b"Reports skipped", self.log("results.log"))
+
+    def test_dirty_or_untracked_target_never_produces_html(self):
+        for control in ({"TEST_ONLY_DIRTY_TARGET": "1"}, {"TEST_ONLY_UNTRACKED_TARGET": "1"}):
+            with self.subTest(control=control):
+                status, _ = self.run_control(**control)
+                self.assertEqual(status, 0)
+                self.assertEqual(self.calls(), ["run", "results"])
+                self.assertIn(b"HTML skipped", self.log("html.log"))
+                self.temporary.cleanup()
+                self.setUp()
 
     def test_report_failure_does_not_claim_success(self):
         status, _ = self.run_control(TEST_ONLY_EXIT_RESULTS="9")
         self.assertEqual(status, 9)
         self.assertIn(b"mutmut run pipeline exit: 0", self.log("status.log"))
-        self.assertEqual(self.calls(), ["run", "results", "html"])
+        self.assertEqual(self.calls(), ["run", "results"])
 
-    def test_report_timeout_is_bounded_and_html_is_still_attempted(self):
+    def test_report_timeout_is_bounded_and_html_is_skipped(self):
         status, _ = self.run_control(TEST_ONLY_BLOCK="results")
         self.assertEqual(status, 124)
-        self.assertEqual(self.calls(), ["run", "results", "html"])
+        self.assertEqual(self.calls(), ["run", "results"])
 
     def test_html_failure_is_visible(self):
         status, _ = self.run_control(TEST_ONLY_EXIT_HTML="11")
@@ -268,7 +349,7 @@ class ActualBashControls(unittest.TestCase):
         status, _ = self.run_control(TEST_ONLY_EXIT_RUN="7")
         self.assertEqual(status, 7)
         self.assertIn(b"mutmut run pipeline exit: 7", self.log("status.log"))
-        self.assertEqual(self.calls(), ["run", "results", "html"])
+        self.assertEqual(self.calls(), ["run", "results"])
 
     def test_tee_failure_is_nonzero_even_when_runner_succeeds(self):
         self.console("tee")
@@ -280,7 +361,7 @@ class ActualBashControls(unittest.TestCase):
         status, _ = self.run_control(TEST_ONLY_EXIT_RUN="7", TEST_ONLY_LIMITER_FAIL="1")
         self.assertEqual(status, 7)
         self.assertIn(b"mutmut run pipeline exit: 7", self.log("status.log"))
-        self.assertEqual(self.calls(), ["run", "results", "html"])
+        self.assertEqual(self.calls(), ["run", "results"])
 
     def test_limiter_failure_is_nonzero_even_when_runner_succeeds(self):
         status, _ = self.run_control(TEST_ONLY_LIMITER_FAIL="1")
@@ -299,7 +380,7 @@ class ActualBashControls(unittest.TestCase):
         self.assertEqual(self.calls(), ["run", "results", "html"])
 
     def test_live_partial_output_and_interruption_keep_evidence(self):
-        process = self.launch(TEST_ONLY_BLOCK="run")
+        process = self.launch(TEST_ONLY_BLOCK="run", TEST_ONLY_EXTERNAL_INTERRUPT="1")
         try:
             with selectors.DefaultSelector() as selector:
                 selector.register(process.stdout, selectors.EVENT_READ)
